@@ -1,0 +1,1297 @@
+{
+  "nodes": [
+    {
+      "id": "employee-1",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 1,
+        "name": "Brian Gutierrez",
+        "department": "Customer Support",
+        "position": "Customer Success Manager",
+        "hire_date": "2010-06-10 00:00:00.000000",
+        "email": "igrant@example.com"
+      }
+    },
+    {
+      "id": "employee-2",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 2,
+        "name": "Joseph Nunez",
+        "department": "Customer Support",
+        "position": "Customer Success Manager",
+        "hire_date": "2018-07-14 00:00:00.000000",
+        "email": "russojacob@example.net"
+      }
+    },
+    {
+      "id": "employee-3",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 3,
+        "name": "Rose Arnold",
+        "department": "Engineering",
+        "position": "DevOps Engineer",
+        "hire_date": "2018-09-30 00:00:00.000000",
+        "email": "oscar85@example.com"
+      }
+    },
+    {
+      "id": "employee-4",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 4,
+        "name": "Joyce Smith",
+        "department": "Customer Support",
+        "position": "Support Manager",
+        "hire_date": "2022-01-27 00:00:00.000000",
+        "email": "mphillips@example.com"
+      }
+    },
+    {
+      "id": "employee-5",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 5,
+        "name": "Gary Norton",
+        "department": "Finance",
+        "position": "Financial Analyst",
+        "hire_date": "2020-12-13 00:00:00.000000",
+        "email": "donaldpayne@example.org"
+      }
+    },
+    {
+      "id": "employee-6",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 6,
+        "name": "Jasmine Smith",
+        "department": "HR",
+        "position": "VP of HR",
+        "hire_date": "2010-08-26 00:00:00.000000",
+        "email": "nbrooks@example.net"
+      }
+    },
+    {
+      "id": "employee-7",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 7,
+        "name": "Wayne Wolfe",
+        "department": "Operations",
+        "position": "COO",
+        "hire_date": "2019-01-26 00:00:00.000000",
+        "email": "ldrake@example.org"
+      }
+    },
+    {
+      "id": "employee-8",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 8,
+        "name": "Christian Chung",
+        "department": "Customer Support",
+        "position": "Support Manager",
+        "hire_date": "2012-11-11 00:00:00.000000",
+        "email": "scunningham@example.org"
+      }
+    },
+    {
+      "id": "employee-9",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 9,
+        "name": "Deanna Rivera",
+        "department": "Finance",
+        "position": "Accountant",
+        "hire_date": "2018-11-02 00:00:00.000000",
+        "email": "jacobsonsamantha@example.org"
+      }
+    },
+    {
+      "id": "employee-10",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 10,
+        "name": "Sarah Edwards",
+        "department": "Operations",
+        "position": "Operations Specialist",
+        "hire_date": "2011-11-19 00:00:00.000000",
+        "email": "brendagoodwin@example.net"
+      }
+    },
+    {
+      "id": "employee-11",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 11,
+        "name": "Connor Hall",
+        "department": "Marketing",
+        "position": "CMO",
+        "hire_date": "2014-01-28 00:00:00.000000",
+        "email": "petersonkayla@example.net"
+      }
+    },
+    {
+      "id": "employee-12",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 12,
+        "name": "Kelsey Phillips",
+        "department": "HR",
+        "position": "HR Manager",
+        "hire_date": "2014-09-30 00:00:00.000000",
+        "email": "jennifermiller@example.org"
+      }
+    },
+    {
+      "id": "employee-13",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 13,
+        "name": "Jacob Cole",
+        "department": "Engineering",
+        "position": "CTO",
+        "hire_date": "2016-03-29 00:00:00.000000",
+        "email": "fgarcia@example.com"
+      }
+    },
+    {
+      "id": "employee-14",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 14,
+        "name": "Jenny Hansen",
+        "department": "Customer Support",
+        "position": "Support Manager",
+        "hire_date": "2015-08-29 00:00:00.000000",
+        "email": "ashleyjackson@example.com"
+      }
+    },
+    {
+      "id": "employee-15",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 15,
+        "name": "Robert Washington",
+        "department": "HR",
+        "position": "HR Specialist",
+        "hire_date": "2022-02-05 00:00:00.000000",
+        "email": "wardsheryl@example.net"
+      }
+    },
+    {
+      "id": "employee-16",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 16,
+        "name": "Scott Jordan",
+        "department": "Engineering",
+        "position": "QA Engineer",
+        "hire_date": "2024-07-31 00:00:00.000000",
+        "email": "kevinmorrison@example.net"
+      }
+    },
+    {
+      "id": "employee-17",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 17,
+        "name": "Nicholas Velasquez",
+        "department": "Operations",
+        "position": "Operations Specialist",
+        "hire_date": "2010-09-12 00:00:00.000000",
+        "email": "kdiaz@example.org"
+      }
+    },
+    {
+      "id": "employee-18",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 18,
+        "name": "Emily Taylor",
+        "department": "Marketing",
+        "position": "Marketing Specialist",
+        "hire_date": "2023-12-08 00:00:00.000000",
+        "email": "john26@example.com"
+      }
+    },
+    {
+      "id": "employee-19",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 19,
+        "name": "Jacqueline Burnett",
+        "department": "Marketing",
+        "position": "CMO",
+        "hire_date": "2025-01-06 00:00:00.000000",
+        "email": "rodriguezjohn@example.net"
+      }
+    },
+    {
+      "id": "employee-20",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 20,
+        "name": "Sean Myers",
+        "department": "Marketing",
+        "position": "CMO",
+        "hire_date": "2015-10-01 00:00:00.000000",
+        "email": "michaeljohnson@example.org"
+      }
+    },
+    {
+      "id": "employee-21",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 21,
+        "name": "Samuel Horton",
+        "department": "Marketing",
+        "position": "Marketing Specialist",
+        "hire_date": "2013-09-03 00:00:00.000000",
+        "email": "carlos01@example.org"
+      }
+    },
+    {
+      "id": "employee-22",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 22,
+        "name": "Danielle Reynolds",
+        "department": "Sales",
+        "position": "Sales Representative",
+        "hire_date": "2016-12-30 00:00:00.000000",
+        "email": "mclaughlinnicole@example.com"
+      }
+    },
+    {
+      "id": "employee-23",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 23,
+        "name": "Michael Gonzalez",
+        "department": "HR",
+        "position": "VP of HR",
+        "hire_date": "2014-06-13 00:00:00.000000",
+        "email": "bakermichelle@example.net"
+      }
+    },
+    {
+      "id": "employee-24",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 24,
+        "name": "Emily Edwards",
+        "department": "Operations",
+        "position": "COO",
+        "hire_date": "2015-06-13 00:00:00.000000",
+        "email": "kevinwhite@example.net"
+      }
+    },
+    {
+      "id": "employee-25",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 25,
+        "name": "Cynthia Steele",
+        "department": "Customer Support",
+        "position": "Support Manager",
+        "hire_date": "2023-06-20 00:00:00.000000",
+        "email": "angelaburns@example.org"
+      }
+    },
+    {
+      "id": "employee-26",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 26,
+        "name": "Tamara Wagner",
+        "department": "Customer Support",
+        "position": "Customer Success Manager",
+        "hire_date": "2010-12-03 00:00:00.000000",
+        "email": "fortiz@example.com"
+      }
+    },
+    {
+      "id": "employee-27",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 27,
+        "name": "Kimberly Cunningham",
+        "department": "HR",
+        "position": "HR Manager",
+        "hire_date": "2011-07-19 00:00:00.000000",
+        "email": "hdunn@example.net"
+      }
+    },
+    {
+      "id": "employee-28",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 28,
+        "name": "Jill Valdez",
+        "department": "Engineering",
+        "position": "Software Engineer",
+        "hire_date": "2019-06-04 00:00:00.000000",
+        "email": "kennethkidd@example.com"
+      }
+    },
+    {
+      "id": "employee-29",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 29,
+        "name": "Lisa Trujillo",
+        "department": "Sales",
+        "position": "VP of Sales",
+        "hire_date": "2018-02-15 00:00:00.000000",
+        "email": "amanda98@example.org"
+      }
+    },
+    {
+      "id": "employee-30",
+      "labels": [
+        "Employee"
+      ],
+      "properties": {
+        "employee_id": 30,
+        "name": "Maria Juarez",
+        "department": "Customer Support",
+        "position": "Support Manager",
+        "hire_date": "2013-06-07 00:00:00.000000",
+        "email": "kburns@example.net"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "manages-26-1",
+      "type": "MANAGES",
+      "source": "employee-26",
+      "target": "employee-1",
+      "properties": {
+        "since": "2019-12-08T14:10:56.486060"
+      }
+    },
+    {
+      "id": "manages-25-2",
+      "type": "MANAGES",
+      "source": "employee-25",
+      "target": "employee-2",
+      "properties": {
+        "since": "2018-09-13T17:45:22.336130"
+      }
+    },
+    {
+      "id": "manages-13-3",
+      "type": "MANAGES",
+      "source": "employee-13",
+      "target": "employee-3",
+      "properties": {
+        "since": "2020-07-18T11:11:28.422777"
+      }
+    },
+    {
+      "id": "manages-25-4",
+      "type": "MANAGES",
+      "source": "employee-25",
+      "target": "employee-4",
+      "properties": {
+        "since": "2022-10-16T09:23:27.991758"
+      }
+    },
+    {
+      "id": "manages-30-8",
+      "type": "MANAGES",
+      "source": "employee-30",
+      "target": "employee-8",
+      "properties": {
+        "since": "2022-01-06T05:37:33.484851"
+      }
+    },
+    {
+      "id": "manages-24-10",
+      "type": "MANAGES",
+      "source": "employee-24",
+      "target": "employee-10",
+      "properties": {
+        "since": "2020-12-15T03:46:20.709277"
+      }
+    },
+    {
+      "id": "manages-23-12",
+      "type": "MANAGES",
+      "source": "employee-23",
+      "target": "employee-12",
+      "properties": {
+        "since": "2024-02-26T06:11:20.660971"
+      }
+    },
+    {
+      "id": "manages-8-14",
+      "type": "MANAGES",
+      "source": "employee-8",
+      "target": "employee-14",
+      "properties": {
+        "since": "2016-06-29T21:31:44.055734"
+      }
+    },
+    {
+      "id": "manages-23-15",
+      "type": "MANAGES",
+      "source": "employee-23",
+      "target": "employee-15",
+      "properties": {
+        "since": "2023-06-12T04:26:38.972014"
+      }
+    },
+    {
+      "id": "manages-13-16",
+      "type": "MANAGES",
+      "source": "employee-13",
+      "target": "employee-16",
+      "properties": {
+        "since": "2024-08-07T17:35:59.082364"
+      }
+    },
+    {
+      "id": "manages-7-17",
+      "type": "MANAGES",
+      "source": "employee-7",
+      "target": "employee-17",
+      "properties": {
+        "since": "2013-11-20T10:57:34.844043"
+      }
+    },
+    {
+      "id": "manages-11-18",
+      "type": "MANAGES",
+      "source": "employee-11",
+      "target": "employee-18",
+      "properties": {
+        "since": "2024-08-14T10:04:09.972830"
+      }
+    },
+    {
+      "id": "manages-19-21",
+      "type": "MANAGES",
+      "source": "employee-19",
+      "target": "employee-21",
+      "properties": {
+        "since": "2013-12-24T14:32:58.122825"
+      }
+    },
+    {
+      "id": "manages-29-22",
+      "type": "MANAGES",
+      "source": "employee-29",
+      "target": "employee-22",
+      "properties": {
+        "since": "2018-08-24T09:14:20.879537"
+      }
+    },
+    {
+      "id": "manages-2-25",
+      "type": "MANAGES",
+      "source": "employee-2",
+      "target": "employee-25",
+      "properties": {
+        "since": "2024-08-26T04:02:44.663787"
+      }
+    },
+    {
+      "id": "manages-30-26",
+      "type": "MANAGES",
+      "source": "employee-30",
+      "target": "employee-26",
+      "properties": {
+        "since": "2018-10-02T03:25:23.235507"
+      }
+    },
+    {
+      "id": "manages-12-27",
+      "type": "MANAGES",
+      "source": "employee-12",
+      "target": "employee-27",
+      "properties": {
+        "since": "2014-07-29T17:29:56.717763"
+      }
+    },
+    {
+      "id": "manages-13-28",
+      "type": "MANAGES",
+      "source": "employee-13",
+      "target": "employee-28",
+      "properties": {
+        "since": "2022-11-18T02:37:55.238167"
+      }
+    },
+    {
+      "id": "manages-4-30",
+      "type": "MANAGES",
+      "source": "employee-4",
+      "target": "employee-30",
+      "properties": {
+        "since": "2023-01-12T01:46:05.416431"
+      }
+    },
+    {
+      "id": "works_with-1-2",
+      "type": "WORKS_WITH",
+      "source": "employee-1",
+      "target": "employee-2",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 3,
+        "last_collaboration": "2024-04-18T15:58:01.643488"
+      }
+    },
+    {
+      "id": "works_with-1-4",
+      "type": "WORKS_WITH",
+      "source": "employee-1",
+      "target": "employee-4",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 1,
+        "last_collaboration": "2025-02-04T14:37:07.393806"
+      }
+    },
+    {
+      "id": "works_with-1-14",
+      "type": "WORKS_WITH",
+      "source": "employee-1",
+      "target": "employee-14",
+      "properties": {
+        "collaboration_level": "high",
+        "projects_count": 8,
+        "last_collaboration": "2024-12-27T06:43:22.578843"
+      }
+    },
+    {
+      "id": "works_with-1-25",
+      "type": "WORKS_WITH",
+      "source": "employee-1",
+      "target": "employee-25",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 1,
+        "last_collaboration": "2024-08-18T13:33:17.723622"
+      }
+    },
+    {
+      "id": "works_with-1-26",
+      "type": "WORKS_WITH",
+      "source": "employee-1",
+      "target": "employee-26",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 3,
+        "last_collaboration": "2024-06-12T01:53:47.528972"
+      }
+    },
+    {
+      "id": "works_with-1-30",
+      "type": "WORKS_WITH",
+      "source": "employee-1",
+      "target": "employee-30",
+      "properties": {
+        "collaboration_level": "high",
+        "projects_count": 10,
+        "last_collaboration": "2025-03-31T21:42:02.215378"
+      }
+    },
+    {
+      "id": "works_with-2-14",
+      "type": "WORKS_WITH",
+      "source": "employee-2",
+      "target": "employee-14",
+      "properties": {
+        "collaboration_level": "medium",
+        "projects_count": 7,
+        "last_collaboration": "2024-08-17T05:30:27.199159"
+      }
+    },
+    {
+      "id": "works_with-2-25",
+      "type": "WORKS_WITH",
+      "source": "employee-2",
+      "target": "employee-25",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 1,
+        "last_collaboration": "2024-05-20T03:59:18.094645"
+      }
+    },
+    {
+      "id": "works_with-2-26",
+      "type": "WORKS_WITH",
+      "source": "employee-2",
+      "target": "employee-26",
+      "properties": {
+        "collaboration_level": "medium",
+        "projects_count": 5,
+        "last_collaboration": "2024-05-21T14:47:35.170610"
+      }
+    },
+    {
+      "id": "works_with-2-30",
+      "type": "WORKS_WITH",
+      "source": "employee-2",
+      "target": "employee-30",
+      "properties": {
+        "collaboration_level": "medium",
+        "projects_count": 3,
+        "last_collaboration": "2025-02-19T19:55:57.980314"
+      }
+    },
+    {
+      "id": "works_with-4-8",
+      "type": "WORKS_WITH",
+      "source": "employee-4",
+      "target": "employee-8",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 2,
+        "last_collaboration": "2024-11-22T19:07:04.988173"
+      }
+    },
+    {
+      "id": "works_with-4-25",
+      "type": "WORKS_WITH",
+      "source": "employee-4",
+      "target": "employee-25",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 3,
+        "last_collaboration": "2025-02-05T02:05:35.837856"
+      }
+    },
+    {
+      "id": "works_with-4-26",
+      "type": "WORKS_WITH",
+      "source": "employee-4",
+      "target": "employee-26",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 2,
+        "last_collaboration": "2025-01-07T19:39:15.343505"
+      }
+    },
+    {
+      "id": "works_with-4-30",
+      "type": "WORKS_WITH",
+      "source": "employee-4",
+      "target": "employee-30",
+      "properties": {
+        "collaboration_level": "medium",
+        "projects_count": 7,
+        "last_collaboration": "2024-10-29T03:26:50.317820"
+      }
+    },
+    {
+      "id": "works_with-8-25",
+      "type": "WORKS_WITH",
+      "source": "employee-8",
+      "target": "employee-25",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 3,
+        "last_collaboration": "2025-04-06T17:05:59.261335"
+      }
+    },
+    {
+      "id": "works_with-8-26",
+      "type": "WORKS_WITH",
+      "source": "employee-8",
+      "target": "employee-26",
+      "properties": {
+        "collaboration_level": "high",
+        "projects_count": 10,
+        "last_collaboration": "2024-09-01T13:08:31.408489"
+      }
+    },
+    {
+      "id": "works_with-25-26",
+      "type": "WORKS_WITH",
+      "source": "employee-25",
+      "target": "employee-26",
+      "properties": {
+        "collaboration_level": "medium",
+        "projects_count": 5,
+        "last_collaboration": "2024-11-03T22:03:22.462363"
+      }
+    },
+    {
+      "id": "works_with-25-30",
+      "type": "WORKS_WITH",
+      "source": "employee-25",
+      "target": "employee-30",
+      "properties": {
+        "collaboration_level": "medium",
+        "projects_count": 4,
+        "last_collaboration": "2025-02-13T05:21:46.027000"
+      }
+    },
+    {
+      "id": "works_with-26-30",
+      "type": "WORKS_WITH",
+      "source": "employee-26",
+      "target": "employee-30",
+      "properties": {
+        "collaboration_level": "high",
+        "projects_count": 8,
+        "last_collaboration": "2024-11-28T04:47:46.536144"
+      }
+    },
+    {
+      "id": "works_with-3-13",
+      "type": "WORKS_WITH",
+      "source": "employee-3",
+      "target": "employee-13",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 3,
+        "last_collaboration": "2025-02-25T00:30:59.162486"
+      }
+    },
+    {
+      "id": "works_with-3-28",
+      "type": "WORKS_WITH",
+      "source": "employee-3",
+      "target": "employee-28",
+      "properties": {
+        "collaboration_level": "medium",
+        "projects_count": 5,
+        "last_collaboration": "2024-11-13T03:55:51.226901"
+      }
+    },
+    {
+      "id": "works_with-13-28",
+      "type": "WORKS_WITH",
+      "source": "employee-13",
+      "target": "employee-28",
+      "properties": {
+        "collaboration_level": "high",
+        "projects_count": 10,
+        "last_collaboration": "2024-12-29T15:06:29.428470"
+      }
+    },
+    {
+      "id": "works_with-16-28",
+      "type": "WORKS_WITH",
+      "source": "employee-16",
+      "target": "employee-28",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 1,
+        "last_collaboration": "2024-05-03T00:41:09.977384"
+      }
+    },
+    {
+      "id": "works_with-6-15",
+      "type": "WORKS_WITH",
+      "source": "employee-6",
+      "target": "employee-15",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 1,
+        "last_collaboration": "2024-07-08T12:42:07.719591"
+      }
+    },
+    {
+      "id": "works_with-6-27",
+      "type": "WORKS_WITH",
+      "source": "employee-6",
+      "target": "employee-27",
+      "properties": {
+        "collaboration_level": "high",
+        "projects_count": 12,
+        "last_collaboration": "2024-07-30T23:42:21.568969"
+      }
+    },
+    {
+      "id": "works_with-12-15",
+      "type": "WORKS_WITH",
+      "source": "employee-12",
+      "target": "employee-15",
+      "properties": {
+        "collaboration_level": "medium",
+        "projects_count": 6,
+        "last_collaboration": "2024-05-15T10:26:16.350697"
+      }
+    },
+    {
+      "id": "works_with-12-27",
+      "type": "WORKS_WITH",
+      "source": "employee-12",
+      "target": "employee-27",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 2,
+        "last_collaboration": "2024-07-10T07:35:22.544101"
+      }
+    },
+    {
+      "id": "works_with-15-23",
+      "type": "WORKS_WITH",
+      "source": "employee-15",
+      "target": "employee-23",
+      "properties": {
+        "collaboration_level": "high",
+        "projects_count": 15,
+        "last_collaboration": "2024-05-23T04:21:17.443506"
+      }
+    },
+    {
+      "id": "works_with-15-27",
+      "type": "WORKS_WITH",
+      "source": "employee-15",
+      "target": "employee-27",
+      "properties": {
+        "collaboration_level": "high",
+        "projects_count": 13,
+        "last_collaboration": "2024-07-26T19:39:01.608314"
+      }
+    },
+    {
+      "id": "works_with-7-10",
+      "type": "WORKS_WITH",
+      "source": "employee-7",
+      "target": "employee-10",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 1,
+        "last_collaboration": "2024-12-04T11:15:28.186958"
+      }
+    },
+    {
+      "id": "works_with-7-17",
+      "type": "WORKS_WITH",
+      "source": "employee-7",
+      "target": "employee-17",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 1,
+        "last_collaboration": "2024-08-27T13:01:54.756064"
+      }
+    },
+    {
+      "id": "works_with-10-17",
+      "type": "WORKS_WITH",
+      "source": "employee-10",
+      "target": "employee-17",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 3,
+        "last_collaboration": "2024-08-29T11:55:05.051532"
+      }
+    },
+    {
+      "id": "works_with-10-24",
+      "type": "WORKS_WITH",
+      "source": "employee-10",
+      "target": "employee-24",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 2,
+        "last_collaboration": "2024-07-01T19:29:20.060200"
+      }
+    },
+    {
+      "id": "works_with-17-24",
+      "type": "WORKS_WITH",
+      "source": "employee-17",
+      "target": "employee-24",
+      "properties": {
+        "collaboration_level": "medium",
+        "projects_count": 7,
+        "last_collaboration": "2024-07-22T19:15:50.648259"
+      }
+    },
+    {
+      "id": "works_with-11-18",
+      "type": "WORKS_WITH",
+      "source": "employee-11",
+      "target": "employee-18",
+      "properties": {
+        "collaboration_level": "high",
+        "projects_count": 7,
+        "last_collaboration": "2025-03-24T09:29:23.547632"
+      }
+    },
+    {
+      "id": "works_with-11-19",
+      "type": "WORKS_WITH",
+      "source": "employee-11",
+      "target": "employee-19",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 3,
+        "last_collaboration": "2024-12-08T23:31:23.570885"
+      }
+    },
+    {
+      "id": "works_with-18-20",
+      "type": "WORKS_WITH",
+      "source": "employee-18",
+      "target": "employee-20",
+      "properties": {
+        "collaboration_level": "medium",
+        "projects_count": 6,
+        "last_collaboration": "2024-11-24T18:29:48.335248"
+      }
+    },
+    {
+      "id": "works_with-18-21",
+      "type": "WORKS_WITH",
+      "source": "employee-18",
+      "target": "employee-21",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 3,
+        "last_collaboration": "2024-06-17T19:09:39.140584"
+      }
+    },
+    {
+      "id": "works_with-19-21",
+      "type": "WORKS_WITH",
+      "source": "employee-19",
+      "target": "employee-21",
+      "properties": {
+        "collaboration_level": "high",
+        "projects_count": 9,
+        "last_collaboration": "2025-01-07T14:21:03.873445"
+      }
+    },
+    {
+      "id": "works_with-20-21",
+      "type": "WORKS_WITH",
+      "source": "employee-20",
+      "target": "employee-21",
+      "properties": {
+        "collaboration_level": "low",
+        "projects_count": 3,
+        "last_collaboration": "2024-06-14T23:20:51.357387"
+      }
+    },
+    {
+      "id": "works_with-22-29",
+      "type": "WORKS_WITH",
+      "source": "employee-22",
+      "target": "employee-29",
+      "properties": {
+        "collaboration_level": "high",
+        "projects_count": 15,
+        "last_collaboration": "2024-09-01T21:12:57.199309"
+      }
+    },
+    {
+      "id": "collaborates_with-10-16",
+      "type": "COLLABORATES_WITH",
+      "source": "employee-10",
+      "target": "employee-16",
+      "properties": {
+        "project_name": "Project Wish",
+        "start_date": "2024-12-06T01:04:27.061793",
+        "status": "active"
+      }
+    },
+    {
+      "id": "collaborates_with-7-29",
+      "type": "COLLABORATES_WITH",
+      "source": "employee-7",
+      "target": "employee-29",
+      "properties": {
+        "project_name": "Project Onto",
+        "start_date": "2024-07-05T12:05:26.889663",
+        "status": "completed"
+      }
+    },
+    {
+      "id": "collaborates_with-25-29",
+      "type": "COLLABORATES_WITH",
+      "source": "employee-25",
+      "target": "employee-29",
+      "properties": {
+        "project_name": "Project Garden",
+        "start_date": "2025-02-18T03:13:26.961408",
+        "status": "active"
+      }
+    },
+    {
+      "id": "collaborates_with-2-3",
+      "type": "COLLABORATES_WITH",
+      "source": "employee-2",
+      "target": "employee-3",
+      "properties": {
+        "project_name": "Project Stand",
+        "start_date": "2024-05-06T17:20:17.686918",
+        "status": "on_hold"
+      }
+    },
+    {
+      "id": "collaborates_with-27-4",
+      "type": "COLLABORATES_WITH",
+      "source": "employee-27",
+      "target": "employee-4",
+      "properties": {
+        "project_name": "Project Term",
+        "start_date": "2024-04-28T00:22:58.996401",
+        "status": "active"
+      }
+    },
+    {
+      "id": "collaborates_with-21-12",
+      "type": "COLLABORATES_WITH",
+      "source": "employee-21",
+      "target": "employee-12",
+      "properties": {
+        "project_name": "Project Four",
+        "start_date": "2024-09-09T19:30:29.206673",
+        "status": "completed"
+      }
+    },
+    {
+      "id": "collaborates_with-24-22",
+      "type": "COLLABORATES_WITH",
+      "source": "employee-24",
+      "target": "employee-22",
+      "properties": {
+        "project_name": "Project Attorney",
+        "start_date": "2024-07-02T08:25:19.236612",
+        "status": "on_hold"
+      }
+    },
+    {
+      "id": "collaborates_with-22-19",
+      "type": "COLLABORATES_WITH",
+      "source": "employee-22",
+      "target": "employee-19",
+      "properties": {
+        "project_name": "Project Yes",
+        "start_date": "2024-11-09T10:45:19.118170",
+        "status": "completed"
+      }
+    },
+    {
+      "id": "collaborates_with-19-29",
+      "type": "COLLABORATES_WITH",
+      "source": "employee-19",
+      "target": "employee-29",
+      "properties": {
+        "project_name": "Project Serious",
+        "start_date": "2024-08-09T05:23:09.928724",
+        "status": "on_hold"
+      }
+    },
+    {
+      "id": "mentors-6-3",
+      "type": "MENTORS",
+      "source": "employee-6",
+      "target": "employee-3",
+      "properties": {
+        "since": "2024-08-07T20:03:56.523486",
+        "focus_areas": [
+          "technical_skills"
+        ]
+      }
+    },
+    {
+      "id": "mentors-26-5",
+      "type": "MENTORS",
+      "source": "employee-26",
+      "target": "employee-5",
+      "properties": {
+        "since": "2024-01-31T01:15:45.171985",
+        "focus_areas": [
+          "leadership",
+          "career_development",
+          "project_management"
+        ]
+      }
+    },
+    {
+      "id": "mentors-29-7",
+      "type": "MENTORS",
+      "source": "employee-29",
+      "target": "employee-7",
+      "properties": {
+        "since": "2025-02-13T02:38:04.824902",
+        "focus_areas": [
+          "technical_skills",
+          "leadership",
+          "project_management"
+        ]
+      }
+    },
+    {
+      "id": "mentors-6-11",
+      "type": "MENTORS",
+      "source": "employee-6",
+      "target": "employee-11",
+      "properties": {
+        "since": "2024-03-17T05:36:12.019312",
+        "focus_areas": [
+          "project_management",
+          "domain_knowledge"
+        ]
+      }
+    },
+    {
+      "id": "mentors-4-13",
+      "type": "MENTORS",
+      "source": "employee-4",
+      "target": "employee-13",
+      "properties": {
+        "since": "2023-10-27T12:59:17.078820",
+        "focus_areas": [
+          "career_development",
+          "project_management",
+          "domain_knowledge"
+        ]
+      }
+    },
+    {
+      "id": "mentors-2-17",
+      "type": "MENTORS",
+      "source": "employee-2",
+      "target": "employee-17",
+      "properties": {
+        "since": "2023-10-14T04:59:29.503623",
+        "focus_areas": [
+          "domain_knowledge",
+          "communication",
+          "project_management"
+        ]
+      }
+    },
+    {
+      "id": "mentors-29-18",
+      "type": "MENTORS",
+      "source": "employee-29",
+      "target": "employee-18",
+      "properties": {
+        "since": "2024-05-31T02:52:04.335110",
+        "focus_areas": [
+          "project_management"
+        ]
+      }
+    },
+    {
+      "id": "mentors-29-21",
+      "type": "MENTORS",
+      "source": "employee-29",
+      "target": "employee-21",
+      "properties": {
+        "since": "2023-10-25T23:29:45.388251",
+        "focus_areas": [
+          "technical_skills",
+          "leadership"
+        ]
+      }
+    },
+    {
+      "id": "mentors-25-22",
+      "type": "MENTORS",
+      "source": "employee-25",
+      "target": "employee-22",
+      "properties": {
+        "since": "2024-06-17T01:54:42.450406",
+        "focus_areas": [
+          "leadership",
+          "domain_knowledge"
+        ]
+      }
+    },
+    {
+      "id": "mentors-23-24",
+      "type": "MENTORS",
+      "source": "employee-23",
+      "target": "employee-24",
+      "properties": {
+        "since": "2025-01-31T21:25:31.555831",
+        "focus_areas": [
+          "technical_skills"
+        ]
+      }
+    },
+    {
+      "id": "mentors-25-28",
+      "type": "MENTORS",
+      "source": "employee-25",
+      "target": "employee-28",
+      "properties": {
+        "since": "2024-02-02T19:19:54.633934",
+        "focus_areas": [
+          "technical_skills"
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "graph_type": "employee_network",
+    "generated_at": "2025-04-16T12:45:38.478272",
+    "seed": 42,
+    "node_count": 30,
+    "edge_count": 80
+  }
+}

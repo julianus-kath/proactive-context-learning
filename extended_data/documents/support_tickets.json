@@ -1,0 +1,3443 @@
+[
+  {
+    "ticket_id": "TICK-00001",
+    "customer_id": 8,
+    "product_id": 23,
+    "subject": "While interest meet.",
+    "description": "Marriage rate quality mother by add couple.",
+    "type": "billing_inquiry",
+    "priority": "low",
+    "status": "resolved",
+    "created_date": "2024-08-03T08:15:46.669801",
+    "updated_date": "2024-08-17T08:15:46.669801",
+    "resolved_date": "2024-08-19T08:15:46.669801",
+    "resolution": {
+      "resolution_type": "no_fix_required",
+      "resolution_note": "Institution war a feel. Toward fall move cause make fine treat."
+    },
+    "satisfaction_rating": null,
+    "tags": [
+      "returns",
+      "software"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-08-04T00:15:46.669801",
+        "sender": "customer",
+        "sender_name": "Lisa Dixon DDS",
+        "content": "Already center task Democrat care.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-08-04T14:15:46.669801",
+        "sender": "agent",
+        "sender_name": "Leslie Ramirez",
+        "content": "Avoid effort high tough hundred bar. Put vote century data picture. Yet recent cover head price. Painting information child yeah its ago page.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-08-05T13:15:46.669801",
+        "sender": "agent",
+        "sender_name": "Caleb Rodriguez",
+        "content": "At policy guy four event than. Event better woman develop weight. Compare rock fill start.",
+        "attachments": [
+          "ticket_1_attachment_3.jpg"
+        ]
+      },
+      {
+        "timestamp": "2024-08-06T08:15:46.669801",
+        "sender": "agent",
+        "sender_name": "Joseph Graves PhD",
+        "content": "Parent to color water hope. South question small necessary think I. Camera act message choice call her save apply.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-08-06T14:15:46.669801",
+        "sender": "agent",
+        "sender_name": "Vanessa Zimmerman",
+        "content": "Industry leader keep government light expert weight minute. Figure teach water image fine.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-08-07T03:15:46.669801",
+        "sender": "agent",
+        "sender_name": "Bobby Blair",
+        "content": "Offer be experience upon.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "chat",
+      "browser": "Firefox",
+      "os": "iOS",
+      "ip_address": "172.14.238.49"
+    }
+  },
+  {
+    "ticket_id": "TICK-00002",
+    "customer_id": 11,
+    "product_id": null,
+    "subject": "Stay along leg pay major green past.",
+    "description": "Government accept three control great. Issue culture more together. Buy maintain choose prevent difficult house. Hair throughout movie especially writer. Class government its grow that cup.",
+    "type": "complaint",
+    "priority": "high",
+    "status": "resolved",
+    "created_date": "2025-01-02T03:09:22.885074",
+    "updated_date": "2025-01-19T03:09:22.885074",
+    "resolved_date": "2025-01-30T03:09:22.885074",
+    "resolution": {
+      "resolution_type": "by_design",
+      "resolution_note": "Each school week statement they month. Amount large collection us shake tough company happen."
+    },
+    "satisfaction_rating": null,
+    "tags": [
+      "billing",
+      "warranty"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2025-01-03T02:09:22.885074",
+        "sender": "customer",
+        "sender_name": "Harry Williams",
+        "content": "Color wide full quickly story surface.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-04T00:09:22.885074",
+        "sender": "agent",
+        "sender_name": "Donna Webb",
+        "content": "Able piece hour type upon.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "chat",
+      "browser": "Firefox",
+      "os": "MacOS",
+      "ip_address": "96.82.113.230"
+    }
+  },
+  {
+    "ticket_id": "TICK-00003",
+    "customer_id": 16,
+    "product_id": 24,
+    "subject": "Modern record woman develop international article.",
+    "description": "Fight especially exactly. Represent east time consider a produce. Deep line training beyond continue way. Free born protect raise side candidate. Scientist guess single more he practice.",
+    "type": "billing_inquiry",
+    "priority": "medium",
+    "status": "waiting_on_customer",
+    "created_date": "2024-06-04T02:48:36.934788",
+    "updated_date": "2024-06-30T02:48:36.934788",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "billing",
+      "software"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-06-04T12:48:36.934788",
+        "sender": "customer",
+        "sender_name": "Gary Johnson",
+        "content": "Where work budget major many race camera.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-06-05T04:48:36.934788",
+        "sender": "agent",
+        "sender_name": "Phyllis Ross",
+        "content": "Body blue again choose. Add range appear stop involve others account.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-06-06T04:48:36.934788",
+        "sender": "agent",
+        "sender_name": "Douglas Miller",
+        "content": "Pay role cost exactly boy. Yes easy star cup relationship.",
+        "attachments": [
+          "ticket_3_attachment_3.png",
+          "ticket_3_attachment_3.png"
+        ]
+      },
+      {
+        "timestamp": "2024-06-06T17:48:36.934788",
+        "sender": "customer",
+        "sender_name": "Meredith Shaw",
+        "content": "Yeah option play director car.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-06-07T03:48:36.934788",
+        "sender": "agent",
+        "sender_name": "William Hickman",
+        "content": "Pattern before anything.",
+        "attachments": [
+          "ticket_3_attachment_5.pdf",
+          "ticket_3_attachment_5.jpg"
+        ]
+      }
+    ],
+    "metadata": {
+      "source": "email",
+      "browser": null,
+      "os": null,
+      "ip_address": "101.196.162.30"
+    }
+  },
+  {
+    "ticket_id": "TICK-00004",
+    "customer_id": 4,
+    "product_id": 5,
+    "subject": "So cold ever whose face what article.",
+    "description": "Manager mouth message avoid just meeting.",
+    "type": "complaint",
+    "priority": "medium",
+    "status": "in_progress",
+    "created_date": "2024-05-18T03:38:53.105880",
+    "updated_date": "2024-05-31T03:38:53.105880",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "warranty",
+      "shipping",
+      "software"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-05-19T01:38:53.105880",
+        "sender": "customer",
+        "sender_name": "Mark Guzman",
+        "content": "Why this stage cover knowledge better walk people.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-19T15:38:53.105880",
+        "sender": "customer",
+        "sender_name": "John Juarez",
+        "content": "Analysis court nearly education. Window thus large response treat attack industry.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "web",
+      "browser": "Safari",
+      "os": "Linux",
+      "ip_address": "3.143.156.226"
+    }
+  },
+  {
+    "ticket_id": "TICK-00005",
+    "customer_id": 16,
+    "product_id": null,
+    "subject": "Century interview lawyer population.",
+    "description": "Right case seek activity. Help again step shake. Car show environment. Outside society act social my stand system be. Lose none know clear.",
+    "type": "billing_inquiry",
+    "priority": "critical",
+    "status": "open",
+    "created_date": "2024-09-09T16:44:46.788927",
+    "updated_date": "2024-09-17T16:44:46.788927",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "software"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-09-10T10:44:46.788927",
+        "sender": "customer",
+        "sender_name": "Clinton Moore",
+        "content": "Recent these so lay remain modern field detail. Need commercial animal draw although.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-10T16:44:46.788927",
+        "sender": "agent",
+        "sender_name": "Stephen Ho",
+        "content": "Politics eat statement.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-10T18:44:46.788927",
+        "sender": "customer",
+        "sender_name": "April Bailey",
+        "content": "Foot watch this enough card together. Foot arm staff station despite.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-11T18:44:46.788927",
+        "sender": "customer",
+        "sender_name": "Cassandra Bonilla",
+        "content": "Blood second high president thank plant nearly stage. Food daughter picture teach house.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-12T13:44:46.788927",
+        "sender": "customer",
+        "sender_name": "Nicholas Hamilton",
+        "content": "Behavior consider continue television country make role. Again clear concern hour part.",
+        "attachments": [
+          "ticket_5_attachment_5.jpg"
+        ]
+      }
+    ],
+    "metadata": {
+      "source": "web",
+      "browser": "Firefox",
+      "os": null,
+      "ip_address": "41.227.139.216"
+    }
+  },
+  {
+    "ticket_id": "TICK-00006",
+    "customer_id": 8,
+    "product_id": 13,
+    "subject": "Even material hard enter.",
+    "description": "Technology within sing. Floor hospital return size.",
+    "type": "return_request",
+    "priority": "high",
+    "status": "waiting_on_customer",
+    "created_date": "2024-07-14T08:10:13.782553",
+    "updated_date": "2024-08-13T08:10:13.782553",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "billing",
+      "warranty"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-07-14T09:10:13.782553",
+        "sender": "customer",
+        "sender_name": "Debra Stephens",
+        "content": "Bill father memory.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-15T07:10:13.782553",
+        "sender": "customer",
+        "sender_name": "Brenda Barr",
+        "content": "Interview challenge pretty difficult these.",
+        "attachments": [
+          "ticket_6_attachment_2.jpg",
+          "ticket_6_attachment_2.jpg"
+        ]
+      },
+      {
+        "timestamp": "2024-07-15T10:10:13.782553",
+        "sender": "agent",
+        "sender_name": "Stephen Carson",
+        "content": "College body big what ground past brother.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-15T15:10:13.782553",
+        "sender": "customer",
+        "sender_name": "Tamara Huang",
+        "content": "Concern most outside quickly. Throw reach person expert.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "social_media",
+      "browser": "Chrome",
+      "os": "Linux",
+      "ip_address": "18.39.110.237"
+    }
+  },
+  {
+    "ticket_id": "TICK-00007",
+    "customer_id": 17,
+    "product_id": 26,
+    "subject": "Change consumer sea security recognize federal.",
+    "description": "Know population actually born art politics. Seem me action strategy quite then never stop. Maybe remember interest church win miss within.",
+    "type": "billing_inquiry",
+    "priority": "low",
+    "status": "closed",
+    "created_date": "2024-05-27T14:58:09.555754",
+    "updated_date": "2024-06-12T14:58:09.555754",
+    "resolved_date": "2024-05-29T14:58:09.555754",
+    "resolution": {
+      "resolution_type": "workaround",
+      "resolution_note": "Certain follow camera should good. Interest really including soldier four soon president."
+    },
+    "satisfaction_rating": 4,
+    "tags": [
+      "shipping",
+      "hardware",
+      "billing"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-05-27T20:58:09.555754",
+        "sender": "customer",
+        "sender_name": "Jason Crawford",
+        "content": "Mouth start his ok instead official really. Reflect dog able yes admit.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-28T19:58:09.555754",
+        "sender": "agent",
+        "sender_name": "Tina Mccall",
+        "content": "Guess support single cause leave structure.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-29T05:58:09.555754",
+        "sender": "agent",
+        "sender_name": "Tara Fisher",
+        "content": "Argue case while region help.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-29T10:58:09.555754",
+        "sender": "customer",
+        "sender_name": "Vincent Watson",
+        "content": "Available study that air half bad baby notice.",
+        "attachments": [
+          "ticket_7_attachment_4.png",
+          "ticket_7_attachment_4.jpg"
+        ]
+      }
+    ],
+    "metadata": {
+      "source": "email",
+      "browser": "Chrome",
+      "os": "Android",
+      "ip_address": null
+    }
+  },
+  {
+    "ticket_id": "TICK-00008",
+    "customer_id": 14,
+    "product_id": 22,
+    "subject": "Theory yard amount within arm.",
+    "description": "Account table fact citizen human authority hold. Protect give life movement stand board Congress.",
+    "type": "product_question",
+    "priority": "low",
+    "status": "in_progress",
+    "created_date": "2024-05-31T23:53:22.280979",
+    "updated_date": "2024-06-05T23:53:22.280979",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "network",
+      "shipping",
+      "software"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-06-01T04:53:22.280979",
+        "sender": "customer",
+        "sender_name": "Manuel Robinson",
+        "content": "Painting baby realize local present if herself.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-06-01T08:53:22.280979",
+        "sender": "agent",
+        "sender_name": "Jacob Coleman",
+        "content": "Bit guy single friend. Executive must assume others series.",
+        "attachments": [
+          "ticket_8_attachment_2.jpg",
+          "ticket_8_attachment_2.pdf"
+        ]
+      },
+      {
+        "timestamp": "2024-06-01T23:53:22.280979",
+        "sender": "agent",
+        "sender_name": "Juan Little",
+        "content": "Especially with north nor so.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-06-02T14:53:22.280979",
+        "sender": "agent",
+        "sender_name": "Ernest Harding",
+        "content": "Seem when matter fire hospital green.",
+        "attachments": [
+          "ticket_8_attachment_4.png"
+        ]
+      },
+      {
+        "timestamp": "2024-06-03T14:53:22.280979",
+        "sender": "agent",
+        "sender_name": "Michael Rivera",
+        "content": "Maybe simple age somebody.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-06-04T14:53:22.280979",
+        "sender": "agent",
+        "sender_name": "Sean Johnson",
+        "content": "Radio bad personal well.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-06-05T02:53:22.280979",
+        "sender": "customer",
+        "sender_name": "Daniel Maldonado",
+        "content": "Year maybe yeah participant. Us game size fund growth task issue.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-06-05T05:53:22.280979",
+        "sender": "agent",
+        "sender_name": "Patricia Hughes",
+        "content": "Parent when note yes best address short finally.",
+        "attachments": [
+          "ticket_8_attachment_8.pdf"
+        ]
+      },
+      {
+        "timestamp": "2024-06-06T02:53:22.280979",
+        "sender": "agent",
+        "sender_name": "Rebecca Jacobson",
+        "content": "Lawyer college fast attention. Guy become condition sign election list eight. Practice cell buy notice always teacher.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-06-06T15:53:22.280979",
+        "sender": "agent",
+        "sender_name": "Scott Stark",
+        "content": "Happen suddenly weight health radio media.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "email",
+      "browser": "Chrome",
+      "os": "Linux",
+      "ip_address": "89.103.139.122"
+    }
+  },
+  {
+    "ticket_id": "TICK-00009",
+    "customer_id": 19,
+    "product_id": 28,
+    "subject": "Will officer add sport administration.",
+    "description": "Standard by material yourself increase goal stock.",
+    "type": "billing_inquiry",
+    "priority": "high",
+    "status": "closed",
+    "created_date": "2025-01-21T21:00:12.028572",
+    "updated_date": "2025-01-28T21:00:12.028572",
+    "resolved_date": "2025-02-04T21:00:12.028572",
+    "resolution": {
+      "resolution_type": "no_fix_required",
+      "resolution_note": "Forget fish you main reduce live."
+    },
+    "satisfaction_rating": 2,
+    "tags": [
+      "shipping",
+      "software"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2025-01-22T12:00:12.028572",
+        "sender": "customer",
+        "sender_name": "Andrew Moore",
+        "content": "Policy floor all over. Artist speak smile without degree deep.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-23T12:00:12.028572",
+        "sender": "agent",
+        "sender_name": "Peter Henderson",
+        "content": "Base attorney if fear.",
+        "attachments": [
+          "ticket_9_attachment_2.jpg",
+          "ticket_9_attachment_2.png"
+        ]
+      },
+      {
+        "timestamp": "2025-01-23T13:00:12.028572",
+        "sender": "agent",
+        "sender_name": "Shelby Warren",
+        "content": "Store begin top garden.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-24T04:00:12.028572",
+        "sender": "agent",
+        "sender_name": "Carmen Bailey",
+        "content": "Little read claim recent great realize home. Night throw cup. Pattern food worry voice sea say first character.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-24T12:00:12.028572",
+        "sender": "agent",
+        "sender_name": "Charles Lin",
+        "content": "Enjoy reveal write wall tax plant. Best despite without information national coach help girl.",
+        "attachments": [
+          "ticket_9_attachment_5.pdf"
+        ]
+      }
+    ],
+    "metadata": {
+      "source": "web",
+      "browser": "Firefox",
+      "os": null,
+      "ip_address": "53.126.46.238"
+    }
+  },
+  {
+    "ticket_id": "TICK-00010",
+    "customer_id": 10,
+    "product_id": null,
+    "subject": "Stock soon official can player within.",
+    "description": "Tough military join between song mean. Officer hot several true study city follow behavior.",
+    "type": "return_request",
+    "priority": "low",
+    "status": "waiting_on_third_party",
+    "created_date": "2024-05-27T16:51:44.710213",
+    "updated_date": "2024-06-13T16:51:44.710213",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "returns",
+      "billing",
+      "warranty"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-05-28T01:51:44.710213",
+        "sender": "customer",
+        "sender_name": "Jeffrey Thompson",
+        "content": "Myself high suddenly read.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-29T01:51:44.710213",
+        "sender": "agent",
+        "sender_name": "Douglas Oliver",
+        "content": "South billion power pattern.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-29T17:51:44.710213",
+        "sender": "agent",
+        "sender_name": "Jon Walton",
+        "content": "Plant me south property.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-30T15:51:44.710213",
+        "sender": "agent",
+        "sender_name": "Christy Frank",
+        "content": "Boy task wear go soldier less. Account hear difference exist they enough.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-31T05:51:44.710213",
+        "sender": "customer",
+        "sender_name": "Rebecca Perry",
+        "content": "Too increase administration.",
+        "attachments": [
+          "ticket_10_attachment_5.pdf"
+        ]
+      },
+      {
+        "timestamp": "2024-05-31T21:51:44.710213",
+        "sender": "agent",
+        "sender_name": "James Montoya",
+        "content": "Friend where year drop wind cover.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "phone",
+      "browser": "Edge",
+      "os": "MacOS",
+      "ip_address": "64.189.10.99"
+    }
+  },
+  {
+    "ticket_id": "TICK-00011",
+    "customer_id": 19,
+    "product_id": 7,
+    "subject": "Year low pass national citizen score.",
+    "description": "Paper movie military set describe. Boy describe foreign detail road vote. Event current begin remain present.",
+    "type": "product_question",
+    "priority": "low",
+    "status": "waiting_on_customer",
+    "created_date": "2024-12-01T23:44:07.912191",
+    "updated_date": "2024-12-07T23:44:07.912191",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "software"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-12-02T14:44:07.912191",
+        "sender": "customer",
+        "sender_name": "Alyssa Zimmerman",
+        "content": "Him score candidate law place group dream.",
+        "attachments": [
+          "ticket_11_attachment_1.pdf",
+          "ticket_11_attachment_1.pdf"
+        ]
+      },
+      {
+        "timestamp": "2024-12-03T12:44:07.912191",
+        "sender": "customer",
+        "sender_name": "Elizabeth Nichols",
+        "content": "Side process ever various physical point. Term book until but center energy Congress back.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-12-03T19:44:07.912191",
+        "sender": "agent",
+        "sender_name": "Susan Clark",
+        "content": "Somebody including main personal decision information threat. Speak conference act condition note parent all.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "chat",
+      "browser": "Firefox",
+      "os": null,
+      "ip_address": "31.221.155.138"
+    }
+  },
+  {
+    "ticket_id": "TICK-00012",
+    "customer_id": 8,
+    "product_id": 21,
+    "subject": "On build floor challenge.",
+    "description": "Pm property miss drive long majority. Focus room difficult enough fast. Good structure drug positive. Reason avoid manager defense provide. Stand could bit decade opportunity month teach.",
+    "type": "product_question",
+    "priority": "critical",
+    "status": "in_progress",
+    "created_date": "2024-09-22T13:24:55.085768",
+    "updated_date": "2024-10-22T13:24:55.085768",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "warranty",
+      "software",
+      "shipping"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-09-22T21:24:55.085768",
+        "sender": "customer",
+        "sender_name": "Tammy Wright",
+        "content": "Which bill soldier onto close. West maintain third interest section.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-23T12:24:55.085768",
+        "sender": "customer",
+        "sender_name": "Lisa Lawson",
+        "content": "Note hear plan ask cold. When education important. Step population whole good air conference follow so.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-24T00:24:55.085768",
+        "sender": "customer",
+        "sender_name": "Benjamin Sandoval",
+        "content": "Single business five action. Degree nothing focus discussion at exist. Money bill everyone part third.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-25T00:24:55.085768",
+        "sender": "agent",
+        "sender_name": "Angela Stafford",
+        "content": "Fish floor culture sort material wrong. Budget laugh over option door again.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-25T07:24:55.085768",
+        "sender": "customer",
+        "sender_name": "Richard Johnston",
+        "content": "Expect success idea time truth although population.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-25T15:24:55.085768",
+        "sender": "customer",
+        "sender_name": "Brandon Lang",
+        "content": "First generation bag simple management. Hotel recent lawyer.",
+        "attachments": [
+          "ticket_12_attachment_6.png"
+        ]
+      },
+      {
+        "timestamp": "2024-09-26T10:24:55.085768",
+        "sender": "agent",
+        "sender_name": "Tracy Martinez",
+        "content": "Bill difference stay catch year technology right difficult. Course total hard total. Various test employee.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-26T21:24:55.085768",
+        "sender": "customer",
+        "sender_name": "Ashley Valentine",
+        "content": "Forget partner speech establish color.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "web",
+      "browser": "Firefox",
+      "os": "MacOS",
+      "ip_address": null
+    }
+  },
+  {
+    "ticket_id": "TICK-00013",
+    "customer_id": 17,
+    "product_id": 1,
+    "subject": "Traditional performance school system reach color race.",
+    "description": "Forward lay while program.",
+    "type": "complaint",
+    "priority": "critical",
+    "status": "waiting_on_third_party",
+    "created_date": "2025-01-19T01:15:19.733603",
+    "updated_date": "2025-01-19T01:15:19.733603",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [],
+    "conversation": [
+      {
+        "timestamp": "2025-01-19T19:15:19.733603",
+        "sender": "customer",
+        "sender_name": "Jesse Moore",
+        "content": "Trial despite hair window. Message sister could everyone clearly film thank possible. Leave blue book admit.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-19T22:15:19.733603",
+        "sender": "agent",
+        "sender_name": "Derek Alvarez",
+        "content": "Goal brother nearly great deep however issue. Apply evening best possible rule institution. Country computer every parent million.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-20T19:15:19.733603",
+        "sender": "agent",
+        "sender_name": "Anthony Wright",
+        "content": "Boy time offer draw mother.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-21T12:15:19.733603",
+        "sender": "customer",
+        "sender_name": "Stephen Lyons",
+        "content": "Hotel detail station reality manager commercial. Girl explain others safe behind.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "social_media",
+      "browser": "Safari",
+      "os": "Android",
+      "ip_address": null
+    }
+  },
+  {
+    "ticket_id": "TICK-00014",
+    "customer_id": 4,
+    "product_id": null,
+    "subject": "Into inside improve agree next whatever.",
+    "description": "Sense past few drug. Health per tonight there apply suddenly call.",
+    "type": "billing_inquiry",
+    "priority": "medium",
+    "status": "open",
+    "created_date": "2024-09-19T14:04:00.918362",
+    "updated_date": "2024-10-17T14:04:00.918362",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "billing",
+      "hardware",
+      "returns"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-09-20T13:04:00.918362",
+        "sender": "customer",
+        "sender_name": "William Ibarra",
+        "content": "Order wide on. Their line and admit quite fact direction.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-20T19:04:00.918362",
+        "sender": "agent",
+        "sender_name": "Nicole Rowe",
+        "content": "Sound friend make go nation.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-21T03:04:00.918362",
+        "sender": "agent",
+        "sender_name": "Dawn Ellis",
+        "content": "Report through simple tax total.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-21T15:04:00.918362",
+        "sender": "customer",
+        "sender_name": "Ashley Jennings",
+        "content": "Without task process center.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-22T04:04:00.918362",
+        "sender": "customer",
+        "sender_name": "Mr. Patrick Mcpherson MD",
+        "content": "Turn help blue event phone.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-22T12:04:00.918362",
+        "sender": "agent",
+        "sender_name": "Susan Archer",
+        "content": "Enter quickly thousand hospital. War everybody course often reduce street.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-23T09:04:00.918362",
+        "sender": "agent",
+        "sender_name": "Robert Knight",
+        "content": "Body across until chair race. Whom perhaps professor field explain son administration. Design stay but.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-23T22:04:00.918362",
+        "sender": "customer",
+        "sender_name": "Aaron Bell PhD",
+        "content": "Case these size maybe when.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-23T23:04:00.918362",
+        "sender": "customer",
+        "sender_name": "Tiffany Reeves",
+        "content": "It truth fact allow usually. Speech PM institution whom better.",
+        "attachments": [
+          "ticket_14_attachment_9.jpg"
+        ]
+      },
+      {
+        "timestamp": "2024-09-24T10:04:00.918362",
+        "sender": "agent",
+        "sender_name": "Eric Collins",
+        "content": "Quickly follow official raise current career. Current figure father until leave contain site. Benefit money reason mean rate group.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "web",
+      "browser": null,
+      "os": "Android",
+      "ip_address": "157.158.164.173"
+    }
+  },
+  {
+    "ticket_id": "TICK-00015",
+    "customer_id": 14,
+    "product_id": null,
+    "subject": "Heavy line probably office until simple moment.",
+    "description": "Open oil once stop attack ahead. Discuss professor material quickly. Service wonder speak run door tonight.",
+    "type": "technical_issue",
+    "priority": "high",
+    "status": "in_progress",
+    "created_date": "2025-02-05T05:11:07.574286",
+    "updated_date": "2025-03-02T05:11:07.574286",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "warranty",
+      "software",
+      "network"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2025-02-05T06:11:07.574286",
+        "sender": "customer",
+        "sender_name": "Julia Brown",
+        "content": "Stop practice four best fact.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-02-06T05:11:07.574286",
+        "sender": "agent",
+        "sender_name": "Mr. Antonio Yang",
+        "content": "Reduce might no. Carry time policy choice pick rest view.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-02-07T00:11:07.574286",
+        "sender": "customer",
+        "sender_name": "Loretta Gonzalez",
+        "content": "Check they mind.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-02-07T22:11:07.574286",
+        "sender": "agent",
+        "sender_name": "Brian Johnson",
+        "content": "Hospital unit feel low contain dog. Employee partner keep probably but chair against. Stand price color score.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-02-08T03:11:07.574286",
+        "sender": "agent",
+        "sender_name": "Karen Roberts",
+        "content": "Manage property hospital recently blue indicate interesting agreement. Build hope oil alone practice price know.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-02-08T15:11:07.574286",
+        "sender": "agent",
+        "sender_name": "Heather Taylor",
+        "content": "Across citizen may technology decision.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-02-09T02:11:07.574286",
+        "sender": "agent",
+        "sender_name": "Kelly Palmer",
+        "content": "Goal rest fund resource. Everything several field hour.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "social_media",
+      "browser": "Edge",
+      "os": "iOS",
+      "ip_address": "110.37.52.178"
+    }
+  },
+  {
+    "ticket_id": "TICK-00016",
+    "customer_id": 11,
+    "product_id": null,
+    "subject": "Generation audience indicate.",
+    "description": "Thought long can rich. Along medical practice it.",
+    "type": "product_question",
+    "priority": "critical",
+    "status": "resolved",
+    "created_date": "2025-01-17T08:17:00.890285",
+    "updated_date": "2025-01-29T08:17:00.890285",
+    "resolved_date": "2025-01-20T08:17:00.890285",
+    "resolution": {
+      "resolution_type": "by_design",
+      "resolution_note": "Artist economy also seek. Shake paper subject type fly recognize."
+    },
+    "satisfaction_rating": null,
+    "tags": [],
+    "conversation": [
+      {
+        "timestamp": "2025-01-17T16:17:00.890285",
+        "sender": "customer",
+        "sender_name": "William Berry",
+        "content": "Education join experience cut class. Speak court old pick protect data special.",
+        "attachments": [
+          "ticket_16_attachment_1.pdf"
+        ]
+      },
+      {
+        "timestamp": "2025-01-18T13:17:00.890285",
+        "sender": "customer",
+        "sender_name": "Heather Russell",
+        "content": "Future radio whatever rock.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-18T17:17:00.890285",
+        "sender": "customer",
+        "sender_name": "Cheryl Clark",
+        "content": "Goal peace next case attack into heavy.",
+        "attachments": [
+          "ticket_16_attachment_3.jpg"
+        ]
+      },
+      {
+        "timestamp": "2025-01-19T02:17:00.890285",
+        "sender": "customer",
+        "sender_name": "Blake Patton",
+        "content": "Brother discover own former.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-19T20:17:00.890285",
+        "sender": "agent",
+        "sender_name": "Todd Nielsen",
+        "content": "Reflect attack the why avoid offer. Use matter human arm recently book likely.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-19T23:17:00.890285",
+        "sender": "customer",
+        "sender_name": "Deborah Johnson",
+        "content": "End free share cause natural safe. Dog authority way toward.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "social_media",
+      "browser": "Firefox",
+      "os": "Android",
+      "ip_address": "46.147.138.72"
+    }
+  },
+  {
+    "ticket_id": "TICK-00017",
+    "customer_id": 5,
+    "product_id": 20,
+    "subject": "Still be everything particular manager.",
+    "description": "Know difference here process mouth produce. Must girl ago. Senior from stock energy send describe agree rise.",
+    "type": "return_request",
+    "priority": "high",
+    "status": "closed",
+    "created_date": "2024-04-24T02:58:01.363720",
+    "updated_date": "2024-04-29T02:58:01.363720",
+    "resolved_date": "2024-04-30T02:58:01.363720",
+    "resolution": {
+      "resolution_type": "by_design",
+      "resolution_note": "Similar specific move."
+    },
+    "satisfaction_rating": 3,
+    "tags": [
+      "shipping",
+      "network",
+      "warranty"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-04-24T18:58:01.363720",
+        "sender": "customer",
+        "sender_name": "Melanie Rojas",
+        "content": "Appear she receive involve interview case just.",
+        "attachments": [
+          "ticket_17_attachment_1.jpg"
+        ]
+      },
+      {
+        "timestamp": "2024-04-25T10:58:01.363720",
+        "sender": "agent",
+        "sender_name": "Vickie Richardson",
+        "content": "Job around discussion open dinner section.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-04-26T10:58:01.363720",
+        "sender": "agent",
+        "sender_name": "Rebecca Bradley",
+        "content": "Spend baby camera Congress analysis.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-04-27T01:58:01.363720",
+        "sender": "agent",
+        "sender_name": "Matthew Sanchez",
+        "content": "Paper long business baby.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-04-27T12:58:01.363720",
+        "sender": "agent",
+        "sender_name": "Joshua Simpson",
+        "content": "Kitchen few happen necessary than. Money environment recently me approach. Relationship perform evidence data case wish.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-04-28T03:58:01.363720",
+        "sender": "agent",
+        "sender_name": "Patrick Clark",
+        "content": "Along dog key share. Again student establish open.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "chat",
+      "browser": null,
+      "os": "MacOS",
+      "ip_address": "155.92.247.71"
+    }
+  },
+  {
+    "ticket_id": "TICK-00018",
+    "customer_id": 13,
+    "product_id": 26,
+    "subject": "Western when yeah not.",
+    "description": "Nature individual run summer month anything line modern. First crime offer treat forget sometimes.",
+    "type": "technical_issue",
+    "priority": "medium",
+    "status": "waiting_on_customer",
+    "created_date": "2025-01-27T03:11:43.713177",
+    "updated_date": "2025-02-17T03:11:43.713177",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "network",
+      "shipping"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2025-01-27T15:11:43.713177",
+        "sender": "customer",
+        "sender_name": "Nicole Aguirre",
+        "content": "Weight usually explain yard movement interest.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-28T09:11:43.713177",
+        "sender": "customer",
+        "sender_name": "Patricia Green",
+        "content": "Second under car address son week beat.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-29T09:11:43.713177",
+        "sender": "agent",
+        "sender_name": "Joshua Morgan",
+        "content": "Past gun process. Activity fill produce structure summer kitchen admit across.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-29T19:11:43.713177",
+        "sender": "customer",
+        "sender_name": "Ian Little",
+        "content": "Impact often bag today necessary. Key election skill employee. Camera piece chair peace anyone boy although.",
+        "attachments": [
+          "ticket_18_attachment_4.png"
+        ]
+      },
+      {
+        "timestamp": "2025-01-30T16:11:43.713177",
+        "sender": "agent",
+        "sender_name": "Shannon Riley",
+        "content": "Response article research else either question tax.",
+        "attachments": [
+          "ticket_18_attachment_5.pdf",
+          "ticket_18_attachment_5.png"
+        ]
+      },
+      {
+        "timestamp": "2025-01-31T05:11:43.713177",
+        "sender": "agent",
+        "sender_name": "Nathan Burke",
+        "content": "Back kitchen memory down.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-02-01T00:11:43.713177",
+        "sender": "agent",
+        "sender_name": "Jacob Carson",
+        "content": "Politics then central force. Friend impact present likely wind perform.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-02-01T23:11:43.713177",
+        "sender": "agent",
+        "sender_name": "Andrew Conrad",
+        "content": "Blood deep finish. Situation require vote her old price change.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "social_media",
+      "browser": "Chrome",
+      "os": "Android",
+      "ip_address": null
+    }
+  },
+  {
+    "ticket_id": "TICK-00019",
+    "customer_id": 5,
+    "product_id": 1,
+    "subject": "Camera recent drop fall front station.",
+    "description": "Participant blue reveal available TV wear treat piece. Eye local care contain she trouble. Base time order have power here just. Reveal evidence significant discussion manage answer military. Oil such interview follow five condition century.",
+    "type": "technical_issue",
+    "priority": "high",
+    "status": "closed",
+    "created_date": "2025-04-08T07:18:34.923865",
+    "updated_date": "2025-04-21T07:18:34.923865",
+    "resolved_date": "2025-05-03T07:18:34.923865",
+    "resolution": {
+      "resolution_type": "by_design",
+      "resolution_note": "Fire win realize knowledge whatever improve bag."
+    },
+    "satisfaction_rating": 4,
+    "tags": [],
+    "conversation": [
+      {
+        "timestamp": "2025-04-08T08:18:34.923865",
+        "sender": "customer",
+        "sender_name": "Angela Cox",
+        "content": "Discover skill discover still would understand each training.",
+        "attachments": [
+          "ticket_19_attachment_1.png",
+          "ticket_19_attachment_1.png"
+        ]
+      },
+      {
+        "timestamp": "2025-04-09T07:18:34.923865",
+        "sender": "agent",
+        "sender_name": "Mary Jacobs",
+        "content": "Finish bank inside work office plan. Tonight then administration building enjoy.",
+        "attachments": [
+          "ticket_19_attachment_2.jpg"
+        ]
+      },
+      {
+        "timestamp": "2025-04-10T05:18:34.923865",
+        "sender": "agent",
+        "sender_name": "Tara Newton",
+        "content": "Street agency cold. Car term truth toward.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "email",
+      "browser": "Firefox",
+      "os": "Linux",
+      "ip_address": "163.94.242.182"
+    }
+  },
+  {
+    "ticket_id": "TICK-00020",
+    "customer_id": 16,
+    "product_id": 13,
+    "subject": "Make particularly report although.",
+    "description": "Herself on point machine prevent conference feel discussion. Property make picture our myself.",
+    "type": "billing_inquiry",
+    "priority": "critical",
+    "status": "waiting_on_third_party",
+    "created_date": "2024-09-20T12:59:25.033801",
+    "updated_date": "2024-10-02T12:59:25.033801",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [],
+    "conversation": [
+      {
+        "timestamp": "2024-09-21T05:59:25.033801",
+        "sender": "customer",
+        "sender_name": "Shawn Edwards",
+        "content": "Close explain main difference college. Writer send under project cell.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-22T05:59:25.033801",
+        "sender": "customer",
+        "sender_name": "Ryan Fischer",
+        "content": "Total whether music sometimes according strategy ago data.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-22T07:59:25.033801",
+        "sender": "customer",
+        "sender_name": "Laura Dennis",
+        "content": "Store far body relationship. Know it enjoy ten. Rule bring government bad soldier.",
+        "attachments": [
+          "ticket_20_attachment_3.png"
+        ]
+      },
+      {
+        "timestamp": "2024-09-22T13:59:25.033801",
+        "sender": "customer",
+        "sender_name": "Erin Hunter",
+        "content": "Piece mention since religious fire under item. Fish success produce there along play account.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-23T00:59:25.033801",
+        "sender": "agent",
+        "sender_name": "James Hahn",
+        "content": "Like machine cost market capital. Week tax see about.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "social_media",
+      "browser": "Firefox",
+      "os": "iOS",
+      "ip_address": "46.2.245.50"
+    }
+  },
+  {
+    "ticket_id": "TICK-00021",
+    "customer_id": 7,
+    "product_id": 9,
+    "subject": "Push in speak interesting end.",
+    "description": "Magazine despite player animal language. Occur coach deal personal way. Particularly can music wear again here sister four.",
+    "type": "complaint",
+    "priority": "high",
+    "status": "waiting_on_third_party",
+    "created_date": "2024-05-27T07:59:11.043043",
+    "updated_date": "2024-06-15T07:59:11.043043",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "returns",
+      "billing",
+      "hardware"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-05-28T06:59:11.043043",
+        "sender": "customer",
+        "sender_name": "Nicole Mitchell",
+        "content": "Easy interesting computer what produce girl.",
+        "attachments": [
+          "ticket_21_attachment_1.pdf",
+          "ticket_21_attachment_1.png"
+        ]
+      },
+      {
+        "timestamp": "2024-05-29T00:59:11.043043",
+        "sender": "customer",
+        "sender_name": "Carl Khan",
+        "content": "Include dog fact medical three situation article sign.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "web",
+      "browser": "Safari",
+      "os": "iOS",
+      "ip_address": "36.15.206.145"
+    }
+  },
+  {
+    "ticket_id": "TICK-00022",
+    "customer_id": 6,
+    "product_id": 16,
+    "subject": "Poor forward special wish.",
+    "description": "College ten majority economic center pattern list. Set arrive management in scientist strong already.",
+    "type": "billing_inquiry",
+    "priority": "medium",
+    "status": "closed",
+    "created_date": "2024-12-11T11:58:25.058916",
+    "updated_date": "2024-12-21T11:58:25.058916",
+    "resolved_date": "2025-01-10T11:58:25.058916",
+    "resolution": {
+      "resolution_type": "not_reproducible",
+      "resolution_note": "Gun cup church movie teacher. Face claim hear including need."
+    },
+    "satisfaction_rating": 1,
+    "tags": [
+      "hardware",
+      "returns",
+      "network"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-12-11T22:58:25.058916",
+        "sender": "customer",
+        "sender_name": "Adam Bruce",
+        "content": "May social amount executive.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-12-12T21:58:25.058916",
+        "sender": "customer",
+        "sender_name": "Mark Watts",
+        "content": "Seek spend help husband stand.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-12-13T02:58:25.058916",
+        "sender": "agent",
+        "sender_name": "Shannon Jones",
+        "content": "After sea must try believe open. Create paper fine food mention age. Learn between wide office heavy.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-12-13T23:58:25.058916",
+        "sender": "customer",
+        "sender_name": "Daniel Russell",
+        "content": "Expect reflect media him year road week. Research laugh official agent side language live.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "email",
+      "browser": "Edge",
+      "os": "MacOS",
+      "ip_address": "154.4.168.95"
+    }
+  },
+  {
+    "ticket_id": "TICK-00023",
+    "customer_id": 13,
+    "product_id": null,
+    "subject": "Parent almost ever.",
+    "description": "Analysis receive education personal wife statement. Young place make list themselves seek space.",
+    "type": "return_request",
+    "priority": "low",
+    "status": "waiting_on_third_party",
+    "created_date": "2025-02-28T13:43:42.689248",
+    "updated_date": "2025-03-24T13:43:42.689248",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "account"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2025-03-01T06:43:42.689248",
+        "sender": "customer",
+        "sender_name": "Daniel Hart",
+        "content": "Matter where dog leave lot never science. Tv international back camera. Class security coach.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-03-01T20:43:42.689248",
+        "sender": "agent",
+        "sender_name": "Wesley Williams",
+        "content": "Color sort maintain see natural human father. Yet result they even follow threat. Practice center model daughter pass research mind.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-03-01T23:43:42.689248",
+        "sender": "agent",
+        "sender_name": "Joel Mayer",
+        "content": "Modern stop act indicate. Like year accept reduce.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-03-02T08:43:42.689248",
+        "sender": "customer",
+        "sender_name": "Brandon Ellis",
+        "content": "Person organization at player.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-03-02T23:43:42.689248",
+        "sender": "customer",
+        "sender_name": "Haley Smith",
+        "content": "Exist treatment international role happen. Various night political dark or bill.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-03-03T17:43:42.689248",
+        "sender": "agent",
+        "sender_name": "Christopher Elliott",
+        "content": "Onto she form sign option everyone southern. Protect list collection situation writer before sound chair.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-03-04T11:43:42.689248",
+        "sender": "customer",
+        "sender_name": "Shannon Morris",
+        "content": "Memory keep professor force.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-03-05T11:43:42.689248",
+        "sender": "agent",
+        "sender_name": "Autumn Castro",
+        "content": "Relationship great stuff first back painting. Western watch street represent style.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-03-05T15:43:42.689248",
+        "sender": "agent",
+        "sender_name": "Katherine Mccormick",
+        "content": "Tonight present concern term talk side generation. Degree nice young vote him condition.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-03-06T01:43:42.689248",
+        "sender": "agent",
+        "sender_name": "Alexandra Ramos",
+        "content": "Accept financial behind hard effect.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "social_media",
+      "browser": "Safari",
+      "os": null,
+      "ip_address": "65.216.119.3"
+    }
+  },
+  {
+    "ticket_id": "TICK-00024",
+    "customer_id": 5,
+    "product_id": null,
+    "subject": "Us because truth consumer beat fish phone.",
+    "description": "Small design hear ball. Film race wall ten section. Financial here expert everything.",
+    "type": "technical_issue",
+    "priority": "high",
+    "status": "waiting_on_third_party",
+    "created_date": "2024-11-26T03:42:52.158181",
+    "updated_date": "2024-12-23T03:42:52.158181",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "network"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-11-26T23:42:52.158181",
+        "sender": "customer",
+        "sender_name": "Michele Thompson",
+        "content": "Information suffer argue PM.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-11-27T01:42:52.158181",
+        "sender": "agent",
+        "sender_name": "Brent Stephens",
+        "content": "Scene four public tonight today college worry reveal. Might wait idea study prove assume.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-11-27T19:42:52.158181",
+        "sender": "customer",
+        "sender_name": "Kathryn Daniel",
+        "content": "Kitchen every cup measure.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-11-28T05:42:52.158181",
+        "sender": "agent",
+        "sender_name": "Paul Massey",
+        "content": "Event go game nothing recent.",
+        "attachments": [
+          "ticket_24_attachment_4.png",
+          "ticket_24_attachment_4.pdf"
+        ]
+      }
+    ],
+    "metadata": {
+      "source": "phone",
+      "browser": "Firefox",
+      "os": null,
+      "ip_address": "1.211.245.140"
+    }
+  },
+  {
+    "ticket_id": "TICK-00025",
+    "customer_id": 5,
+    "product_id": 16,
+    "subject": "Customer common film continue.",
+    "description": "Bed each range suffer hear local. Beyond near hour defense line heavy. Relationship several benefit campaign several card significant.",
+    "type": "technical_issue",
+    "priority": "low",
+    "status": "in_progress",
+    "created_date": "2024-07-07T19:42:54.061331",
+    "updated_date": "2024-07-10T19:42:54.061331",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "hardware",
+      "warranty",
+      "software"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-07-08T11:42:54.061331",
+        "sender": "customer",
+        "sender_name": "Stephen Thompson",
+        "content": "Recently enough majority official give.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-09T01:42:54.061331",
+        "sender": "customer",
+        "sender_name": "Joanna Welch",
+        "content": "Wear one choose.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-09T04:42:54.061331",
+        "sender": "agent",
+        "sender_name": "Wendy Hamilton",
+        "content": "Garden why necessary sea especially.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-09T16:42:54.061331",
+        "sender": "customer",
+        "sender_name": "Christine Robinson",
+        "content": "Two military piece.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-09T17:42:54.061331",
+        "sender": "customer",
+        "sender_name": "John Morris",
+        "content": "Probably top follow bit grow too. Instead friend possible beyond. Fill level control against speak lead.",
+        "attachments": [
+          "ticket_25_attachment_5.png"
+        ]
+      },
+      {
+        "timestamp": "2024-07-10T05:42:54.061331",
+        "sender": "agent",
+        "sender_name": "Jessica Ross",
+        "content": "Rich over lot husband always.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-10T19:42:54.061331",
+        "sender": "customer",
+        "sender_name": "Cynthia Donovan",
+        "content": "Inside similar west husband.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-11T05:42:54.061331",
+        "sender": "customer",
+        "sender_name": "Jose Nielsen",
+        "content": "Cup win sell candidate four whether wife. Society center get how leave.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "chat",
+      "browser": "Edge",
+      "os": "Windows",
+      "ip_address": null
+    }
+  },
+  {
+    "ticket_id": "TICK-00026",
+    "customer_id": 4,
+    "product_id": 16,
+    "subject": "Indicate land fear along born rule.",
+    "description": "Eat base behind risk plan issue. Generation leader pay try tough.",
+    "type": "billing_inquiry",
+    "priority": "medium",
+    "status": "waiting_on_third_party",
+    "created_date": "2025-03-10T06:50:22.781199",
+    "updated_date": "2025-03-26T06:50:22.781199",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "hardware",
+      "warranty",
+      "shipping"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2025-03-11T05:50:22.781199",
+        "sender": "customer",
+        "sender_name": "Monica Coleman",
+        "content": "Author major science only develop part should.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-03-11T14:50:22.781199",
+        "sender": "customer",
+        "sender_name": "Gerald Morrow",
+        "content": "Seem trip population catch could deep itself fund.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-03-12T02:50:22.781199",
+        "sender": "customer",
+        "sender_name": "Jessica Mitchell",
+        "content": "Alone when instead clear radio strong let. Get run pretty identify. Claim can medical.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-03-12T15:50:22.781199",
+        "sender": "customer",
+        "sender_name": "Alexandra Valdez",
+        "content": "Side field else plant page sort. Maybe sit Republican such will born condition. Mother himself push character front various.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-03-12T23:50:22.781199",
+        "sender": "agent",
+        "sender_name": "Christina Hess",
+        "content": "Any example business majority happen threat. Education front fast standard myself condition.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "web",
+      "browser": "Chrome",
+      "os": "iOS",
+      "ip_address": "207.170.215.225"
+    }
+  },
+  {
+    "ticket_id": "TICK-00027",
+    "customer_id": 6,
+    "product_id": 24,
+    "subject": "Travel question evening imagine affect increase.",
+    "description": "Environment out wish fish determine. Remember determine particularly.",
+    "type": "billing_inquiry",
+    "priority": "critical",
+    "status": "waiting_on_third_party",
+    "created_date": "2024-05-01T03:14:58.694802",
+    "updated_date": "2024-05-20T03:14:58.694802",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "account",
+      "hardware",
+      "returns"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-05-01T11:14:58.694802",
+        "sender": "customer",
+        "sender_name": "Andrew Lynch",
+        "content": "Mention rise front PM few husband.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-01T23:14:58.694802",
+        "sender": "customer",
+        "sender_name": "Paul Griffith",
+        "content": "Whole soldier number yet past much.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-02T21:14:58.694802",
+        "sender": "agent",
+        "sender_name": "Melissa Williams",
+        "content": "Democrat very ever read control maybe animal.",
+        "attachments": [
+          "ticket_27_attachment_3.pdf",
+          "ticket_27_attachment_3.png"
+        ]
+      }
+    ],
+    "metadata": {
+      "source": "phone",
+      "browser": "Chrome",
+      "os": "Android",
+      "ip_address": null
+    }
+  },
+  {
+    "ticket_id": "TICK-00028",
+    "customer_id": 20,
+    "product_id": 18,
+    "subject": "Raise kitchen drop computer left.",
+    "description": "Study the training each reveal attorney security radio. Term yet television audience indicate employee.",
+    "type": "return_request",
+    "priority": "low",
+    "status": "waiting_on_customer",
+    "created_date": "2025-01-07T05:54:40.177093",
+    "updated_date": "2025-01-07T05:54:40.177093",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [],
+    "conversation": [
+      {
+        "timestamp": "2025-01-07T16:54:40.177093",
+        "sender": "customer",
+        "sender_name": "Julia Fisher",
+        "content": "Must little newspaper gas floor state.",
+        "attachments": [
+          "ticket_28_attachment_1.pdf",
+          "ticket_28_attachment_1.pdf"
+        ]
+      },
+      {
+        "timestamp": "2025-01-08T12:54:40.177093",
+        "sender": "agent",
+        "sender_name": "Scott Porter",
+        "content": "Pull eight allow system. Place no generation debate. Hard factor firm purpose ahead person coach.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-09T11:54:40.177093",
+        "sender": "agent",
+        "sender_name": "Jeffrey Forbes",
+        "content": "News make doctor TV capital.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-09T21:54:40.177093",
+        "sender": "agent",
+        "sender_name": "Sarah Davis",
+        "content": "Yeah number condition city since.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-10T21:54:40.177093",
+        "sender": "agent",
+        "sender_name": "Jennifer Ortiz",
+        "content": "Too everything side picture professional rather.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-11T05:54:40.177093",
+        "sender": "agent",
+        "sender_name": "Makayla Shaw",
+        "content": "Different identify series experience under church. Hundred about stop several.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-12T02:54:40.177093",
+        "sender": "customer",
+        "sender_name": "Melinda Garcia",
+        "content": "Wind improve player peace catch people. Outside rule watch foot. Coach personal range weight age. Third pressure need tell sure claim hard themselves.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-12T13:54:40.177093",
+        "sender": "agent",
+        "sender_name": "Timothy Morse",
+        "content": "Fall thus debate leave.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "email",
+      "browser": "Safari",
+      "os": "MacOS",
+      "ip_address": "179.223.21.148"
+    }
+  },
+  {
+    "ticket_id": "TICK-00029",
+    "customer_id": 4,
+    "product_id": 20,
+    "subject": "Few debate during seven local better think.",
+    "description": "So authority long kind live between.",
+    "type": "product_question",
+    "priority": "medium",
+    "status": "open",
+    "created_date": "2025-01-02T17:29:11.181085",
+    "updated_date": "2025-01-05T17:29:11.181085",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [],
+    "conversation": [
+      {
+        "timestamp": "2025-01-03T10:29:11.181085",
+        "sender": "customer",
+        "sender_name": "Virginia Espinoza",
+        "content": "Still art speech stock rise always human. Picture key skin billion suggest serious often.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-04T00:29:11.181085",
+        "sender": "agent",
+        "sender_name": "Miranda Richardson",
+        "content": "Tree somebody decide best. Leader remember sell serious.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-04T18:29:11.181085",
+        "sender": "customer",
+        "sender_name": "Michael Rivera",
+        "content": "Nothing organization seven challenge eye. They nor research fill respond. Plant little key far season reason chair.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-05T04:29:11.181085",
+        "sender": "customer",
+        "sender_name": "James Walsh",
+        "content": "On chance activity hair meet.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-05T09:29:11.181085",
+        "sender": "customer",
+        "sender_name": "Kellie Woods",
+        "content": "Popular onto may model her unit. That lot low here.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-06T06:29:11.181085",
+        "sender": "agent",
+        "sender_name": "Amy Walker",
+        "content": "Change part rock build culture. Least tree trade style suffer situation model.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-06T20:29:11.181085",
+        "sender": "customer",
+        "sender_name": "Dale Beck",
+        "content": "Better forget attack network movement scientist their wife. Land mission each something. Ready practice each ready.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-07T04:29:11.181085",
+        "sender": "customer",
+        "sender_name": "Andrew Lynch",
+        "content": "Before couple store as total.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "phone",
+      "browser": "Chrome",
+      "os": "MacOS",
+      "ip_address": "159.46.201.137"
+    }
+  },
+  {
+    "ticket_id": "TICK-00030",
+    "customer_id": 15,
+    "product_id": 8,
+    "subject": "Citizen message surface off life practice course.",
+    "description": "Stand letter threat yes charge form. Possible fund month realize. Threat husband family perhaps hope across.",
+    "type": "product_question",
+    "priority": "high",
+    "status": "waiting_on_customer",
+    "created_date": "2024-08-03T20:23:10.831946",
+    "updated_date": "2024-08-29T20:23:10.831946",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [],
+    "conversation": [
+      {
+        "timestamp": "2024-08-04T13:23:10.831946",
+        "sender": "customer",
+        "sender_name": "Jeffrey Stein",
+        "content": "Open play sense yeah edge. Over manage computer medical method week. Enough mother game question me.",
+        "attachments": [
+          "ticket_30_attachment_1.pdf"
+        ]
+      },
+      {
+        "timestamp": "2024-08-04T22:23:10.831946",
+        "sender": "agent",
+        "sender_name": "Ashley Sherman",
+        "content": "According throw meeting many condition set pull. Understand kitchen point Mrs.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-08-04T23:23:10.831946",
+        "sender": "agent",
+        "sender_name": "Richard Hines",
+        "content": "Maybe floor most bill feel.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-08-05T02:23:10.831946",
+        "sender": "customer",
+        "sender_name": "Laura Moore",
+        "content": "Short skill system particular church.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-08-05T05:23:10.831946",
+        "sender": "agent",
+        "sender_name": "Veronica Valdez",
+        "content": "Director enjoy various strong he. Free government seat last interesting.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-08-05T21:23:10.831946",
+        "sender": "customer",
+        "sender_name": "Jason Gill",
+        "content": "Why government south window. Affect region decade respond far. Age into him newspaper school something.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-08-06T01:23:10.831946",
+        "sender": "customer",
+        "sender_name": "Jessica Hill",
+        "content": "Civil reveal walk or weight. Sit hope where.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-08-07T01:23:10.831946",
+        "sender": "customer",
+        "sender_name": "Danielle Benitez",
+        "content": "Arrive argue garden Mrs just exist. Care seek foot simple including charge character. Off no just foreign national. News stage ready cell show.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-08-07T17:23:10.831946",
+        "sender": "customer",
+        "sender_name": "Melissa Stevenson",
+        "content": "Section Democrat fly direction gun current will. Effort section age budget improve.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-08-07T19:23:10.831946",
+        "sender": "customer",
+        "sender_name": "John Williams",
+        "content": "Tree mention administration join. Where their force. Man offer plant same north wind sister.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "social_media",
+      "browser": "Safari",
+      "os": "Windows",
+      "ip_address": "41.161.181.113"
+    }
+  },
+  {
+    "ticket_id": "TICK-00031",
+    "customer_id": 8,
+    "product_id": 19,
+    "subject": "Great watch student its.",
+    "description": "Yourself be poor hope likely. Role today animal suggest concern. Campaign choose reason. Article sort term.",
+    "type": "billing_inquiry",
+    "priority": "medium",
+    "status": "open",
+    "created_date": "2024-07-19T20:02:36.210786",
+    "updated_date": "2024-07-23T20:02:36.210786",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [],
+    "conversation": [
+      {
+        "timestamp": "2024-07-20T04:02:36.210786",
+        "sender": "customer",
+        "sender_name": "Michael Nguyen",
+        "content": "Show off great they test. Country challenge final beyond. Own suddenly single music west force firm.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-20T07:02:36.210786",
+        "sender": "agent",
+        "sender_name": "Daniel Turner",
+        "content": "Do turn sign agree there. But way agent test take decade.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-20T17:02:36.210786",
+        "sender": "agent",
+        "sender_name": "Jeffrey Gonzalez",
+        "content": "Sport behavior compare tree right business series build. Scientist group yet indeed decision before medical.",
+        "attachments": [
+          "ticket_31_attachment_3.pdf"
+        ]
+      },
+      {
+        "timestamp": "2024-07-21T03:02:36.210786",
+        "sender": "customer",
+        "sender_name": "Jordan Duffy",
+        "content": "Herself information which.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "chat",
+      "browser": "Chrome",
+      "os": "MacOS",
+      "ip_address": "151.201.255.184"
+    }
+  },
+  {
+    "ticket_id": "TICK-00032",
+    "customer_id": 5,
+    "product_id": 9,
+    "subject": "Often various alone town.",
+    "description": "Answer cup consider central alone some class follow. Lose tax could thank wife if yeah. Perform national brother evidence shoulder under front. Effort southern maintain nature.",
+    "type": "return_request",
+    "priority": "high",
+    "status": "closed",
+    "created_date": "2024-11-27T20:20:23.134952",
+    "updated_date": "2024-12-07T20:20:23.134952",
+    "resolved_date": "2024-12-08T20:20:23.134952",
+    "resolution": {
+      "resolution_type": "fixed",
+      "resolution_note": "Common view whole score special consider."
+    },
+    "satisfaction_rating": 4,
+    "tags": [
+      "billing",
+      "software",
+      "hardware"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-11-28T00:20:23.134952",
+        "sender": "customer",
+        "sender_name": "Ashley Martin",
+        "content": "Fill personal training enter fly.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-11-28T16:20:23.134952",
+        "sender": "customer",
+        "sender_name": "Erin Oneal",
+        "content": "Trial another help out.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-11-29T01:20:23.134952",
+        "sender": "customer",
+        "sender_name": "Brooke Smith",
+        "content": "Information at why less.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-11-29T18:20:23.134952",
+        "sender": "agent",
+        "sender_name": "Steven Alexander",
+        "content": "Find light total. Follow music whatever protect.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-11-30T18:20:23.134952",
+        "sender": "customer",
+        "sender_name": "Johnathan Guerra",
+        "content": "Call method south central process.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-12-01T15:20:23.134952",
+        "sender": "agent",
+        "sender_name": "Michelle Campbell",
+        "content": "Economic economy role feeling. Property mind officer third service capital instead.",
+        "attachments": [
+          "ticket_32_attachment_6.pdf",
+          "ticket_32_attachment_6.jpg"
+        ]
+      }
+    ],
+    "metadata": {
+      "source": "phone",
+      "browser": "Firefox",
+      "os": "Android",
+      "ip_address": "149.233.120.236"
+    }
+  },
+  {
+    "ticket_id": "TICK-00033",
+    "customer_id": 11,
+    "product_id": 23,
+    "subject": "Everything where we fast too.",
+    "description": "Life carry visit a edge new find. Order at sense cell lose civil will with. Hospital city industry option eat.",
+    "type": "product_question",
+    "priority": "critical",
+    "status": "open",
+    "created_date": "2025-01-20T01:38:10.554295",
+    "updated_date": "2025-02-05T01:38:10.554295",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [],
+    "conversation": [
+      {
+        "timestamp": "2025-01-20T16:38:10.554295",
+        "sender": "customer",
+        "sender_name": "Richard Simmons",
+        "content": "Call dinner leader book nearly fast their.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-21T04:38:10.554295",
+        "sender": "customer",
+        "sender_name": "Jeffrey Joyce",
+        "content": "Consumer star those memory center quite simply.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-21T08:38:10.554295",
+        "sender": "agent",
+        "sender_name": "Patrick Fox",
+        "content": "Teacher modern song guy discover water most.",
+        "attachments": [
+          "ticket_33_attachment_3.jpg",
+          "ticket_33_attachment_3.png"
+        ]
+      },
+      {
+        "timestamp": "2025-01-21T10:38:10.554295",
+        "sender": "agent",
+        "sender_name": "Brett Martin",
+        "content": "Successful seem charge walk participant.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "web",
+      "browser": "Safari",
+      "os": "MacOS",
+      "ip_address": "46.123.200.58"
+    }
+  },
+  {
+    "ticket_id": "TICK-00034",
+    "customer_id": 6,
+    "product_id": 30,
+    "subject": "Possible scientist send sit common matter become.",
+    "description": "Mrs source whole first figure trial bed image. Market control him enter religious go south time. Where follow born ok.",
+    "type": "product_question",
+    "priority": "high",
+    "status": "waiting_on_third_party",
+    "created_date": "2025-04-03T03:33:35.374803",
+    "updated_date": "2025-04-17T03:33:35.374803",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "hardware"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2025-04-03T21:33:35.374803",
+        "sender": "customer",
+        "sender_name": "Steven Martinez",
+        "content": "Day central every force. Minute modern sign out. Produce federal by sea lawyer. They senior result themselves.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-04-04T01:33:35.374803",
+        "sender": "customer",
+        "sender_name": "Amanda Massey",
+        "content": "Phone international collection report.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-04-04T09:33:35.374803",
+        "sender": "agent",
+        "sender_name": "Katherine Carter",
+        "content": "Become rule where ten.",
+        "attachments": [
+          "ticket_34_attachment_3.jpg"
+        ]
+      },
+      {
+        "timestamp": "2025-04-05T06:33:35.374803",
+        "sender": "agent",
+        "sender_name": "Samuel Simpson",
+        "content": "Arm black show success run toward.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-04-05T09:33:35.374803",
+        "sender": "customer",
+        "sender_name": "Erin Estrada",
+        "content": "Bar big south drug manager opportunity.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-04-06T06:33:35.374803",
+        "sender": "customer",
+        "sender_name": "Ashley Norman",
+        "content": "Parent not parent that property among blue. Offer brother shake guess.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-04-06T17:33:35.374803",
+        "sender": "customer",
+        "sender_name": "Stephanie Fisher",
+        "content": "Girl small system.",
+        "attachments": [
+          "ticket_34_attachment_7.pdf"
+        ]
+      },
+      {
+        "timestamp": "2025-04-07T12:33:35.374803",
+        "sender": "customer",
+        "sender_name": "Kelly Bentley",
+        "content": "Protect agent note agency watch better. Soon rock support effect stand general.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-04-07T13:33:35.374803",
+        "sender": "customer",
+        "sender_name": "Danielle Griffin",
+        "content": "Leader yard enjoy soldier decide side.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "social_media",
+      "browser": null,
+      "os": "Android",
+      "ip_address": "217.122.128.42"
+    }
+  },
+  {
+    "ticket_id": "TICK-00035",
+    "customer_id": 19,
+    "product_id": null,
+    "subject": "Including claim create woman similar writer structure.",
+    "description": "Rock forward behind idea red rate source.",
+    "type": "billing_inquiry",
+    "priority": "critical",
+    "status": "waiting_on_customer",
+    "created_date": "2025-01-17T16:40:11.333935",
+    "updated_date": "2025-01-28T16:40:11.333935",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "network"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2025-01-18T06:40:11.333935",
+        "sender": "customer",
+        "sender_name": "Jennifer Dominguez",
+        "content": "Bed our theory identify. Certainly future government card history.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-18T19:40:11.333935",
+        "sender": "customer",
+        "sender_name": "Nancy Walter",
+        "content": "Now bank yourself kind American nature property event.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-19T12:40:11.333935",
+        "sender": "agent",
+        "sender_name": "Roy Lucero II",
+        "content": "Possible democratic actually during again partner.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-19T13:40:11.333935",
+        "sender": "agent",
+        "sender_name": "Jennifer Arnold",
+        "content": "Include summer ok physical thousand. Section religious word sound enjoy have.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-20T07:40:11.333935",
+        "sender": "customer",
+        "sender_name": "Taylor Flores",
+        "content": "When care team worry. Somebody often benefit true world.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-20T18:40:11.333935",
+        "sender": "agent",
+        "sender_name": "Kimberly Garcia",
+        "content": "Result response population never world. Especially student least just opportunity ask yet.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-21T02:40:11.333935",
+        "sender": "customer",
+        "sender_name": "Jerry Santos",
+        "content": "Test challenge radio assume rest now water.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-21T04:40:11.333935",
+        "sender": "agent",
+        "sender_name": "Michelle Henry",
+        "content": "Democrat laugh Mrs push form now.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-21T12:40:11.333935",
+        "sender": "agent",
+        "sender_name": "Theresa Thomas",
+        "content": "Fire according participant Republican group build within pass.",
+        "attachments": [
+          "ticket_35_attachment_9.pdf",
+          "ticket_35_attachment_9.jpg"
+        ]
+      }
+    ],
+    "metadata": {
+      "source": "phone",
+      "browser": null,
+      "os": "Linux",
+      "ip_address": null
+    }
+  },
+  {
+    "ticket_id": "TICK-00036",
+    "customer_id": 7,
+    "product_id": null,
+    "subject": "Southern find fact give.",
+    "description": "Million too marriage page young turn visit up. Story six want protect assume east center. Could identify group true TV specific travel.",
+    "type": "billing_inquiry",
+    "priority": "high",
+    "status": "closed",
+    "created_date": "2024-09-02T13:18:12.249496",
+    "updated_date": "2024-09-03T13:18:12.249496",
+    "resolved_date": "2024-10-02T13:18:12.249496",
+    "resolution": {
+      "resolution_type": "not_reproducible",
+      "resolution_note": "Suggest consumer find concern. These matter continue husband dinner worry."
+    },
+    "satisfaction_rating": 3,
+    "tags": [],
+    "conversation": [
+      {
+        "timestamp": "2024-09-03T08:18:12.249496",
+        "sender": "customer",
+        "sender_name": "Gina Walton",
+        "content": "After paper word arrive health.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-04T00:18:12.249496",
+        "sender": "agent",
+        "sender_name": "Victor Rice",
+        "content": "His agree toward nor teacher western.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-04T03:18:12.249496",
+        "sender": "agent",
+        "sender_name": "Marc White",
+        "content": "Best raise choice hear computer key.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-04T19:18:12.249496",
+        "sender": "customer",
+        "sender_name": "Patricia Romero",
+        "content": "Performance very thousand.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "phone",
+      "browser": null,
+      "os": null,
+      "ip_address": null
+    }
+  },
+  {
+    "ticket_id": "TICK-00037",
+    "customer_id": 5,
+    "product_id": 3,
+    "subject": "Explain claim natural fish born assume million.",
+    "description": "Result right focus although top range accept about.",
+    "type": "product_question",
+    "priority": "high",
+    "status": "open",
+    "created_date": "2024-12-30T17:58:49.715584",
+    "updated_date": "2025-01-04T17:58:49.715584",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [],
+    "conversation": [
+      {
+        "timestamp": "2024-12-31T05:58:49.715584",
+        "sender": "customer",
+        "sender_name": "Annette Meyer",
+        "content": "None reduce miss series poor executive career.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-12-31T18:58:49.715584",
+        "sender": "agent",
+        "sender_name": "Eileen Sims",
+        "content": "Help make make focus machine home. Yeah side side recognize month among water. Throughout security number community finish.",
+        "attachments": [
+          "ticket_37_attachment_2.jpg"
+        ]
+      },
+      {
+        "timestamp": "2025-01-01T00:58:49.715584",
+        "sender": "customer",
+        "sender_name": "Alfred Rasmussen",
+        "content": "Goal Mrs statement range its. Model condition he recognize treat better wear. Republican authority data deal policy.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-01T16:58:49.715584",
+        "sender": "agent",
+        "sender_name": "Thomas Harris",
+        "content": "Above drive sport story worker. Step head study and center east.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-02T10:58:49.715584",
+        "sender": "agent",
+        "sender_name": "Sonia Henderson",
+        "content": "Finally wait president trial important act statement help. Stage major outside phone house. Can ready audience boy city social at.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-02T22:58:49.715584",
+        "sender": "agent",
+        "sender_name": "Carol Singh",
+        "content": "Movie expect now board budget.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-03T11:58:49.715584",
+        "sender": "agent",
+        "sender_name": "Stacey Clements",
+        "content": "Customer million along long born also hold. Several southern drop past.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-03T17:58:49.715584",
+        "sender": "customer",
+        "sender_name": "Charles Harper",
+        "content": "Short country decision fish notice we game.",
+        "attachments": [
+          "ticket_37_attachment_8.png",
+          "ticket_37_attachment_8.jpg"
+        ]
+      },
+      {
+        "timestamp": "2025-01-04T12:58:49.715584",
+        "sender": "agent",
+        "sender_name": "Tammy Bell",
+        "content": "Hospital check factor as.",
+        "attachments": [
+          "ticket_37_attachment_9.png"
+        ]
+      },
+      {
+        "timestamp": "2025-01-05T07:58:49.715584",
+        "sender": "customer",
+        "sender_name": "Cory Barrett",
+        "content": "The attorney early.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "web",
+      "browser": "Edge",
+      "os": "Windows",
+      "ip_address": "88.205.63.41"
+    }
+  },
+  {
+    "ticket_id": "TICK-00038",
+    "customer_id": 14,
+    "product_id": 13,
+    "subject": "Know home hair for human rich day.",
+    "description": "Nothing way role six guy.",
+    "type": "return_request",
+    "priority": "medium",
+    "status": "in_progress",
+    "created_date": "2025-01-22T01:12:00.849633",
+    "updated_date": "2025-01-27T01:12:00.849633",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "software",
+      "returns",
+      "hardware"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2025-01-22T13:12:00.849633",
+        "sender": "customer",
+        "sender_name": "Danny Fuller",
+        "content": "Available power treat visit population executive pattern. Travel down make economic woman PM look.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-22T15:12:00.849633",
+        "sender": "agent",
+        "sender_name": "Jordan Suarez",
+        "content": "Expert room white home.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-01-22T21:12:00.849633",
+        "sender": "agent",
+        "sender_name": "Christopher Singh",
+        "content": "Century least represent must dinner. By phone decade image third leave.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "web",
+      "browser": "Chrome",
+      "os": "Linux",
+      "ip_address": "29.16.10.105"
+    }
+  },
+  {
+    "ticket_id": "TICK-00039",
+    "customer_id": 17,
+    "product_id": 14,
+    "subject": "Film at perhaps firm toward.",
+    "description": "Full compare field sort civil thing clear. Mother peace citizen need. Record example summer economic box war training.",
+    "type": "complaint",
+    "priority": "critical",
+    "status": "open",
+    "created_date": "2024-08-31T04:33:11.711417",
+    "updated_date": "2024-09-05T04:33:11.711417",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [],
+    "conversation": [
+      {
+        "timestamp": "2024-08-31T15:33:11.711417",
+        "sender": "customer",
+        "sender_name": "James Harrison",
+        "content": "Feel strategy simple perhaps anything describe necessary.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-08-31T18:33:11.711417",
+        "sender": "customer",
+        "sender_name": "James Holmes",
+        "content": "Agency deal note common worker quite. Political offer song character.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-01T05:33:11.711417",
+        "sender": "agent",
+        "sender_name": "David Rodgers",
+        "content": "Particular shake most physical along best. Beat across television apply. Finish top data character.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "email",
+      "browser": "Safari",
+      "os": "MacOS",
+      "ip_address": null
+    }
+  },
+  {
+    "ticket_id": "TICK-00040",
+    "customer_id": 15,
+    "product_id": null,
+    "subject": "Ten article continue according compare culture century my.",
+    "description": "Reflect away cost focus. Class play or own media.",
+    "type": "complaint",
+    "priority": "low",
+    "status": "waiting_on_third_party",
+    "created_date": "2024-05-21T17:53:00.718117",
+    "updated_date": "2024-06-16T17:53:00.718117",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "returns",
+      "billing",
+      "shipping"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-05-22T17:53:00.718117",
+        "sender": "customer",
+        "sender_name": "Spencer Kennedy",
+        "content": "Short only write gun. Once consider thus wife water note. Write though attention career feel hour.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-23T03:53:00.718117",
+        "sender": "agent",
+        "sender_name": "Willie Gibbs",
+        "content": "Factor society skill great worker manager.",
+        "attachments": [
+          "ticket_40_attachment_2.png"
+        ]
+      },
+      {
+        "timestamp": "2024-05-23T19:53:00.718117",
+        "sender": "agent",
+        "sender_name": "Leslie Frey",
+        "content": "Court exactly minute trouble majority.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-24T05:53:00.718117",
+        "sender": "agent",
+        "sender_name": "Amber Allen",
+        "content": "Large item American seek service. Process four all the unit action off.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-24T09:53:00.718117",
+        "sender": "agent",
+        "sender_name": "Curtis Harrison",
+        "content": "Receive establish heart.",
+        "attachments": [
+          "ticket_40_attachment_5.jpg",
+          "ticket_40_attachment_5.pdf"
+        ]
+      },
+      {
+        "timestamp": "2024-05-24T13:53:00.718117",
+        "sender": "agent",
+        "sender_name": "Jose Chaney",
+        "content": "Religious car get energy cover example. Tree try be program.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-25T11:53:00.718117",
+        "sender": "agent",
+        "sender_name": "Jordan Wilson",
+        "content": "Drug computer assume occur.",
+        "attachments": [
+          "ticket_40_attachment_7.jpg",
+          "ticket_40_attachment_7.pdf"
+        ]
+      },
+      {
+        "timestamp": "2024-05-26T00:53:00.718117",
+        "sender": "customer",
+        "sender_name": "Brandon Jones",
+        "content": "Thank pay choose personal the leave.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-26T15:53:00.718117",
+        "sender": "customer",
+        "sender_name": "Rachel Rodriguez",
+        "content": "Region current second ball.",
+        "attachments": [
+          "ticket_40_attachment_9.png"
+        ]
+      },
+      {
+        "timestamp": "2024-05-27T14:53:00.718117",
+        "sender": "customer",
+        "sender_name": "Trevor Smith",
+        "content": "Anyone bag fly more live. Remain manager relationship light rule.",
+        "attachments": [
+          "ticket_40_attachment_10.jpg",
+          "ticket_40_attachment_10.png"
+        ]
+      }
+    ],
+    "metadata": {
+      "source": "chat",
+      "browser": null,
+      "os": "MacOS",
+      "ip_address": "59.76.40.110"
+    }
+  },
+  {
+    "ticket_id": "TICK-00041",
+    "customer_id": 1,
+    "product_id": 20,
+    "subject": "As language indicate decide for do the.",
+    "description": "Skill never officer former create camera focus. Occur treat remain participant spend eat none three. Memory believe seek perhaps ball make. Too water road at hope cover show Republican. Summer arrive east plan force station.",
+    "type": "technical_issue",
+    "priority": "critical",
+    "status": "open",
+    "created_date": "2024-07-16T22:45:58.547040",
+    "updated_date": "2024-07-20T22:45:58.547040",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "software"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-07-17T21:45:58.547040",
+        "sender": "customer",
+        "sender_name": "David Smith",
+        "content": "Senior ask artist general run.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-18T16:45:58.547040",
+        "sender": "agent",
+        "sender_name": "Sabrina Miller",
+        "content": "With purpose five. Recently painting where notice road five. Score lose matter shake finish yourself.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-19T07:45:58.547040",
+        "sender": "customer",
+        "sender_name": "Kevin Williams",
+        "content": "Let left type suffer win less.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-19T14:45:58.547040",
+        "sender": "customer",
+        "sender_name": "Jodi Thomas",
+        "content": "Wear them small high that change.",
+        "attachments": [
+          "ticket_41_attachment_4.pdf"
+        ]
+      },
+      {
+        "timestamp": "2024-07-20T04:45:58.547040",
+        "sender": "agent",
+        "sender_name": "Jeffrey Roth",
+        "content": "Or contain believe hospital.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-21T00:45:58.547040",
+        "sender": "agent",
+        "sender_name": "George Smith",
+        "content": "Field western near direction. Parent material itself surface maintain program government.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-21T03:45:58.547040",
+        "sender": "agent",
+        "sender_name": "Troy Mccarthy",
+        "content": "Center million management describe make.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-07-21T14:45:58.547040",
+        "sender": "customer",
+        "sender_name": "Lynn Morgan",
+        "content": "Investment business can example right southern ten hard.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "email",
+      "browser": null,
+      "os": "Windows",
+      "ip_address": null
+    }
+  },
+  {
+    "ticket_id": "TICK-00042",
+    "customer_id": 15,
+    "product_id": 25,
+    "subject": "Meeting stock however charge account physical.",
+    "description": "Enter hear home strong senior. Free force employee budget experience. Knowledge whose public. Daughter both hold blood value day. Save fear ready Democrat order field less.",
+    "type": "technical_issue",
+    "priority": "medium",
+    "status": "resolved",
+    "created_date": "2024-10-09T12:56:43.450534",
+    "updated_date": "2024-10-11T12:56:43.450534",
+    "resolved_date": "2024-11-07T12:56:43.450534",
+    "resolution": {
+      "resolution_type": "not_reproducible",
+      "resolution_note": "What machine fire third customer."
+    },
+    "satisfaction_rating": 4,
+    "tags": [
+      "returns",
+      "software"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-10-10T07:56:43.450534",
+        "sender": "customer",
+        "sender_name": "Chelsea Bradshaw",
+        "content": "Fast art those model. Executive so institution stand action end century. Agreement popular instead. Let travel challenge personal new order.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-10-10T20:56:43.450534",
+        "sender": "customer",
+        "sender_name": "Ashley Hill",
+        "content": "Relationship law clear campaign what.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-10-11T09:56:43.450534",
+        "sender": "agent",
+        "sender_name": "Sean Tran",
+        "content": "Firm result nearly pick.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-10-12T08:56:43.450534",
+        "sender": "agent",
+        "sender_name": "Jennifer Nguyen",
+        "content": "Food series always memory reveal.",
+        "attachments": [
+          "ticket_42_attachment_4.jpg"
+        ]
+      },
+      {
+        "timestamp": "2024-10-12T09:56:43.450534",
+        "sender": "agent",
+        "sender_name": "Kathleen Mcintosh",
+        "content": "Bill clear research begin.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-10-12T18:56:43.450534",
+        "sender": "customer",
+        "sender_name": "Howard Miller",
+        "content": "Manage nation modern politics. Reason nature become debate city several.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-10-13T02:56:43.450534",
+        "sender": "agent",
+        "sender_name": "Crystal Brown",
+        "content": "Appear successful different.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-10-13T13:56:43.450534",
+        "sender": "agent",
+        "sender_name": "Daniel Hall",
+        "content": "May follow series prove.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-10-13T16:56:43.450534",
+        "sender": "agent",
+        "sender_name": "Ralph Vasquez",
+        "content": "Attack customer along director man glass ball.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "social_media",
+      "browser": null,
+      "os": "Windows",
+      "ip_address": "142.181.53.49"
+    }
+  },
+  {
+    "ticket_id": "TICK-00043",
+    "customer_id": 14,
+    "product_id": 4,
+    "subject": "System people tax.",
+    "description": "Field high nothing.",
+    "type": "billing_inquiry",
+    "priority": "high",
+    "status": "in_progress",
+    "created_date": "2024-11-09T07:50:30.300310",
+    "updated_date": "2024-11-24T07:50:30.300310",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "network",
+      "returns",
+      "account"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-11-09T15:50:30.300310",
+        "sender": "customer",
+        "sender_name": "Darlene Dixon",
+        "content": "Describe Congress free.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-11-10T14:50:30.300310",
+        "sender": "agent",
+        "sender_name": "Dr. Nathan Ellis MD",
+        "content": "Lose others some project visit back blue.",
+        "attachments": [
+          "ticket_43_attachment_2.png"
+        ]
+      }
+    ],
+    "metadata": {
+      "source": "social_media",
+      "browser": null,
+      "os": "Linux",
+      "ip_address": "104.219.74.127"
+    }
+  },
+  {
+    "ticket_id": "TICK-00044",
+    "customer_id": 1,
+    "product_id": null,
+    "subject": "Look rule check assume question air market.",
+    "description": "Company actually today prevent where then. Rest dark environment provide white.",
+    "type": "return_request",
+    "priority": "medium",
+    "status": "waiting_on_customer",
+    "created_date": "2024-08-28T17:14:11.260991",
+    "updated_date": "2024-09-17T17:14:11.260991",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "hardware"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-08-29T03:14:11.260991",
+        "sender": "customer",
+        "sender_name": "Tricia Harmon",
+        "content": "Evidence president father alone.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-08-29T22:14:11.260991",
+        "sender": "customer",
+        "sender_name": "Charles Bryant",
+        "content": "Try season radio air.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-08-30T20:14:11.260991",
+        "sender": "agent",
+        "sender_name": "Karen Smith",
+        "content": "Lay though reason event against.",
+        "attachments": [
+          "ticket_44_attachment_3.png"
+        ]
+      }
+    ],
+    "metadata": {
+      "source": "phone",
+      "browser": "Safari",
+      "os": "Android",
+      "ip_address": null
+    }
+  },
+  {
+    "ticket_id": "TICK-00045",
+    "customer_id": 9,
+    "product_id": 23,
+    "subject": "Respond throw wide son manager.",
+    "description": "Drop image stay my benefit. Age all building control simply.",
+    "type": "billing_inquiry",
+    "priority": "medium",
+    "status": "waiting_on_customer",
+    "created_date": "2024-06-23T23:34:31.492152",
+    "updated_date": "2024-07-09T23:34:31.492152",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "hardware"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-06-24T13:34:31.492152",
+        "sender": "customer",
+        "sender_name": "Rita Forbes",
+        "content": "Structure itself weight major discuss summer another.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-06-24T20:34:31.492152",
+        "sender": "agent",
+        "sender_name": "Kyle Bryant",
+        "content": "Clearly probably he necessary certainly same get. Oil head work should.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-06-25T16:34:31.492152",
+        "sender": "agent",
+        "sender_name": "Michael Preston",
+        "content": "Growth it own those four grow. Late much quite threat gas truth work.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-06-26T14:34:31.492152",
+        "sender": "customer",
+        "sender_name": "Glenn Chen",
+        "content": "Cause staff day really bank industry born.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-06-27T00:34:31.492152",
+        "sender": "agent",
+        "sender_name": "Amanda Garcia",
+        "content": "Various professor clearly dinner report.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-06-27T11:34:31.492152",
+        "sender": "agent",
+        "sender_name": "Bruce Dennis",
+        "content": "View mission standard despite go impact seem. Difficult popular choose really.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "social_media",
+      "browser": "Edge",
+      "os": null,
+      "ip_address": "80.56.66.212"
+    }
+  },
+  {
+    "ticket_id": "TICK-00046",
+    "customer_id": 2,
+    "product_id": 19,
+    "subject": "Right resource two lawyer see.",
+    "description": "Worker alone finally since take describe improve act. Order push agreement media.",
+    "type": "product_question",
+    "priority": "medium",
+    "status": "in_progress",
+    "created_date": "2024-09-28T14:22:40.554333",
+    "updated_date": "2024-10-19T14:22:40.554333",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "shipping",
+      "billing",
+      "network"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-09-29T11:22:40.554333",
+        "sender": "customer",
+        "sender_name": "Tony Stanley",
+        "content": "Feel hold decade investment operation long pass among.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-09-30T01:22:40.554333",
+        "sender": "customer",
+        "sender_name": "Andre Flores Jr.",
+        "content": "Send show institution onto thing we. Yes here while service beautiful edge begin.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "phone",
+      "browser": null,
+      "os": "MacOS",
+      "ip_address": "75.153.83.115"
+    }
+  },
+  {
+    "ticket_id": "TICK-00047",
+    "customer_id": 4,
+    "product_id": 28,
+    "subject": "Listen medical during until case agency.",
+    "description": "Cost cultural process national newspaper long wife.",
+    "type": "return_request",
+    "priority": "medium",
+    "status": "waiting_on_third_party",
+    "created_date": "2024-10-02T11:07:30.279764",
+    "updated_date": "2024-10-18T11:07:30.279764",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [],
+    "conversation": [
+      {
+        "timestamp": "2024-10-03T11:07:30.279764",
+        "sender": "customer",
+        "sender_name": "Jasmine Buckley",
+        "content": "One recently make total fall.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-10-03T17:07:30.279764",
+        "sender": "agent",
+        "sender_name": "Dylan Rivera",
+        "content": "Why baby lot eat. Simply southern town significant analysis consumer.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-10-04T01:07:30.279764",
+        "sender": "agent",
+        "sender_name": "Michael Bruce",
+        "content": "Space way break clearly car without.",
+        "attachments": [
+          "ticket_47_attachment_3.jpg"
+        ]
+      },
+      {
+        "timestamp": "2024-10-04T12:07:30.279764",
+        "sender": "agent",
+        "sender_name": "Allison Crawford",
+        "content": "Remain today happy. Blood list everything newspaper institution assume enjoy.",
+        "attachments": [
+          "ticket_47_attachment_4.jpg"
+        ]
+      }
+    ],
+    "metadata": {
+      "source": "chat",
+      "browser": null,
+      "os": "Linux",
+      "ip_address": "154.114.200.80"
+    }
+  },
+  {
+    "ticket_id": "TICK-00048",
+    "customer_id": 7,
+    "product_id": 6,
+    "subject": "Outside individual no relate since significant.",
+    "description": "Everyone exactly practice would game student.",
+    "type": "return_request",
+    "priority": "low",
+    "status": "in_progress",
+    "created_date": "2024-05-28T14:30:44.404059",
+    "updated_date": "2024-06-01T14:30:44.404059",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "returns",
+      "account",
+      "warranty"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-05-28T21:30:44.404059",
+        "sender": "customer",
+        "sender_name": "Dale Evans",
+        "content": "Head member activity. Program one across they case TV team.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-29T12:30:44.404059",
+        "sender": "agent",
+        "sender_name": "Chelsea Wells",
+        "content": "Between hold plant must sound.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-29T15:30:44.404059",
+        "sender": "agent",
+        "sender_name": "Cameron Hicks",
+        "content": "Message would not east send style gun.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2024-05-30T02:30:44.404059",
+        "sender": "agent",
+        "sender_name": "Dennis Brown",
+        "content": "That sister agree. Hospital paper term security camera past. Thousand position sense church out explain significant.",
+        "attachments": [
+          "ticket_48_attachment_4.jpg"
+        ]
+      }
+    ],
+    "metadata": {
+      "source": "chat",
+      "browser": "Edge",
+      "os": "Windows",
+      "ip_address": "147.184.152.164"
+    }
+  },
+  {
+    "ticket_id": "TICK-00049",
+    "customer_id": 7,
+    "product_id": 30,
+    "subject": "Before science without especially.",
+    "description": "Believe suddenly determine least. Throughout truth evidence about. Itself team support land discussion. Impact know character thousand. Seek age share day pull job themselves garden. Material past study.",
+    "type": "technical_issue",
+    "priority": "medium",
+    "status": "in_progress",
+    "created_date": "2025-02-22T17:02:48.223987",
+    "updated_date": "2025-03-01T17:02:48.223987",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "account"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2025-02-22T18:02:48.223987",
+        "sender": "customer",
+        "sender_name": "John Todd",
+        "content": "Type painting produce off light before majority. Mouth pattern as pick various themselves.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-02-22T19:02:48.223987",
+        "sender": "agent",
+        "sender_name": "Crystal Mcintosh",
+        "content": "Not give fill stay military. Everything our prove could party skin. Couple rather Republican need daughter.",
+        "attachments": [
+          "ticket_49_attachment_2.pdf",
+          "ticket_49_attachment_2.pdf"
+        ]
+      },
+      {
+        "timestamp": "2025-02-23T07:02:48.223987",
+        "sender": "agent",
+        "sender_name": "Joseph Wilson",
+        "content": "Day so store consumer positive.",
+        "attachments": [
+          "ticket_49_attachment_3.png"
+        ]
+      },
+      {
+        "timestamp": "2025-02-23T13:02:48.223987",
+        "sender": "agent",
+        "sender_name": "David Washington III",
+        "content": "Mr chair paper education whom spend worker.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-02-23T23:02:48.223987",
+        "sender": "customer",
+        "sender_name": "Colin Villa",
+        "content": "Various nearly start memory inside enter word. Word other live hit budget Congress guess soon.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-02-24T10:02:48.223987",
+        "sender": "agent",
+        "sender_name": "Ryan Ramirez",
+        "content": "Environmental six understand rather daughter through note. Born with rest.",
+        "attachments": []
+      },
+      {
+        "timestamp": "2025-02-24T21:02:48.223987",
+        "sender": "agent",
+        "sender_name": "David Robinson",
+        "content": "Seem until government door age once several. South stay data pattern.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "email",
+      "browser": null,
+      "os": "Android",
+      "ip_address": "151.222.152.9"
+    }
+  },
+  {
+    "ticket_id": "TICK-00050",
+    "customer_id": 2,
+    "product_id": 14,
+    "subject": "Begin receive anyone bad.",
+    "description": "Chance center job that control important coach. Discussion begin appear pressure. Explain like institution collection. Space crime Republican.",
+    "type": "return_request",
+    "priority": "low",
+    "status": "waiting_on_customer",
+    "created_date": "2024-06-08T01:47:26.918756",
+    "updated_date": "2024-06-25T01:47:26.918756",
+    "resolved_date": null,
+    "resolution": null,
+    "satisfaction_rating": null,
+    "tags": [
+      "warranty",
+      "shipping"
+    ],
+    "conversation": [
+      {
+        "timestamp": "2024-06-08T14:47:26.918756",
+        "sender": "customer",
+        "sender_name": "Russell Vega",
+        "content": "Debate fire if eat fact discuss. There whether rather none population ask require against.",
+        "attachments": [
+          "ticket_50_attachment_1.png",
+          "ticket_50_attachment_1.pdf"
+        ]
+      },
+      {
+        "timestamp": "2024-06-08T16:47:26.918756",
+        "sender": "agent",
+        "sender_name": "Heather Smith",
+        "content": "Training become effort direction hand young long. Despite one military most. Suffer without hair set bed.",
+        "attachments": []
+      }
+    ],
+    "metadata": {
+      "source": "phone",
+      "browser": "Firefox",
+      "os": null,
+      "ip_address": "70.127.37.18"
+    }
+  }
+]

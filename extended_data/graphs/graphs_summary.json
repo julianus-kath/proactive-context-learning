@@ -1,0 +1,24 @@
+{
+  "total_nodes": 175,
+  "total_edges": 521,
+  "graphs": {
+    "employee_network": {
+      "nodes": 30,
+      "edges": 80
+    },
+    "product_network": {
+      "nodes": 37,
+      "edges": 122
+    },
+    "customer_product_network": {
+      "nodes": 49,
+      "edges": 179
+    },
+    "supply_chain_network": {
+      "nodes": 59,
+      "edges": 140
+    }
+  },
+  "generation_date": "2025-04-16T12:45:38.486737",
+  "seed": 42
+}
