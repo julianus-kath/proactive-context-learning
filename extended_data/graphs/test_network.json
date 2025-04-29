@@ -1,0 +1,30 @@
+{
+  "nodes": [
+    {
+      "id": "1",
+      "labels": ["Person"],
+      "properties": {
+        "name": "John Doe",
+        "age": 30
+      }
+    },
+    {
+      "id": "2",
+      "labels": ["Person"],
+      "properties": {
+        "name": "Jane Smith",
+        "age": 28
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "1",
+      "target": "2",
+      "type": "KNOWS",
+      "properties": {
+        "since": 2020
+      }
+    }
+  ]
+}
