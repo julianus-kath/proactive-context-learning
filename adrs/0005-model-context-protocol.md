@@ -10,7 +10,7 @@ Accepted
 
 ## Context
 
-Our crawling agent system needs to interact with multiple heterogeneous data sources (ERP systems, document storage, knowledge graphs) in a consistent and maintainable way. We need a standardized approach to:
+The crawling agent system needs to interact with multiple heterogeneous data sources (ERP systems, document storage, knowledge graphs) in a consistent and maintainable way. We need a standardized approach to:
 
 1. Process natural language queries from users
 2. Translate these queries into structured data source-specific queries

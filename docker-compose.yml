@@ -1,0 +1,76 @@
+version: '3'
+
+services:
+  erp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    ports:
+      - "8001:8001"
+    command: python -m crawling_agent.servers.erp_server --host 0.0.0.0 --mock
+    volumes:
+      - .:/app
+    networks:
+      - mcp-network
+
+  document-storage-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    ports:
+      - "8002:8002"
+    command: python -m crawling_agent.servers.document_storage_server --host 0.0.0.0 --mock
+    volumes:
+      - .:/app
+    networks:
+      - mcp-network
+
+  knowledge-graph-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    ports:
+      - "8003:8003"
+    command: python -m crawling_agent.servers.knowledge_graph_server --host 0.0.0.0 --mock
+    volumes:
+      - .:/app
+    networks:
+      - mcp-network
+      
+  crawling-agent-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    ports:
+      - "8000:8000"
+    command: python -m crawling_agent.api.agent_api --host 0.0.0.0
+    volumes:
+      - .:/app
+    depends_on:
+      - erp-server
+      - document-storage-server
+      - knowledge-graph-server
+    environment:
+      - LLM_PROVIDER=${LLM_PROVIDER:-mock}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_ORGANIZATION=${OPENAI_ORGANIZATION:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
+    networks:
+      - mcp-network
+      
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./frontend:/app/frontend
+    networks:
+      - mcp-network
+    depends_on:
+      - crawling-agent-api
+
+networks:
+  mcp-network:
+    driver: bridge
