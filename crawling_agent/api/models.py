@@ -22,6 +22,7 @@ class QueryResult(BaseModel):
     execution_time_ms: float = Field(..., description="Total execution time in milliseconds")
     status: str = Field(default="success", description="Status of the query execution")
     error: Optional[str] = Field(default=None, description="Error message if the query failed")
+    answer: Optional[str] = Field(default=None, description="Natural language answer to the query")
 
 
 class HealthStatus(BaseModel):

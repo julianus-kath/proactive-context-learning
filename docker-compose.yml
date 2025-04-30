@@ -7,9 +7,10 @@ services:
       dockerfile: Dockerfile.mcp
     ports:
       - "8001:8001"
-    command: python -m crawling_agent.servers.erp_server --host 0.0.0.0 --mock
+    command: python -m crawling_agent.servers.erp_server --host 0.0.0.0
     volumes:
       - .:/app
+      - ./synthetic_data.db:/app/synthetic_data.db
     networks:
       - mcp-network
 

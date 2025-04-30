@@ -2,6 +2,7 @@
 Document Storage Connector for executing MongoDB queries against the Document Storage MCP server.
 """
 import time
+import uuid
 import requests
 import json
 from typing import Dict, List, Any, Optional, Union
@@ -95,15 +96,17 @@ class DocumentStorageConnector(BaseMCPConnector):
         start_time = time.time()
         
         try:
-            self.logger.info(f"Executing MongoDB query via MCP: {query.query}")
-            self.logger.debug(f"Query parameters: {query.parameters}")
+            query_text = query.query if hasattr(query, 'query') else query
+            query_params = query.parameters if hasattr(query, 'parameters') else {}
+            self.logger.info(f"Executing MongoDB query via MCP: {query_text}")
+            self.logger.debug(f"Query parameters: {query_params}")
             
             # Prepare the request
             request_data = {
-                "query": query.query,
+                "query": query_text,
                 "query_type": "MONGODB",
-                "parameters": query.parameters,
-                "request_id": str(query.query_id) if hasattr(query, 'query_id') else None
+                "parameters": query_params,
+                "request_id": str(query.query_id) if hasattr(query, 'query_id') and query.query_id else str(uuid.uuid4())
             }
             
             # Execute the query

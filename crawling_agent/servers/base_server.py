@@ -150,10 +150,41 @@ class BaseMCPServer:
             return self.get_server_info()
         
         @self.app.post("/query", tags=["Query"], response_model=QueryResponse)
-        async def execute_query(request: QueryRequest = Body(...)):
+        async def execute_query(request_data: dict = Body(...)):
             """Execute a query against the data source."""
             try:
-                return await self.execute_query(request)
+                # Log the received request data
+                self.logger.debug(f"Received request data: {json.dumps(request_data)}")
+                
+                # Validate and convert to QueryRequest
+                try:
+                    # Ensure required fields are present
+                    if "query" not in request_data:
+                        raise ValueError("Missing required field: 'query'")
+                    if "query_type" not in request_data:
+                        raise ValueError("Missing required field: 'query_type'")
+                    
+                    # Create QueryRequest object
+                    request = QueryRequest(
+                        query=request_data["query"],
+                        query_type=request_data["query_type"],
+                        parameters=request_data.get("parameters", {}),
+                        request_id=request_data.get("request_id")
+                    )
+                    
+                    self.logger.debug(f"Converted to QueryRequest: {request}")
+                    
+                except Exception as e:
+                    self.logger.error(f"Error validating request data: {str(e)}")
+                    raise HTTPException(status_code=422, detail=f"Invalid request data: {str(e)}")
+                
+                # Execute the query and await the result
+                # Execute the query and await the result
+                result = await self.execute_query(request)
+                return result
+                return result
+            except HTTPException:
+                raise
             except Exception as e:
                 self.logger.error(f"Error executing query: {str(e)}")
                 raise HTTPException(status_code=500, detail=str(e))

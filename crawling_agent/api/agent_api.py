@@ -147,44 +147,84 @@ async def execute_query(
     process the results.
     """
     start_time = time.time()
+    query_id = getattr(query, "query_id", f"query-{int(time.time())}")
+    query_text = getattr(query, "query", str(query))
     
     try:
-        logger.info(f"Received natural language query: {query.query}")
+        logger.info(f"Received natural language query: {query_text}")
         
         # Process the query using the agent
-        result = await agent.process_query(query.query)
+        result = await agent.process_query(query_text)
         
         # Calculate execution time
         execution_time = (time.time() - start_time) * 1000  # in milliseconds
         
-        # Prepare the response with detailed thought process
-        thought_process = result.get("analysis", {}).get("thought_process", "")
-        
-        # Add tool selection thought process if available
-        if "structured_queries" in result and result["structured_queries"]:
-            for i, query in enumerate(result["structured_queries"]):
-                if "thought_process" in query:
-                    thought_process += f"\n\nTool {i+1} ({query.get('tool_name', 'unknown')}) reasoning:\n"
-                    thought_process += query["thought_process"]
-        
-        # Add results processing thought process if available
-        if "results" in result and isinstance(result["results"], dict) and "thought_process" in result["results"]:
-            thought_process += f"\n\nResults processing:\n"
-            thought_process += result["results"]["thought_process"]
+        # Use the complete thought process if available, otherwise build it
+        if "complete_thought_process" in result:
+            thought_process = result["complete_thought_process"]
+        else:
+            # Fallback to building the thought process (for backward compatibility)
+            thought_process = result.get("analysis", {}).get("thought_process", "")
             
-        # Add summary if available
+            # Add tool selection thought process if available
+            if "structured_queries" in result and result["structured_queries"]:
+                for i, sq in enumerate(result["structured_queries"]):
+                    if "thought_process" in sq:
+                        thought_process += f"\n\nTool {i+1} ({sq.get('tool_name', 'unknown')}) reasoning:\n"
+                        thought_process += sq["thought_process"]
+            
+            # Add results processing thought process if available
+            if "results" in result and isinstance(result["results"], dict) and "thought_process" in result["results"]:
+                thought_process += f"\n\nResults processing:\n"
+                thought_process += result["results"]["thought_process"]
+        
+        # Add summary and answer to thought process if not already included
+        summary = None
+        
+        # Try to extract summary from different places
         if "results" in result and isinstance(result["results"], dict) and "summary" in result["results"]:
             summary = result["results"]["summary"]
+        elif "summary" in result:
+            summary = result["summary"]
+            
+        # Add summary to thought process if not already included
+        if summary and "Summary:" not in thought_process:
             thought_process += f"\n\nSummary: {summary}"
         
+        # Extract the answer and error from the result
+        answer = None
+        error = None
+        
+        # Check for errors first
+        if "error" in result:
+            error = result["error"]
+            # If there's an error, use it as the answer too
+            answer = f"Error: {error}"
+        
+        # If no error, proceed with normal answer extraction
+        if not error:
+            # First check if there's a direct answer field at the top level
+            if "answer" in result:
+                answer = result["answer"]
+            # Then check if there's an answer in the results dictionary
+            elif "results" in result and isinstance(result["results"], dict):
+                if "answer" in result["results"]:
+                    answer = result["results"]["answer"]
+                elif "summary" in result["results"]:
+                    answer = result["results"]["summary"]
+            # Finally, use the summary as a fallback
+            elif "summary" in result:
+                answer = result["summary"]
+                
         response = QueryResult(
-            query_id=query.query_id,
+            query_id=query_id,
             thought_process=thought_process,
             structured_queries=result.get("structured_queries", []),
             results=result.get("results", {}).get("combined_results", []),
             execution_time_ms=execution_time,
-            status=result.get("status", "success"),
-            error=result.get("error")
+            status="error" if error else result.get("status", "success"),
+            error=error or result.get("error"),
+            answer=answer
         )
         
         logger.info(f"Query executed successfully in {execution_time:.2f}ms")
@@ -199,7 +239,7 @@ async def execute_query(
         
         # Prepare the error response
         response = QueryResult(
-            query_id=query.query_id,
+            query_id=query_id,
             thought_process="Error occurred during query processing.",
             structured_queries=[],
             results=[],

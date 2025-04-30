@@ -21,8 +21,7 @@ class ERPServer(BaseMCPServer):
         self,
         host: str = "localhost",
         port: int = 8001,
-        config_path: Optional[str] = None,
-        mock_mode: bool = False
+        config_path: Optional[str] = None
     ):
         """
         Initialize the ERP MCP server.
@@ -31,7 +30,6 @@ class ERPServer(BaseMCPServer):
             host: Host to bind the server to
             port: Port to bind the server to
             config_path: Path to the configuration file
-            mock_mode: Whether to run in mock mode
         """
         super().__init__(
             server_type="ERP",
@@ -41,7 +39,6 @@ class ERPServer(BaseMCPServer):
             config_path=config_path
         )
         
-        self.mock_mode = mock_mode
         self.connection = None
         
         # Register additional routes
@@ -117,123 +114,25 @@ class ERPServer(BaseMCPServer):
             return
         
         try:
-            if self.mock_mode:
-                # Use in-memory database for mock mode
-                self.connection = sqlite3.connect(":memory:")
-                self._setup_mock_database()
-                self.logger.info("Connected to in-memory SQLite database (mock mode)")
-            else:
-                # Use configured database
-                db_uri = self.config['data_sources']['erp']['uri']
-                self.logger.info(f"Connecting to ERP database: {db_uri}")
-                
-                # For SQLite, extract the path from the URI
-                if db_uri.startswith('sqlite:///'):
-                    db_path = db_uri[10:]
-                    self.connection = sqlite3.connect(db_path)
-                    self.logger.info(f"Connected to SQLite database at {db_path}")
-                else:
-                    # For other database types, you would use appropriate drivers
-                    raise NotImplementedError(f"Database driver for {db_uri} not implemented")
+            # Use the synthetic_data.db file
+            db_path = "/app/synthetic_data.db"
+            
+            # Check if the file exists
+            if not os.path.exists(db_path):
+                self.logger.error(f"Database file {db_path} not found.")
+                raise FileNotFoundError(f"Database file {db_path} not found. Please ensure the database file exists.")
+            
+            self.connection = sqlite3.connect(db_path)
+            self.logger.info(f"Connected to SQLite database at {db_path}")
+            
+            # Log the tables in the database for debugging
+            cursor = self.connection.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            tables = [row[0] for row in cursor.fetchall()]
+            self.logger.info(f"Tables in the database: {tables}")
         except Exception as e:
             self.logger.error(f"Error connecting to ERP database: {str(e)}")
             raise
-    
-    def _setup_mock_database(self):
-        """Set up mock database with sample data."""
-        cursor = self.connection.cursor()
-        
-        # Create products table
-        cursor.execute('''
-        CREATE TABLE products (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            description TEXT,
-            price REAL NOT NULL,
-            category TEXT,
-            stock INTEGER DEFAULT 0
-        )
-        ''')
-        
-        # Insert sample products
-        products = [
-            (1, 'Expensive Product 1', 'A very expensive product', 150.0, 'Electronics', 10),
-            (2, 'Expensive Product 2', 'Another expensive product', 200.0, 'Electronics', 5),
-            (3, 'Budget Product 1', 'An affordable product', 50.0, 'Home', 20),
-            (4, 'Budget Product 2', 'Another affordable product', 75.0, 'Home', 15),
-            (5, 'Premium Service', 'A premium service offering', 300.0, 'Services', 0)
-        ]
-        cursor.executemany('INSERT INTO products VALUES (?, ?, ?, ?, ?, ?)', products)
-        
-        # Create employees table
-        cursor.execute('''
-        CREATE TABLE employees (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            department TEXT,
-            position TEXT,
-            salary REAL,
-            hire_date TEXT
-        )
-        ''')
-        
-        # Insert sample employees
-        employees = [
-            (1, 'John Doe', 'Sales', 'Manager', 75000.0, '2020-01-15'),
-            (2, 'Jane Smith', 'Sales', 'Associate', 50000.0, '2021-03-10'),
-            (3, 'Bob Johnson', 'Engineering', 'Senior Engineer', 90000.0, '2019-05-22'),
-            (4, 'Alice Brown', 'Engineering', 'Engineer', 70000.0, '2022-02-18'),
-            (5, 'Charlie Wilson', 'Marketing', 'Director', 85000.0, '2018-11-30')
-        ]
-        cursor.executemany('INSERT INTO employees VALUES (?, ?, ?, ?, ?, ?)', employees)
-        
-        # Create orders table
-        cursor.execute('''
-        CREATE TABLE orders (
-            id INTEGER PRIMARY KEY,
-            customer_id INTEGER,
-            order_date TEXT,
-            total_amount REAL,
-            status TEXT
-        )
-        ''')
-        
-        # Insert sample orders
-        orders = [
-            (1, 101, '2023-01-10', 350.0, 'Completed'),
-            (2, 102, '2023-01-15', 200.0, 'Completed'),
-            (3, 103, '2023-02-05', 150.0, 'Processing'),
-            (4, 101, '2023-02-20', 75.0, 'Completed'),
-            (5, 104, '2023-03-01', 500.0, 'Processing')
-        ]
-        cursor.executemany('INSERT INTO orders VALUES (?, ?, ?, ?, ?)', orders)
-        
-        # Create order_items table
-        cursor.execute('''
-        CREATE TABLE order_items (
-            id INTEGER PRIMARY KEY,
-            order_id INTEGER,
-            product_id INTEGER,
-            quantity INTEGER,
-            price REAL
-        )
-        ''')
-        
-        # Insert sample order items
-        order_items = [
-            (1, 1, 1, 2, 150.0),
-            (2, 1, 3, 1, 50.0),
-            (3, 2, 2, 1, 200.0),
-            (4, 3, 1, 1, 150.0),
-            (5, 4, 3, 1, 50.0),
-            (6, 4, 4, 1, 25.0),
-            (7, 5, 2, 1, 200.0),
-            (8, 5, 5, 1, 300.0)
-        ]
-        cursor.executemany('INSERT INTO order_items VALUES (?, ?, ?, ?, ?)', order_items)
-        
-        # Commit the changes
-        self.connection.commit()
     
     async def execute_query(self, request: QueryRequest) -> QueryResponse:
         """
@@ -299,15 +198,13 @@ def main():
     parser.add_argument("--host", type=str, default="localhost", help="Host to bind the server to")
     parser.add_argument("--port", type=int, default=8001, help="Port to bind the server to")
     parser.add_argument("--config", type=str, help="Path to the configuration file")
-    parser.add_argument("--mock", action="store_true", help="Run in mock mode")
     
     args = parser.parse_args()
     
     server = ERPServer(
         host=args.host,
         port=args.port,
-        config_path=args.config,
-        mock_mode=args.mock
+        config_path=args.config
     )
     
     server.run()

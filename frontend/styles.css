@@ -133,6 +133,28 @@ body {
     margin-bottom: 0;
 }
 
+.message-content .agent-answer {
+    font-size: 1.1rem;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    padding: 0 0 12px 0;
+    border-bottom: 1px solid #e9ecef;
+    color: #212529;
+    font-weight: 500;
+}
+
+.message-content .agent-error {
+    font-size: 1.1rem;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    padding: 12px;
+    border: 1px solid #ffc9c9;
+    background-color: #fff5f5;
+    color: #e03131;
+    font-weight: 500;
+    border-radius: 4px;
+}
+
 .message-content ul {
     margin-left: 20px;
     margin-bottom: 8px;
@@ -164,6 +186,75 @@ body {
     margin-bottom: 8px;
     font-size: 0.9rem;
     color: #868e96;
+}
+
+.thought-toggle {
+    background-color: #f1f3f5;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    color: #495057;
+    cursor: pointer;
+    margin-bottom: 12px;
+    transition: background-color 0.2s ease;
+}
+
+.thought-toggle:hover {
+    background-color: #e9ecef;
+}
+
+.thought-process-container {
+    margin-bottom: 16px;
+    border-left: 3px solid #4a6cf7;
+    padding-left: 12px;
+}
+
+.thought-process-text {
+    white-space: pre-wrap;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: #495057;
+    background-color: #f8f9fa;
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.query-intent {
+    font-size: 0.9rem;
+    color: #495057;
+    margin: 8px 0 12px;
+    padding: 8px 12px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.query-status {
+    font-size: 0.9rem;
+    color: #495057;
+    margin: 8px 0;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+}
+
+.query-status::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.query-status.executed::before {
+    background-color: #4caf50;
+}
+
+.query-status.skipped::before {
+    background-color: #ff9800;
 }
 
 .message-content .results-container {

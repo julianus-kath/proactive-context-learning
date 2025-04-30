@@ -125,13 +125,19 @@ class OpenAIProvider(LLMProvider):
                 "Please install it with `pip install openai`."
             )
         
+        # Initialize logger
+        self.logger = logging.getLogger(__name__)
+        
         # Get API key from config or environment variable
         self.api_key = config.get("api_key") or os.environ.get("OPENAI_API_KEY")
         if not self.api_key:
-            raise ValueError(
-                "OpenAI API key is required. Provide it in the config or "
-                "set the OPENAI_API_KEY environment variable."
-            )
+            raise ValueError("No OpenAI API key provided. Set OPENAI_API_KEY environment variable or provide in config.")
+        
+        # Check if the API key is valid (starts with sk-)
+        if not self.api_key.startswith("sk-"):
+            raise ValueError("Invalid OpenAI API key format. Must start with 'sk-'.")
+            
+        self.logger.info("Valid OpenAI API key found.")
         
         # Get organization ID from config or environment variable
         self.organization = config.get("organization") or os.environ.get("OPENAI_ORGANIZATION")
@@ -139,13 +145,16 @@ class OpenAIProvider(LLMProvider):
         # Get model from config, environment variable, or use default
         self.model = config.get("model") or os.environ.get("OPENAI_MODEL", "gpt-4")
         
-        # Initialize the client
-        self.client = openai.AsyncOpenAI(
-            api_key=self.api_key,
-            organization=self.organization
-        )
-        
-        logger.info(f"Initialized OpenAI provider with model: {self.model}")
+        # Initialize the OpenAI client
+        try:
+            self.client = openai.AsyncOpenAI(
+                api_key=self.api_key,
+                organization=self.organization
+            )
+            self.logger.info(f"Initialized OpenAI provider with model: {self.model}")
+        except Exception as e:
+            self.logger.error(f"Error initializing OpenAI client: {str(e)}")
+            raise
     
     async def generate(self, 
                       prompt: str, 
@@ -165,6 +174,9 @@ class OpenAIProvider(LLMProvider):
             
         Returns:
             The generated text
+            
+        Raises:
+            Exception: If there is an error generating the completion
         """
         messages = []
         
@@ -175,20 +187,15 @@ class OpenAIProvider(LLMProvider):
         # Add user prompt
         messages.append({"role": "user", "content": prompt})
         
-        try:
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                stop=stop_sequences
-            )
-            
-            return response.choices[0].message.content
-            
-        except Exception as e:
-            logger.error(f"Error generating completion with OpenAI: {str(e)}")
-            raise
+        response = await self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stop=stop_sequences
+        )
+        
+        return response.choices[0].message.content
     
     async def generate_with_json_output(self, 
                                        prompt: str, 
@@ -206,6 +213,9 @@ class OpenAIProvider(LLMProvider):
             
         Returns:
             The generated output as a Python dictionary
+            
+        Raises:
+            Exception: If there is an error generating or parsing the JSON completion
         """
         if not system_message:
             system_message = "You are a helpful assistant that always responds in JSON format."
@@ -216,27 +226,45 @@ class OpenAIProvider(LLMProvider):
         schema_prompt = f"\n\nYour response must conform to the following JSON schema:\n{json.dumps(output_schema, indent=2)}"
         full_prompt = prompt + schema_prompt
         
+        # Check if the model supports JSON response format
+        supports_json_format = "gpt-4-turbo" in self.model or "gpt-4-0125" in self.model or "gpt-3.5-turbo-0125" in self.model
+        
+        params = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": full_prompt}
+            ],
+            "temperature": temperature
+        }
+        
+        # Only add response_format for models that support it
+        if supports_json_format:
+            params["response_format"] = {"type": "json_object"}
+            
+        response = await self.client.chat.completions.create(**params)
+        
+        content = response.choices[0].message.content
+        
+        # Clean up the content if it contains markdown code blocks
+        if content.startswith("```json") or content.startswith("```"):
+            # Extract JSON from markdown code block
+            content = content.strip()
+            if content.startswith("```json"):
+                content = content[7:]  # Remove ```json
+            elif content.startswith("```"):
+                content = content[3:]  # Remove ```
+            
+            if content.endswith("```"):
+                content = content[:-3]  # Remove trailing ```
+            
+            content = content.strip()
+        
         try:
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_message},
-                    {"role": "user", "content": full_prompt}
-                ],
-                temperature=temperature,
-                response_format={"type": "json_object"}
-            )
-            
-            content = response.choices[0].message.content
             return json.loads(content)
-            
         except json.JSONDecodeError as e:
-            logger.error(f"Error decoding JSON from OpenAI response: {str(e)}")
-            logger.error(f"Raw response: {content}")
-            raise
-            
-        except Exception as e:
-            logger.error(f"Error generating JSON completion with OpenAI: {str(e)}")
+            self.logger.error(f"Error decoding JSON: {str(e)}")
+            self.logger.error(f"Content: {content}")
             raise
     
     def get_provider_name(self) -> str:

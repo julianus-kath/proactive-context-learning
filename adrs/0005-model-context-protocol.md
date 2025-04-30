@@ -53,6 +53,45 @@ The central component of this architecture will be the `CrawlingContext` object,
 
 ## Implementation Details
 
+### MCP Architecture Diagram
+
+```
++------------------------------------------------------------------------------------------------------+
+|                                     Model-Context Protocol (MCP)                                      |
++------------------------------------------------------------------------------------------------------+
+                                                |
+                                                v
++------------------------------------------------------------------------------------------------------+
+|                                        CrawlingContext                                                |
+|                                                                                                      |
+|  +----------------+  +----------------+  +----------------+  +----------------+  +----------------+  |
+|  | context_id     |  | original_query |  | thought        |  | plan           |  | action_requests|  |
+|  +----------------+  +----------------+  +----------------+  +----------------+  +----------------+  |
+|                                                                                                      |
+|  +----------------+  +----------------+  +----------------+  +----------------+                      |
+|  | observations   |  | final_result   |  | task_instruction| | status         |                      |
+|  +----------------+  +----------------+  +----------------+  +----------------+                      |
++------------------------------------------------------------------------------------------------------+
+                |                  |                   |                  |
+                v                  v                   v                  v
++---------------+--+  +-----------+-------+  +--------+---------+  +-----+------------+
+|   Planning Phase  |  |   Acting Phase   |  | Observing Phase  |  |  Controller      |
++------------------+  +------------------+  +------------------+  +------------------+
+| - Query Analysis |  | - Execute Actions|  | - Process Results|  | - Orchestration  |
+| - Tool Selection |  | - Data Retrieval |  | - Combine Data   |  | - State Management|
+| - Query Generation|  | - Error Handling|  | - Format Response|  | - Error Recovery |
++--------+---------+  +--------+---------+  +--------+---------+  +------------------+
+         |                     |                     |                      |
+         v                     v                     v                      v
++------------------+  +------------------+  +------------------+  +------------------+
+|  Data Sources    |  |    Connectors    |  |  Response Format |  |  API Endpoints   |
++------------------+  +------------------+  +------------------+  +------------------+
+| - ERP System     |  | - ERPConnector   |  | - JSON           |  | - Query          |
+| - Document Store |  | - DocumentStorage|  | - Text           |  | - Health         |
+| - Knowledge Graph|  | - KnowledgeGraph |  | - Structured     |  | - Info           |
++------------------+  +------------------+  +------------------+  +------------------+
+```
+
 The MCP will be implemented with the following key components:
 
 1. **CrawlingContext**: The central state container with the following structure:
@@ -89,6 +128,104 @@ The MCP will be implemented with the following key components:
    - Manages the flow between planning, acting, and observing phases
    - Delegates actions to appropriate connectors
    - Updates the context with results
+
+### MCP Sequence Diagram
+
+```
++--------+      +------------+      +------------+      +------------+      +------------+
+| Client |      | API        |      | Controller |      | Connectors |      | Data       |
+|        |      | Endpoint   |      |            |      |            |      | Sources    |
++---+----+      +-----+------+      +-----+------+      +-----+------+      +-----+------+
+    |                 |                   |                   |                   |
+    | Natural Language|                   |                   |                   |
+    | Query           |                   |                   |                   |
+    +---------------->|                   |                   |                   |
+    |                 | Create Context    |                   |                   |
+    |                 +------------------>|                   |                   |
+    |                 |                   |                   |                   |
+    |                 |                   | Planning Phase    |                   |
+    |                 |                   |-------------------|                   |
+    |                 |                   | 1. Analyze Query  |                   |
+    |                 |                   | 2. Select Tools   |                   |
+    |                 |                   | 3. Generate Query |                   |
+    |                 |                   |                   |                   |
+    |                 |                   | Create Action     |                   |
+    |                 |                   | Requests          |                   |
+    |                 |                   |------------------>|                   |
+    |                 |                   |                   |                   |
+    |                 |                   |                   | Acting Phase      |
+    |                 |                   |                   |-------------------|
+    |                 |                   |                   | Execute Queries   |
+    |                 |                   |                   |------------------>|
+    |                 |                   |                   |                   |
+    |                 |                   |                   |                   | Process
+    |                 |                   |                   |                   | Queries
+    |                 |                   |                   |                   |---------|
+    |                 |                   |                   |                   |         |
+    |                 |                   |                   |                   |<--------|
+    |                 |                   |                   |                   |
+    |                 |                   |                   | Return Results    |
+    |                 |                   |                   |<------------------|
+    |                 |                   |                   |                   |
+    |                 |                   |                   | Update Context    |
+    |                 |                   |<------------------|                   |
+    |                 |                   |                   |                   |
+    |                 |                   | Observing Phase   |                   |
+    |                 |                   |-------------------|                   |
+    |                 |                   | 1. Process Results|                   |
+    |                 |                   | 2. Combine Data   |                   |
+    |                 |                   | 3. Format Response|                   |
+    |                 |                   |                   |                   |
+    |                 | Return Response   |                   |                   |
+    |                 |<------------------|                   |                   |
+    |                 |                   |                   |                   |
+    | Formatted       |                   |                   |                   |
+    | Response        |                   |                   |                   |
+    |<----------------|                   |                   |                   |
+    |                 |                   |                   |                   |
+```
+
+### MCP Data Flow Diagram
+
+```
++------------------+     +------------------+     +------------------+
+|                  |     |                  |     |                  |
+| Natural Language |     | Structured Query |     |  Query Results   |
+|      Query       +---->+   Generation     +---->+   Processing     |
+|                  |     |                  |     |                  |
++------------------+     +------------------+     +------------------+
+                               |                         |
+                               v                         v
+                         +-----+-----+           +-------+-------+
+                         |           |           |               |
+                         | ERP Query |           | ERP Results   |
+                         |           |           |               |
+                         +-----------+           +---------------+
+                               |                         ^
+                               v                         |
+                         +-----+-----+           +-------+-------+
+                         |           |           |               |
+                         | Document  |           | Document      |
+                         | Query     |           | Results       |
+                         |           |           |               |
+                         +-----------+           +---------------+
+                               |                         ^
+                               v                         |
+                         +-----+-----+           +-------+-------+
+                         |           |           |               |
+                         | Knowledge |           | Knowledge     |
+                         | Graph     |           | Graph Results |
+                         | Query     |           |               |
+                         +-----------+           +---------------+
+                               |                         ^
+                               |                         |
+                               v                         |
+                         +-----+---------------------+   |
+                         |                           |   |
+                         | Data Source Connectors    +---+
+                         |                           |
+                         +---------------------------+
+```
 
 ## Alternatives Considered
 

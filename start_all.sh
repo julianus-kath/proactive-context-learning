@@ -8,6 +8,17 @@ docker-compose down
 echo "Rebuilding services..."
 docker-compose build
 
+# Verify the synthetic_data.db file exists
+if [ ! -f "synthetic_data.db" ]; then
+  echo "Error: synthetic_data.db file not found!"
+  echo "Please make sure the database file exists in the project root directory."
+  exit 1
+fi
+
+# Print database info
+echo "Using database file: synthetic_data.db"
+echo "Database file size: $(du -h synthetic_data.db | cut -f1)"
+
 # Start all services with environment variables from .env file
 echo "Starting all services..."
 docker-compose up -d

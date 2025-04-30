@@ -38,8 +38,46 @@ class QueryTranslator:
         # Initialize the list of structured queries
         structured_queries = []
         
+        # Check for count queries
+        if re.search(r'(how many|count|number of)', query, re.IGNORECASE):
+            # Determine which entity to count
+            entity_type = None
+            table_name = None
+            
+            if re.search(r'(customer|customers)', query, re.IGNORECASE):
+                entity_type = "customers"
+                table_name = "customers"
+            elif re.search(r'(product|products)', query, re.IGNORECASE):
+                entity_type = "products"
+                table_name = "products"
+            elif re.search(r'(employee|employees)', query, re.IGNORECASE):
+                entity_type = "employees"
+                table_name = "employees"
+            elif re.search(r'(order|orders)', query, re.IGNORECASE):
+                entity_type = "orders"
+                table_name = "orders"
+            
+            if entity_type and table_name:
+                thought_process += f"This query is asking for a count of {entity_type}. I'll use SQL COUNT to get the total number.\n\n"
+                
+                # Add SQL query for ERP
+                thought_process += f"For the ERP system, I'll use SQL to count {entity_type}:\n"
+                sql_query = f"SELECT COUNT(*) AS count FROM {table_name}"
+                thought_process += f"SQL Query: {sql_query}\n\n"
+                
+                structured_queries.append(
+                    DataSourceQuery(
+                        source_type="erp",
+                        query_type=QueryType.SQL,
+                        query=sql_query,
+                        parameters={}
+                    )
+                )
+                
+                return thought_process, structured_queries
+        
         # Check for product-related queries
-        if re.search(r'(expensive|costly|pricey|high.?price|premium)', query, re.IGNORECASE):
+        elif re.search(r'(expensive|costly|pricey|high.?price|premium)', query, re.IGNORECASE):
             thought_process += "This query is about expensive products. I'll query all data sources for products with high prices.\n\n"
             
             # Add SQL query for ERP

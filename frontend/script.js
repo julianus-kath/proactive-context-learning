@@ -203,12 +203,70 @@ function addErrorMessage(errorText) {
 function addAgentResponse(data) {
     const container = document.createElement('div');
     
-    // Add summary of results
-    if (data.results && data.results.length > 0) {
-        const summary = document.createElement('p');
-        summary.textContent = formatResults(data.results);
-        container.appendChild(summary);
-    } else {
+    // Check for a direct answer in the response
+    let answer = '';
+    
+    // First check if there's a dedicated answer field
+    if (data.answer) {
+        answer = data.answer;
+    } 
+    // Then check if there's an answer in the results object
+    else if (data.results && typeof data.results === 'object') {
+        // If results is an array of objects with an answer field
+        if (Array.isArray(data.results)) {
+            for (const result of data.results) {
+                if (result.answer) {
+                    answer = result.answer;
+                    break;
+                }
+            }
+        } 
+        // If results is an object with an answer field
+        else if (data.results.answer) {
+            answer = data.results.answer;
+        }
+        // If results is an object with a summary field
+        else if (data.results.summary) {
+            answer = data.results.summary;
+        }
+    }
+    // Then check if there's a summary in the data
+    else if (data.summary) {
+        answer = data.summary;
+    }
+    // Finally, extract summary from thought process if available
+    else if (data.thought_process) {
+        const summaryMatch = data.thought_process.match(/Summary: (.*?)(\n|$)/);
+        if (summaryMatch && summaryMatch[1]) {
+            answer = summaryMatch[1];
+        }
+    }
+    
+    // Log the answer for debugging
+    console.log("Extracted answer:", answer);
+    
+    // Check if there's an error in the response
+    if (data.error) {
+        const errorPara = document.createElement('p');
+        errorPara.className = 'agent-error';
+        errorPara.textContent = `Error: ${data.error}`;
+        container.appendChild(errorPara);
+    }
+    // Add the answer as a prominent response
+    else if (answer) {
+        const answerPara = document.createElement('p');
+        answerPara.className = 'agent-answer';
+        answerPara.textContent = answer;
+        container.appendChild(answerPara);
+    } 
+    // Fallback to formatting results if no answer is available
+    else if (data.results && data.results.length > 0) {
+        const summaryPara = document.createElement('p');
+        summaryPara.textContent = formatResults(data.results);
+        container.appendChild(summaryPara);
+    } 
+    // Show no results message if nothing else is available
+    else {
         const noResults = document.createElement('p');
         noResults.textContent = 'No results found for your query.';
         container.appendChild(noResults);
@@ -218,16 +276,77 @@ function addAgentResponse(data) {
     const detailsContainer = document.createElement('div');
     detailsContainer.className = 'query-details';
     
+    // Extract intent from thought process if available
+    let intent = '';
+    let entities = [];
+    
+    if (data.thought_process) {
+        const intentMatch = data.thought_process.match(/intent: ([a-z]+)/i);
+        if (intentMatch && intentMatch[1]) {
+            intent = intentMatch[1].toLowerCase();
+        }
+        
+        // Extract entities
+        const entityMatches = data.thought_process.match(/entities?:.*?(\w+)/gi);
+        if (entityMatches) {
+            entities = entityMatches.map(match => {
+                const entityMatch = match.match(/(\w+)$/);
+                return entityMatch ? entityMatch[1].toLowerCase() : '';
+            }).filter(Boolean);
+        }
+    }
+    
+    // Add query intent and entities if available
+    if (intent || entities.length > 0) {
+        const intentDiv = document.createElement('div');
+        intentDiv.className = 'query-intent';
+        
+        let intentText = '';
+        if (intent) {
+            intentText += `Intent: ${intent.charAt(0).toUpperCase() + intent.slice(1)}`;
+        }
+        
+        if (entities.length > 0) {
+            if (intentText) intentText += ' • ';
+            intentText += `Entities: ${entities.join(', ')}`;
+        }
+        
+        intentDiv.textContent = intentText;
+        detailsContainer.appendChild(intentDiv);
+    }
+    
     // Add thought process
     if (data.thought_process) {
-        const thoughtTitle = document.createElement('h4');
-        thoughtTitle.textContent = 'Thought Process';
-        detailsContainer.appendChild(thoughtTitle);
+        // Create a toggle button for thought process
+        const thoughtToggle = document.createElement('button');
+        thoughtToggle.className = 'thought-toggle';
+        thoughtToggle.textContent = 'Show Thinking Process';
+        thoughtToggle.onclick = function() {
+            const thoughtProcess = this.nextElementSibling;
+            if (thoughtProcess.style.display === 'none') {
+                thoughtProcess.style.display = 'block';
+                this.textContent = 'Hide Thinking Process';
+            } else {
+                thoughtProcess.style.display = 'none';
+                this.textContent = 'Show Thinking Process';
+            }
+        };
+        detailsContainer.appendChild(thoughtToggle);
+        
+        // Create the thought process container
+        const thoughtContainer = document.createElement('div');
+        thoughtContainer.className = 'thought-process-container';
+        thoughtContainer.style.display = 'none'; // Hidden by default
         
         const thoughtPre = document.createElement('pre');
         thoughtPre.className = 'thought-process-text';
-        thoughtPre.textContent = data.thought_process;
-        detailsContainer.appendChild(thoughtPre);
+        
+        // Format the thought process for better readability
+        const formattedThoughtProcess = formatThoughtProcess(data.thought_process);
+        thoughtPre.textContent = formattedThoughtProcess;
+        
+        thoughtContainer.appendChild(thoughtPre);
+        detailsContainer.appendChild(thoughtContainer);
     }
     
     // Add structured queries
@@ -237,6 +356,38 @@ function addAgentResponse(data) {
         detailsContainer.appendChild(queriesTitle);
         
         data.structured_queries.forEach((query, index) => {
+            // Add query status (executed, skipped)
+            const queryStatus = document.createElement('div');
+            
+            // Check if this query was executed or skipped
+            let wasSkipped = false;
+            
+            // First check in the results array
+            if (data.results) {
+                for (const result of data.results) {
+                    if (result._source && result._source.tool === query.tool_name && result._source.status === 'skipped') {
+                        wasSkipped = true;
+                        break;
+                    }
+                    
+                    if (result.tool_name === query.tool_name && result.status === 'skipped') {
+                        wasSkipped = true;
+                        break;
+                    }
+                }
+            }
+            
+            // Set the appropriate class and text
+            if (wasSkipped) {
+                queryStatus.className = 'query-status skipped';
+                queryStatus.textContent = `Query ${index + 1}: ${query.tool_name} (Skipped)`;
+            } else {
+                queryStatus.className = 'query-status executed';
+                queryStatus.textContent = `Query ${index + 1}: ${query.tool_name} (Executed)`;
+            }
+            
+            detailsContainer.appendChild(queryStatus);
+            
             const queryPre = document.createElement('pre');
             const queryCode = document.createElement('code');
             
@@ -276,6 +427,38 @@ function addAgentResponse(data) {
     
     // Highlight code blocks
     highlightCodeBlocks();
+}
+
+// Format thought process for better readability
+function formatThoughtProcess(thoughtProcess) {
+    if (!thoughtProcess) return '';
+    
+    // Split by sections
+    let formatted = thoughtProcess;
+    
+    // Highlight intent
+    formatted = formatted.replace(/intent:?\s*([a-z]+)/gi, '🎯 INTENT: $1');
+    
+    // Highlight entities
+    formatted = formatted.replace(/entities?:?\s*([^.]+)/gi, '📦 ENTITIES: $1');
+    
+    // Highlight data sources
+    formatted = formatted.replace(/data sources?:?\s*([^.]+)/gi, '🗄️ DATA SOURCES: $1');
+    
+    // Highlight tool names
+    formatted = formatted.replace(/Tool \d+ \((.*?)\) reasoning:/g, '🔧 TOOL: $1');
+    
+    // Highlight necessary/not necessary statements
+    formatted = formatted.replace(/this query is necessary/gi, '✅ THIS QUERY IS NECESSARY');
+    formatted = formatted.replace(/this query is not necessary/gi, '❌ THIS QUERY IS NOT NECESSARY');
+    
+    // Highlight results processing
+    formatted = formatted.replace(/Results processing:/g, '🔄 RESULTS PROCESSING:');
+    
+    // Highlight summary
+    formatted = formatted.replace(/Summary:/g, '📋 SUMMARY:');
+    
+    return formatted;
 }
 
 // Format results for display

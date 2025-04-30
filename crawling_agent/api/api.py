@@ -46,7 +46,14 @@ query_translator = QueryTranslator()
 result_processor = ResultProcessor()
 
 # Initialize the connectors
-erp_connector = ERPConnector(mock_mode=True)
+import os
+
+# Get connector configuration from environment variables
+erp_connector = ERPConnector(
+    mock_mode=False,
+    host=os.environ.get("ERP_HOST", "erp-server"),
+    port=int(os.environ.get("ERP_PORT", "8001"))
+)
 document_storage_connector = DocumentStorageConnector(mock_mode=True)
 knowledge_graph_connector = KnowledgeGraphConnector(mock_mode=True)
 
