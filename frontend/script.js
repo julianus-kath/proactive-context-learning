@@ -225,6 +225,7 @@ function addAgentResponse(data) {
         detailsContainer.appendChild(thoughtTitle);
         
         const thoughtPre = document.createElement('pre');
+        thoughtPre.className = 'thought-process-text';
         thoughtPre.textContent = data.thought_process;
         detailsContainer.appendChild(thoughtPre);
     }
@@ -283,7 +284,17 @@ function formatResults(results) {
         return 'No results found.';
     }
     
-    // For simple result sets, just return a summary
+    // Extract summary from thought process if available
+    const thoughtProcess = document.querySelector('.thought-process-text');
+    if (thoughtProcess) {
+        const text = thoughtProcess.textContent;
+        const summaryMatch = text.match(/Summary: (.*?)(\n|$)/);
+        if (summaryMatch && summaryMatch[1]) {
+            return summaryMatch[1];
+        }
+    }
+    
+    // For simple result sets, generate a summary
     if (results.length === 1 && typeof results[0] === 'object') {
         const result = results[0];
         
@@ -293,9 +304,30 @@ function formatResults(results) {
         }
         
         // Check if it's a simple object
-        const keys = Object.keys(result);
+        const keys = Object.keys(result).filter(k => !k.startsWith('_'));
         if (keys.length <= 3) {
             return keys.map(key => `${key}: ${result[key]}`).join(', ');
+        }
+    }
+    
+    // For specific types of results, create more detailed summaries
+    if (results.length > 0) {
+        // Check for product results
+        if (results[0].name && results[0].price) {
+            const mostExpensive = results.reduce((prev, current) => 
+                (prev.price > current.price) ? prev : current);
+            return `Found ${results.length} products. The most expensive is '${mostExpensive.name}' at $${mostExpensive.price.toFixed(2)}.`;
+        }
+        
+        // Check for employee results
+        if (results[0].name && results[0].department) {
+            return `Found ${results.length} employees in the ${results[0].department} department.`;
+        }
+        
+        // Check for order results
+        if (results[0].status && results[0].status === 'Completed') {
+            const total = results.reduce((sum, order) => sum + (order.total || 0), 0);
+            return `Found ${results.length} completed orders with a total value of $${total.toFixed(2)}.`;
         }
     }
     

@@ -68,11 +68,31 @@ async def get_agent() -> Agent:
     # Create the tool registry
     tool_registry = ToolRegistry()
     
-    # Register tools
-    tool_registry.register_tool(ERPQueryTool({"mock_mode": True}))
-    tool_registry.register_tool(DocumentStorageQueryTool({"mock_mode": True}))
-    tool_registry.register_tool(KnowledgeGraphQueryTool({"mock_mode": True}))
-    tool_registry.register_tool(SchemaInformationTool({"mock_mode": True}))
+    # Register tools with real data sources
+    tool_registry.register_tool(ERPQueryTool({
+        "mock_mode": False,
+        "host": os.environ.get("ERP_HOST", "erp-server"),
+        "port": int(os.environ.get("ERP_PORT", "8001"))
+    }))
+    tool_registry.register_tool(DocumentStorageQueryTool({
+        "mock_mode": False,
+        "host": os.environ.get("DOCUMENT_STORAGE_HOST", "document-storage-server"),
+        "port": int(os.environ.get("DOCUMENT_STORAGE_PORT", "8002"))
+    }))
+    tool_registry.register_tool(KnowledgeGraphQueryTool({
+        "mock_mode": False,
+        "host": os.environ.get("KNOWLEDGE_GRAPH_HOST", "knowledge-graph-server"),
+        "port": int(os.environ.get("KNOWLEDGE_GRAPH_PORT", "8003"))
+    }))
+    tool_registry.register_tool(SchemaInformationTool({
+        "mock_mode": False,
+        "erp_host": os.environ.get("ERP_HOST", "erp-server"),
+        "erp_port": int(os.environ.get("ERP_PORT", "8001")),
+        "document_storage_host": os.environ.get("DOCUMENT_STORAGE_HOST", "document-storage-server"),
+        "document_storage_port": int(os.environ.get("DOCUMENT_STORAGE_PORT", "8002")),
+        "knowledge_graph_host": os.environ.get("KNOWLEDGE_GRAPH_HOST", "knowledge-graph-server"),
+        "knowledge_graph_port": int(os.environ.get("KNOWLEDGE_GRAPH_PORT", "8003"))
+    }))
     
     # Create the agent
     agent = Agent(llm_provider, tool_registry)
@@ -137,10 +157,29 @@ async def execute_query(
         # Calculate execution time
         execution_time = (time.time() - start_time) * 1000  # in milliseconds
         
-        # Prepare the response
+        # Prepare the response with detailed thought process
+        thought_process = result.get("analysis", {}).get("thought_process", "")
+        
+        # Add tool selection thought process if available
+        if "structured_queries" in result and result["structured_queries"]:
+            for i, query in enumerate(result["structured_queries"]):
+                if "thought_process" in query:
+                    thought_process += f"\n\nTool {i+1} ({query.get('tool_name', 'unknown')}) reasoning:\n"
+                    thought_process += query["thought_process"]
+        
+        # Add results processing thought process if available
+        if "results" in result and isinstance(result["results"], dict) and "thought_process" in result["results"]:
+            thought_process += f"\n\nResults processing:\n"
+            thought_process += result["results"]["thought_process"]
+            
+        # Add summary if available
+        if "results" in result and isinstance(result["results"], dict) and "summary" in result["results"]:
+            summary = result["results"]["summary"]
+            thought_process += f"\n\nSummary: {summary}"
+        
         response = QueryResult(
             query_id=query.query_id,
-            thought_process=result.get("analysis", {}).get("thought_process", ""),
+            thought_process=thought_process,
             structured_queries=result.get("structured_queries", []),
             results=result.get("results", {}).get("combined_results", []),
             execution_time_ms=execution_time,
