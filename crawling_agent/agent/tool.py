@@ -31,7 +31,7 @@ class Tool(abc.ABC):
         Args:
             config: Tool-specific configuration
         """
-        pass
+        self.config = config or {}
     
     @abc.abstractmethod
     async def run(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
@@ -92,28 +92,30 @@ class ERPQueryTool(Tool):
     Tool for querying the ERP system.
     """
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, erp_connector: Optional[ERPConnector] = None, config: Optional[Dict] = None):
         """
         Initialize the ERP query tool.
         
         Args:
-            config: Configuration dictionary with the following keys:
-                - mock_mode: Whether to use mock mode (default: False)
-                - host: ERP server host (default: "localhost")
-                - port: ERP server port (default: 8001)
+            erp_connector: Optional ERPConnector instance
+            config: Optional configuration dictionary with the following keys:
+            - host: Host where the MCP server is running
+            - port: Port of the MCP server
+            - config_path: Path to the configuration file
         """
-        self.mock_mode = config.get("mock_mode", False)
-        self.host = config.get("host", "localhost")
-        self.port = config.get("port", 8001)
+        config = config or self.get_default_config()
+        super().__init__(config)
         
-        # Initialize the connector
-        self.connector = ERPConnector(
-            mock_mode=self.mock_mode,
-            host=self.host,
-            port=self.port
-        )
+        if erp_connector is not None:
+            self.erp_connector = erp_connector
+        else:
+            self.erp_connector = ERPConnector(
+                host=config.get("host", "localhost"),
+                port=config.get("port", 8001),
+                config_path=config.get("config_path")
+            )
         
-        logger.info(f"Initialized ERP query tool (mock_mode={self.mock_mode})")
+        logger.info("Initialized ERP query tool")
     
     async def run(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -142,7 +144,7 @@ class ERPQueryTool(Tool):
         )
         
         # Execute the query
-        result = self.connector.execute_query(data_source_query)
+        result = await self.erp_connector.execute_query(data_source_query)
         
         return {
             "source_type": "erp",
@@ -205,7 +207,6 @@ class ERPQueryTool(Tool):
             Default configuration dictionary
         """
         return {
-            "mock_mode": False,
             "host": "localhost",
             "port": 8001
         }
@@ -216,28 +217,30 @@ class DocumentStorageQueryTool(Tool):
     Tool for querying the document storage system.
     """
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, doc_connector: Optional[DocumentStorageConnector] = None, config: Optional[Dict] = None):
         """
         Initialize the document storage query tool.
         
         Args:
-            config: Configuration dictionary with the following keys:
-                - mock_mode: Whether to use mock mode (default: False)
-                - host: Document storage server host (default: "localhost")
-                - port: Document storage server port (default: 8002)
+            doc_connector: Optional DocumentStorageConnector instance
+            config: Optional configuration dictionary with the following keys:
+            - host: Host where the MCP server is running
+            - port: Port of the MCP server
+            - config_path: Path to the configuration file
         """
-        self.mock_mode = config.get("mock_mode", False)
-        self.host = config.get("host", "localhost")
-        self.port = config.get("port", 8002)
+        config = config or self.get_default_config()
+        super().__init__(config)
         
-        # Initialize the connector
-        self.connector = DocumentStorageConnector(
-            mock_mode=self.mock_mode,
-            host=self.host,
-            port=self.port
-        )
+        if doc_connector is not None:
+            self.doc_connector = doc_connector
+        else:
+            self.doc_connector = DocumentStorageConnector(
+                host=config.get("host", "localhost"),
+                port=config.get("port", 8002),
+                config_path=config.get("config_path")
+            )
         
-        logger.info(f"Initialized document storage query tool (mock_mode={self.mock_mode})")
+        logger.info("Initialized document storage query tool")
     
     async def run(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -281,7 +284,7 @@ class DocumentStorageQueryTool(Tool):
         )
         
         # Execute the query
-        result = self.connector.execute_query(data_source_query)
+        result = self.doc_connector.execute_query(data_source_query)
         
         return {
             "source_type": "document_storage",
@@ -352,7 +355,6 @@ class DocumentStorageQueryTool(Tool):
             Default configuration dictionary
         """
         return {
-            "mock_mode": False,
             "host": "localhost",
             "port": 8002
         }
@@ -363,28 +365,30 @@ class KnowledgeGraphQueryTool(Tool):
     Tool for querying the knowledge graph system.
     """
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, kg_connector: Optional[KnowledgeGraphConnector] = None, config: Optional[Dict] = None):
         """
         Initialize the knowledge graph query tool.
         
         Args:
-            config: Configuration dictionary with the following keys:
-                - mock_mode: Whether to use mock mode (default: False)
-                - host: Knowledge graph server host (default: "localhost")
-                - port: Knowledge graph server port (default: 8003)
+            kg_connector: Optional KnowledgeGraphConnector instance
+            config: Optional configuration dictionary with the following keys:
+            - host: Host where the MCP server is running
+            - port: Port of the MCP server
+            - config_path: Path to the configuration file
         """
-        self.mock_mode = config.get("mock_mode", False)
-        self.host = config.get("host", "localhost")
-        self.port = config.get("port", 8003)
+        config = config or self.get_default_config()
+        super().__init__(config)
         
-        # Initialize the connector
-        self.connector = KnowledgeGraphConnector(
-            mock_mode=self.mock_mode,
-            host=self.host,
-            port=self.port
-        )
+        if kg_connector is not None:
+            self.kg_connector = kg_connector
+        else:
+            self.kg_connector = KnowledgeGraphConnector(
+                host=config.get("host", "localhost"),
+                port=config.get("port", 8003),
+                config_path=config.get("config_path")
+            )
         
-        logger.info(f"Initialized knowledge graph query tool (mock_mode={self.mock_mode})")
+        logger.info("Initialized knowledge graph query tool")
     
     async def run(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -413,7 +417,7 @@ class KnowledgeGraphQueryTool(Tool):
         )
         
         # Execute the query
-        result = self.connector.execute_query(data_source_query)
+        result = self.kg_connector.execute_query(data_source_query)
         
         return {
             "source_type": "knowledge_graph",
@@ -477,7 +481,6 @@ class KnowledgeGraphQueryTool(Tool):
             Default configuration dictionary
         """
         return {
-            "mock_mode": False,
             "host": "localhost",
             "port": 8003
         }
@@ -488,22 +491,34 @@ class SchemaInformationTool(Tool):
     Tool for retrieving schema information about data sources.
     """
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Optional[Dict] = None):
         """
         Initialize the schema information tool.
         
         Args:
-            config: Configuration dictionary with the following keys:
-                - mock_mode: Whether to use mock mode (default: False)
+            config: Optional configuration dictionary with connection settings
         """
-        self.mock_mode = config.get("mock_mode", False)
+        config = config or self.get_default_config()
+        super().__init__(config)
         
-        # Initialize the connectors
-        self.erp_connector = ERPConnector(mock_mode=self.mock_mode)
-        self.document_storage_connector = DocumentStorageConnector(mock_mode=self.mock_mode)
-        self.knowledge_graph_connector = KnowledgeGraphConnector(mock_mode=self.mock_mode)
+        # Initialize connectors with configuration
+        self.erp_connector = ERPConnector(
+            host=config.get("host", "localhost"),
+            port=config.get("port", 8001),
+            config_path=config.get("config_path")
+        )
+        self.document_storage_connector = DocumentStorageConnector(
+            host=config.get("host", "localhost"),
+            port=config.get("port", 8002),
+            config_path=config.get("config_path")
+        )
+        self.knowledge_graph_connector = KnowledgeGraphConnector(
+            host=config.get("host", "localhost"),
+            port=config.get("port", 8003),
+            config_path=config.get("config_path")
+        )
         
-        logger.info(f"Initialized schema information tool (mock_mode={self.mock_mode})")
+        logger.info("Initialized schema information tool")
     
     async def run(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -779,7 +794,8 @@ class SchemaInformationTool(Tool):
             Default configuration dictionary
         """
         return {
-            "mock_mode": False
+            "host": "localhost",
+            "port": 8003
         }
 
 
@@ -846,3 +862,34 @@ class ToolRegistry:
             }
             for tool in self._tools.values()
         ]
+
+
+def initialize_tools(
+    host: str = "localhost",
+    erp_port: int = 8001,
+    config_path: Optional[str] = None
+) -> List[Tool]:
+    """
+    Initialize the tools for the agent.
+    
+    Args:
+        host: Host where the MCP servers are running
+        erp_port: Port of the ERP MCP server
+        config_path: Path to the configuration file
+        
+    Returns:
+        List of initialized tools
+    """
+    # Initialize connectors
+    erp_connector = ERPConnector(
+        host=host,
+        port=erp_port,
+        config_path=config_path
+    )
+    
+    # Initialize tools
+    tools = [
+        ERPQueryTool(erp_connector)
+    ]
+    
+    return tools

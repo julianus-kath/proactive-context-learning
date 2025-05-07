@@ -23,7 +23,8 @@ class ERPConnector(BaseMCPConnector):
         self,
         host: str = "localhost",
         port: int = 8001,
-        config_path: Optional[str] = None
+        config_path: Optional[str] = None,
+        mock_mode: bool = False
     ):
         """
         Initialize the ERP MCP connector.
@@ -32,13 +33,14 @@ class ERPConnector(BaseMCPConnector):
             host: Host of the ERP MCP server
             port: Port of the ERP MCP server
             config_path: Path to the configuration file
+            mock_mode: Whether to run in mock mode
         """
         super().__init__(
             server_type="ERP",
-            version="1.0.0",
             host=host,
             port=port,
-            config_path=config_path
+            config_path=config_path,
+            mock_mode=mock_mode
         )
         
         self.logger = logging.getLogger(__name__)
@@ -50,11 +52,20 @@ class ERPConnector(BaseMCPConnector):
         Returns:
             List of table names
         """
-        response = await self._make_request(
-            "GET",
-            "/tables"
-        )
-        return response["tables"]
+        try:
+            if self.mock_mode:
+                return ["products", "employees", "orders", "order_items", "customers"]
+            
+            response = await self._make_request(
+                "GET",
+                "/tables"
+            )
+            return response["tables"]
+        except Exception as e:
+            self.logger.error(f"Error getting tables: {str(e)}")
+            if self.mock_mode:
+                return ["products", "employees", "orders", "order_items", "customers"]
+            raise
     
     async def get_table_schema(self, table_name: str) -> Dict[str, Any]:
         """
@@ -66,221 +77,96 @@ class ERPConnector(BaseMCPConnector):
         Returns:
             Table schema as a dictionary
         """
-        response = await self._make_request(
-            "GET",
-            f"/tables/{table_name}/schema"
-        )
-        return response["schema"]
-    
-    async def execute_query(self, query: str) -> Dict[str, Any]:
-        """
-        Execute a SQL query.
-        
-        Args:
-            query: SQL query string
-            
-        Returns:
-            Query results as a dictionary
-        """
-        response = await self._make_request(
-            "POST",
-            "/query",
-            json={
-                "query": query,
-                "query_type": "SQL"
-            }
-        )
-        return response
-
-    def get_tables(self) -> List[str]:
-        """
-        Get list of tables in the ERP database.
-        
-        Returns:
-            List of table names
-        """
         try:
-            response = requests.get(f"{self.base_url}/tables")
-            response.raise_for_status()
-            return response.json().get("tables", [])
-        except Exception as e:
-            self.logger.error(f"Error getting tables: {str(e)}")
             if self.mock_mode:
-                return ["products", "employees", "orders", "order_items"]
-            else:
-                raise
-    
-    def get_table_schema(self, table_name: str) -> Dict[str, Any]:
-        """
-        Get schema for a specific table.
-        
-        Args:
-            table_name: Name of the table
+                return {"table": table_name, "schema": []}
             
-        Returns:
-            Dictionary containing the table schema
-        """
-        try:
-            response = requests.get(f"{self.base_url}/schema/{table_name}")
-            response.raise_for_status()
-            return response.json()
+            response = await self._make_request(
+                "GET",
+                f"/tables/{table_name}/schema"
+            )
+            return response["schema"]
         except Exception as e:
             self.logger.error(f"Error getting schema for table {table_name}: {str(e)}")
             if self.mock_mode:
                 return {"table": table_name, "schema": []}
-            else:
-                raise
+            raise
     
-    def execute_query(self, query: DataSourceQuery) -> Dict[str, Any]:
+    async def execute_query(self, query: Union[str, DataSourceQuery]) -> Dict[str, Any]:
         """
-        Execute a SQL query against the ERP database via MCP.
+        Execute a SQL query.
         
         Args:
-            query: The DataSourceQuery object containing the SQL query and parameters
+            query: SQL query string or DataSourceQuery object
             
         Returns:
-            Dictionary containing the query results and metadata
+            Query results as a dictionary
         """
-        if query.query_type != QueryType.SQL:
-            raise ValueError(f"Invalid query type for ERP connector: {query.query_type}")
-        
-        start_time = time.time()
-        
-        # If in mock mode, return mock data
-        if self.mock_mode:
-            self.logger.info(f"Using mock mode for ERP query: {query.query}")
-            result = self._mock_execute_query(query)
-            
-            # Calculate execution time
-            execution_time = (time.time() - start_time) * 1000  # in milliseconds
-            
-            # Add execution time to the metadata
-            if "metadata" in result:
-                result["metadata"]["total_execution_time_ms"] = execution_time
-            
-            self.logger.info(f"Mock query executed successfully. Retrieved {len(result.get('data', []))} rows in {execution_time:.2f}ms")
-            
-            return result
-        
         try:
-            query_text = query.query if hasattr(query, 'query') else query
-            query_params = query.parameters if hasattr(query, 'parameters') else {}
-            self.logger.info(f"Executing SQL query via MCP: {query_text}")
-            self.logger.debug(f"Query parameters: {query_params}")
+            # Handle both string queries and DataSourceQuery objects
+            if isinstance(query, DataSourceQuery):
+                query_str = query.query
+                query_type = query.query_type.value if hasattr(query.query_type, 'value') else query.query_type
+                parameters = query.parameters
+                self.logger.info(f"Executing {query_type} query with parameters")
+                self.logger.info(f"Query: {query_str}")
+                self.logger.info(f"Parameters: {json.dumps(parameters, indent=2)}")
+            else:
+                query_str = query
+                query_type = "SQL"
+                parameters = {}
+                self.logger.info(f"Executing raw SQL query: {query_str}")
             
-            # Prepare the request
-            request_data = {
-                "query": query.query if hasattr(query, 'query') else query,
-                "query_type": "SQL",
-                "parameters": query.parameters if hasattr(query, 'parameters') else {},
-                "request_id": str(query.query_id) if hasattr(query, 'query_id') and query.query_id else str(uuid.uuid4())
-            }
+            if self.mock_mode:
+                self.logger.info("Running in mock mode, returning mock data")
+                # Return mock data based on the query
+                if "COUNT" in query_str.upper() and "customers" in query_str.lower():
+                    mock_result = {
+                        "data": [{"count": 120}],
+                        "metadata": {
+                            "source_type": "erp",
+                            "query_type": "SQL",
+                            "mock": True
+                        }
+                    }
+                    self.logger.info(f"Mock result: {json.dumps(mock_result, indent=2)}")
+                    return mock_result
+                return {"data": [], "metadata": {"mock": True}}
             
-            # Log the request data for debugging
-            self.logger.debug(f"Request data: {json.dumps(request_data)}")
-            
-            # Execute the query
-            response = requests.post(
-                f"{self.base_url}/query",
-                json=request_data
+            self.logger.info("Sending query to ERP server")
+            response = await self._make_request(
+                "POST",
+                "/query",
+                json={
+                    "query": query_str,
+                    "query_type": query_type,
+                    "parameters": parameters
+                }
             )
             
-            # Log the response for debugging
-            self.logger.debug(f"Response status: {response.status_code}")
-            self.logger.debug(f"Response content: {response.text}")
+            # Log the response details
+            row_count = len(response.get("data", []))
+            self.logger.info(f"Query executed successfully. Retrieved {row_count} rows.")
             
-            response.raise_for_status()
-            result = response.json()
+            if row_count > 0:
+                # Log a sample of the data (first row)
+                self.logger.info("Sample data (first row):")
+                self.logger.info(json.dumps(response["data"][0], indent=2))
             
-            # Calculate execution time
-            execution_time = (time.time() - start_time) * 1000  # in milliseconds
+            # Log any metadata
+            if "metadata" in response:
+                self.logger.info("Query metadata:")
+                self.logger.info(json.dumps(response["metadata"], indent=2))
             
-            # Add our own execution time to the metadata
-            if "metadata" in result:
-                result["metadata"]["total_execution_time_ms"] = execution_time
-            
-            self.logger.info(f"Query executed successfully via MCP. Retrieved {len(result.get('data', []))} rows in {execution_time:.2f}ms")
-            
-            return result
+            return response
             
         except Exception as e:
-            self.logger.error(f"Error executing SQL query via MCP: {str(e)}")
+            self.logger.error(f"Error executing query: {str(e)}")
+            if self.mock_mode:
+                error_response = {"data": [], "metadata": {"mock": True, "error": str(e)}}
+                self.logger.info(f"Returning mock error response: {json.dumps(error_response, indent=2)}")
+                return error_response
             raise
-            
-    def _mock_execute_query(self, query: DataSourceQuery) -> Dict[str, Any]:
-        """
-        Execute a mock query.
-        
-        Args:
-            query: Query to execute
-            
-        Returns:
-            Mock query results
-        """
-        # Parse the query to determine what data to return
-        query_lower = query.query.lower()
-        
-        # Handle different types of queries
-        if "count" in query_lower and "customer" in query_lower:
-            # Count of customers
-            return {
-                "data": [{"count": 120}],
-                "metadata": {
-                    "source_type": "erp",
-                    "query_type": "SQL",
-                    "mock": True
-                }
-            }
-        elif "product" in query_lower and ("expensive" in query_lower or "price" in query_lower):
-            # Expensive products
-            return {
-                "data": self._get_mock_expensive_products(),
-                "metadata": {
-                    "source_type": "erp",
-                    "query_type": "SQL",
-                    "mock": True
-                }
-            }
-        elif "employee" in query_lower and "sales" in query_lower:
-            # Sales employees
-            return {
-                "data": self._get_mock_sales_employees(),
-                "metadata": {
-                    "source_type": "erp",
-                    "query_type": "SQL",
-                    "mock": True
-                }
-            }
-        elif "order" in query_lower and "complete" in query_lower:
-            # Completed orders
-            return {
-                "data": self._get_mock_completed_orders(),
-                "metadata": {
-                    "source_type": "erp",
-                    "query_type": "SQL",
-                    "mock": True
-                }
-            }
-        elif "revenue" in query_lower or "total" in query_lower:
-            # Revenue data
-            return {
-                "data": [{"total_revenue": 125750.50}],
-                "metadata": {
-                    "source_type": "erp",
-                    "query_type": "SQL",
-                    "mock": True
-                }
-            }
-        else:
-            # Default empty response
-            return {
-                "data": [],
-                "metadata": {
-                    "source_type": "erp",
-                    "query_type": "SQL",
-                    "mock": True
-                }
-            }
     
     def _get_mock_expensive_products(self) -> List[Dict[str, Any]]:
         """
@@ -305,30 +191,6 @@ class ERPConnector(BaseMCPConnector):
                 "price": 2499.99,
                 "category": "Accessories",
                 "stock": 8
-            },
-            {
-                "id": 3,
-                "name": "Professional Camera",
-                "description": "High-resolution camera for professional photography",
-                "price": 3299.99,
-                "category": "Electronics",
-                "stock": 5
-            },
-            {
-                "id": 4,
-                "name": "Smart Home System",
-                "description": "Complete smart home automation system",
-                "price": 1599.99,
-                "category": "Home",
-                "stock": 12
-            },
-            {
-                "id": 5,
-                "name": "Gaming Desktop",
-                "description": "High-performance gaming computer",
-                "price": 2199.99,
-                "category": "Electronics",
-                "stock": 10
             }
         ]
     
@@ -355,30 +217,6 @@ class ERPConnector(BaseMCPConnector):
                 "department": "Sales",
                 "position": "Senior Sales Representative",
                 "hire_date": "2019-02-10T00:00:00Z"
-            },
-            {
-                "id": 3,
-                "name": "Michael Brown",
-                "email": "michael.brown@example.com",
-                "department": "Sales",
-                "position": "Sales Representative",
-                "hire_date": "2020-07-22T00:00:00Z"
-            },
-            {
-                "id": 4,
-                "name": "Sarah Davis",
-                "email": "sarah.davis@example.com",
-                "department": "Sales",
-                "position": "Sales Representative",
-                "hire_date": "2021-03-05T00:00:00Z"
-            },
-            {
-                "id": 5,
-                "name": "Robert Wilson",
-                "email": "robert.wilson@example.com",
-                "department": "Sales",
-                "position": "Junior Sales Representative",
-                "hire_date": "2022-01-18T00:00:00Z"
             }
         ]
     
@@ -403,26 +241,5 @@ class ERPConnector(BaseMCPConnector):
                 "order_date": "2023-04-12T09:15:00Z",
                 "status": "Completed",
                 "total": 1899.99
-            },
-            {
-                "id": 3,
-                "customer_id": 42,
-                "order_date": "2023-04-15T16:45:00Z",
-                "status": "Completed",
-                "total": 3299.99
-            },
-            {
-                "id": 4,
-                "customer_id": 7,
-                "order_date": "2023-04-18T11:20:00Z",
-                "status": "Completed",
-                "total": 1599.99
-            },
-            {
-                "id": 5,
-                "customer_id": 35,
-                "order_date": "2023-04-20T13:10:00Z",
-                "status": "Completed",
-                "total": 2199.99
             }
         ]

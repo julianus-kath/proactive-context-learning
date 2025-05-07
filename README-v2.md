@@ -1,6 +1,6 @@
-# Crawling Agent with Proactive Context Learning
+# Crawling Agent v2 with Proactive Context Learning
 
-This repository contains an implementation of a Crawling Agent with Proactive Context Learning capabilities, using the Model-Context Protocol (MCP) for structured interactions.
+This is an implementation of the Crawling Agent with Proactive Context Learning capabilities.
 
 ## Overview
 
@@ -23,7 +23,7 @@ The system consists of:
    - Executes SQL queries
    - Returns results in a structured format
 
-## Quick Start
+## Running the System
 
 The easiest way to run the system is using the provided script:
 
@@ -39,27 +39,18 @@ This script will:
 5. Wait for them to be ready
 6. Print the URLs for the API documentation and chat interface
 
-## Running with Docker
-
-If you prefer to run the Docker commands manually:
+Alternatively, you can use Docker Compose directly:
 
 ```bash
-# Stop any running services
-docker-compose down
-
-# Rebuild the services
-docker-compose build
-
 # Start all services
 docker-compose up -d
+
+# Check the status of the services
+docker-compose ps
 
 # View logs
 docker-compose logs -f
 ```
-
-Once the services are running, you can access:
-- The chat interface at: http://localhost:8080
-- The API documentation at: http://localhost:8000/docs
 
 ## LLM Integration
 
@@ -85,15 +76,6 @@ To use the OpenAI provider:
    ```bash
    ./run.sh
    ```
-
-## Testing the Implementation
-
-You can test the implementation by:
-
-1. Running the system with the `run.sh` script
-2. Using the web interface at http://localhost:8080
-3. Using the API directly at http://localhost:8000/query
-4. Using the interactive API documentation at http://localhost:8000/docs
 
 ## API Documentation
 
@@ -125,12 +107,6 @@ Example queries:
 - "Show me all employees in the sales department"
 - "List all completed orders"
 - "What is the total revenue from orders this month?"
-
-## Web Interface
-
-The system includes a simple web interface for interacting with the agent:
-
-- Web UI: http://localhost:8080
 
 ## Architecture
 

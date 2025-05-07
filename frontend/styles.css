@@ -385,3 +385,243 @@ body {
         max-width: 90%;
     }
 }
+
+/* Logging Panel Styles */
+.logging-panel {
+    position: fixed;
+    right: 20px;
+    top: 20px;
+    width: 400px;
+    max-height: 80vh;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+}
+
+.logging-header {
+    padding: 12px 16px;
+    background-color: #e9ecef;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logging-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #495057;
+}
+
+.logging-header button {
+    padding: 4px 8px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.logging-header button:hover {
+    background-color: #5a6268;
+}
+
+.logging-content {
+    padding: 12px;
+    overflow-y: auto;
+    max-height: calc(80vh - 50px);
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.log-entry {
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    background-color: white;
+    border-radius: 4px;
+    border-left: 3px solid #6c757d;
+}
+
+.log-timestamp {
+    color: #6c757d;
+    margin-right: 8px;
+    font-size: 12px;
+}
+
+.log-content {
+    color: #212529;
+}
+
+.log-error {
+    border-left-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+.log-info {
+    border-left-color: #0d6efd;
+}
+
+.thinking-section {
+    margin: 12px 0;
+    padding: 8px;
+    background-color: #e7f5ff;
+    border-radius: 4px;
+}
+
+.thinking-header {
+    font-weight: bold;
+    color: #0d6efd;
+    margin-bottom: 8px;
+}
+
+.thinking-step {
+    margin-left: 16px;
+    margin-bottom: 4px;
+    color: #495057;
+}
+
+.query-section {
+    margin: 12px 0;
+    padding: 8px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border-left: 3px solid #20c997;
+}
+
+.query-content {
+    margin: 0;
+    padding: 8px;
+    background-color: white;
+    border-radius: 4px;
+    overflow-x: auto;
+    color: #212529;
+}
+
+.query-params {
+    margin: 8px 0 0 0;
+    padding: 8px;
+    background-color: white;
+    border-radius: 4px;
+    overflow-x: auto;
+    color: #6c757d;
+    font-size: 12px;
+}
+
+.results-section {
+    margin: 12px 0;
+    padding: 8px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border-left: 3px solid #ffd43b;
+}
+
+.results-header {
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.results-content {
+    margin: 0;
+    padding: 8px;
+    background-color: white;
+    border-radius: 4px;
+    overflow-x: auto;
+    color: #212529;
+}
+
+/* Make the logging panel draggable */
+.logging-panel.dragging {
+    opacity: 0.8;
+    cursor: move;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .logging-panel {
+        width: calc(100% - 40px);
+        right: 10px;
+        top: 10px;
+    }
+}
+
+/* Message info styles */
+.message-info {
+    margin-top: 12px;
+}
+
+.toggle-info {
+    background-color: #f1f3f5;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    color: #495057;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.toggle-info:hover {
+    background-color: #e9ecef;
+}
+
+.info-content {
+    margin-top: 12px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+/* SQL syntax highlighting */
+.sql-query {
+    background-color: #282c34;
+    color: #abb2bf;
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Fira Code', 'Courier New', Courier, monospace;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 8px 0;
+}
+
+.sql-keyword {
+    color: #c678dd;
+    font-weight: bold;
+}
+
+.sql-function {
+    color: #61afef;
+}
+
+.sql-string {
+    color: #98c379;
+}
+
+.sql-number {
+    color: #d19a66;
+}
+
+/* Loading spinner */
+.loading-spinner {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top-color: #4a6cf7;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

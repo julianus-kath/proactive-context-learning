@@ -1,70 +1,45 @@
-version: '3'
+version: '3.8'
 
 services:
-  erp-server:
-    build:
-      context: .
-      dockerfile: Dockerfile.mcp
-    ports:
-      - "8001:8001"
-    command: python -m crawling_agent.servers.erp_server --host 0.0.0.0
-    volumes:
-      - .:/app
-      - ./synthetic_data.db:/app/synthetic_data.db
-    networks:
-      - mcp-network
-
-  document-storage-server:
-    build:
-      context: .
-      dockerfile: Dockerfile.mcp
-    ports:
-      - "8002:8002"
-    command: python -m crawling_agent.servers.document_storage_server --host 0.0.0.0 --mock
-    volumes:
-      - .:/app
-    networks:
-      - mcp-network
-
-  knowledge-graph-server:
-    build:
-      context: .
-      dockerfile: Dockerfile.mcp
-    ports:
-      - "8003:8003"
-    command: python -m crawling_agent.servers.knowledge_graph_server --host 0.0.0.0 --mock
-    volumes:
-      - .:/app
-    networks:
-      - mcp-network
-      
-  crawling-agent-api:
+  # Main API service
+  api:
     build:
       context: .
       dockerfile: Dockerfile.mcp
     ports:
       - "8000:8000"
-    command: python -m crawling_agent.api.agent_api --host 0.0.0.0
     volumes:
       - .:/app
-    depends_on:
-      - erp-server
-      - document-storage-server
-      - knowledge-graph-server
+      - ./logs:/app/logs
     environment:
-      - LLM_PROVIDER=${LLM_PROVIDER}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_ORGANIZATION=${OPENAI_ORGANIZATION}
-      - OPENAI_MODEL=${OPENAI_MODEL}
-      - ERP_HOST=erp-server
-      - ERP_PORT=8001
-      - DOCUMENT_STORAGE_HOST=document-storage-server
-      - DOCUMENT_STORAGE_PORT=8002
-      - KNOWLEDGE_GRAPH_HOST=knowledge-graph-server
-      - KNOWLEDGE_GRAPH_PORT=8003
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
+      - SQL_HOST=erp
+      - SQL_PORT=8001
+    depends_on:
+      - erp
+    command: python -m crawling_agent.api.main --host 0.0.0.0 --port 8000
     networks:
       - mcp-network
-      
+
+  # ERP API service
+  erp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    ports:
+      - "8001:8001"
+    volumes:
+      - .:/app
+      - ./synthetic_data.db:/app/synthetic_data.db
+    environment:
+      - SQL_DB_PATH=/app/synthetic_data.db
+    command: python -m crawling_agent.api.erp_api --host 0.0.0.0 --port 8001
+    networks:
+      - mcp-network
+
+  # Web UI (using existing frontend)
   frontend:
     build:
       context: .
@@ -76,7 +51,9 @@ services:
     networks:
       - mcp-network
     depends_on:
-      - crawling-agent-api
+      - api
+    environment:
+      - API_URL=http://api:8000
 
 networks:
   mcp-network:

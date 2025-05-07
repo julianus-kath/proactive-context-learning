@@ -19,6 +19,9 @@ fi
 echo "Using database file: synthetic_data.db"
 echo "Database file size: $(du -h synthetic_data.db | cut -f1)"
 
+# Create logs directory if it doesn't exist
+mkdir -p logs
+
 # Start all services with environment variables from .env file
 echo "Starting all services..."
 docker-compose up -d

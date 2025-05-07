@@ -183,19 +183,40 @@ class OpenAIProvider(LLMProvider):
         # Add system message if provided
         if system_message:
             messages.append({"role": "system", "content": system_message})
+            self.logger.info(f"Using system message: {system_message[:100]}...")
         
         # Add user prompt
         messages.append({"role": "user", "content": prompt})
+        self.logger.info(f"Generating completion for prompt: {prompt[:100]}...")
         
-        response = await self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            stop=stop_sequences
-        )
-        
-        return response.choices[0].message.content
+        try:
+            self.logger.info(f"Sending request to OpenAI API (model: {self.model}, temperature: {temperature})")
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stop=stop_sequences
+            )
+            
+            content = response.choices[0].message.content
+            self.logger.info(f"Generated completion ({len(content)} chars)")
+            self.logger.debug(f"Generated content: {content[:200]}...")
+            
+            # Extract and log any thinking steps or reasoning if present
+            if "THINKING:" in content or "REASONING:" in content or "STEPS:" in content:
+                thinking_lines = [line for line in content.split('\n') 
+                                if any(prefix in line for prefix in ["THINKING:", "REASONING:", "STEPS:"])]
+                if thinking_lines:
+                    self.logger.info("Thinking steps:")
+                    for line in thinking_lines:
+                        self.logger.info(f"  {line}")
+            
+            return content
+            
+        except Exception as e:
+            self.logger.error(f"Error generating completion: {str(e)}")
+            raise
     
     async def generate_with_json_output(self, 
                                        prompt: str, 
@@ -217,14 +238,20 @@ class OpenAIProvider(LLMProvider):
         Raises:
             Exception: If there is an error generating or parsing the JSON completion
         """
+        self.logger.info("Generating JSON completion")
+        self.logger.info(f"Output schema: {json.dumps(output_schema, indent=2)}")
+        
         if not system_message:
-            system_message = "You are a helpful assistant that always responds in JSON format."
+            system_message = "You are a helpful assistant that always responds in JSON format. Do not include markdown code block formatting in your response."
         else:
-            system_message += "\n\nYou must respond in JSON format."
+            system_message += "\n\nYou must respond in JSON format. Do not include markdown code block formatting in your response."
         
         # Add schema information to the prompt
-        schema_prompt = f"\n\nYour response must conform to the following JSON schema:\n{json.dumps(output_schema, indent=2)}"
+        schema_prompt = f"\n\nYour response must conform to the following JSON schema:\n{json.dumps(output_schema, indent=2)}\n\nIMPORTANT: Respond with only the JSON object. Do not include markdown code block formatting (```json or ```) in your response."
         full_prompt = prompt + schema_prompt
+        
+        self.logger.info(f"Using system message: {system_message[:100]}...")
+        self.logger.info(f"Full prompt: {full_prompt[:200]}...")
         
         # Check if the model supports JSON response format
         supports_json_format = "gpt-4-turbo" in self.model or "gpt-4-0125" in self.model or "gpt-3.5-turbo-0125" in self.model
@@ -241,30 +268,72 @@ class OpenAIProvider(LLMProvider):
         # Only add response_format for models that support it
         if supports_json_format:
             params["response_format"] = {"type": "json_object"}
-            
-        response = await self.client.chat.completions.create(**params)
-        
-        content = response.choices[0].message.content
-        
-        # Clean up the content if it contains markdown code blocks
-        if content.startswith("```json") or content.startswith("```"):
-            # Extract JSON from markdown code block
-            content = content.strip()
-            if content.startswith("```json"):
-                content = content[7:]  # Remove ```json
-            elif content.startswith("```"):
-                content = content[3:]  # Remove ```
-            
-            if content.endswith("```"):
-                content = content[:-3]  # Remove trailing ```
-            
-            content = content.strip()
+            self.logger.info("Using JSON response format")
         
         try:
-            return json.loads(content)
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Error decoding JSON: {str(e)}")
-            self.logger.error(f"Content: {content}")
+            self.logger.info("Sending request to OpenAI API")
+            response = await self.client.chat.completions.create(**params)
+            
+            content = response.choices[0].message.content.strip()
+            self.logger.info(f"Generated JSON response ({len(content)} chars)")
+            self.logger.debug(f"Raw response: {content[:200]}...")
+            
+            # First try to parse as is
+            try:
+                result = json.loads(content)
+                self.logger.info("Successfully parsed JSON response")
+                
+                # Log thinking steps if present
+                if "thought_process" in result:
+                    self.logger.info(f"Thinking process: {result['thought_process']}")
+                if "steps" in result:
+                    self.logger.info("Processing steps:")
+                    for step in result["steps"]:
+                        self.logger.info(f"  - {step}")
+                
+                return result
+                
+            except json.JSONDecodeError:
+                self.logger.warning("Failed to parse raw response as JSON, attempting to clean up markdown formatting")
+                # If that fails, try to clean up markdown formatting
+                try:
+                    # Remove markdown code block formatting if present
+                    if content.startswith("```"):
+                        # Split by ``` and take the middle part
+                        parts = content.split("```")
+                        if len(parts) >= 3:
+                            # Take the middle part (between the first and last ```)
+                            content = parts[1]
+                            # If it starts with "json\n" or "json\r\n", remove that
+                            if content.startswith("json\n"):
+                                content = content[5:]
+                            elif content.startswith("json\r\n"):
+                                content = content[6:]
+                        else:
+                            # If we can't find both start and end ```, just remove them from the start
+                            content = content[3:]
+                    content = content.strip()
+                    
+                    result = json.loads(content)
+                    self.logger.info("Successfully parsed cleaned JSON response")
+                    
+                    # Log thinking steps if present
+                    if "thought_process" in result:
+                        self.logger.info(f"Thinking process: {result['thought_process']}")
+                    if "steps" in result:
+                        self.logger.info("Processing steps:")
+                        for step in result["steps"]:
+                            self.logger.info(f"  - {step}")
+                    
+                    return result
+                    
+                except json.JSONDecodeError as e:
+                    self.logger.error(f"Error decoding JSON: {str(e)}")
+                    self.logger.error(f"Content: {content}")
+                    raise
+                
+        except Exception as e:
+            self.logger.error(f"Error generating JSON completion: {str(e)}")
             raise
     
     def get_provider_name(self) -> str:

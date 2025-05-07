@@ -6,7 +6,8 @@ import os
 import yaml
 import json
 import uuid
-import requests
+import aiohttp
+import requests  # Keep for sync health checks
 from typing import Dict, Any, Optional, List, Union
 
 from crawling_agent.models.task_instruction import DataSourceQuery
@@ -66,6 +67,87 @@ class BaseMCPConnector:
             
             # Update base URL with configured host and port
             self.base_url = f"http://{self.host}:{self.port}"
+        
+        # Initialize session to None, will be created when needed
+        self._session = None
+    
+    async def _ensure_session(self):
+        """Ensure we have an aiohttp session."""
+        if self._session is None:
+            self._session = aiohttp.ClientSession()
+    
+    async def _make_request(self, method: str, path: str, **kwargs) -> Dict[str, Any]:
+        """
+        Make an HTTP request to the server.
+        
+        Args:
+            method: HTTP method
+            path: URL path
+            **kwargs: Additional arguments to pass to the request
+            
+        Returns:
+            Response data as a dictionary
+        """
+        await self._ensure_session()
+        
+        url = f"{self.base_url}{path}"
+        try:
+            async with self._session.request(method, url, **kwargs) as response:
+                response.raise_for_status()
+                return await response.json()
+        except Exception as e:
+            self.logger.error(f"Error making request to {url}: {str(e)}")
+            raise
+    
+    async def execute_query(self, query: DataSourceQuery) -> Dict[str, Any]:
+        """
+        Execute a query against the server.
+        
+        Args:
+            query: The query to execute
+            
+        Returns:
+            Dictionary containing the query results
+        """
+        raise NotImplementedError("Subclasses must implement execute_query")
+    
+    async def get_server_info(self) -> Dict[str, Any]:
+        """
+        Get information about the server.
+        
+        Returns:
+            Dictionary containing server information
+        """
+        try:
+            response = await self._make_request("GET", "/info")
+            return response
+        except Exception as e:
+            self.logger.error(f"Error getting server info: {str(e)}")
+            if self.mock_mode:
+                return {
+                    "server_type": self.server_type,
+                    "version": "1.0.0",
+                    "capabilities": ["query"],
+                    "query_types": [],
+                    "status": "online"
+                }
+            raise
+    
+    def check_health(self) -> bool:
+        """
+        Check if the server is healthy.
+        Note: This is kept synchronous for compatibility with health check endpoints.
+        
+        Returns:
+            True if the server is healthy, False otherwise
+        """
+        try:
+            response = requests.get(f"{self.base_url}/health")
+            response.raise_for_status()
+            return response.json().get("status") == "healthy"
+        except Exception as e:
+            self.logger.error(f"Error checking server health: {str(e)}")
+            return False
     
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """
@@ -79,7 +161,6 @@ class BaseMCPConnector:
         """
         try:
             with open(config_path, 'r') as f:
-                # Load the YAML content
                 config_str = f.read()
                 
                 # Replace environment variables
@@ -98,61 +179,7 @@ class BaseMCPConnector:
                 
                 config_str = re.sub(pattern, replace_with_default, config_str)
                 
-                # Parse the modified YAML
-                config = yaml.safe_load(config_str)
-                
-                return config
+                return yaml.safe_load(config_str)
         except Exception as e:
             self.logger.error(f"Error loading configuration: {str(e)}")
             return {}
-    
-    def get_server_info(self) -> Dict[str, Any]:
-        """
-        Get information about the server.
-        
-        Returns:
-            Dictionary containing server information
-        """
-        try:
-            response = requests.get(f"{self.base_url}/info")
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            self.logger.error(f"Error getting server info: {str(e)}")
-            if self.mock_mode:
-                return {
-                    "server_type": self.server_type,
-                    "version": "1.0.0",
-                    "capabilities": ["query"],
-                    "query_types": [],
-                    "status": "online"
-                }
-            else:
-                raise
-    
-    def check_health(self) -> bool:
-        """
-        Check if the server is healthy.
-        
-        Returns:
-            True if the server is healthy, False otherwise
-        """
-        try:
-            response = requests.get(f"{self.base_url}/health")
-            response.raise_for_status()
-            return response.json().get("status") == "healthy"
-        except Exception as e:
-            self.logger.error(f"Error checking server health: {str(e)}")
-            return False
-    
-    def execute_query(self, query: DataSourceQuery) -> Dict[str, Any]:
-        """
-        Execute a query against the server.
-        
-        Args:
-            query: The query to execute
-            
-        Returns:
-            Dictionary containing the query results
-        """
-        raise NotImplementedError("Subclasses must implement execute_query")

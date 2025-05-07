@@ -7,9 +7,10 @@ COPY frontend /app/frontend
 
 # Install dependencies
 RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir fastapi uvicorn
 
 # Expose port
 EXPOSE 8080
 
 # Set the entrypoint
-ENTRYPOINT ["python", "frontend/server.py", "--port", "8080", "--host", "0.0.0.0"]
+ENTRYPOINT ["python", "frontend/server.py"]
