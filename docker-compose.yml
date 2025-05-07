@@ -17,8 +17,11 @@ services:
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
       - SQL_HOST=erp
       - SQL_PORT=8001
+      - DOC_HOST=docstore
+      - DOC_PORT=8002
     depends_on:
       - erp
+      - docstore
     command: python -m crawling_agent.api.main --host 0.0.0.0 --port 8000
     networks:
       - mcp-network
@@ -39,6 +42,40 @@ services:
     networks:
       - mcp-network
 
+  # Document Store API service
+  docstore:
+    build:
+      context: .
+      dockerfile: Dockerfile.docstore
+    ports:
+      - "8002:8002"
+    volumes:
+      - .:/app
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/
+      - MONGO_DB=document_store
+    networks:
+      - mcp-network
+    depends_on:
+      - mongo
+
+  # MongoDB service
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - mcp-network
+    environment:
+      - MONGO_INITDB_DATABASE=document_store
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Web UI (using existing frontend)
   frontend:
     build:
@@ -58,3 +95,6 @@ services:
 networks:
   mcp-network:
     driver: bridge
+
+volumes:
+  mongo_data:

@@ -16,7 +16,7 @@ from crawling_agent.tools.base import ToolRegistry
 from crawling_agent.tools.sql_tool import SQLTool
 from crawling_agent.tools.doc_tool import DocTool
 from crawling_agent.tools.kg_tool import KGTool
-from crawling_agent.agent.mcp_agent import MCPCrawlingAgent
+from crawling_agent.agent.enhanced_mcp_agent import EnhancedMCPCrawlingAgent
 from crawling_agent.fusion.fusion_agent import FusionAgent
 from crawling_agent.models.fusion_models import CrawlingResult, FusedAnswer
 
@@ -85,13 +85,17 @@ class CrawlingAgentAPI:
             "host": os.environ.get("SQL_HOST", "localhost"),
             "port": os.environ.get("SQL_PORT", "8001")
         }
+        doc_config = {
+            "host": os.environ.get("DOC_HOST", "localhost"),
+            "port": os.environ.get("DOC_PORT", "8002")
+        }
         self.tool_registry.register_tool(SQLTool(sql_config))
-        self.tool_registry.register_tool(DocTool())
+        self.tool_registry.register_tool(DocTool(doc_config))
         self.tool_registry.register_tool(KGTool())
         
         # Initialize the agents
-        self.crawling_agent = MCPCrawlingAgent(self.llm_provider, self.tool_registry)
-        self.fusion_agent = FusionAgent()
+        self.crawling_agent = EnhancedMCPCrawlingAgent(self.llm_provider, self.tool_registry)
+        self.fusion_agent = FusionAgent(self.llm_provider)
         
         # Create the FastAPI app
         self.app = FastAPI(
@@ -145,10 +149,10 @@ class CrawlingAgentAPI:
                 logger.info(f"Processing query: {request.query}")
                 
                 # Process the query with the crawling agent
-                crawling_result = await self.crawling_agent.run(request.query)
+                crawling_results = await self.crawling_agent.run(request.query)
                 
                 # Fuse the results
-                fused_answer = await self.fusion_agent.fuse([crawling_result])
+                fused_answer = await self.fusion_agent.fuse(crawling_results)
                 
                 # Calculate execution time
                 execution_time = (time.time() - start_time) * 1000  # in milliseconds

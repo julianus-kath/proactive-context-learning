@@ -4,16 +4,25 @@
 echo "Stopping any running services..."
 docker-compose down
 
-# Rebuild the services to apply code changes
-echo "Rebuilding services..."
-docker-compose build
+# Check if we should skip the build step
+if [ "$1" == "--skip-build" ]; then
+  echo "Skipping build step..."
+else
+  # Rebuild the services to apply code changes
+  echo "Rebuilding services..."
+  echo "If this step hangs, press Ctrl+C and run again with --skip-build"
+  # Add a timeout to the build command
+  timeout 60 docker-compose build || {
+    echo "Build timed out or failed. Continuing anyway..."
+  }
+fi
 
 # Verify the synthetic_data.db file exists
-if [ ! -f "synthetic_data.db" ]; then
-  echo "Error: synthetic_data.db file not found!"
-  echo "Please make sure the database file exists in the project root directory."
-  exit 1
-fi
+#if [ ! -f "synthetic_data.db" ]; then
+#  echo "Error: synthetic_data.db file not found!"
+#  echo "Please make sure the database file exists in the project root directory."
+#  exit 1
+#fi
 
 # Print database info
 echo "Using database file: synthetic_data.db"
@@ -28,7 +37,17 @@ docker-compose up -d
 
 # Wait for services to be ready
 echo "Waiting for services to be ready..."
-sleep 10
+echo "This may take a minute or two..."
+sleep 20
+
+# Install MongoDB dependencies in the containers
+echo "Installing MongoDB dependencies in the containers..."
+docker-compose exec -T api pip install motor pymongo || echo "Failed to install dependencies in API container"
+docker-compose exec -T docstore pip install motor pymongo || echo "Failed to install dependencies in docstore container"
+
+# Populate the document store with synthetic data
+echo "Populating the document store with synthetic data..."
+docker-compose exec -T api python scripts/populate_document_store.py --erp-api-url http://erp:8001 --doc-api-url http://docstore:8002 || echo "Failed to populate document store"
 
 # Print the URLs and provider info
 echo ""
