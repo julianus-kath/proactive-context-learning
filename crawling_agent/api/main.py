@@ -2,11 +2,10 @@
 Main API for the crawling agent system.
 """
 import os
-import json
 import time
 import logging
 from typing import Dict, List, Any, Optional
-from fastapi import FastAPI, HTTPException, Body, BackgroundTasks
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import uvicorn
@@ -17,8 +16,7 @@ from crawling_agent.tools.sql_tool import SQLTool
 from crawling_agent.tools.doc_tool import DocTool
 from crawling_agent.tools.kg_tool import KGTool
 from crawling_agent.agent.enhanced_mcp_agent import EnhancedMCPCrawlingAgent
-from crawling_agent.fusion.fusion_agent import FusionAgent
-from crawling_agent.models.fusion_models import CrawlingResult, FusedAnswer
+from fusion.fusion_agent import FusionAgent
 
 # Configure logging
 logging.basicConfig(

@@ -8,8 +8,8 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     line-height: 1.6;
-    color: #333;
-    background-color: #f5f7fa;
+    color: #e0e0e0;
+    background-color: #000000;
     height: 100vh;
     display: flex;
     justify-content: center;
@@ -21,9 +21,9 @@ body {
     width: 90%;
     max-width: 1000px;
     height: 90vh;
-    background-color: #fff;
+    background-color: #121212;
     border-radius: 12px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 5px 15px rgba(0, 255, 0, 0.2);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -32,11 +32,12 @@ body {
 /* Chat Header */
 .chat-header {
     padding: 20px;
-    background-color: #4a6cf7;
-    color: white;
+    background-color: #0a3d0a;
+    color: #00ff00;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid #00ff00;
 }
 
 .chat-header h1 {
@@ -57,15 +58,15 @@ body {
 }
 
 .status-dot.online {
-    background-color: #4caf50;
+    background-color: #00ff00;
 }
 
 .status-dot.offline {
-    background-color: #f44336;
+    background-color: #ff0000;
 }
 
 .status-dot.connecting {
-    background-color: #ff9800;
+    background-color: #ffff00;
 }
 
 /* Chat Messages */
@@ -76,6 +77,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    background-color: #121212;
 }
 
 .message {
@@ -93,31 +95,33 @@ body {
 
 .message.user {
     align-self: flex-end;
-    background-color: #4a6cf7;
-    color: white;
+    background-color: #0a3d0a;
+    color: #00ff00;
     border-bottom-right-radius: 4px;
+    border: 1px solid #00ff00;
 }
 
 .message.agent {
     align-self: flex-start;
-    background-color: #f1f3f5;
-    color: #333;
+    background-color: #1a1a1a;
+    color: #00ff00;
     border-bottom-left-radius: 4px;
+    border: 1px solid #00ff00;
 }
 
 .message.system {
     align-self: center;
-    background-color: #f8f9fa;
-    color: #666;
-    border: 1px solid #e9ecef;
+    background-color: #1a1a1a;
+    color: #00ff00;
+    border: 1px solid #00ff00;
     width: 100%;
 }
 
 .message.error {
     align-self: center;
-    background-color: #fff5f5;
-    color: #e03131;
-    border: 1px solid #ffc9c9;
+    background-color: #2a0000;
+    color: #ff0000;
+    border: 1px solid #ff0000;
     width: 100%;
 }
 
@@ -164,11 +168,12 @@ body {
     margin: 10px 0;
     padding: 12px;
     border-radius: 6px;
-    background-color: #282c34;
-    color: #abb2bf;
+    background-color: #0a0a0a;
+    color: #00ff00;
     overflow-x: auto;
     font-family: 'Fira Code', 'Courier New', Courier, monospace;
     font-size: 0.9rem;
+    border: 1px solid #00ff00;
 }
 
 .message-content code {
@@ -189,24 +194,25 @@ body {
 }
 
 .thought-toggle {
-    background-color: #f1f3f5;
-    border: 1px solid #e9ecef;
+    background-color: #0a1a0a;
+    border: 1px solid #00ff00;
     border-radius: 4px;
     padding: 8px 12px;
     font-size: 0.9rem;
-    color: #495057;
+    color: #00ff00;
     cursor: pointer;
     margin-bottom: 12px;
     transition: background-color 0.2s ease;
 }
 
 .thought-toggle:hover {
-    background-color: #e9ecef;
+    background-color: #0a3d0a;
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
 }
 
 .thought-process-container {
     margin-bottom: 16px;
-    border-left: 3px solid #4a6cf7;
+    border-left: 3px solid #00ff00;
     padding-left: 12px;
 }
 
@@ -214,26 +220,28 @@ body {
     white-space: pre-wrap;
     font-size: 0.85rem;
     line-height: 1.5;
-    color: #495057;
-    background-color: #f8f9fa;
+    color: #00ff00;
+    background-color: #0a1a0a;
     padding: 12px;
     border-radius: 4px;
     overflow-x: auto;
+    border: 1px solid #00ff00;
 }
 
 .query-intent {
     font-size: 0.9rem;
-    color: #495057;
+    color: #00ff00;
     margin: 8px 0 12px;
     padding: 8px 12px;
-    background-color: #e9ecef;
+    background-color: #0a1a0a;
     border-radius: 4px;
     font-weight: 500;
+    border: 1px solid #00ff00;
 }
 
 .query-status {
     font-size: 0.9rem;
-    color: #495057;
+    color: #00ff00;
     margin: 8px 0;
     font-weight: 500;
     display: flex;
@@ -250,11 +258,11 @@ body {
 }
 
 .query-status.executed::before {
-    background-color: #4caf50;
+    background-color: #00ff00;
 }
 
 .query-status.skipped::before {
-    background-color: #ff9800;
+    background-color: #ffff00;
 }
 
 .message-content .results-container {
@@ -272,30 +280,35 @@ body {
 .message-content .results-table td {
     padding: 8px 12px;
     text-align: left;
-    border: 1px solid #e9ecef;
+    border: 1px solid #00ff00;
 }
 
 .message-content .results-table th {
-    background-color: #f8f9fa;
+    background-color: #0a3d0a;
     font-weight: 600;
+    color: #00ff00;
 }
 
 .message-content .results-table tr:nth-child(even) {
-    background-color: #f8f9fa;
+    background-color: #1a1a1a;
+}
+
+.message-content .results-table tr:nth-child(odd) {
+    background-color: #0a0a0a;
 }
 
 .message-content .execution-time {
     margin-top: 12px;
     font-size: 0.8rem;
-    color: #868e96;
+    color: #00aa00;
     text-align: right;
 }
 
 /* Chat Input */
 .chat-input-container {
     padding: 16px;
-    background-color: #f8f9fa;
-    border-top: 1px solid #e9ecef;
+    background-color: #0a0a0a;
+    border-top: 1px solid #00ff00;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -304,7 +317,7 @@ body {
 #user-input {
     flex: 1;
     padding: 12px 16px;
-    border: 1px solid #e9ecef;
+    border: 1px solid #00ff00;
     border-radius: 24px;
     font-size: 1rem;
     resize: none;
@@ -312,19 +325,22 @@ body {
     transition: border-color 0.3s ease;
     max-height: 120px;
     overflow-y: auto;
+    background-color: #1a1a1a;
+    color: #00ff00;
 }
 
 #user-input:focus {
-    border-color: #4a6cf7;
+    border-color: #00ff00;
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
 }
 
 #send-button {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background-color: #4a6cf7;
-    color: white;
-    border: none;
+    background-color: #0a3d0a;
+    color: #00ff00;
+    border: 1px solid #00ff00;
     cursor: pointer;
     display: flex;
     justify-content: center;
@@ -333,11 +349,14 @@ body {
 }
 
 #send-button:hover {
-    background-color: #3a5ce4;
+    background-color: #0a5a0a;
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
 }
 
 #send-button:disabled {
-    background-color: #adb5bd;
+    background-color: #1a1a1a;
+    border-color: #2a2a2a;
+    color: #2a2a2a;
     cursor: not-allowed;
 }
 
@@ -352,7 +371,7 @@ body {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background-color: #adb5bd;
+    background-color: #00ff00;
     animation: loadingAnimation 1.4s infinite ease-in-out both;
 }
 
@@ -393,10 +412,10 @@ body {
     top: 20px;
     width: 400px;
     max-height: 80vh;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
+    background-color: #0a0a0a;
+    border: 1px solid #00ff00;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 255, 0, 0.2);
     display: flex;
     flex-direction: column;
     z-index: 1000;
@@ -404,8 +423,8 @@ body {
 
 .logging-header {
     padding: 12px 16px;
-    background-color: #e9ecef;
-    border-bottom: 1px solid #dee2e6;
+    background-color: #0a3d0a;
+    border-bottom: 1px solid #00ff00;
     border-radius: 8px 8px 0 0;
     display: flex;
     justify-content: space-between;
@@ -415,21 +434,22 @@ body {
 .logging-header h3 {
     margin: 0;
     font-size: 16px;
-    color: #495057;
+    color: #00ff00;
 }
 
 .logging-header button {
     padding: 4px 8px;
-    background-color: #6c757d;
-    color: white;
-    border: none;
+    background-color: #0a5a0a;
+    color: #00ff00;
+    border: 1px solid #00ff00;
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
 }
 
 .logging-header button:hover {
-    background-color: #5a6268;
+    background-color: #0a7a0a;
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
 }
 
 .logging-content {
@@ -439,102 +459,106 @@ body {
     font-family: monospace;
     font-size: 13px;
     line-height: 1.4;
+    color: #00ff00;
 }
 
 .log-entry {
     margin-bottom: 8px;
     padding: 6px 8px;
-    background-color: white;
+    background-color: #1a1a1a;
     border-radius: 4px;
-    border-left: 3px solid #6c757d;
+    border-left: 3px solid #00ff00;
 }
 
 .log-timestamp {
-    color: #6c757d;
+    color: #00aa00;
     margin-right: 8px;
     font-size: 12px;
 }
 
 .log-content {
-    color: #212529;
+    color: #00ff00;
 }
 
 .log-error {
-    border-left-color: #dc3545;
-    background-color: #fff5f5;
+    border-left-color: #ff0000;
+    background-color: #2a0000;
 }
 
 .log-info {
-    border-left-color: #0d6efd;
+    border-left-color: #00aaff;
 }
 
 .thinking-section {
     margin: 12px 0;
     padding: 8px;
-    background-color: #e7f5ff;
+    background-color: #0a1a0a;
     border-radius: 4px;
+    border: 1px solid #00ff00;
 }
 
 .thinking-header {
     font-weight: bold;
-    color: #0d6efd;
+    color: #00ff00;
     margin-bottom: 8px;
 }
 
 .thinking-step {
     margin-left: 16px;
     margin-bottom: 4px;
-    color: #495057;
+    color: #00aa00;
 }
 
 .query-section {
     margin: 12px 0;
     padding: 8px;
-    background-color: #f8f9fa;
+    background-color: #0a1a0a;
     border-radius: 4px;
-    border-left: 3px solid #20c997;
+    border-left: 3px solid #00ff00;
+    border: 1px solid #00ff00;
 }
 
 .query-content {
     margin: 0;
     padding: 8px;
-    background-color: white;
+    background-color: #1a1a1a;
     border-radius: 4px;
     overflow-x: auto;
-    color: #212529;
+    color: #00ff00;
 }
 
 .query-params {
     margin: 8px 0 0 0;
     padding: 8px;
-    background-color: white;
+    background-color: #1a1a1a;
     border-radius: 4px;
     overflow-x: auto;
-    color: #6c757d;
+    color: #00aa00;
     font-size: 12px;
 }
 
 .results-section {
     margin: 12px 0;
     padding: 8px;
-    background-color: #f8f9fa;
+    background-color: #0a1a0a;
     border-radius: 4px;
-    border-left: 3px solid #ffd43b;
+    border-left: 3px solid #00ff00;
+    border: 1px solid #00ff00;
 }
 
 .results-header {
     font-weight: bold;
-    color: #495057;
+    color: #00ff00;
     margin-bottom: 8px;
 }
 
 .results-content {
     margin: 0;
     padding: 8px;
-    background-color: white;
+    background-color: #1a1a1a;
     border-radius: 4px;
     overflow-x: auto;
-    color: #212529;
+    color: #00ff00;
 }
 
 /* Make the logging panel draggable */
@@ -558,32 +582,35 @@ body {
 }
 
 .toggle-info {
-    background-color: #f1f3f5;
-    border: 1px solid #e9ecef;
+    background-color: #0a1a0a;
+    border: 1px solid #00ff00;
     border-radius: 4px;
     padding: 6px 12px;
     font-size: 0.8rem;
-    color: #495057;
+    color: #00ff00;
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
 
 .toggle-info:hover {
-    background-color: #e9ecef;
+    background-color: #0a3d0a;
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
 }
 
 .info-content {
     margin-top: 12px;
     padding: 12px;
-    background-color: #f8f9fa;
+    background-color: #0a1a0a;
     border-radius: 4px;
     font-size: 0.9rem;
+    color: #00ff00;
+    border: 1px solid #00ff00;
 }
 
 /* SQL syntax highlighting */
 .sql-query {
-    background-color: #282c34;
-    color: #abb2bf;
+    background-color: #0a0a0a;
+    color: #00ff00;
     padding: 12px;
     border-radius: 4px;
     overflow-x: auto;
@@ -591,23 +618,24 @@ body {
     font-size: 0.9rem;
     line-height: 1.5;
     margin: 8px 0;
+    border: 1px solid #00ff00;
 }
 
 .sql-keyword {
-    color: #c678dd;
+    color: #00ffaa;
     font-weight: bold;
 }
 
 .sql-function {
-    color: #61afef;
+    color: #00aaff;
 }
 
 .sql-string {
-    color: #98c379;
+    color: #ffff00;
 }
 
 .sql-number {
-    color: #d19a66;
+    color: #ff00ff;
 }
 
 /* Loading spinner */
@@ -615,9 +643,9 @@ body {
     display: inline-block;
     width: 24px;
     height: 24px;
-    border: 3px solid rgba(0, 0, 0, 0.1);
+    border: 3px solid rgba(0, 255, 0, 0.1);
     border-radius: 50%;
-    border-top-color: #4a6cf7;
+    border-top-color: #00ff00;
     animation: spin 1s ease-in-out infinite;
     margin-right: 8px;
 }

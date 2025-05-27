@@ -11,8 +11,8 @@ def main():
     print("Testing Crawling Agent...")
     
     # Initialize components
-    translator = QueryTranslator(use_mock=True)
-    controller = CrawlingAgentController(mock_mode=True)
+    translator = QueryTranslator(use_mock=False)
+    controller = CrawlingAgentController(mock_mode=False)
     
     # Test query
     query = "Find all products with price greater than 100"

@@ -22,7 +22,8 @@ class ERPServer(BaseMCPServer):
         self,
         host: str = "localhost",
         port: int = 8001,
-        config_path: Optional[str] = None
+        config_path: Optional[str] = None,
+        mock_mode: bool = False
     ):
         """
         Initialize the ERP MCP server.
@@ -31,6 +32,7 @@ class ERPServer(BaseMCPServer):
             host: Host to bind the server to
             port: Port to bind the server to
             config_path: Path to the configuration file
+            mock_mode: Whether to run in mock mode
         """
         super().__init__(
             server_type="ERP",
@@ -39,6 +41,7 @@ class ERPServer(BaseMCPServer):
             port=port,
             config_path=config_path
         )
+        self.mock_mode = mock_mode
         
         self.connection = None
         
@@ -231,13 +234,15 @@ def main():
     parser.add_argument("--host", type=str, default="localhost", help="Host to bind the server to")
     parser.add_argument("--port", type=int, default=8001, help="Port to bind the server to")
     parser.add_argument("--config", type=str, help="Path to the configuration file")
+    parser.add_argument("--mock", action="store_true", help="Run in mock mode")
     
     args = parser.parse_args()
     
     server = ERPServer(
         host=args.host,
         port=args.port,
-        config_path=args.config
+        config_path=args.config,
+        mock_mode=args.mock
     )
     
     server.run()

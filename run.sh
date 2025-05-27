@@ -18,15 +18,25 @@ else
 fi
 
 # Verify the synthetic_data.db file exists
-#if [ ! -f "synthetic_data.db" ]; then
-#  echo "Error: synthetic_data.db file not found!"
-#  echo "Please make sure the database file exists in the project root directory."
-#  exit 1
-#fi
+if [ ! -f "synthetic_data.db" ]; then
+  echo "Error: synthetic_data.db file not found!"
+  echo "Please make sure the database file exists in the project root directory."
+  exit 1
+fi
 
 # Print database info
 echo "Using database file: synthetic_data.db"
 echo "Database file size: $(du -h synthetic_data.db | cut -f1)"
+
+# Generate MongoDB data if it doesn't exist
+if [ ! -f "mongodb_data.json" ]; then
+  echo "MongoDB data file not found. Generating it now..."
+  python scripts/generate_simple_mongodb_data.py
+fi
+
+# Print MongoDB data info
+echo "Using MongoDB data file: mongodb_data.json"
+echo "MongoDB data file size: $(du -h mongodb_data.json | cut -f1)"
 
 # Create logs directory if it doesn't exist
 mkdir -p logs
@@ -40,14 +50,17 @@ echo "Waiting for services to be ready..."
 echo "This may take a minute or two..."
 sleep 20
 
-# Install MongoDB dependencies in the containers
-echo "Installing MongoDB dependencies in the containers..."
-docker-compose exec -T api pip install motor pymongo || echo "Failed to install dependencies in API container"
-docker-compose exec -T docstore pip install motor pymongo || echo "Failed to install dependencies in docstore container"
+# Install dependencies in the containers
+echo "Installing dependencies in the containers..."
+docker-compose exec -T api pip install motor pymongo faker aiohttp requests fastapi uvicorn pydantic python-dotenv openai || echo "Failed to install dependencies in API container"
+docker-compose exec -T docstore pip install motor pymongo faker aiohttp requests fastapi uvicorn pydantic python-dotenv openai || echo "Failed to install dependencies in docstore container"
 
-# Populate the document store with synthetic data
-echo "Populating the document store with synthetic data..."
-docker-compose exec -T api python scripts/populate_document_store.py --erp-api-url http://erp:8001 --doc-api-url http://docstore:8002 || echo "Failed to populate document store"
+# Load MongoDB data directly
+echo "Loading MongoDB data directly..."
+# Copy the JavaScript file to the MongoDB container
+docker cp scripts/generate_simple_mongodb_data.js $(docker-compose ps -q mongo):/generate_data.js || echo "Failed to copy MongoDB data script"
+# Run the JavaScript file in the MongoDB shell
+docker-compose exec -T mongo mongosh --file /generate_data.js || echo "Failed to load MongoDB data"
 
 # Print the URLs and provider info
 echo ""
