@@ -1,0 +1,33 @@
+{
+  "document_collections": {
+    "product_details": 30,
+    "customer_feedback": 57,
+    "marketing_campaigns": 20,
+    "support_tickets": 50,
+    "knowledge_base": 40
+  },
+  "graph_networks": {
+    "employee_network": {
+      "nodes": 30,
+      "edges": 80
+    },
+    "product_network": {
+      "nodes": 37,
+      "edges": 122
+    },
+    "customer_product_network": {
+      "nodes": 49,
+      "edges": 179
+    },
+    "supply_chain_network": {
+      "nodes": 59,
+      "edges": 140
+    }
+  },
+  "relational_data": {
+    "employees": 30,
+    "products": 30,
+    "suppliers": 20,
+    "sales": 50
+  }
+}

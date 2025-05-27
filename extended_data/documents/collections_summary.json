@@ -1,0 +1,12 @@
+{
+  "total_documents": 197,
+  "collections": {
+    "product_details": 30,
+    "customer_feedback": 57,
+    "marketing_campaigns": 20,
+    "support_tickets": 50,
+    "knowledge_base": 40
+  },
+  "generation_date": "2025-04-16T12:45:38.476195",
+  "seed": 42
+}

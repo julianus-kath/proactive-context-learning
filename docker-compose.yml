@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # Main API service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    environment:
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
+      - SQL_HOST=erp
+      - SQL_PORT=8001
+      - DOC_HOST=docstore
+      - DOC_PORT=8002
+    depends_on:
+      - erp
+      - docstore
+    command: python -m crawling_agent.api.main --host 0.0.0.0 --port 8000
+    networks:
+      - mcp-network
+
+  # ERP API service
+  erp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    ports:
+      - "8001:8001"
+    volumes:
+      - .:/app
+      - ./synthetic_data.db:/app/synthetic_data.db
+    environment:
+      - SQL_DB_PATH=/app/synthetic_data.db
+    command: python -m crawling_agent.api.erp_api --host 0.0.0.0 --port 8001
+    networks:
+      - mcp-network
+
+  # Document Store API service
+  docstore:
+    build:
+      context: .
+      dockerfile: Dockerfile.docstore
+    ports:
+      - "8002:8002"
+    volumes:
+      - .:/app
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/
+      - MONGO_DB=document_store
+    command: python -m crawling_agent.api.doc_api --host 0.0.0.0 --port 8002
+    networks:
+      - mcp-network
+    depends_on:
+      - mongo
+
+  # MongoDB service
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./mongodb_data.json:/mongodb_data.json
+      - ./scripts:/scripts
+    networks:
+      - mcp-network
+    environment:
+      - MONGO_INITDB_DATABASE=document_store
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Web UI (using existing frontend)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./frontend:/app/frontend
+    networks:
+      - mcp-network
+    depends_on:
+      - api
+    environment:
+      - API_URL=http://api:8000
+
+networks:
+  mcp-network:
+    driver: bridge
+
+volumes:
+  mongo_data:

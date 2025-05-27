@@ -1,0 +1,2523 @@
+{
+  "nodes": [
+    {
+      "id": "customer-1",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 1
+      }
+    },
+    {
+      "id": "customer-2",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 2
+      }
+    },
+    {
+      "id": "customer-3",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 3
+      }
+    },
+    {
+      "id": "customer-4",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 4
+      }
+    },
+    {
+      "id": "customer-5",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 5
+      }
+    },
+    {
+      "id": "customer-6",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 6
+      }
+    },
+    {
+      "id": "customer-7",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 7
+      }
+    },
+    {
+      "id": "customer-8",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 8
+      }
+    },
+    {
+      "id": "customer-9",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 9
+      }
+    },
+    {
+      "id": "customer-10",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 10
+      }
+    },
+    {
+      "id": "customer-11",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 11
+      }
+    },
+    {
+      "id": "customer-13",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 13
+      }
+    },
+    {
+      "id": "customer-14",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 14
+      }
+    },
+    {
+      "id": "customer-15",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 15
+      }
+    },
+    {
+      "id": "customer-16",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 16
+      }
+    },
+    {
+      "id": "customer-17",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 17
+      }
+    },
+    {
+      "id": "customer-18",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 18
+      }
+    },
+    {
+      "id": "customer-19",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 19
+      }
+    },
+    {
+      "id": "customer-20",
+      "labels": [
+        "Customer"
+      ],
+      "properties": {
+        "customer_id": 20
+      }
+    },
+    {
+      "id": "product-1",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 1
+      }
+    },
+    {
+      "id": "product-2",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 2
+      }
+    },
+    {
+      "id": "product-3",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 3
+      }
+    },
+    {
+      "id": "product-4",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 4
+      }
+    },
+    {
+      "id": "product-5",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 5
+      }
+    },
+    {
+      "id": "product-6",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 6
+      }
+    },
+    {
+      "id": "product-7",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 7
+      }
+    },
+    {
+      "id": "product-8",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 8
+      }
+    },
+    {
+      "id": "product-9",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 9
+      }
+    },
+    {
+      "id": "product-10",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 10
+      }
+    },
+    {
+      "id": "product-11",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 11
+      }
+    },
+    {
+      "id": "product-12",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 12
+      }
+    },
+    {
+      "id": "product-13",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 13
+      }
+    },
+    {
+      "id": "product-14",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 14
+      }
+    },
+    {
+      "id": "product-15",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 15
+      }
+    },
+    {
+      "id": "product-16",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 16
+      }
+    },
+    {
+      "id": "product-17",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 17
+      }
+    },
+    {
+      "id": "product-18",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 18
+      }
+    },
+    {
+      "id": "product-19",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 19
+      }
+    },
+    {
+      "id": "product-20",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 20
+      }
+    },
+    {
+      "id": "product-21",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 21
+      }
+    },
+    {
+      "id": "product-22",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 22
+      }
+    },
+    {
+      "id": "product-23",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 23
+      }
+    },
+    {
+      "id": "product-24",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 24
+      }
+    },
+    {
+      "id": "product-25",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 25
+      }
+    },
+    {
+      "id": "product-26",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 26
+      }
+    },
+    {
+      "id": "product-27",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 27
+      }
+    },
+    {
+      "id": "product-28",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 28
+      }
+    },
+    {
+      "id": "product-29",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 29
+      }
+    },
+    {
+      "id": "product-30",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 30
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "purchased-1-16-1",
+      "type": "PURCHASED",
+      "source": "customer-1",
+      "target": "product-16",
+      "properties": {
+        "sale_id": 1,
+        "date": "2021-09-17 00:00:00.000000",
+        "quantity": 6,
+        "amount": 2129.88,
+        "payment_method": "Bank Transfer"
+      }
+    },
+    {
+      "id": "purchased-9-29-2",
+      "type": "PURCHASED",
+      "source": "customer-9",
+      "target": "product-29",
+      "properties": {
+        "sale_id": 2,
+        "date": "2023-05-01 00:00:00.000000",
+        "quantity": 10,
+        "amount": 3814.9,
+        "payment_method": "Cash"
+      }
+    },
+    {
+      "id": "purchased-3-8-3",
+      "type": "PURCHASED",
+      "source": "customer-3",
+      "target": "product-8",
+      "properties": {
+        "sale_id": 3,
+        "date": "2023-07-01 00:00:00.000000",
+        "quantity": 7,
+        "amount": 5481.14,
+        "payment_method": "Debit Card"
+      }
+    },
+    {
+      "id": "purchased-15-26-4",
+      "type": "PURCHASED",
+      "source": "customer-15",
+      "target": "product-26",
+      "properties": {
+        "sale_id": 4,
+        "date": "2022-02-21 00:00:00.000000",
+        "quantity": 1,
+        "amount": 802.64,
+        "payment_method": "PayPal"
+      }
+    },
+    {
+      "id": "purchased-19-12-5",
+      "type": "PURCHASED",
+      "source": "customer-19",
+      "target": "product-12",
+      "properties": {
+        "sale_id": 5,
+        "date": "2023-04-18 00:00:00.000000",
+        "quantity": 8,
+        "amount": 6007.6,
+        "payment_method": "PayPal"
+      }
+    },
+    {
+      "id": "purchased-18-11-6",
+      "type": "PURCHASED",
+      "source": "customer-18",
+      "target": "product-11",
+      "properties": {
+        "sale_id": 6,
+        "date": "2023-01-31 00:00:00.000000",
+        "quantity": 6,
+        "amount": 1429.68,
+        "payment_method": "Bank Transfer"
+      }
+    },
+    {
+      "id": "purchased-7-11-7",
+      "type": "PURCHASED",
+      "source": "customer-7",
+      "target": "product-11",
+      "properties": {
+        "sale_id": 7,
+        "date": "2022-11-25 00:00:00.000000",
+        "quantity": 2,
+        "amount": 472.12,
+        "payment_method": "Debit Card"
+      }
+    },
+    {
+      "id": "purchased-9-24-8",
+      "type": "PURCHASED",
+      "source": "customer-9",
+      "target": "product-24",
+      "properties": {
+        "sale_id": 8,
+        "date": "2023-05-08 00:00:00.000000",
+        "quantity": 10,
+        "amount": 2662.8,
+        "payment_method": "Credit Card"
+      }
+    },
+    {
+      "id": "purchased-10-8-9",
+      "type": "PURCHASED",
+      "source": "customer-10",
+      "target": "product-8",
+      "properties": {
+        "sale_id": 9,
+        "date": "2022-07-09 00:00:00.000000",
+        "quantity": 6,
+        "amount": 5020.08,
+        "payment_method": "Cash"
+      }
+    },
+    {
+      "id": "purchased-2-18-10",
+      "type": "PURCHASED",
+      "source": "customer-2",
+      "target": "product-18",
+      "properties": {
+        "sale_id": 10,
+        "date": "2021-10-27 00:00:00.000000",
+        "quantity": 5,
+        "amount": 2583.45,
+        "payment_method": "PayPal"
+      }
+    },
+    {
+      "id": "purchased-19-10-11",
+      "type": "PURCHASED",
+      "source": "customer-19",
+      "target": "product-10",
+      "properties": {
+        "sale_id": 11,
+        "date": "2023-04-14 00:00:00.000000",
+        "quantity": 8,
+        "amount": 4434.8,
+        "payment_method": "Debit Card"
+      }
+    },
+    {
+      "id": "purchased-9-28-12",
+      "type": "PURCHASED",
+      "source": "customer-9",
+      "target": "product-28",
+      "properties": {
+        "sale_id": 12,
+        "date": "2022-09-27 00:00:00.000000",
+        "quantity": 8,
+        "amount": 7267.28,
+        "payment_method": "PayPal"
+      }
+    },
+    {
+      "id": "purchased-5-5-13",
+      "type": "PURCHASED",
+      "source": "customer-5",
+      "target": "product-5",
+      "properties": {
+        "sale_id": 13,
+        "date": "2023-12-02 00:00:00.000000",
+        "quantity": 10,
+        "amount": 5934.0,
+        "payment_method": "Debit Card"
+      }
+    },
+    {
+      "id": "purchased-20-20-14",
+      "type": "PURCHASED",
+      "source": "customer-20",
+      "target": "product-20",
+      "properties": {
+        "sale_id": 14,
+        "date": "2023-08-25 00:00:00.000000",
+        "quantity": 10,
+        "amount": 6539.8,
+        "payment_method": "PayPal"
+      }
+    },
+    {
+      "id": "purchased-10-28-15",
+      "type": "PURCHASED",
+      "source": "customer-10",
+      "target": "product-28",
+      "properties": {
+        "sale_id": 15,
+        "date": "2023-05-03 00:00:00.000000",
+        "quantity": 10,
+        "amount": 7455.5,
+        "payment_method": "Cash"
+      }
+    },
+    {
+      "id": "purchased-7-21-16",
+      "type": "PURCHASED",
+      "source": "customer-7",
+      "target": "product-21",
+      "properties": {
+        "sale_id": 16,
+        "date": "2022-08-11 00:00:00.000000",
+        "quantity": 4,
+        "amount": 1138.64,
+        "payment_method": "Debit Card"
+      }
+    },
+    {
+      "id": "purchased-3-6-17",
+      "type": "PURCHASED",
+      "source": "customer-3",
+      "target": "product-6",
+      "properties": {
+        "sale_id": 17,
+        "date": "2023-04-21 00:00:00.000000",
+        "quantity": 1,
+        "amount": 763.21,
+        "payment_method": "Cash"
+      }
+    },
+    {
+      "id": "purchased-8-10-18",
+      "type": "PURCHASED",
+      "source": "customer-8",
+      "target": "product-10",
+      "properties": {
+        "sale_id": 18,
+        "date": "2022-10-28 00:00:00.000000",
+        "quantity": 5,
+        "amount": 2634.25,
+        "payment_method": "Credit Card"
+      }
+    },
+    {
+      "id": "purchased-19-22-19",
+      "type": "PURCHASED",
+      "source": "customer-19",
+      "target": "product-22",
+      "properties": {
+        "sale_id": 19,
+        "date": "2023-11-09 00:00:00.000000",
+        "quantity": 4,
+        "amount": 1876.04,
+        "payment_method": "Debit Card"
+      }
+    },
+    {
+      "id": "purchased-5-3-20",
+      "type": "PURCHASED",
+      "source": "customer-5",
+      "target": "product-3",
+      "properties": {
+        "sale_id": 20,
+        "date": "2023-12-16 00:00:00.000000",
+        "quantity": 1,
+        "amount": 335.34,
+        "payment_method": "Cash"
+      }
+    },
+    {
+      "id": "purchased-15-4-21",
+      "type": "PURCHASED",
+      "source": "customer-15",
+      "target": "product-4",
+      "properties": {
+        "sale_id": 21,
+        "date": "2023-06-26 00:00:00.000000",
+        "quantity": 8,
+        "amount": 729.44,
+        "payment_method": "PayPal"
+      }
+    },
+    {
+      "id": "purchased-17-18-22",
+      "type": "PURCHASED",
+      "source": "customer-17",
+      "target": "product-18",
+      "properties": {
+        "sale_id": 22,
+        "date": "2023-12-30 00:00:00.000000",
+        "quantity": 8,
+        "amount": 4382.96,
+        "payment_method": "Credit Card"
+      }
+    },
+    {
+      "id": "purchased-11-20-23",
+      "type": "PURCHASED",
+      "source": "customer-11",
+      "target": "product-20",
+      "properties": {
+        "sale_id": 23,
+        "date": "2023-05-24 00:00:00.000000",
+        "quantity": 5,
+        "amount": 3406.75,
+        "payment_method": "Cash"
+      }
+    },
+    {
+      "id": "purchased-9-19-24",
+      "type": "PURCHASED",
+      "source": "customer-9",
+      "target": "product-19",
+      "properties": {
+        "sale_id": 24,
+        "date": "2023-01-18 00:00:00.000000",
+        "quantity": 1,
+        "amount": 823.12,
+        "payment_method": "PayPal"
+      }
+    },
+    {
+      "id": "purchased-9-6-25",
+      "type": "PURCHASED",
+      "source": "customer-9",
+      "target": "product-6",
+      "properties": {
+        "sale_id": 25,
+        "date": "2023-12-08 00:00:00.000000",
+        "quantity": 10,
+        "amount": 7586.6,
+        "payment_method": "Credit Card"
+      }
+    },
+    {
+      "id": "purchased-11-11-26",
+      "type": "PURCHASED",
+      "source": "customer-11",
+      "target": "product-11",
+      "properties": {
+        "sale_id": 26,
+        "date": "2023-07-14 00:00:00.000000",
+        "quantity": 2,
+        "amount": 459.38,
+        "payment_method": "PayPal"
+      }
+    },
+    {
+      "id": "purchased-13-27-27",
+      "type": "PURCHASED",
+      "source": "customer-13",
+      "target": "product-27",
+      "properties": {
+        "sale_id": 27,
+        "date": "2023-01-17 00:00:00.000000",
+        "quantity": 9,
+        "amount": 8463.87,
+        "payment_method": "Bank Transfer"
+      }
+    },
+    {
+      "id": "purchased-13-28-28",
+      "type": "PURCHASED",
+      "source": "customer-13",
+      "target": "product-28",
+      "properties": {
+        "sale_id": 28,
+        "date": "2022-12-03 00:00:00.000000",
+        "quantity": 9,
+        "amount": 6986.25,
+        "payment_method": "Cash"
+      }
+    },
+    {
+      "id": "purchased-7-17-29",
+      "type": "PURCHASED",
+      "source": "customer-7",
+      "target": "product-17",
+      "properties": {
+        "sale_id": 29,
+        "date": "2023-10-12 00:00:00.000000",
+        "quantity": 6,
+        "amount": 3982.8,
+        "payment_method": "PayPal"
+      }
+    },
+    {
+      "id": "purchased-9-18-30",
+      "type": "PURCHASED",
+      "source": "customer-9",
+      "target": "product-18",
+      "properties": {
+        "sale_id": 30,
+        "date": "2023-10-14 00:00:00.000000",
+        "quantity": 3,
+        "amount": 1467.12,
+        "payment_method": "PayPal"
+      }
+    },
+    {
+      "id": "purchased-20-26-31",
+      "type": "PURCHASED",
+      "source": "customer-20",
+      "target": "product-26",
+      "properties": {
+        "sale_id": 31,
+        "date": "2023-01-20 00:00:00.000000",
+        "quantity": 4,
+        "amount": 2807.04,
+        "payment_method": "Cash"
+      }
+    },
+    {
+      "id": "purchased-3-8-32",
+      "type": "PURCHASED",
+      "source": "customer-3",
+      "target": "product-8",
+      "properties": {
+        "sale_id": 32,
+        "date": "2021-09-13 00:00:00.000000",
+        "quantity": 2,
+        "amount": 1575.46,
+        "payment_method": "Debit Card"
+      }
+    },
+    {
+      "id": "purchased-17-23-33",
+      "type": "PURCHASED",
+      "source": "customer-17",
+      "target": "product-23",
+      "properties": {
+        "sale_id": 33,
+        "date": "2023-12-22 00:00:00.000000",
+        "quantity": 5,
+        "amount": 739.55,
+        "payment_method": "PayPal"
+      }
+    },
+    {
+      "id": "purchased-13-7-34",
+      "type": "PURCHASED",
+      "source": "customer-13",
+      "target": "product-7",
+      "properties": {
+        "sale_id": 34,
+        "date": "2023-02-10 00:00:00.000000",
+        "quantity": 10,
+        "amount": 497.4,
+        "payment_method": "Credit Card"
+      }
+    },
+    {
+      "id": "purchased-11-30-35",
+      "type": "PURCHASED",
+      "source": "customer-11",
+      "target": "product-30",
+      "properties": {
+        "sale_id": 35,
+        "date": "2023-01-28 00:00:00.000000",
+        "quantity": 9,
+        "amount": 2936.52,
+        "payment_method": "Bank Transfer"
+      }
+    },
+    {
+      "id": "purchased-5-15-36",
+      "type": "PURCHASED",
+      "source": "customer-5",
+      "target": "product-15",
+      "properties": {
+        "sale_id": 36,
+        "date": "2023-12-18 00:00:00.000000",
+        "quantity": 9,
+        "amount": 2065.86,
+        "payment_method": "Cash"
+      }
+    },
+    {
+      "id": "purchased-15-30-37",
+      "type": "PURCHASED",
+      "source": "customer-15",
+      "target": "product-30",
+      "properties": {
+        "sale_id": 37,
+        "date": "2023-06-24 00:00:00.000000",
+        "quantity": 6,
+        "amount": 1708.5,
+        "payment_method": "Debit Card"
+      }
+    },
+    {
+      "id": "purchased-14-2-38",
+      "type": "PURCHASED",
+      "source": "customer-14",
+      "target": "product-2",
+      "properties": {
+        "sale_id": 38,
+        "date": "2023-07-14 00:00:00.000000",
+        "quantity": 6,
+        "amount": 3029.94,
+        "payment_method": "PayPal"
+      }
+    },
+    {
+      "id": "purchased-5-16-39",
+      "type": "PURCHASED",
+      "source": "customer-5",
+      "target": "product-16",
+      "properties": {
+        "sale_id": 39,
+        "date": "2023-12-18 00:00:00.000000",
+        "quantity": 1,
+        "amount": 359.08,
+        "payment_method": "Credit Card"
+      }
+    },
+    {
+      "id": "purchased-15-4-40",
+      "type": "PURCHASED",
+      "source": "customer-15",
+      "target": "product-4",
+      "properties": {
+        "sale_id": 40,
+        "date": "2021-07-25 00:00:00.000000",
+        "quantity": 9,
+        "amount": 778.41,
+        "payment_method": "Debit Card"
+      }
+    },
+    {
+      "id": "purchased-3-16-41",
+      "type": "PURCHASED",
+      "source": "customer-3",
+      "target": "product-16",
+      "properties": {
+        "sale_id": 41,
+        "date": "2023-04-25 00:00:00.000000",
+        "quantity": 5,
+        "amount": 1717.2,
+        "payment_method": "PayPal"
+      }
+    },
+    {
+      "id": "purchased-18-13-42",
+      "type": "PURCHASED",
+      "source": "customer-18",
+      "target": "product-13",
+      "properties": {
+        "sale_id": 42,
+        "date": "2023-09-10 00:00:00.000000",
+        "quantity": 6,
+        "amount": 2136.66,
+        "payment_method": "Cash"
+      }
+    },
+    {
+      "id": "purchased-8-21-43",
+      "type": "PURCHASED",
+      "source": "customer-8",
+      "target": "product-21",
+      "properties": {
+        "sale_id": 43,
+        "date": "2020-10-14 00:00:00.000000",
+        "quantity": 5,
+        "amount": 1203.05,
+        "payment_method": "PayPal"
+      }
+    },
+    {
+      "id": "purchased-4-15-44",
+      "type": "PURCHASED",
+      "source": "customer-4",
+      "target": "product-15",
+      "properties": {
+        "sale_id": 44,
+        "date": "2022-08-19 00:00:00.000000",
+        "quantity": 3,
+        "amount": 656.64,
+        "payment_method": "Credit Card"
+      }
+    },
+    {
+      "id": "purchased-10-12-45",
+      "type": "PURCHASED",
+      "source": "customer-10",
+      "target": "product-12",
+      "properties": {
+        "sale_id": 45,
+        "date": "2023-03-02 00:00:00.000000",
+        "quantity": 6,
+        "amount": 4630.08,
+        "payment_method": "Cash"
+      }
+    },
+    {
+      "id": "purchased-6-6-46",
+      "type": "PURCHASED",
+      "source": "customer-6",
+      "target": "product-6",
+      "properties": {
+        "sale_id": 46,
+        "date": "2023-10-22 00:00:00.000000",
+        "quantity": 3,
+        "amount": 2453.94,
+        "payment_method": "PayPal"
+      }
+    },
+    {
+      "id": "purchased-16-30-47",
+      "type": "PURCHASED",
+      "source": "customer-16",
+      "target": "product-30",
+      "properties": {
+        "sale_id": 47,
+        "date": "2023-05-12 00:00:00.000000",
+        "quantity": 10,
+        "amount": 3348.3,
+        "payment_method": "Bank Transfer"
+      }
+    },
+    {
+      "id": "purchased-15-29-48",
+      "type": "PURCHASED",
+      "source": "customer-15",
+      "target": "product-29",
+      "properties": {
+        "sale_id": 48,
+        "date": "2021-12-18 00:00:00.000000",
+        "quantity": 5,
+        "amount": 1917.95,
+        "payment_method": "Credit Card"
+      }
+    },
+    {
+      "id": "purchased-19-10-49",
+      "type": "PURCHASED",
+      "source": "customer-19",
+      "target": "product-10",
+      "properties": {
+        "sale_id": 49,
+        "date": "2023-08-11 00:00:00.000000",
+        "quantity": 7,
+        "amount": 3698.8,
+        "payment_method": "Bank Transfer"
+      }
+    },
+    {
+      "id": "purchased-16-4-50",
+      "type": "PURCHASED",
+      "source": "customer-16",
+      "target": "product-4",
+      "properties": {
+        "sale_id": 50,
+        "date": "2022-10-15 00:00:00.000000",
+        "quantity": 4,
+        "amount": 390.72,
+        "payment_method": "Cash"
+      }
+    },
+    {
+      "id": "viewed-1-14",
+      "type": "VIEWED",
+      "source": "customer-1",
+      "target": "product-14",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:40:56.955473",
+        "average_view_time_seconds": 276
+      }
+    },
+    {
+      "id": "viewed-1-28",
+      "type": "VIEWED",
+      "source": "customer-1",
+      "target": "product-28",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:45:37.113538",
+        "average_view_time_seconds": 132
+      }
+    },
+    {
+      "id": "viewed-1-19",
+      "type": "VIEWED",
+      "source": "customer-1",
+      "target": "product-19",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:42:41.429466",
+        "average_view_time_seconds": 235
+      }
+    },
+    {
+      "id": "viewed-1-15",
+      "type": "VIEWED",
+      "source": "customer-1",
+      "target": "product-15",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:40:10.727388",
+        "average_view_time_seconds": 156
+      }
+    },
+    {
+      "id": "viewed-1-6",
+      "type": "VIEWED",
+      "source": "customer-1",
+      "target": "product-6",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:39:54.961895",
+        "average_view_time_seconds": 149
+      }
+    },
+    {
+      "id": "viewed-1-25",
+      "type": "VIEWED",
+      "source": "customer-1",
+      "target": "product-25",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:40:17.473687",
+        "average_view_time_seconds": 173
+      }
+    },
+    {
+      "id": "viewed-1-17",
+      "type": "VIEWED",
+      "source": "customer-1",
+      "target": "product-17",
+      "properties": {
+        "view_count": 5,
+        "last_view_date": "2025-04-16T12:43:23.880575",
+        "average_view_time_seconds": 51
+      }
+    },
+    {
+      "id": "viewed-1-27",
+      "type": "VIEWED",
+      "source": "customer-1",
+      "target": "product-27",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:44:23.148571",
+        "average_view_time_seconds": 87
+      }
+    },
+    {
+      "id": "viewed-1-9",
+      "type": "VIEWED",
+      "source": "customer-1",
+      "target": "product-9",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:42:09.977588",
+        "average_view_time_seconds": 206
+      }
+    },
+    {
+      "id": "viewed-1-8",
+      "type": "VIEWED",
+      "source": "customer-1",
+      "target": "product-8",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:40:00.869974",
+        "average_view_time_seconds": 119
+      }
+    },
+    {
+      "id": "viewed-2-14",
+      "type": "VIEWED",
+      "source": "customer-2",
+      "target": "product-14",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:41:55.382943",
+        "average_view_time_seconds": 222
+      }
+    },
+    {
+      "id": "viewed-2-11",
+      "type": "VIEWED",
+      "source": "customer-2",
+      "target": "product-11",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:45:36.603697",
+        "average_view_time_seconds": 115
+      }
+    },
+    {
+      "id": "viewed-2-19",
+      "type": "VIEWED",
+      "source": "customer-2",
+      "target": "product-19",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:42:48.481164",
+        "average_view_time_seconds": 209
+      }
+    },
+    {
+      "id": "viewed-3-28",
+      "type": "VIEWED",
+      "source": "customer-3",
+      "target": "product-28",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:45:27.588216",
+        "average_view_time_seconds": 254
+      }
+    },
+    {
+      "id": "viewed-3-22",
+      "type": "VIEWED",
+      "source": "customer-3",
+      "target": "product-22",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:44:47.880693",
+        "average_view_time_seconds": 190
+      }
+    },
+    {
+      "id": "viewed-4-26",
+      "type": "VIEWED",
+      "source": "customer-4",
+      "target": "product-26",
+      "properties": {
+        "view_count": 5,
+        "last_view_date": "2025-04-16T12:39:42.133168",
+        "average_view_time_seconds": 122
+      }
+    },
+    {
+      "id": "viewed-4-13",
+      "type": "VIEWED",
+      "source": "customer-4",
+      "target": "product-13",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:43:57.459855",
+        "average_view_time_seconds": 122
+      }
+    },
+    {
+      "id": "viewed-4-28",
+      "type": "VIEWED",
+      "source": "customer-4",
+      "target": "product-28",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:43:43.415733",
+        "average_view_time_seconds": 233
+      }
+    },
+    {
+      "id": "viewed-4-14",
+      "type": "VIEWED",
+      "source": "customer-4",
+      "target": "product-14",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:42:51.309319",
+        "average_view_time_seconds": 24
+      }
+    },
+    {
+      "id": "viewed-4-19",
+      "type": "VIEWED",
+      "source": "customer-4",
+      "target": "product-19",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:41:14.057068",
+        "average_view_time_seconds": 182
+      }
+    },
+    {
+      "id": "viewed-4-25",
+      "type": "VIEWED",
+      "source": "customer-4",
+      "target": "product-25",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:43:28.746248",
+        "average_view_time_seconds": 94
+      }
+    },
+    {
+      "id": "viewed-5-7",
+      "type": "VIEWED",
+      "source": "customer-5",
+      "target": "product-7",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:40:18.158782",
+        "average_view_time_seconds": 79
+      }
+    },
+    {
+      "id": "viewed-5-24",
+      "type": "VIEWED",
+      "source": "customer-5",
+      "target": "product-24",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:42:14.515490",
+        "average_view_time_seconds": 103
+      }
+    },
+    {
+      "id": "viewed-5-22",
+      "type": "VIEWED",
+      "source": "customer-5",
+      "target": "product-22",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:42:21.340534",
+        "average_view_time_seconds": 143
+      }
+    },
+    {
+      "id": "viewed-5-1",
+      "type": "VIEWED",
+      "source": "customer-5",
+      "target": "product-1",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:45:21.373734",
+        "average_view_time_seconds": 177
+      }
+    },
+    {
+      "id": "viewed-5-17",
+      "type": "VIEWED",
+      "source": "customer-5",
+      "target": "product-17",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:44:53.307059",
+        "average_view_time_seconds": 242
+      }
+    },
+    {
+      "id": "viewed-5-23",
+      "type": "VIEWED",
+      "source": "customer-5",
+      "target": "product-23",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:41:12.820058",
+        "average_view_time_seconds": 182
+      }
+    },
+    {
+      "id": "viewed-5-25",
+      "type": "VIEWED",
+      "source": "customer-5",
+      "target": "product-25",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:42:38.211001",
+        "average_view_time_seconds": 152
+      }
+    },
+    {
+      "id": "viewed-5-27",
+      "type": "VIEWED",
+      "source": "customer-5",
+      "target": "product-27",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:40:42.314677",
+        "average_view_time_seconds": 139
+      }
+    },
+    {
+      "id": "viewed-5-4",
+      "type": "VIEWED",
+      "source": "customer-5",
+      "target": "product-4",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:45:06.546022",
+        "average_view_time_seconds": 250
+      }
+    },
+    {
+      "id": "viewed-6-25",
+      "type": "VIEWED",
+      "source": "customer-6",
+      "target": "product-25",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:44:51.386685",
+        "average_view_time_seconds": 189
+      }
+    },
+    {
+      "id": "viewed-6-19",
+      "type": "VIEWED",
+      "source": "customer-6",
+      "target": "product-19",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:41:25.440125",
+        "average_view_time_seconds": 45
+      }
+    },
+    {
+      "id": "viewed-7-28",
+      "type": "VIEWED",
+      "source": "customer-7",
+      "target": "product-28",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:43:28.021818",
+        "average_view_time_seconds": 112
+      }
+    },
+    {
+      "id": "viewed-7-1",
+      "type": "VIEWED",
+      "source": "customer-7",
+      "target": "product-1",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:43:17.229276",
+        "average_view_time_seconds": 88
+      }
+    },
+    {
+      "id": "viewed-8-5",
+      "type": "VIEWED",
+      "source": "customer-8",
+      "target": "product-5",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:40:33.022137",
+        "average_view_time_seconds": 248
+      }
+    },
+    {
+      "id": "viewed-8-17",
+      "type": "VIEWED",
+      "source": "customer-8",
+      "target": "product-17",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:44:12.503888",
+        "average_view_time_seconds": 198
+      }
+    },
+    {
+      "id": "viewed-8-24",
+      "type": "VIEWED",
+      "source": "customer-8",
+      "target": "product-24",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:42:52.176451",
+        "average_view_time_seconds": 68
+      }
+    },
+    {
+      "id": "viewed-8-4",
+      "type": "VIEWED",
+      "source": "customer-8",
+      "target": "product-4",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:44:18.305532",
+        "average_view_time_seconds": 169
+      }
+    },
+    {
+      "id": "viewed-8-20",
+      "type": "VIEWED",
+      "source": "customer-8",
+      "target": "product-20",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:42:48.927322",
+        "average_view_time_seconds": 23
+      }
+    },
+    {
+      "id": "viewed-9-22",
+      "type": "VIEWED",
+      "source": "customer-9",
+      "target": "product-22",
+      "properties": {
+        "view_count": 5,
+        "last_view_date": "2025-04-16T12:39:38.205883",
+        "average_view_time_seconds": 134
+      }
+    },
+    {
+      "id": "viewed-9-26",
+      "type": "VIEWED",
+      "source": "customer-9",
+      "target": "product-26",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:41:34.696181",
+        "average_view_time_seconds": 164
+      }
+    },
+    {
+      "id": "viewed-9-14",
+      "type": "VIEWED",
+      "source": "customer-9",
+      "target": "product-14",
+      "properties": {
+        "view_count": 5,
+        "last_view_date": "2025-04-16T12:39:45.011627",
+        "average_view_time_seconds": 71
+      }
+    },
+    {
+      "id": "viewed-9-27",
+      "type": "VIEWED",
+      "source": "customer-9",
+      "target": "product-27",
+      "properties": {
+        "view_count": 5,
+        "last_view_date": "2025-04-16T12:45:12.475502",
+        "average_view_time_seconds": 31
+      }
+    },
+    {
+      "id": "viewed-9-8",
+      "type": "VIEWED",
+      "source": "customer-9",
+      "target": "product-8",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:44:54.339876",
+        "average_view_time_seconds": 282
+      }
+    },
+    {
+      "id": "viewed-9-3",
+      "type": "VIEWED",
+      "source": "customer-9",
+      "target": "product-3",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:44:37.399590",
+        "average_view_time_seconds": 199
+      }
+    },
+    {
+      "id": "viewed-10-19",
+      "type": "VIEWED",
+      "source": "customer-10",
+      "target": "product-19",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:41:28.705085",
+        "average_view_time_seconds": 225
+      }
+    },
+    {
+      "id": "viewed-10-23",
+      "type": "VIEWED",
+      "source": "customer-10",
+      "target": "product-23",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:39:58.853060",
+        "average_view_time_seconds": 64
+      }
+    },
+    {
+      "id": "viewed-10-13",
+      "type": "VIEWED",
+      "source": "customer-10",
+      "target": "product-13",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:44:54.083456",
+        "average_view_time_seconds": 195
+      }
+    },
+    {
+      "id": "viewed-11-25",
+      "type": "VIEWED",
+      "source": "customer-11",
+      "target": "product-25",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:45:18.901800",
+        "average_view_time_seconds": 248
+      }
+    },
+    {
+      "id": "viewed-11-5",
+      "type": "VIEWED",
+      "source": "customer-11",
+      "target": "product-5",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:40:08.835243",
+        "average_view_time_seconds": 147
+      }
+    },
+    {
+      "id": "viewed-11-15",
+      "type": "VIEWED",
+      "source": "customer-11",
+      "target": "product-15",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:42:32.956567",
+        "average_view_time_seconds": 135
+      }
+    },
+    {
+      "id": "viewed-11-6",
+      "type": "VIEWED",
+      "source": "customer-11",
+      "target": "product-6",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:40:02.916507",
+        "average_view_time_seconds": 152
+      }
+    },
+    {
+      "id": "viewed-11-18",
+      "type": "VIEWED",
+      "source": "customer-11",
+      "target": "product-18",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:44:11.816779",
+        "average_view_time_seconds": 134
+      }
+    },
+    {
+      "id": "viewed-11-23",
+      "type": "VIEWED",
+      "source": "customer-11",
+      "target": "product-23",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:44:13.700395",
+        "average_view_time_seconds": 204
+      }
+    },
+    {
+      "id": "viewed-11-9",
+      "type": "VIEWED",
+      "source": "customer-11",
+      "target": "product-9",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:40:24.220927",
+        "average_view_time_seconds": 24
+      }
+    },
+    {
+      "id": "viewed-11-22",
+      "type": "VIEWED",
+      "source": "customer-11",
+      "target": "product-22",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:42:29.101656",
+        "average_view_time_seconds": 176
+      }
+    },
+    {
+      "id": "viewed-11-19",
+      "type": "VIEWED",
+      "source": "customer-11",
+      "target": "product-19",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:42:55.929294",
+        "average_view_time_seconds": 259
+      }
+    },
+    {
+      "id": "viewed-13-13",
+      "type": "VIEWED",
+      "source": "customer-13",
+      "target": "product-13",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:41:13.420386",
+        "average_view_time_seconds": 294
+      }
+    },
+    {
+      "id": "viewed-13-29",
+      "type": "VIEWED",
+      "source": "customer-13",
+      "target": "product-29",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:44:52.075895",
+        "average_view_time_seconds": 274
+      }
+    },
+    {
+      "id": "viewed-13-10",
+      "type": "VIEWED",
+      "source": "customer-13",
+      "target": "product-10",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:42:10.329659",
+        "average_view_time_seconds": 53
+      }
+    },
+    {
+      "id": "viewed-13-12",
+      "type": "VIEWED",
+      "source": "customer-13",
+      "target": "product-12",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:40:54.247354",
+        "average_view_time_seconds": 218
+      }
+    },
+    {
+      "id": "viewed-13-21",
+      "type": "VIEWED",
+      "source": "customer-13",
+      "target": "product-21",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:42:52.146592",
+        "average_view_time_seconds": 294
+      }
+    },
+    {
+      "id": "viewed-14-24",
+      "type": "VIEWED",
+      "source": "customer-14",
+      "target": "product-24",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:44:00.775185",
+        "average_view_time_seconds": 57
+      }
+    },
+    {
+      "id": "viewed-14-17",
+      "type": "VIEWED",
+      "source": "customer-14",
+      "target": "product-17",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:40:50.414383",
+        "average_view_time_seconds": 123
+      }
+    },
+    {
+      "id": "viewed-14-22",
+      "type": "VIEWED",
+      "source": "customer-14",
+      "target": "product-22",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:41:30.217865",
+        "average_view_time_seconds": 134
+      }
+    },
+    {
+      "id": "viewed-14-16",
+      "type": "VIEWED",
+      "source": "customer-14",
+      "target": "product-16",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:45:36.253768",
+        "average_view_time_seconds": 198
+      }
+    },
+    {
+      "id": "viewed-14-27",
+      "type": "VIEWED",
+      "source": "customer-14",
+      "target": "product-27",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:43:31.956101",
+        "average_view_time_seconds": 293
+      }
+    },
+    {
+      "id": "viewed-15-13",
+      "type": "VIEWED",
+      "source": "customer-15",
+      "target": "product-13",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:42:15.716030",
+        "average_view_time_seconds": 71
+      }
+    },
+    {
+      "id": "viewed-15-15",
+      "type": "VIEWED",
+      "source": "customer-15",
+      "target": "product-15",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:42:44.327303",
+        "average_view_time_seconds": 171
+      }
+    },
+    {
+      "id": "viewed-15-25",
+      "type": "VIEWED",
+      "source": "customer-15",
+      "target": "product-25",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:40:21.561511",
+        "average_view_time_seconds": 284
+      }
+    },
+    {
+      "id": "viewed-15-19",
+      "type": "VIEWED",
+      "source": "customer-15",
+      "target": "product-19",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:40:58.891041",
+        "average_view_time_seconds": 108
+      }
+    },
+    {
+      "id": "viewed-15-12",
+      "type": "VIEWED",
+      "source": "customer-15",
+      "target": "product-12",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:41:39.710802",
+        "average_view_time_seconds": 257
+      }
+    },
+    {
+      "id": "viewed-15-28",
+      "type": "VIEWED",
+      "source": "customer-15",
+      "target": "product-28",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:43:09.791139",
+        "average_view_time_seconds": 278
+      }
+    },
+    {
+      "id": "viewed-15-16",
+      "type": "VIEWED",
+      "source": "customer-15",
+      "target": "product-16",
+      "properties": {
+        "view_count": 5,
+        "last_view_date": "2025-04-16T12:41:00.841304",
+        "average_view_time_seconds": 154
+      }
+    },
+    {
+      "id": "viewed-15-10",
+      "type": "VIEWED",
+      "source": "customer-15",
+      "target": "product-10",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:40:57.278258",
+        "average_view_time_seconds": 109
+      }
+    },
+    {
+      "id": "viewed-15-11",
+      "type": "VIEWED",
+      "source": "customer-15",
+      "target": "product-11",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:40:03.557511",
+        "average_view_time_seconds": 126
+      }
+    },
+    {
+      "id": "viewed-15-20",
+      "type": "VIEWED",
+      "source": "customer-15",
+      "target": "product-20",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:43:25.197065",
+        "average_view_time_seconds": 101
+      }
+    },
+    {
+      "id": "viewed-16-1",
+      "type": "VIEWED",
+      "source": "customer-16",
+      "target": "product-1",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:41:00.419042",
+        "average_view_time_seconds": 293
+      }
+    },
+    {
+      "id": "viewed-16-24",
+      "type": "VIEWED",
+      "source": "customer-16",
+      "target": "product-24",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:45:03.951205",
+        "average_view_time_seconds": 74
+      }
+    },
+    {
+      "id": "viewed-16-19",
+      "type": "VIEWED",
+      "source": "customer-16",
+      "target": "product-19",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:44:47.468744",
+        "average_view_time_seconds": 62
+      }
+    },
+    {
+      "id": "viewed-16-6",
+      "type": "VIEWED",
+      "source": "customer-16",
+      "target": "product-6",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:40:03.508646",
+        "average_view_time_seconds": 155
+      }
+    },
+    {
+      "id": "viewed-16-10",
+      "type": "VIEWED",
+      "source": "customer-16",
+      "target": "product-10",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:41:03.681668",
+        "average_view_time_seconds": 255
+      }
+    },
+    {
+      "id": "viewed-16-2",
+      "type": "VIEWED",
+      "source": "customer-16",
+      "target": "product-2",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:43:38.832000",
+        "average_view_time_seconds": 184
+      }
+    },
+    {
+      "id": "viewed-17-2",
+      "type": "VIEWED",
+      "source": "customer-17",
+      "target": "product-2",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:40:55.125251",
+        "average_view_time_seconds": 43
+      }
+    },
+    {
+      "id": "viewed-17-9",
+      "type": "VIEWED",
+      "source": "customer-17",
+      "target": "product-9",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:40:25.632266",
+        "average_view_time_seconds": 261
+      }
+    },
+    {
+      "id": "viewed-17-30",
+      "type": "VIEWED",
+      "source": "customer-17",
+      "target": "product-30",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:45:14.785127",
+        "average_view_time_seconds": 37
+      }
+    },
+    {
+      "id": "viewed-17-16",
+      "type": "VIEWED",
+      "source": "customer-17",
+      "target": "product-16",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:43:03.575514",
+        "average_view_time_seconds": 86
+      }
+    },
+    {
+      "id": "viewed-18-3",
+      "type": "VIEWED",
+      "source": "customer-18",
+      "target": "product-3",
+      "properties": {
+        "view_count": 5,
+        "last_view_date": "2025-04-16T12:42:28.161569",
+        "average_view_time_seconds": 125
+      }
+    },
+    {
+      "id": "viewed-18-8",
+      "type": "VIEWED",
+      "source": "customer-18",
+      "target": "product-8",
+      "properties": {
+        "view_count": 5,
+        "last_view_date": "2025-04-16T12:44:20.462993",
+        "average_view_time_seconds": 204
+      }
+    },
+    {
+      "id": "viewed-18-4",
+      "type": "VIEWED",
+      "source": "customer-18",
+      "target": "product-4",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:44:28.698919",
+        "average_view_time_seconds": 236
+      }
+    },
+    {
+      "id": "viewed-18-20",
+      "type": "VIEWED",
+      "source": "customer-18",
+      "target": "product-20",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:40:46.547569",
+        "average_view_time_seconds": 229
+      }
+    },
+    {
+      "id": "viewed-18-16",
+      "type": "VIEWED",
+      "source": "customer-18",
+      "target": "product-16",
+      "properties": {
+        "view_count": 3,
+        "last_view_date": "2025-04-16T12:40:12.895093",
+        "average_view_time_seconds": 40
+      }
+    },
+    {
+      "id": "viewed-18-22",
+      "type": "VIEWED",
+      "source": "customer-18",
+      "target": "product-22",
+      "properties": {
+        "view_count": 5,
+        "last_view_date": "2025-04-16T12:42:13.178426",
+        "average_view_time_seconds": 60
+      }
+    },
+    {
+      "id": "viewed-19-24",
+      "type": "VIEWED",
+      "source": "customer-19",
+      "target": "product-24",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:42:10.488304",
+        "average_view_time_seconds": 132
+      }
+    },
+    {
+      "id": "viewed-19-7",
+      "type": "VIEWED",
+      "source": "customer-19",
+      "target": "product-7",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:42:26.128881",
+        "average_view_time_seconds": 292
+      }
+    },
+    {
+      "id": "viewed-19-9",
+      "type": "VIEWED",
+      "source": "customer-19",
+      "target": "product-9",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:44:00.467306",
+        "average_view_time_seconds": 90
+      }
+    },
+    {
+      "id": "viewed-19-25",
+      "type": "VIEWED",
+      "source": "customer-19",
+      "target": "product-25",
+      "properties": {
+        "view_count": 1,
+        "last_view_date": "2025-04-16T12:43:40.411237",
+        "average_view_time_seconds": 219
+      }
+    },
+    {
+      "id": "viewed-19-3",
+      "type": "VIEWED",
+      "source": "customer-19",
+      "target": "product-3",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:45:32.299476",
+        "average_view_time_seconds": 250
+      }
+    },
+    {
+      "id": "viewed-20-2",
+      "type": "VIEWED",
+      "source": "customer-20",
+      "target": "product-2",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:40:13.430434",
+        "average_view_time_seconds": 46
+      }
+    },
+    {
+      "id": "viewed-20-8",
+      "type": "VIEWED",
+      "source": "customer-20",
+      "target": "product-8",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:42:02.943661",
+        "average_view_time_seconds": 145
+      }
+    },
+    {
+      "id": "viewed-20-10",
+      "type": "VIEWED",
+      "source": "customer-20",
+      "target": "product-10",
+      "properties": {
+        "view_count": 5,
+        "last_view_date": "2025-04-16T12:41:40.148938",
+        "average_view_time_seconds": 111
+      }
+    },
+    {
+      "id": "viewed-20-24",
+      "type": "VIEWED",
+      "source": "customer-20",
+      "target": "product-24",
+      "properties": {
+        "view_count": 4,
+        "last_view_date": "2025-04-16T12:44:48.202113",
+        "average_view_time_seconds": 68
+      }
+    },
+    {
+      "id": "viewed-20-28",
+      "type": "VIEWED",
+      "source": "customer-20",
+      "target": "product-28",
+      "properties": {
+        "view_count": 5,
+        "last_view_date": "2025-04-16T12:41:07.516280",
+        "average_view_time_seconds": 125
+      }
+    },
+    {
+      "id": "viewed-20-27",
+      "type": "VIEWED",
+      "source": "customer-20",
+      "target": "product-27",
+      "properties": {
+        "view_count": 2,
+        "last_view_date": "2025-04-16T12:40:46.475207",
+        "average_view_time_seconds": 146
+      }
+    },
+    {
+      "id": "added_to_cart-2-27",
+      "type": "ADDED_TO_CART",
+      "source": "customer-2",
+      "target": "product-27",
+      "properties": {
+        "date": "2025-04-16T12:43:58.750439",
+        "quantity": 2,
+        "cart_abandoned": true
+      }
+    },
+    {
+      "id": "added_to_cart-6-24",
+      "type": "ADDED_TO_CART",
+      "source": "customer-6",
+      "target": "product-24",
+      "properties": {
+        "date": "2025-04-16T12:43:53.938695",
+        "quantity": 3,
+        "cart_abandoned": true
+      }
+    },
+    {
+      "id": "added_to_cart-6-11",
+      "type": "ADDED_TO_CART",
+      "source": "customer-6",
+      "target": "product-11",
+      "properties": {
+        "date": "2025-04-16T12:43:28.138126",
+        "quantity": 2,
+        "cart_abandoned": true
+      }
+    },
+    {
+      "id": "added_to_cart-9-23",
+      "type": "ADDED_TO_CART",
+      "source": "customer-9",
+      "target": "product-23",
+      "properties": {
+        "date": "2025-04-16T12:43:22.965161",
+        "quantity": 1,
+        "cart_abandoned": true
+      }
+    },
+    {
+      "id": "added_to_cart-14-23",
+      "type": "ADDED_TO_CART",
+      "source": "customer-14",
+      "target": "product-23",
+      "properties": {
+        "date": "2025-04-16T12:45:24.187808",
+        "quantity": 3,
+        "cart_abandoned": true
+      }
+    },
+    {
+      "id": "added_to_cart-16-28",
+      "type": "ADDED_TO_CART",
+      "source": "customer-16",
+      "target": "product-28",
+      "properties": {
+        "date": "2025-04-16T12:43:57.763534",
+        "quantity": 1,
+        "cart_abandoned": true
+      }
+    },
+    {
+      "id": "added_to_cart-16-10",
+      "type": "ADDED_TO_CART",
+      "source": "customer-16",
+      "target": "product-10",
+      "properties": {
+        "date": "2025-04-16T12:45:13.042839",
+        "quantity": 1,
+        "cart_abandoned": true
+      }
+    },
+    {
+      "id": "added_to_cart-16-20",
+      "type": "ADDED_TO_CART",
+      "source": "customer-16",
+      "target": "product-20",
+      "properties": {
+        "date": "2025-04-16T12:44:17.058556",
+        "quantity": 2,
+        "cart_abandoned": true
+      }
+    },
+    {
+      "id": "added_to_cart-18-6",
+      "type": "ADDED_TO_CART",
+      "source": "customer-18",
+      "target": "product-6",
+      "properties": {
+        "date": "2025-04-16T12:42:47.105899",
+        "quantity": 2,
+        "cart_abandoned": true
+      }
+    },
+    {
+      "id": "added_to_cart-18-21",
+      "type": "ADDED_TO_CART",
+      "source": "customer-18",
+      "target": "product-21",
+      "properties": {
+        "date": "2025-04-16T12:45:37.870844",
+        "quantity": 3,
+        "cart_abandoned": true
+      }
+    },
+    {
+      "id": "rated-15-26-4",
+      "type": "RATED",
+      "source": "customer-15",
+      "target": "product-26",
+      "properties": {
+        "rating": 2,
+        "date": "2022-03-21T00:00:00",
+        "comment": "Unit support coach magazine."
+      }
+    },
+    {
+      "id": "rated-10-8-9",
+      "type": "RATED",
+      "source": "customer-10",
+      "target": "product-8",
+      "properties": {
+        "rating": 1,
+        "date": "2022-08-05T00:00:00",
+        "comment": "Total clearly able hospital unit size."
+      }
+    },
+    {
+      "id": "rated-2-18-10",
+      "type": "RATED",
+      "source": "customer-2",
+      "target": "product-18",
+      "properties": {
+        "rating": 4,
+        "date": "2021-12-05T00:00:00",
+        "comment": null
+      }
+    },
+    {
+      "id": "rated-19-10-11",
+      "type": "RATED",
+      "source": "customer-19",
+      "target": "product-10",
+      "properties": {
+        "rating": 5,
+        "date": "2023-05-20T00:00:00",
+        "comment": "Recent room situation product main couple."
+      }
+    },
+    {
+      "id": "rated-9-28-12",
+      "type": "RATED",
+      "source": "customer-9",
+      "target": "product-28",
+      "properties": {
+        "rating": 3,
+        "date": "2022-11-12T00:00:00",
+        "comment": null
+      }
+    },
+    {
+      "id": "rated-10-28-15",
+      "type": "RATED",
+      "source": "customer-10",
+      "target": "product-28",
+      "properties": {
+        "rating": 5,
+        "date": "2023-05-18T00:00:00",
+        "comment": null
+      }
+    },
+    {
+      "id": "rated-8-10-18",
+      "type": "RATED",
+      "source": "customer-8",
+      "target": "product-10",
+      "properties": {
+        "rating": 5,
+        "date": "2022-12-25T00:00:00",
+        "comment": "Often my security arm."
+      }
+    },
+    {
+      "id": "rated-19-22-19",
+      "type": "RATED",
+      "source": "customer-19",
+      "target": "product-22",
+      "properties": {
+        "rating": 5,
+        "date": "2023-11-16T00:00:00",
+        "comment": null
+      }
+    },
+    {
+      "id": "rated-5-3-20",
+      "type": "RATED",
+      "source": "customer-5",
+      "target": "product-3",
+      "properties": {
+        "rating": 1,
+        "date": "2024-01-21T00:00:00",
+        "comment": null
+      }
+    },
+    {
+      "id": "rated-17-18-22",
+      "type": "RATED",
+      "source": "customer-17",
+      "target": "product-18",
+      "properties": {
+        "rating": 3,
+        "date": "2024-02-07T00:00:00",
+        "comment": null
+      }
+    },
+    {
+      "id": "rated-13-27-27",
+      "type": "RATED",
+      "source": "customer-13",
+      "target": "product-27",
+      "properties": {
+        "rating": 2,
+        "date": "2023-03-03T00:00:00",
+        "comment": null
+      }
+    },
+    {
+      "id": "rated-9-18-30",
+      "type": "RATED",
+      "source": "customer-9",
+      "target": "product-18",
+      "properties": {
+        "rating": 4,
+        "date": "2023-11-11T00:00:00",
+        "comment": null
+      }
+    },
+    {
+      "id": "rated-17-23-33",
+      "type": "RATED",
+      "source": "customer-17",
+      "target": "product-23",
+      "properties": {
+        "rating": 3,
+        "date": "2024-02-20T00:00:00",
+        "comment": null
+      }
+    },
+    {
+      "id": "rated-5-15-36",
+      "type": "RATED",
+      "source": "customer-5",
+      "target": "product-15",
+      "properties": {
+        "rating": 5,
+        "date": "2024-01-24T00:00:00",
+        "comment": "Me system church whether bag control organization."
+      }
+    },
+    {
+      "id": "rated-3-16-41",
+      "type": "RATED",
+      "source": "customer-3",
+      "target": "product-16",
+      "properties": {
+        "rating": 2,
+        "date": "2023-06-07T00:00:00",
+        "comment": "Build three east organization people information."
+      }
+    }
+  ],
+  "metadata": {
+    "graph_type": "customer_product_network",
+    "generated_at": "2025-04-16T12:45:38.482396",
+    "seed": 42,
+    "node_count": 49,
+    "edge_count": 179
+  }
+}
