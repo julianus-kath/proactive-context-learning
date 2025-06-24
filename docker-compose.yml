@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  erp-server:
+    build:
+      context: .
+      dockerfile: crawling_agent/servers/Dockerfile.erp
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./synthetic_data.db:/app/synthetic_data.db
+    environment:
+      - DB_PATH=/app/synthetic_data.db
+
+  document-storage-server:
+    build:
+      context: .
+      dockerfile: crawling_agent/servers/Dockerfile.document
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./mongodb_data.json:/app/mongodb_data.json
+    environment:
+      - JSON_PATH=/app/mongodb_data.json
+
+  knowledge-graph-server:
+    build:
+      context: .
+      dockerfile: crawling_agent/servers/Dockerfile.knowledge
+    ports:
+      - "8003:8003"

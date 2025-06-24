@@ -1,0 +1,86 @@
+{
+  "type": "object",
+  "properties": {
+    "nodes": {
+      "type": "array",
+      "description": "Types of nodes in the knowledge graph",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Type of node"
+          },
+          "properties": {
+            "type": "array",
+            "description": "Properties of this node type",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Name of the property"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Data type of the property"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description of the property"
+                }
+              },
+              "required": ["name", "type"]
+            }
+          }
+        },
+        "required": ["type", "properties"]
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "description": "Types of relationships in the knowledge graph",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Type of relationship"
+          },
+          "source": {
+            "type": "string",
+            "description": "Source node type"
+          },
+          "target": {
+            "type": "string",
+            "description": "Target node type"
+          },
+          "properties": {
+            "type": "array",
+            "description": "Properties of this relationship type",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Name of the property"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Data type of the property"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description of the property"
+                }
+              },
+              "required": ["name", "type"]
+            }
+          }
+        },
+        "required": ["type", "source", "target"]
+      }
+    }
+  },
+  "required": ["nodes", "relationships"]
+}

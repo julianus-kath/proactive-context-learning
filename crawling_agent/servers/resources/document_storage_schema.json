@@ -1,0 +1,46 @@
+{
+  "type": "object",
+  "properties": {
+    "collections": {
+      "type": "array",
+      "description": "List of collections in the document storage",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the collection"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the collection"
+          },
+          "fields": {
+            "type": "array",
+            "description": "List of common fields in the collection",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Name of the field"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Data type of the field"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description of the field"
+                }
+              },
+              "required": ["name", "type"]
+            }
+          }
+        },
+        "required": ["name", "fields"]
+      }
+    }
+  },
+  "required": ["collections"]
+}

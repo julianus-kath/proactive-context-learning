@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "properties": {
+    "tables": {
+      "type": "array",
+      "description": "List of tables in the ERP database",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the table"
+          },
+          "columns": {
+            "type": "array",
+            "description": "List of columns in the table",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Name of the column"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Data type of the column"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description of the column"
+                }
+              },
+              "required": ["name", "type"]
+            }
+          }
+        },
+        "required": ["name", "columns"]
+      }
+    }
+  },
+  "required": ["tables"]
+}

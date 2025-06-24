@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Chatbot Interface</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        
+        #chat-container {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 5px;
+            max-width: 80%;
+        }
+        
+        .user-message {
+            background-color: #dcf8c6;
+            margin-left: auto;
+            margin-right: 0;
+        }
+        
+        .bot-message {
+            background-color: #f1f0f0;
+            margin-right: auto;
+            margin-left: 0;
+        }
+        
+        #message-form {
+            display: flex;
+        }
+        
+        #message-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px 0 0 5px;
+        }
+        
+        #send-button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+        }
+        
+        #send-button:hover {
+            background-color: #45a049;
+        }
+        
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        
+        .loading {
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .loading::after {
+            content: "...";
+            animation: dots 1s steps(5, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: "."; }
+            40% { content: ".."; }
+            60%, 100% { content: "..."; }
+        }
+    </style>
+</head>
+<body>
+    <h1>MCP Chatbot Interface</h1>
+    
+    <div id="status-container" style="margin-bottom: 10px; text-align: center;">
+        <button id="check-status-button" style="padding: 5px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Check Server Status</button>
+        <div id="status-results" style="margin-top: 5px; font-size: 0.9em;"></div>
+    </div>
+    
+    <div id="chat-container">
+        <div class="message bot-message">
+            Hello! I'm your MCP assistant powered by OpenAI. I can understand natural language questions and help you query databases and knowledge graphs. 
+            
+            To use my full capabilities, make sure the MCP servers are running:
+            - ERP Database: http://localhost:8001
+            - Document Storage: http://localhost:8002
+            - Knowledge Graph: http://localhost:8003
+            
+            Try asking me something like "How many customers do we have?" or type 'help' to see what I can do.
+        </div>
+    </div>
+    
+    <form id="message-form">
+        <input type="text" id="message-input" placeholder="Type your message here..." autocomplete="off">
+        <button type="submit" id="send-button">Send</button>
+    </form>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatContainer = document.getElementById('chat-container');
+            const messageForm = document.getElementById('message-form');
+            const messageInput = document.getElementById('message-input');
+            const checkStatusButton = document.getElementById('check-status-button');
+            const statusResults = document.getElementById('status-results');
+            
+            // Function to add a message to the chat
+            function addMessage(message, isUser = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                messageDiv.classList.add(isUser ? 'user-message' : 'bot-message');
+                
+                if (!isUser) {
+                    // For bot messages, check for reasoning steps and format them
+                    if (message.includes("Step 1:") || message.includes("Step 2:") || 
+                        message.includes("Step 3:") || message.includes("Step 4:") || 
+                        message.includes("Step 5:")) {
+                        
+                        // This looks like a message with reasoning steps
+                        const container = document.createElement('div');
+                        
+                        // Split the message by steps
+                        const parts = message.split(/(Step \d+:)/g);
+                        
+                        // Add the intro text if it exists
+                        if (parts[0].trim() !== '') {
+                            const introDiv = document.createElement('div');
+                            introDiv.textContent = parts[0].trim();
+                            introDiv.style.marginBottom = '10px';
+                            container.appendChild(introDiv);
+                        }
+                        
+                        // Process each step
+                        for (let i = 1; i < parts.length; i += 2) {
+                            if (i + 1 < parts.length) {
+                                const stepHeader = parts[i];
+                                const stepContent = parts[i + 1];
+                                
+                                // Create a div for the step
+                                const stepDiv = document.createElement('div');
+                                stepDiv.style.marginBottom = '15px';
+                                stepDiv.style.padding = '8px';
+                                stepDiv.style.borderLeft = '3px solid #4CAF50';
+                                stepDiv.style.backgroundColor = '#f9f9f9';
+                                
+                                // Add the step header
+                                const headerDiv = document.createElement('div');
+                                headerDiv.textContent = stepHeader;
+                                headerDiv.style.fontWeight = 'bold';
+                                headerDiv.style.marginBottom = '5px';
+                                stepDiv.appendChild(headerDiv);
+                                
+                                // Process the step content
+                                const contentDiv = document.createElement('div');
+                                
+                                // Check if the content contains SQL or code
+                                if (stepContent.includes('```sql') || stepContent.includes('```')) {
+                                    // Split by code blocks
+                                    const codeParts = stepContent.split(/```(?:sql)?/);
+                                    
+                                    for (let j = 0; j < codeParts.length; j++) {
+                                        if (codeParts[j].trim() === '') continue;
+                                        
+                                        if (j % 2 === 0) {
+                                            // Regular text
+                                            const textDiv = document.createElement('div');
+                                            textDiv.textContent = codeParts[j].trim();
+                                            contentDiv.appendChild(textDiv);
+                                        } else {
+                                            // Code block
+                                            const pre = document.createElement('pre');
+                                            pre.textContent = codeParts[j].trim();
+                                            pre.style.backgroundColor = '#f5f5f5';
+                                            pre.style.padding = '8px';
+                                            pre.style.borderRadius = '4px';
+                                            pre.style.marginTop = '5px';
+                                            pre.style.marginBottom = '5px';
+                                            contentDiv.appendChild(pre);
+                                        }
+                                    }
+                                } else if (stepContent.includes('{') || stepContent.includes('[')) {
+                                    // JSON content
+                                    const textDiv = document.createElement('div');
+                                    textDiv.textContent = stepContent.trim().split('{')[0];
+                                    contentDiv.appendChild(textDiv);
+                                    
+                                    const pre = document.createElement('pre');
+                                    pre.textContent = stepContent.trim().substring(stepContent.trim().indexOf('{'));
+                                    pre.style.backgroundColor = '#f5f5f5';
+                                    pre.style.padding = '8px';
+                                    pre.style.borderRadius = '4px';
+                                    pre.style.marginTop = '5px';
+                                    contentDiv.appendChild(pre);
+                                } else {
+                                    // Regular text
+                                    contentDiv.textContent = stepContent.trim();
+                                }
+                                
+                                stepDiv.appendChild(contentDiv);
+                                container.appendChild(stepDiv);
+                            }
+                        }
+                        
+                        messageDiv.appendChild(container);
+                    } 
+                    // Check if the message contains JSON or code-like content
+                    else if (message.includes('{') || message.includes('[') || message.includes('\n')) {
+                        // Format as code
+                        const pre = document.createElement('pre');
+                        pre.textContent = message;
+                        messageDiv.appendChild(pre);
+                    } else {
+                        messageDiv.textContent = message;
+                    }
+                } else {
+                    // User messages are displayed as-is
+                    messageDiv.textContent = message;
+                }
+                
+                chatContainer.appendChild(messageDiv);
+                
+                // Scroll to the bottom
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // Function to add a loading indicator
+            function addLoadingIndicator() {
+                const loadingDiv = document.createElement('div');
+                loadingDiv.classList.add('message', 'bot-message', 'loading');
+                loadingDiv.textContent = 'Thinking';
+                loadingDiv.id = 'loading-indicator';
+                chatContainer.appendChild(loadingDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // Function to remove the loading indicator
+            function removeLoadingIndicator() {
+                const loadingIndicator = document.getElementById('loading-indicator');
+                if (loadingIndicator) {
+                    loadingIndicator.remove();
+                }
+            }
+            
+            // Handle form submission
+            messageForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const message = messageInput.value.trim();
+                if (!message) return;
+                
+                // Add the user message to the chat
+                addMessage(message, true);
+                
+                // Clear the input
+                messageInput.value = '';
+                
+                // Add loading indicator
+                addLoadingIndicator();
+                
+                try {
+                    // Send the message to the server
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ message })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    // Remove loading indicator
+                    removeLoadingIndicator();
+                    
+                    // Add the bot response to the chat
+                    addMessage(data.response);
+                } catch (error) {
+                    // Remove loading indicator
+                    removeLoadingIndicator();
+                    
+                    // Add an error message
+                    addMessage('Sorry, there was an error processing your request.');
+                    console.error('Error:', error);
+                }
+            });
+            
+            // Handle status check button click
+            checkStatusButton.addEventListener('click', async function() {
+                // Update status text
+                statusResults.innerHTML = 'Checking server status...';
+                
+                try {
+                    // Send the status check request
+                    const response = await fetch('/api/status');
+                    const data = await response.json();
+                    
+                    // Format the status results
+                    let statusHTML = '<strong>Server Status:</strong><br>';
+                    statusHTML += `ERP Server: <span style="color: ${data.erp_server === 'Running' ? 'green' : 'red'}">${data.erp_server}</span><br>`;
+                    statusHTML += `Document Storage Server: <span style="color: ${data.document_storage_server === 'Running' ? 'green' : 'red'}">${data.document_storage_server}</span><br>`;
+                    statusHTML += `Knowledge Graph Server: <span style="color: ${data.knowledge_graph_server === 'Running' ? 'green' : 'red'}">${data.knowledge_graph_server}</span>`;
+                    
+                    // Update the status results
+                    statusResults.innerHTML = statusHTML;
+                } catch (error) {
+                    // Update status text with error
+                    statusResults.innerHTML = 'Error checking server status.';
+                    console.error('Error:', error);
+                }
+            });
+            
+            // Focus the input field on page load
+            messageInput.focus();
+        });
+    </script>
+</body>
+</html>
