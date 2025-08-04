@@ -9,19 +9,22 @@ from dataclasses import dataclass
 @dataclass
 class DatabaseConfig:
     """Database configuration settings."""
-    # Default to SQLite for simplicity, but can be changed to other databases
-    db_type: str = "sqlite"
-    db_name: str = "synthetic_data.db"
-    db_host: str = ""
-    db_port: int = 0
-    db_user: str = ""
-    db_password: str = ""
+    # Default to PostgreSQL for production use
+    db_type: str = "postgresql"
+    db_name: str = "synthetic_erp_data"
+    db_path: str = None  # Custom path for SQLite database (legacy)
+    db_host: str = "localhost"
+    db_port: int = 5432
+    db_user: str = "postgres"
+    db_password: str = "postgres"
     
     @property
     def connection_string(self) -> str:
         """Generate the database connection string based on the configuration."""
         if self.db_type == "sqlite":
-            return f"sqlite:///{self.db_name}"
+            # Use custom path if provided, otherwise use db_name in current directory
+            db_file = self.db_path if self.db_path else self.db_name
+            return f"sqlite:///{db_file}"
         elif self.db_type == "postgresql":
             return f"postgresql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
         elif self.db_type == "mysql":
@@ -63,6 +66,8 @@ def configure_from_env():
         db_config.db_type = os.environ.get("DB_TYPE")
     if os.environ.get("DB_NAME"):
         db_config.db_name = os.environ.get("DB_NAME")
+    if os.environ.get("DB_PATH"):
+        db_config.db_path = os.environ.get("DB_PATH")
     if os.environ.get("DB_HOST"):
         db_config.db_host = os.environ.get("DB_HOST")
     if os.environ.get("DB_PORT"):

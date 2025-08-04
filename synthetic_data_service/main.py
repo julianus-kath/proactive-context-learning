@@ -17,22 +17,24 @@ logger = logging.getLogger(__name__)
 
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="Generate synthetic CRM and ERP data")
+    parser = argparse.ArgumentParser(description="Generate synthetic CRM and ERP data for PostgreSQL")
     
-    parser.add_argument("--customers", type=int, default=50,
-                        help="Number of customer records to generate (default: 50)")
-    parser.add_argument("--products", type=int, default=100,
-                        help="Number of product records to generate (default: 100)")
-    parser.add_argument("--suppliers", type=int, default=20,
-                        help="Number of supplier records to generate (default: 20)")
-    parser.add_argument("--employees", type=int, default=30,
-                        help="Number of employee records to generate (default: 30)")
-    parser.add_argument("--sales", type=int, default=200,
-                        help="Number of sales records to generate (default: 200)")
+    parser.add_argument("--customers", type=int, default=5000,
+                        help="Number of customer records to generate (default: 5000)")
+    parser.add_argument("--products", type=int, default=10000,
+                        help="Number of product records to generate (default: 10000)")
+    parser.add_argument("--suppliers", type=int, default=500,
+                        help="Number of supplier records to generate (default: 500)")
+    parser.add_argument("--employees", type=int, default=1000,
+                        help="Number of employee records to generate (default: 1000)")
+    parser.add_argument("--sales", type=int, default=50000,
+                        help="Number of sales records to generate (default: 50000)")
     parser.add_argument("--seed", type=int, default=None,
                         help="Random seed for reproducibility (default: from config)")
     parser.add_argument("--drop-tables", action="store_true",
                         help="Drop existing tables before creating new ones")
+    parser.add_argument("--batch-size", type=int, default=1000,
+                        help="Batch size for database inserts (default: 1000)")
     
     return parser.parse_args()
 
@@ -61,7 +63,8 @@ def main():
             num_suppliers=args.suppliers,
             num_employees=args.employees,
             num_sales=args.sales,
-            seed=args.seed
+            seed=args.seed,
+            batch_size=args.batch_size
         )
         
         logger.info("Data generation completed successfully.")

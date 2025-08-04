@@ -1,0 +1,19 @@
+# Main requirements file for the Master Thesis project
+
+# LangGraph and related packages
+langgraph>=0.0.27
+langgraph-supervisor>=0.0.3
+langchain>=0.0.350
+langchain-openai>=0.0.2
+langchain-community>=0.0.16
+langchain-core>=0.1.17
+
+# Database and data handling
+pandas>=2.0.0
+sqlalchemy>=2.0.0
+pyyaml>=6.0
+tiktoken>=0.5.1
+
+# Utilities
+tqdm>=4.65.0
+python-dotenv>=1.0.0

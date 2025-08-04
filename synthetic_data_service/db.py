@@ -3,8 +3,7 @@ Database connection and session management.
 """
 
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 from synthetic_data_service.config import db_config
 
@@ -12,7 +11,14 @@ from synthetic_data_service.config import db_config
 Base = declarative_base()
 
 # Create the engine based on the configuration
-engine = create_engine(db_config.connection_string, echo=False)
+engine = create_engine(
+    db_config.connection_string, 
+    echo=False,
+    pool_size=20,
+    max_overflow=30,
+    pool_pre_ping=True,
+    pool_recycle=3600
+)
 
 # Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -25,11 +31,7 @@ def get_db_session() -> Session:
     Returns:
         Session: A SQLAlchemy session object.
     """
-    session = SessionLocal()
-    try:
-        return session
-    finally:
-        session.close()
+    return SessionLocal()
 
 
 def init_db(drop_all: bool = False):
