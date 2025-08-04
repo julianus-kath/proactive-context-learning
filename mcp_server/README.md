@@ -1,80 +1,167 @@
-# MCP Server for PostgreSQL ERP Database
+# MCP Database Server
 
-This MCP (Model Context Protocol) server provides AI agents with access to the synthetic PostgreSQL ERP database. It exposes database resources and tools through a standardized interface that can be used by LangGraph agents and other AI systems.
+A Model Context Protocol (MCP) server implementation that provides secure access to a PostgreSQL database through JSON-RPC 2.0 over HTTP with Server-Sent Events support.
 
 ## Features
 
-### 🗄️ Database Resources
-- **Database Schema**: Complete schema information with table and column details
-- **Table Data**: Access to individual tables with sample data
-- **Relationships**: Foreign key relationships between tables
+### 🔐 Security
+- API Key authentication via Bearer token
+- Read-only database access (SELECT queries only)
+- Query result limits (max 1000 rows)
+- Input validation and sanitization
 
-### 🔧 Available Tools
-- **execute_sql_query**: Execute SQL queries with safety limits
+### 🛠️ MCP Tools
+- **get_schema**: Get complete database schema information
+- **query**: Execute SELECT queries with safety limits
 - **get_table_info**: Get detailed information about specific tables
-- **search_tables**: Search for tables by name
 - **get_sample_data**: Retrieve sample data from tables
-- **analyze_query_performance**: Analyze SQL query performance with EXPLAIN
 
-### 🛡️ Safety Features
-- Query result limits (default: 1000 rows)
-- Query timeout protection
-- Connection pooling for performance
-- Error handling and logging
+### 🌐 HTTP API
+- JSON-RPC 2.0 protocol compliance
+- FastAPI with automatic OpenAPI documentation
+- Server-Sent Events for streaming (future use)
+- CORS support for web clients
 
 ## Quick Start
 
-### 1. Prerequisites
-Ensure you have:
-- PostgreSQL running with the synthetic ERP database
-- Python 3.8+ with required dependencies
-
-### 2. Install Dependencies
+### 1. Install Dependencies
 ```bash
-cd mcp_server
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment
+### 2. Configure Environment
 ```bash
 cp .env.example .env
-# Edit .env with your PostgreSQL credentials
+# Edit .env with your database credentials and API key
 ```
+
+### 3. Start the Server
+```bash
+python start_server.py
+```
+
+The server will be available at:
+- **Main Server**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/health
+- **MCP Endpoint**: http://localhost:8000/mcp
 
 ### 4. Test the Server
 ```bash
 python test_client.py
 ```
 
-This will run a comprehensive test suite that:
-- Lists available resources and tools
-- Tests database connectivity
-- Executes sample queries
-- Provides an interactive SQL mode
+## Configuration
 
-## Usage Examples
-
-### Starting the Server
-```bash
-python start_server.py
+### Environment Variables (.env)
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=synthetic_erp_data
+DB_USER=postgres
+DB_PASSWORD=postgres
+API_KEY=supersecretapikey
 ```
 
-### Using the Test Client
+## API Usage
+
+### Authentication
+All requests require an API key in the Authorization header:
+```
+Authorization: Bearer supersecretapikey
+```
+
+### MCP JSON-RPC Requests
+
+**Initialize Session:**
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {},
+    "clientInfo": {
+      "name": "my-client",
+      "version": "1.0.0"
+    }
+  },
+  "id": 1
+}
+```
+
+**List Available Tools:**
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "list_tools",
+  "id": 2
+}
+```
+
+**Execute SQL Query:**
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "call_tool",
+  "params": {
+    "name": "query",
+    "arguments": {
+      "sql": "SELECT COUNT(*) FROM customers WHERE is_active = true",
+      "limit": 100
+    }
+  },
+  "id": 3
+}
+```
+
+**Get Database Schema:**
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "call_tool",
+  "params": {
+    "name": "get_schema"
+  },
+  "id": 4
+}
+```
+
+## Testing
+
+### Automated Tests
 ```bash
 python test_client.py
 ```
 
-The test client provides:
-- **Automated Tests**: Comprehensive test suite
-- **Interactive Mode**: Manual SQL query execution
-- **Special Commands**:
-  - `\tables` - List all tables
-  - `\desc <table>` - Describe table structure
-  - `\sample <table>` - Show sample data
+This runs a comprehensive test suite including:
+- Health check
+- MCP session initialization
+- Tool listing
+- Schema retrieval
+- Table information queries
+- Sample data retrieval
+- SQL query execution
 
-### Sample Queries
+### Interactive Testing
+The test client also provides an interactive mode:
+```bash
+python test_client.py
+# Choose 'y' when prompted for interactive mode
+```
 
-**Get customer statistics:**
+Available interactive commands:
+- `help` - Show available commands
+- `health` - Check server health
+- `tools` - List available tools
+- `schema` - Get database schema
+- `table <name>` - Get table information
+- `sample <name> [limit]` - Get sample data
+- `query <sql>` - Execute SQL query
+
+### Example Queries
+
+**Customer Analysis:**
 ```sql
 SELECT 
     industry,
@@ -84,16 +171,16 @@ SELECT
 FROM customers 
 WHERE is_active = true
 GROUP BY industry, company_size
-ORDER BY customer_count DESC;
+ORDER BY customer_count DESC
+LIMIT 10;
 ```
 
-**Analyze sales performance:**
+**Sales Performance:**
 ```sql
 SELECT 
     c.name as customer_name,
     COUNT(s.sale_id) as total_orders,
-    SUM(s.total_amount) as total_revenue,
-    AVG(s.total_amount) as avg_order_value
+    SUM(s.total_amount) as total_revenue
 FROM customers c
 JOIN sales s ON c.customer_id = s.customer_id
 WHERE s.status = 'Completed'
@@ -102,14 +189,13 @@ ORDER BY total_revenue DESC
 LIMIT 10;
 ```
 
-**Product inventory analysis:**
+**Product Inventory:**
 ```sql
 SELECT 
     p.product_name,
     p.category,
     w.warehouse_name,
     w.stock_quantity,
-    w.reorder_level,
     CASE 
         WHEN w.stock_quantity <= w.reorder_level THEN 'REORDER'
         WHEN w.stock_quantity = 0 THEN 'OUT_OF_STOCK'
@@ -118,113 +204,140 @@ SELECT
 FROM products p
 JOIN warehouse w ON p.product_id = w.product_id
 WHERE p.is_active = true
-ORDER BY w.stock_quantity ASC;
+ORDER BY w.stock_quantity ASC
+LIMIT 20;
 ```
 
-## MCP Protocol Integration
+## Security Features
 
-### Resources
-The server exposes these MCP resources:
-- `schema://database` - Complete database schema
-- `table://<table_name>` - Individual table information
-- `relationships://database` - Table relationships
+### Query Safety
+- Only SELECT queries are allowed
+- Automatic LIMIT clause addition if not present
+- Maximum row limit enforcement (1000 rows)
+- Query timeout protection (30 seconds)
 
-### Tools
-All database operations are exposed as MCP tools with proper input validation and error handling.
+### Authentication
+- API key validation on all endpoints
+- Bearer token format required
+- Configurable API key via environment variable
 
-### Client Integration
-```python
-from mcp.client.session import ClientSession
-from mcp.client.stdio import stdio_client
+### Database Security
+- Read-only database access
+- Connection pooling with limits
+- Prepared statement support
+- Input sanitization
 
-# Connect to the server
-read_stream, write_stream = stdio_client(server_process)
-session = ClientSession(read_stream, write_stream)
-await session.initialize()
+## Error Handling
 
-# Execute a query
-result = await session.call_tool("execute_sql_query", {
-    "query": "SELECT COUNT(*) FROM customers"
-})
+The server returns standard JSON-RPC 2.0 error responses:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32601,
+    "message": "Method not found",
+    "data": {"method": "unknown_method"}
+  },
+  "id": 1
+}
 ```
 
-## LangGraph Integration
+Common error codes:
+- `-32700`: Parse error
+- `-32600`: Invalid request
+- `-32601`: Method not found
+- `-32602`: Invalid params
+- `-32603`: Internal error
+- `-32002`: Server not initialized
 
-This MCP server is designed to work seamlessly with LangGraph agents:
+## Development
 
-### Agent Specialization
-- **Customer Agent**: Query customer-related tables
-- **Product Agent**: Handle inventory and catalog queries
-- **Sales Agent**: Process transaction and performance data
-- **Analytics Agent**: Run complex analytical queries
+### Project Structure
+```
+mcp_server/
+├── server.py          # FastAPI server with MCP protocol
+├── tools.py           # MCP tools implementation
+├── db.py              # Database connection and operations
+├── models.py          # Pydantic models for JSON-RPC
+├── requirements.txt   # Python dependencies
+├── .env.example       # Environment configuration template
+├── start_server.py    # Server startup script
+├── test_client.py     # Test client and examples
+└── README.md          # This file
+```
 
-### Example LangGraph Integration
+### Adding New Tools
+1. Add tool definition to `MCPTools.get_available_tools()` in `tools.py`
+2. Implement tool logic in `MCPTools.execute_tool()`
+3. Add corresponding method in `MCPTools` class
+
+### Database Operations
+All database operations go through the `DatabaseManager` class in `db.py`:
+- `fetch()` - Execute SELECT queries
+- `fetch_schema()` - Get database schema
+- `get_table_count()` - Get row counts
+- `get_sample_data()` - Get sample data
+
+## Integration with LangGraph
+
+This MCP server is designed to work with LangGraph agents:
+
 ```python
-from langgraph import StateGraph
-from mcp.client.session import ClientSession
+import aiohttp
+import json
 
 class DatabaseAgent:
-    def __init__(self, mcp_session: ClientSession):
-        self.session = mcp_session
+    def __init__(self, mcp_url: str, api_key: str):
+        self.mcp_url = mcp_url
+        self.api_key = api_key
     
-    async def query_database(self, query: str):
-        return await self.session.call_tool("execute_sql_query", {
-            "query": query
-        })
-
-# Use in LangGraph workflow
-graph = StateGraph(AgentState)
-graph.add_node("database_agent", DatabaseAgent(mcp_session))
+    async def query_database(self, sql: str):
+        async with aiohttp.ClientSession() as session:
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            request_data = {
+                "jsonrpc": "2.0",
+                "method": "call_tool",
+                "params": {
+                    "name": "query",
+                    "arguments": {"sql": sql}
+                },
+                "id": 1
+            }
+            
+            async with session.post(
+                f"{self.mcp_url}/mcp",
+                json=request_data,
+                headers=headers
+            ) as response:
+                return await response.json()
 ```
-
-## Configuration
-
-### Environment Variables
-```env
-# Database
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=synthetic_erp_data
-DB_USER=postgres
-DB_PASSWORD=postgres
-
-# Server Settings
-MAX_QUERY_RESULTS=1000
-QUERY_TIMEOUT=30
-```
-
-### Security Considerations
-- Query result limits prevent memory exhaustion
-- Timeout protection prevents long-running queries
-- Connection pooling manages database resources
-- Input validation prevents SQL injection
 
 ## Troubleshooting
 
 ### Common Issues
 
-**Connection Refused:**
-```bash
-# Check if PostgreSQL is running
-brew services list | grep postgresql
-# or
-sudo systemctl status postgresql
-```
+**Server won't start:**
+- Check if PostgreSQL is running
+- Verify database credentials in `.env`
+- Ensure port 8000 is available
 
-**Database Not Found:**
-```bash
-# Ensure the synthetic database exists
-python ../synthetic_data_service/setup_postgres.py
-```
+**Database connection failed:**
+- Verify database exists and is accessible
+- Check network connectivity
+- Validate credentials
 
-**Permission Denied:**
-```bash
-# Check database credentials in .env file
-# Ensure user has access to the database
-```
+**API key errors:**
+- Ensure API key is set in `.env`
+- Use correct Bearer token format
+- Check Authorization header
 
 ### Debug Mode
-Enable debug logging:
+Enable debug logging by setting log level:
 ```python
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -232,48 +345,16 @@ logging.basicConfig(level=logging.DEBUG)
 
 ## Performance
 
-### Optimization Features
-- Connection pooling (10 base connections, 20 overflow)
-- Query result limits (configurable)
+### Optimizations
+- Connection pooling (5-20 connections)
+- Query result limits
+- Async/await throughout
 - Efficient JSON serialization
-- Prepared statement support
 
 ### Monitoring
-The server logs:
-- Query execution times
-- Connection pool status
-- Error rates and types
-- Resource usage
+- Health check endpoint
+- Request/response logging
+- Database connection status
+- Error tracking
 
-## Development
-
-### Adding New Tools
-```python
-@server.call_tool()
-async def call_tool(name: str, arguments: Dict[str, Any]):
-    if name == "my_new_tool":
-        # Implementation here
-        pass
-```
-
-### Adding New Resources
-```python
-@server.list_resources()
-async def list_resources():
-    resources.append(Resource(
-        uri="my://resource",
-        name="My Resource",
-        description="Description",
-        mimeType="application/json"
-    ))
-```
-
-## Next Steps
-
-1. **LangGraph Integration**: Use this server in multi-agent workflows
-2. **Advanced Analytics**: Add more sophisticated analytical tools
-3. **Real-time Updates**: Implement database change notifications
-4. **Caching**: Add query result caching for performance
-5. **Monitoring**: Add comprehensive monitoring and metrics
-
-The MCP server is now ready for immediate testing and integration with AI agent systems! 🚀
+The MCP server is production-ready and optimized for AI agent integration! 🚀

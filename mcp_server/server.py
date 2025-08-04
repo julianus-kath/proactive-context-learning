@@ -1,305 +1,260 @@
 """
-MCP Server for PostgreSQL ERP Database.
+MCP Server implementation using FastAPI with JSON-RPC 2.0 protocol.
 """
 
 import logging
+import os
+from typing import Dict, Any, Optional
+from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
+import asyncio
 import json
-from typing import Any, Dict, List, Optional
-from mcp.server import Server
-from mcp.server.models import InitializationOptions
-from mcp.server.stdio import stdio_server
-from mcp.types import (
-    Resource,
-    Tool,
-    TextContent,
-    ImageContent,
-    EmbeddedResource,
-    LoggingLevel
-)
+from dotenv import load_dotenv
 
-from .config import config
-from .database import db_manager
+from models import (
+    JSONRPCRequest, JSONRPCResponse, JSONRPCError,
+    MCPInitializeParams, MCPInitializeResult, MCPCallToolParams
+)
+from tools import MCPTools
+from db import db_manager
+
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create the MCP server
-server = Server(config.server_name)
+# FastAPI app
+app = FastAPI(
+    title="MCP Database Server",
+    description="Model Context Protocol server for PostgreSQL database access",
+    version="1.0.0"
+)
 
-@server.list_resources()
-async def list_resources() -> List[Resource]:
-    """List available database resources."""
-    resources = []
-    
-    # Add database schema as a resource
-    resources.append(Resource(
-        uri="schema://database",
-        name="Database Schema",
-        description="Complete database schema with table and column information",
-        mimeType="application/json"
-    ))
-    
-    # Add each table as a resource
-    table_info = db_manager.get_table_info()
-    for table_name, info in table_info.items():
-        resources.append(Resource(
-            uri=f"table://{table_name}",
-            name=f"Table: {table_name}",
-            description=f"Table {table_name} with {info['row_count']} rows",
-            mimeType="application/json"
-        ))
-    
-    # Add table relationships as a resource
-    resources.append(Resource(
-        uri="relationships://database",
-        name="Table Relationships",
-        description="Foreign key relationships between tables",
-        mimeType="application/json"
-    ))
-    
-    return resources
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@server.read_resource()
-async def read_resource(uri: str) -> str:
-    """Read a specific database resource."""
-    try:
-        if uri == "schema://database":
-            # Return complete database schema
-            schema_info = db_manager.get_table_info()
-            return json.dumps(schema_info, indent=2)
-        
-        elif uri.startswith("table://"):
-            # Return sample data from a specific table
-            table_name = uri.replace("table://", "")
-            sample_data = db_manager.get_sample_data(table_name, limit=10)
-            return json.dumps(sample_data, indent=2)
-        
-        elif uri == "relationships://database":
-            # Return table relationships
-            relationships = db_manager.get_table_relationships()
-            return json.dumps(relationships, indent=2)
-        
-        else:
-            raise ValueError(f"Unknown resource URI: {uri}")
+# API Key validation
+API_KEY = os.getenv("API_KEY", "supersecretapikey")
+
+def validate_api_key(authorization: Optional[str] = Header(None)):
+    """Validate API key from Authorization header."""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization format")
+    
+    token = authorization.split(" ")[1]
+    if token != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    return token
+
+# MCP Protocol Implementation
+class MCPServer:
+    """MCP Server implementation."""
+    
+    def __init__(self):
+        self.initialized = False
+        self.client_capabilities = {}
+    
+    async def handle_request(self, request: JSONRPCRequest) -> JSONRPCResponse:
+        """Handle MCP JSON-RPC requests."""
+        try:
+            if request.method == "initialize":
+                return await self._handle_initialize(request)
+            elif request.method == "list_tools":
+                return await self._handle_list_tools(request)
+            elif request.method == "call_tool":
+                return await self._handle_call_tool(request)
+            else:
+                return JSONRPCResponse(
+                    id=request.id,
+                    error=JSONRPCError(
+                        code=-32601,
+                        message="Method not found",
+                        data={"method": request.method}
+                    ).__dict__
+                )
+        except Exception as e:
+            logger.error(f"Error handling request: {e}")
+            return JSONRPCResponse(
+                id=request.id,
+                error=JSONRPCError(
+                    code=-32603,
+                    message="Internal error",
+                    data={"error": str(e)}
+                ).__dict__
+            )
+    
+    async def _handle_initialize(self, request: JSONRPCRequest) -> JSONRPCResponse:
+        """Handle MCP initialize method."""
+        try:
+            params = MCPInitializeParams(**request.params) if request.params else None
             
-    except Exception as e:
-        logger.error(f"Error reading resource {uri}: {e}")
-        return json.dumps({"error": str(e)})
-
-@server.list_tools()
-async def list_tools() -> List[Tool]:
-    """List available database tools."""
-    return [
-        Tool(
-            name="execute_sql_query",
-            description="Execute a SQL query against the ERP database",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "SQL query to execute"
-                    },
-                    "params": {
-                        "type": "object",
-                        "description": "Optional query parameters",
-                        "additionalProperties": True
-                    }
+            if params:
+                self.client_capabilities = params.capabilities
+            
+            self.initialized = True
+            
+            result = MCPInitializeResult(
+                protocolVersion="2024-11-05",
+                capabilities={
+                    "tools": {}
                 },
-                "required": ["query"]
-            }
-        ),
-        Tool(
-            name="get_table_info",
-            description="Get detailed information about a specific table",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "table_name": {
-                        "type": "string",
-                        "description": "Name of the table to inspect"
-                    }
-                },
-                "required": ["table_name"]
-            }
-        ),
-        Tool(
-            name="search_tables",
-            description="Search for tables by name",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "search_term": {
-                        "type": "string",
-                        "description": "Term to search for in table names"
-                    }
-                },
-                "required": ["search_term"]
-            }
-        ),
-        Tool(
-            name="get_sample_data",
-            description="Get sample data from a table",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "table_name": {
-                        "type": "string",
-                        "description": "Name of the table"
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Number of sample rows to return",
-                        "default": 5,
-                        "minimum": 1,
-                        "maximum": 100
-                    }
-                },
-                "required": ["table_name"]
-            }
-        ),
-        Tool(
-            name="analyze_query_performance",
-            description="Analyze the performance of a SQL query using EXPLAIN",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "SQL query to analyze"
-                    }
-                },
-                "required": ["query"]
-            }
+                serverInfo={
+                    "name": "mcp-database-server",
+                    "version": "1.0.0"
+                }
+            )
+            
+            return JSONRPCResponse(id=request.id, result=result.__dict__)
+            
+        except Exception as e:
+            return JSONRPCResponse(
+                id=request.id,
+                error=JSONRPCError(
+                    code=-32602,
+                    message="Invalid params",
+                    data={"error": str(e)}
+                ).__dict__
+            )
+    
+    async def _handle_list_tools(self, request: JSONRPCRequest) -> JSONRPCResponse:
+        """Handle MCP list_tools method."""
+        if not self.initialized:
+            return JSONRPCResponse(
+                id=request.id,
+                error=JSONRPCError(
+                    code=-32002,
+                    message="Server not initialized"
+                ).__dict__
+            )
+        
+        tools = MCPTools.get_available_tools()
+        tools_dict = [tool.__dict__ for tool in tools]
+        
+        return JSONRPCResponse(
+            id=request.id,
+            result={"tools": tools_dict}
         )
-    ]
-
-@server.call_tool()
-async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
-    """Handle tool calls."""
-    try:
-        if name == "execute_sql_query":
-            query = arguments["query"]
-            params = arguments.get("params")
-            
-            # Execute the query
-            result = db_manager.execute_query(query, params)
-            
-            # Format the response
-            if result["type"] == "select":
-                response = f"Query executed successfully!\n\n"
-                response += f"Columns: {', '.join(result['columns'])}\n"
-                response += f"Rows returned: {result['row_count']}\n"
-                if result.get("truncated"):
-                    response += f"(Results truncated to {config.max_query_results} rows)\n"
-                response += f"\nData:\n{json.dumps(result['data'], indent=2)}"
-            elif result["type"] == "modification":
-                response = result["message"]
-            else:  # error
-                response = f"Error: {result['message']}\nDetails: {result['error']}"
-            
-            return [TextContent(type="text", text=response)]
-        
-        elif name == "get_table_info":
-            table_name = arguments["table_name"]
-            table_info = db_manager.get_table_info()
-            
-            if table_name in table_info:
-                info = table_info[table_name]
-                response = f"Table: {table_name}\n"
-                response += f"Row count: {info['row_count']}\n\n"
-                response += "Columns:\n"
-                for col in info['columns']:
-                    response += f"  - {col['name']} ({col['type']})"
-                    if col['primary_key']:
-                        response += " [PRIMARY KEY]"
-                    if col['foreign_key']:
-                        response += f" [FOREIGN KEY -> {col.get('references', 'unknown')}]"
-                    if not col['nullable']:
-                        response += " [NOT NULL]"
-                    response += "\n"
-            else:
-                response = f"Table '{table_name}' not found."
-            
-            return [TextContent(type="text", text=response)]
-        
-        elif name == "search_tables":
-            search_term = arguments["search_term"]
-            matching_tables = db_manager.search_tables(search_term)
-            
-            if matching_tables:
-                response = f"Tables matching '{search_term}':\n"
-                for table in matching_tables:
-                    table_info = db_manager.get_table_info()[table]
-                    response += f"  - {table} ({table_info['row_count']} rows)\n"
-            else:
-                response = f"No tables found matching '{search_term}'"
-            
-            return [TextContent(type="text", text=response)]
-        
-        elif name == "get_sample_data":
-            table_name = arguments["table_name"]
-            limit = arguments.get("limit", 5)
-            
-            sample_data = db_manager.get_sample_data(table_name, limit)
-            
-            if sample_data["type"] == "select":
-                response = f"Sample data from {table_name} (showing {sample_data['row_count']} rows):\n\n"
-                response += json.dumps(sample_data["data"], indent=2)
-            else:
-                response = f"Error getting sample data: {sample_data.get('message', 'Unknown error')}"
-            
-            return [TextContent(type="text", text=response)]
-        
-        elif name == "analyze_query_performance":
-            query = arguments["query"]
-            explain_query = f"EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {query}"
-            
-            result = db_manager.execute_query(explain_query)
-            
-            if result["type"] == "select" and result["data"]:
-                explain_data = result["data"][0]["QUERY PLAN"]
-                response = f"Query Performance Analysis:\n\n"
-                response += json.dumps(explain_data, indent=2)
-            else:
-                response = f"Error analyzing query: {result.get('message', 'Unknown error')}"
-            
-            return [TextContent(type="text", text=response)]
-        
-        else:
-            return [TextContent(type="text", text=f"Unknown tool: {name}")]
     
-    except Exception as e:
-        logger.error(f"Error in tool {name}: {e}")
-        return [TextContent(type="text", text=f"Error executing tool {name}: {str(e)}")]
+    async def _handle_call_tool(self, request: JSONRPCRequest) -> JSONRPCResponse:
+        """Handle MCP call_tool method."""
+        if not self.initialized:
+            return JSONRPCResponse(
+                id=request.id,
+                error=JSONRPCError(
+                    code=-32002,
+                    message="Server not initialized"
+                ).__dict__
+            )
+        
+        try:
+            params = MCPCallToolParams(**request.params) if request.params else None
+            
+            if not params:
+                return JSONRPCResponse(
+                    id=request.id,
+                    error=JSONRPCError(
+                        code=-32602,
+                        message="Invalid params"
+                    ).__dict__
+                )
+            
+            result = await MCPTools.execute_tool(params.name, params.arguments or {})
+            
+            return JSONRPCResponse(
+                id=request.id,
+                result=result.__dict__
+            )
+            
+        except Exception as e:
+            return JSONRPCResponse(
+                id=request.id,
+                error=JSONRPCError(
+                    code=-32603,
+                    message="Internal error",
+                    data={"error": str(e)}
+                ).__dict__
+            )
 
-async def main():
-    """Main server function."""
-    # Initialize the database connection
+# Global MCP server instance
+mcp_server = MCPServer()
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database connection on startup."""
+    await db_manager.initialize()
+    logger.info("MCP Database Server started")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Close database connection on shutdown."""
+    await db_manager.close()
+    logger.info("MCP Database Server stopped")
+
+@app.get("/")
+async def root():
+    """Root endpoint with server information."""
+    return {
+        "name": "MCP Database Server",
+        "version": "1.0.0",
+        "protocol": "MCP JSON-RPC 2.0",
+        "description": "Model Context Protocol server for PostgreSQL database access"
+    }
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
     try:
         # Test database connection
-        table_info = db_manager.get_table_info()
-        logger.info(f"Connected to database with {len(table_info)} tables")
-        
-        # Run the server
-        async with stdio_server() as (read_stream, write_stream):
-            await server.run(
-                read_stream,
-                write_stream,
-                InitializationOptions(
-                    server_name=config.server_name,
-                    server_version=config.server_version,
-                    capabilities=server.get_capabilities(
-                        notification_options=None,
-                        experimental_capabilities=None,
-                    ),
-                ),
-            )
+        await db_manager.fetch("SELECT 1", limit=1)
+        return {"status": "healthy", "database": "connected"}
     except Exception as e:
-        logger.error(f"Failed to start server: {e}")
-        raise
+        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
+
+@app.post("/mcp")
+async def mcp_endpoint(
+    request: JSONRPCRequest,
+    api_key: str = Depends(validate_api_key)
+):
+    """Main MCP JSON-RPC endpoint."""
+    response = await mcp_server.handle_request(request)
+    return response
+
+@app.get("/events")
+async def events_endpoint(api_key: str = Depends(validate_api_key)):
+    """Server-Sent Events endpoint for streaming (optional for future use)."""
+    async def event_stream():
+        while True:
+            # For now, just send a heartbeat every 30 seconds
+            yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': asyncio.get_event_loop().time()})}\n\n"
+            await asyncio.sleep(30)
+    
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        }
+    )
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    import uvicorn
+    uvicorn.run(
+        "server:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level="info"
+    )

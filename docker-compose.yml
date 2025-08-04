@@ -1,35 +1,60 @@
 version: '3.8'
+
 services:
-  n8n:
-    build: .
-    ports:
-      - "5678:5678"
-    volumes:
-      - ./n8n-data:/home/node/.n8n
-      - ./synthetic_data.db:/home/node/synthetic_data.db
-      - ./:/home/node/project  # Mount the entire project for access to Python scripts
+  # PostgreSQL database
+  postgres:
+    image: postgres:15
+    container_name: thesis_postgres
     environment:
-      - N8N_BASIC_AUTH_ACTIVE=false
-      - NODE_ENV=development
-      - N8N_LOG_LEVEL=debug
-      - WEBHOOK_URL=http://localhost:5678/
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      POSTGRES_DB: synthetic_erp_data
+      POSTGRES_USER: juli
+      POSTGRES_PASSWORD: ""
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init_db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U juli -d synthetic_erp_data"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
-      - n8n-network
+      - thesis_network
+
+  # MCP Database Server
+  mcp_server:
+    build:
+      context: ./mcp_server
+      dockerfile: Dockerfile
+    container_name: thesis_mcp_server
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=synthetic_erp_data
+      - DB_USER=juli
+      - DB_PASSWORD=
+      - API_KEY=supersecretapikey
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - thesis_network
     restart: unless-stopped
 
-  chatbot-ui:
-    image: nginx:alpine
-    ports:
-      - "8080:80"
-    volumes:
-      - ./chatbot-interface:/usr/share/nginx/html
-    networks:
-      - n8n-network
-    restart: unless-stopped
+volumes:
+  postgres_data:
+    driver: local
 
 networks:
-  n8n-network:
+  thesis_network:
     driver: bridge

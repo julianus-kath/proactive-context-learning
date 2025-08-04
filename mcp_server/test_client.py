@@ -3,199 +3,217 @@ Test client for the MCP server.
 """
 
 import asyncio
+import aiohttp
 import json
 import logging
-from typing import Any, Dict
-from mcp.client.session import ClientSession
-from mcp.client.stdio import stdio_client
+from typing import Dict, Any, Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class MCPTestClient:
-    """Test client for the MCP server."""
+    """Test client for MCP server."""
     
-    def __init__(self):
-        self.session = None
+    def __init__(self, base_url: str = "http://localhost:8000", api_key: str = "supersecretapikey"):
+        self.base_url = base_url
+        self.api_key = api_key
+        self.session: Optional[aiohttp.ClientSession] = None
+        self.request_id = 0
     
-    async def connect(self):
-        """Connect to the MCP server."""
-        try:
-            # Start the server process
-            import subprocess
-            import sys
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession()
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self.session:
+            await self.session.close()
+    
+    def _get_next_id(self) -> int:
+        """Get next request ID."""
+        self.request_id += 1
+        return self.request_id
+    
+    async def _make_request(self, method: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Make a JSON-RPC request to the MCP server."""
+        request_data = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "id": self._get_next_id()
+        }
+        
+        if params:
+            request_data["params"] = params
+        
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        async with self.session.post(
+            f"{self.base_url}/mcp",
+            json=request_data,
+            headers=headers
+        ) as response:
+            if response.status != 200:
+                raise Exception(f"HTTP {response.status}: {await response.text()}")
             
-            server_process = subprocess.Popen([
-                sys.executable, "-m", "mcp_server.server"
-            ], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            
-            # Create client session
-            read_stream, write_stream = stdio_client(server_process)
-            self.session = ClientSession(read_stream, write_stream)
-            
-            # Initialize the session
-            await self.session.initialize()
-            logger.info("Connected to MCP server successfully")
-            
-        except Exception as e:
-            logger.error(f"Failed to connect to MCP server: {e}")
-            raise
+            return await response.json()
     
-    async def list_resources(self):
-        """List available resources."""
-        try:
-            resources = await self.session.list_resources()
-            print("\n📚 Available Resources:")
-            print("=" * 50)
-            for resource in resources:
-                print(f"URI: {resource.uri}")
-                print(f"Name: {resource.name}")
-                print(f"Description: {resource.description}")
-                print(f"MIME Type: {resource.mimeType}")
-                print("-" * 30)
-            return resources
-        except Exception as e:
-            logger.error(f"Error listing resources: {e}")
-            return []
+    async def health_check(self) -> Dict[str, Any]:
+        """Check server health."""
+        headers = {"Authorization": f"Bearer {self.api_key}"}
+        async with self.session.get(f"{self.base_url}/health", headers=headers) as response:
+            return await response.json()
     
-    async def read_resource(self, uri: str):
-        """Read a specific resource."""
-        try:
-            content = await self.session.read_resource(uri)
-            print(f"\n📖 Resource Content ({uri}):")
-            print("=" * 50)
-            print(content)
-            return content
-        except Exception as e:
-            logger.error(f"Error reading resource {uri}: {e}")
-            return None
+    async def initialize(self) -> Dict[str, Any]:
+        """Initialize MCP session."""
+        params = {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": {
+                "name": "test-client",
+                "version": "1.0.0"
+            }
+        }
+        return await self._make_request("initialize", params)
     
-    async def list_tools(self):
+    async def list_tools(self) -> Dict[str, Any]:
         """List available tools."""
-        try:
-            tools = await self.session.list_tools()
-            print("\n🔧 Available Tools:")
-            print("=" * 50)
-            for tool in tools:
-                print(f"Name: {tool.name}")
-                print(f"Description: {tool.description}")
-                print(f"Input Schema: {json.dumps(tool.inputSchema, indent=2)}")
-                print("-" * 30)
-            return tools
-        except Exception as e:
-            logger.error(f"Error listing tools: {e}")
-            return []
+        return await self._make_request("list_tools")
     
-    async def call_tool(self, name: str, arguments: Dict[str, Any]):
+    async def call_tool(self, name: str, arguments: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Call a specific tool."""
-        try:
-            result = await self.session.call_tool(name, arguments)
-            print(f"\n🛠️ Tool Result ({name}):")
-            print("=" * 50)
-            for content in result:
-                if hasattr(content, 'text'):
-                    print(content.text)
-                else:
-                    print(str(content))
-            return result
-        except Exception as e:
-            logger.error(f"Error calling tool {name}: {e}")
-            return None
+        params = {"name": name}
+        if arguments:
+            params["arguments"] = arguments
+        return await self._make_request("call_tool", params)
     
-    async def run_tests(self):
-        """Run a comprehensive test suite."""
+    async def run_comprehensive_test(self):
+        """Run comprehensive test suite."""
         print("🚀 Starting MCP Server Test Suite")
         print("=" * 60)
         
-        # Test 1: List resources
-        print("\n🧪 Test 1: List Resources")
-        resources = await self.list_resources()
-        
-        # Test 2: Read database schema
-        print("\n🧪 Test 2: Read Database Schema")
-        await self.read_resource("schema://database")
-        
-        # Test 3: List tools
-        print("\n🧪 Test 3: List Tools")
-        tools = await self.list_tools()
-        
-        # Test 4: Search for tables
-        print("\n🧪 Test 4: Search Tables")
-        await self.call_tool("search_tables", {"search_term": "customer"})
-        
-        # Test 5: Get table info
-        print("\n🧪 Test 5: Get Table Info")
-        await self.call_tool("get_table_info", {"table_name": "customers"})
-        
-        # Test 6: Get sample data
-        print("\n🧪 Test 6: Get Sample Data")
-        await self.call_tool("get_sample_data", {"table_name": "customers", "limit": 3})
-        
-        # Test 7: Execute SQL query
-        print("\n🧪 Test 7: Execute SQL Query")
-        await self.call_tool("execute_sql_query", {
-            "query": "SELECT COUNT(*) as total_customers FROM customers WHERE is_active = true"
-        })
-        
-        # Test 8: Complex query with joins
-        print("\n🧪 Test 8: Complex Query with Joins")
-        await self.call_tool("execute_sql_query", {
-            "query": """
-                SELECT 
-                    c.name as customer_name,
-                    c.industry,
-                    COUNT(s.sale_id) as total_orders,
-                    SUM(s.total_amount) as total_revenue
-                FROM customers c
-                LEFT JOIN sales s ON c.customer_id = s.customer_id
-                WHERE c.is_active = true
-                GROUP BY c.customer_id, c.name, c.industry
-                ORDER BY total_revenue DESC
-                LIMIT 5
-            """
-        })
-        
-        # Test 9: Query performance analysis
-        print("\n🧪 Test 9: Query Performance Analysis")
-        await self.call_tool("analyze_query_performance", {
-            "query": "SELECT * FROM sales WHERE sale_date >= '2024-01-01' ORDER BY total_amount DESC LIMIT 10"
-        })
-        
-        print("\n✅ Test Suite Completed!")
+        try:
+            # Test 1: Health check
+            print("\n🧪 Test 1: Health Check")
+            health = await self.health_check()
+            print(f"Health Status: {health}")
+            
+            # Test 2: Initialize
+            print("\n🧪 Test 2: Initialize MCP Session")
+            init_response = await self.initialize()
+            print(f"Initialize Response: {json.dumps(init_response, indent=2)}")
+            
+            # Test 3: List tools
+            print("\n🧪 Test 3: List Available Tools")
+            tools_response = await self.list_tools()
+            print(f"Available Tools: {json.dumps(tools_response, indent=2)}")
+            
+            # Test 4: Get schema
+            print("\n🧪 Test 4: Get Database Schema")
+            schema_response = await self.call_tool("get_schema")
+            print(f"Schema Response: {json.dumps(schema_response, indent=2)}")
+            
+            # Test 5: Get table info
+            print("\n🧪 Test 5: Get Table Info")
+            table_info_response = await self.call_tool("get_table_info", {"table_name": "customers"})
+            print(f"Table Info Response: {json.dumps(table_info_response, indent=2)}")
+            
+            # Test 6: Get sample data
+            print("\n🧪 Test 6: Get Sample Data")
+            sample_response = await self.call_tool("get_sample_data", {"table_name": "customers", "limit": 3})
+            print(f"Sample Data Response: {json.dumps(sample_response, indent=2)}")
+            
+            # Test 7: Execute query
+            print("\n🧪 Test 7: Execute SQL Query")
+            query_response = await self.call_tool("query", {
+                "sql": "SELECT COUNT(*) as total_customers FROM customers WHERE is_active = true",
+                "limit": 10
+            })
+            print(f"Query Response: {json.dumps(query_response, indent=2)}")
+            
+            # Test 8: Complex query
+            print("\n🧪 Test 8: Complex Query with Joins")
+            complex_query_response = await self.call_tool("query", {
+                "sql": """
+                    SELECT 
+                        c.name as customer_name,
+                        c.industry,
+                        COUNT(s.sale_id) as total_orders,
+                        SUM(s.total_amount) as total_revenue
+                    FROM customers c
+                    LEFT JOIN sales s ON c.customer_id = s.customer_id
+                    WHERE c.is_active = true
+                    GROUP BY c.customer_id, c.name, c.industry
+                    ORDER BY total_revenue DESC
+                    LIMIT 5
+                """,
+                "limit": 5
+            })
+            print(f"Complex Query Response: {json.dumps(complex_query_response, indent=2)}")
+            
+            print("\n✅ All tests completed successfully!")
+            
+        except Exception as e:
+            print(f"\n❌ Test failed: {e}")
+            import traceback
+            traceback.print_exc()
     
     async def interactive_mode(self):
-        """Run in interactive mode for manual testing."""
-        print("\n🎮 Interactive Mode - Enter SQL queries (type 'exit' to quit)")
+        """Interactive mode for manual testing."""
+        print("\n🎮 Interactive Mode - Enter commands (type 'help' for commands, 'exit' to quit)")
         print("=" * 60)
+        
+        # Initialize session first
+        try:
+            await self.initialize()
+            print("✅ MCP session initialized")
+        except Exception as e:
+            print(f"❌ Failed to initialize: {e}")
+            return
         
         while True:
             try:
-                query = input("\nSQL> ").strip()
+                command = input("\nMCP> ").strip()
                 
-                if query.lower() in ['exit', 'quit', 'q']:
+                if command.lower() in ['exit', 'quit', 'q']:
                     break
-                
-                if not query:
-                    continue
-                
-                if query.startswith('\\'):
-                    # Handle special commands
-                    if query == '\\tables':
-                        await self.call_tool("search_tables", {"search_term": ""})
-                    elif query.startswith('\\desc '):
-                        table_name = query[6:].strip()
-                        await self.call_tool("get_table_info", {"table_name": table_name})
-                    elif query.startswith('\\sample '):
-                        table_name = query[8:].strip()
-                        await self.call_tool("get_sample_data", {"table_name": table_name, "limit": 5})
-                    else:
-                        print("Available commands:")
-                        print("  \\tables - List all tables")
-                        print("  \\desc <table> - Describe table structure")
-                        print("  \\sample <table> - Show sample data")
-                else:
-                    # Execute SQL query
-                    await self.call_tool("execute_sql_query", {"query": query})
+                elif command.lower() == 'help':
+                    print("Available commands:")
+                    print("  help - Show this help")
+                    print("  health - Check server health")
+                    print("  tools - List available tools")
+                    print("  schema - Get database schema")
+                    print("  table <name> - Get table info")
+                    print("  sample <name> [limit] - Get sample data")
+                    print("  query <sql> - Execute SQL query")
+                    print("  exit - Exit interactive mode")
+                elif command.lower() == 'health':
+                    health = await self.health_check()
+                    print(f"Health: {json.dumps(health, indent=2)}")
+                elif command.lower() == 'tools':
+                    tools = await self.list_tools()
+                    print(f"Tools: {json.dumps(tools, indent=2)}")
+                elif command.lower() == 'schema':
+                    schema = await self.call_tool("get_schema")
+                    print(f"Schema: {json.dumps(schema, indent=2)}")
+                elif command.startswith('table '):
+                    table_name = command[6:].strip()
+                    table_info = await self.call_tool("get_table_info", {"table_name": table_name})
+                    print(f"Table Info: {json.dumps(table_info, indent=2)}")
+                elif command.startswith('sample '):
+                    parts = command[7:].split()
+                    table_name = parts[0]
+                    limit = int(parts[1]) if len(parts) > 1 else 5
+                    sample = await self.call_tool("get_sample_data", {"table_name": table_name, "limit": limit})
+                    print(f"Sample Data: {json.dumps(sample, indent=2)}")
+                elif command.startswith('query '):
+                    sql = command[6:].strip()
+                    query_result = await self.call_tool("query", {"sql": sql})
+                    print(f"Query Result: {json.dumps(query_result, indent=2)}")
+                elif command:
+                    print("Unknown command. Type 'help' for available commands.")
                     
             except KeyboardInterrupt:
                 break
@@ -204,25 +222,18 @@ class MCPTestClient:
         
         print("\nGoodbye! 👋")
 
+
 async def main():
     """Main test function."""
-    client = MCPTestClient()
-    
-    try:
-        await client.connect()
-        
-        # Run automated tests
-        await client.run_tests()
+    async with MCPTestClient() as client:
+        # Run comprehensive tests
+        await client.run_comprehensive_test()
         
         # Ask if user wants interactive mode
         response = input("\n🎮 Would you like to enter interactive mode? (y/n): ").strip().lower()
         if response in ['y', 'yes']:
             await client.interactive_mode()
-            
-    except Exception as e:
-        logger.error(f"Test failed: {e}")
-        import traceback
-        traceback.print_exc()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

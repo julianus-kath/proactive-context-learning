@@ -15,8 +15,8 @@ from langgraph.graph import StateGraph, START, END, MessagesState
 from langgraph.types import Command
 from langgraph.prebuilt import InjectedState
 
-# Import SQL agent tools
-from agent_system.sql_agent import run_sql_query, get_table_info, get_database_schema
+# Import MCP-enabled SQL agent tools
+from agent_system.mcp_sql_agent import run_sql_query, get_table_info, get_database_schema, get_sample_data, check_mcp_server_health
 
 
 def create_handoff_tool(*, agent_name: str, description: str | None = None):
@@ -89,36 +89,48 @@ def create_supervisor_agent():
 
 def create_sql_agent():
     """
-    Create the SQL agent for querying the ERP database.
+    Create the SQL agent for querying the ERP database via MCP server.
     
     Returns:
         SQL agent
     """
-    # Create tools for the SQL agent
+    # Create tools for the SQL agent (now using MCP server)
     sql_query_tool = Tool.from_function(
         func=run_sql_query,
         name="run_sql_query",
-        description="Run a SQL query against the ERP database."
+        description="Run a SQL query against the ERP database via MCP server."
     )
     
     table_info_tool = Tool.from_function(
         func=get_table_info,
         name="get_table_info",
-        description="Get information about a specific table or all tables in the ERP database."
+        description="Get information about a specific table or all tables in the ERP database via MCP server."
     )
     
     schema_tool = Tool.from_function(
         func=get_database_schema,
         name="get_database_schema",
-        description="Get the complete schema of the ERP database."
+        description="Get the complete schema of the ERP database via MCP server."
+    )
+    
+    sample_data_tool = Tool.from_function(
+        func=get_sample_data,
+        name="get_sample_data",
+        description="Get sample data from a specific table in the ERP database via MCP server."
+    )
+    
+    health_check_tool = Tool.from_function(
+        func=check_mcp_server_health,
+        name="check_mcp_server_health",
+        description="Check the health status of the MCP database server."
     )
     
     # Create the SQL agent
     sql_agent = create_react_agent(
         model=ChatOpenAI(model="gpt-4o", temperature=0),
-        tools=[sql_query_tool, table_info_tool, schema_tool],
+        tools=[sql_query_tool, table_info_tool, schema_tool, sample_data_tool, health_check_tool],
         prompt=(
-            "You are a SQL expert agent that helps users query and analyze data from the ERP database.\n\n"
+            "You are a SQL expert agent that helps users query and analyze data from the ERP database via the MCP (Model Context Protocol) server.\n\n"
             "The ERP database contains business data including:\n"
             "- Customers: Information about clients\n"
             "- Products: Details about products in inventory\n"
@@ -126,11 +138,20 @@ def create_sql_agent():
             "- Suppliers: Information about vendors\n"
             "- Employees: Staff member records\n"
             "- Warehouse: Inventory stock information\n\n"
+            "You access the database through a secure MCP server that provides:\n"
+            "- Standardized database access\n"
+            "- Read-only operations for data safety\n"
+            "- Query limits and timeouts for performance\n"
+            "- Authentication and security\n\n"
             "Your job is to:\n"
-            "1. Help users understand the database schema\n"
-            "2. Write and execute SQL queries based on user requests\n"
-            "3. Explain the results in a clear, concise manner\n\n"
-            "Always check the database schema first if you're unsure about table structures."
+            "1. Help users understand the database schema using get_database_schema\n"
+            "2. Write and execute SQL queries using run_sql_query\n"
+            "3. Get detailed table information using get_table_info\n"
+            "4. Retrieve sample data using get_sample_data\n"
+            "5. Check MCP server health if there are connection issues\n"
+            "6. Explain the results in a clear, concise manner\n\n"
+            "Always check the database schema first if you're unsure about table structures.\n"
+            "If you encounter errors, check the MCP server health status."
         ),
         name="sql_agent",
     )
