@@ -1,0 +1,2225 @@
+{
+  "nodes": [
+    {
+      "id": "supplier-1",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 1,
+        "name": "Rodriguez, Figueroa and Sanchez",
+        "country": "Micronesia",
+        "city": "Lake Stephenville"
+      }
+    },
+    {
+      "id": "supplier-2",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 2,
+        "name": "Calderon-Montgomery",
+        "country": "Palau",
+        "city": "New Nancy"
+      }
+    },
+    {
+      "id": "supplier-3",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 3,
+        "name": "Foster-Rocha",
+        "country": "Madagascar",
+        "city": "Smithview"
+      }
+    },
+    {
+      "id": "supplier-4",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 4,
+        "name": "Harrell LLC",
+        "country": "Holy See (Vatican City State)",
+        "city": "Lake Larry"
+      }
+    },
+    {
+      "id": "supplier-5",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 5,
+        "name": "Lam-Hayes",
+        "country": "Comoros",
+        "city": "Laurenville"
+      }
+    },
+    {
+      "id": "supplier-6",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 6,
+        "name": "West, Henderson and Ramirez",
+        "country": "Malawi",
+        "city": "New Thomashaven"
+      }
+    },
+    {
+      "id": "supplier-7",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 7,
+        "name": "York Inc",
+        "country": "Romania",
+        "city": "West Justin"
+      }
+    },
+    {
+      "id": "supplier-8",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 8,
+        "name": "Carr-Archer",
+        "country": "Monaco",
+        "city": "Lake Scott"
+      }
+    },
+    {
+      "id": "supplier-9",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 9,
+        "name": "Rodriguez Ltd",
+        "country": "Svalbard & Jan Mayen Islands",
+        "city": "South Monicafort"
+      }
+    },
+    {
+      "id": "supplier-10",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 10,
+        "name": "Bailey-Hoover",
+        "country": "Madagascar",
+        "city": "Cindyville"
+      }
+    },
+    {
+      "id": "supplier-11",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 11,
+        "name": "Estrada-Nguyen",
+        "country": "Ecuador",
+        "city": "Lake Heather"
+      }
+    },
+    {
+      "id": "supplier-12",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 12,
+        "name": "Douglas Inc",
+        "country": "Canada",
+        "city": "Matthewside"
+      }
+    },
+    {
+      "id": "supplier-13",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 13,
+        "name": "Reyes and Sons",
+        "country": "Australia",
+        "city": "North Dawnberg"
+      }
+    },
+    {
+      "id": "supplier-14",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 14,
+        "name": "Gray-Lewis",
+        "country": "Anguilla",
+        "city": "Port Loriport"
+      }
+    },
+    {
+      "id": "supplier-15",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 15,
+        "name": "Johnston-Odonnell",
+        "country": "Turkmenistan",
+        "city": "Marcusbury"
+      }
+    },
+    {
+      "id": "supplier-16",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 16,
+        "name": "Sanchez-Marshall",
+        "country": "Reunion",
+        "city": "Ronaldside"
+      }
+    },
+    {
+      "id": "supplier-17",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 17,
+        "name": "Nelson-King",
+        "country": "Austria",
+        "city": "Taylormouth"
+      }
+    },
+    {
+      "id": "supplier-18",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 18,
+        "name": "Everett-Woods",
+        "country": "Latvia",
+        "city": "East Aaronmouth"
+      }
+    },
+    {
+      "id": "supplier-19",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 19,
+        "name": "Johnson-Roberts",
+        "country": "Denmark",
+        "city": "South Jessicaview"
+      }
+    },
+    {
+      "id": "supplier-20",
+      "labels": [
+        "Supplier"
+      ],
+      "properties": {
+        "supplier_id": 20,
+        "name": "Huff, Johnston and Sampson",
+        "country": "Comoros",
+        "city": "Lake Mollymouth"
+      }
+    },
+    {
+      "id": "product-1",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 1,
+        "name": "mesh bricks-and-clicks e-business",
+        "category": "Electronics"
+      }
+    },
+    {
+      "id": "product-2",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 2,
+        "name": "syndicate collaborative action-items",
+        "category": "Furniture"
+      }
+    },
+    {
+      "id": "product-3",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 3,
+        "name": "harness dynamic action-items",
+        "category": "Health & Beauty"
+      }
+    },
+    {
+      "id": "product-4",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 4,
+        "name": "orchestrate intuitive info-mediaries",
+        "category": "Electronics"
+      }
+    },
+    {
+      "id": "product-5",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 5,
+        "name": "innovate front-end e-services",
+        "category": "Sports & Outdoors"
+      }
+    },
+    {
+      "id": "product-6",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 6,
+        "name": "disintermediate user-centric eyeballs",
+        "category": "Food & Beverage"
+      }
+    },
+    {
+      "id": "product-7",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 7,
+        "name": "productize front-end methodologies",
+        "category": "Furniture"
+      }
+    },
+    {
+      "id": "product-8",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 8,
+        "name": "empower value-added networks",
+        "category": "Sports & Outdoors"
+      }
+    },
+    {
+      "id": "product-9",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 9,
+        "name": "morph global functionalities",
+        "category": "Sports & Outdoors"
+      }
+    },
+    {
+      "id": "product-10",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 10,
+        "name": "deliver real-time communities",
+        "category": "Health & Beauty"
+      }
+    },
+    {
+      "id": "product-11",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 11,
+        "name": "disintermediate e-business interfaces",
+        "category": "Office Supplies"
+      }
+    },
+    {
+      "id": "product-12",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 12,
+        "name": "transition out-of-the-box platforms",
+        "category": "Health & Beauty"
+      }
+    },
+    {
+      "id": "product-13",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 13,
+        "name": "embrace mission-critical action-items",
+        "category": "Sports & Outdoors"
+      }
+    },
+    {
+      "id": "product-14",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 14,
+        "name": "transform out-of-the-box users",
+        "category": "Furniture"
+      }
+    },
+    {
+      "id": "product-15",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 15,
+        "name": "generate clicks-and-mortar niches",
+        "category": "Clothing"
+      }
+    },
+    {
+      "id": "product-16",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 16,
+        "name": "reinvent back-end markets",
+        "category": "Office Supplies"
+      }
+    },
+    {
+      "id": "product-17",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 17,
+        "name": "utilize leading-edge info-mediaries",
+        "category": "Office Supplies"
+      }
+    },
+    {
+      "id": "product-18",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 18,
+        "name": "iterate killer e-commerce",
+        "category": "Furniture"
+      }
+    },
+    {
+      "id": "product-19",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 19,
+        "name": "streamline open-source web services",
+        "category": "Food & Beverage"
+      }
+    },
+    {
+      "id": "product-20",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 20,
+        "name": "embrace efficient networks",
+        "category": "Health & Beauty"
+      }
+    },
+    {
+      "id": "product-21",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 21,
+        "name": "reinvent B2B networks",
+        "category": "Clothing"
+      }
+    },
+    {
+      "id": "product-22",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 22,
+        "name": "brand holistic metrics",
+        "category": "Food & Beverage"
+      }
+    },
+    {
+      "id": "product-23",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 23,
+        "name": "brand virtual channels",
+        "category": "Food & Beverage"
+      }
+    },
+    {
+      "id": "product-24",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 24,
+        "name": "exploit ubiquitous relationships",
+        "category": "Electronics"
+      }
+    },
+    {
+      "id": "product-25",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 25,
+        "name": "revolutionize cross-media convergence",
+        "category": "Furniture"
+      }
+    },
+    {
+      "id": "product-26",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 26,
+        "name": "engineer customized methodologies",
+        "category": "Health & Beauty"
+      }
+    },
+    {
+      "id": "product-27",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 27,
+        "name": "generate revolutionary systems",
+        "category": "Furniture"
+      }
+    },
+    {
+      "id": "product-28",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 28,
+        "name": "generate open-source partnerships",
+        "category": "Office Supplies"
+      }
+    },
+    {
+      "id": "product-29",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 29,
+        "name": "innovate e-business experiences",
+        "category": "Office Supplies"
+      }
+    },
+    {
+      "id": "product-30",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 30,
+        "name": "leverage viral e-business",
+        "category": "Furniture"
+      }
+    },
+    {
+      "id": "warehouse-1",
+      "labels": [
+        "Warehouse"
+      ],
+      "properties": {
+        "warehouse_id": 1,
+        "name": "Main Warehouse",
+        "city": "Chicago",
+        "country": "USA",
+        "capacity": 14968
+      }
+    },
+    {
+      "id": "warehouse-2",
+      "labels": [
+        "Warehouse"
+      ],
+      "properties": {
+        "warehouse_id": 2,
+        "name": "East Coast Facility",
+        "city": "New York",
+        "country": "USA",
+        "capacity": 37461
+      }
+    },
+    {
+      "id": "warehouse-3",
+      "labels": [
+        "Warehouse"
+      ],
+      "properties": {
+        "warehouse_id": 3,
+        "name": "West Coast Facility",
+        "city": "Los Angeles",
+        "country": "USA",
+        "capacity": 7426
+      }
+    },
+    {
+      "id": "warehouse-4",
+      "labels": [
+        "Warehouse"
+      ],
+      "properties": {
+        "warehouse_id": 4,
+        "name": "Central Distribution",
+        "city": "Dallas",
+        "country": "USA",
+        "capacity": 13273
+      }
+    },
+    {
+      "id": "warehouse-5",
+      "labels": [
+        "Warehouse"
+      ],
+      "properties": {
+        "warehouse_id": 5,
+        "name": "European Hub",
+        "city": "Amsterdam",
+        "country": "Netherlands",
+        "capacity": 37918
+      }
+    },
+    {
+      "id": "warehouse-6",
+      "labels": [
+        "Warehouse"
+      ],
+      "properties": {
+        "warehouse_id": 6,
+        "name": "Asian Hub",
+        "city": "Singapore",
+        "country": "Singapore",
+        "capacity": 43678
+      }
+    },
+    {
+      "id": "distribution_center-1",
+      "labels": [
+        "DistributionCenter"
+      ],
+      "properties": {
+        "dc_id": 1,
+        "name": "North Region DC",
+        "city": "Minneapolis",
+        "country": "USA",
+        "throughput": 6439
+      }
+    },
+    {
+      "id": "distribution_center-2",
+      "labels": [
+        "DistributionCenter"
+      ],
+      "properties": {
+        "dc_id": 2,
+        "name": "South Region DC",
+        "city": "Atlanta",
+        "country": "USA",
+        "throughput": 2644
+      }
+    },
+    {
+      "id": "distribution_center-3",
+      "labels": [
+        "DistributionCenter"
+      ],
+      "properties": {
+        "dc_id": 3,
+        "name": "European DC",
+        "city": "Frankfurt",
+        "country": "Germany",
+        "throughput": 8213
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "supplies-18-1",
+      "type": "SUPPLIES",
+      "source": "supplier-18",
+      "target": "product-1",
+      "properties": {
+        "lead_time_days": 9,
+        "min_order_quantity": 548,
+        "unit_cost": 136.51,
+        "contract_start_date": "2024-01-16T08:24:56.909012"
+      }
+    },
+    {
+      "id": "supplies-1-2",
+      "type": "SUPPLIES",
+      "source": "supplier-1",
+      "target": "product-2",
+      "properties": {
+        "lead_time_days": 32,
+        "min_order_quantity": 25,
+        "unit_cost": 429.46,
+        "contract_start_date": "2023-11-10T15:11:30.216438"
+      }
+    },
+    {
+      "id": "supplies-11-3",
+      "type": "SUPPLIES",
+      "source": "supplier-11",
+      "target": "product-3",
+      "properties": {
+        "lead_time_days": 12,
+        "min_order_quantity": 429,
+        "unit_cost": 160.31,
+        "contract_start_date": "2025-02-03T23:37:09.344556"
+      }
+    },
+    {
+      "id": "supplies-20-4",
+      "type": "SUPPLIES",
+      "source": "supplier-20",
+      "target": "product-4",
+      "properties": {
+        "lead_time_days": 44,
+        "min_order_quantity": 168,
+        "unit_cost": 78.15,
+        "contract_start_date": "2022-11-26T14:55:17.362028"
+      }
+    },
+    {
+      "id": "supplies-13-5",
+      "type": "SUPPLIES",
+      "source": "supplier-13",
+      "target": "product-5",
+      "properties": {
+        "lead_time_days": 7,
+        "min_order_quantity": 490,
+        "unit_cost": 450.07,
+        "contract_start_date": "2024-06-09T13:18:18.919580"
+      }
+    },
+    {
+      "id": "supplies-12-6",
+      "type": "SUPPLIES",
+      "source": "supplier-12",
+      "target": "product-6",
+      "properties": {
+        "lead_time_days": 19,
+        "min_order_quantity": 356,
+        "unit_cost": 538.07,
+        "contract_start_date": "2023-01-03T08:14:52.853877"
+      }
+    },
+    {
+      "id": "supplies-10-7",
+      "type": "SUPPLIES",
+      "source": "supplier-10",
+      "target": "product-7",
+      "properties": {
+        "lead_time_days": 42,
+        "min_order_quantity": 719,
+        "unit_cost": 27.2,
+        "contract_start_date": "2023-06-24T11:31:55.956279"
+      }
+    },
+    {
+      "id": "supplies-15-8",
+      "type": "SUPPLIES",
+      "source": "supplier-15",
+      "target": "product-8",
+      "properties": {
+        "lead_time_days": 28,
+        "min_order_quantity": 675,
+        "unit_cost": 479.08,
+        "contract_start_date": "2024-04-21T19:02:21.310707"
+      }
+    },
+    {
+      "id": "supplies-9-9",
+      "type": "SUPPLIES",
+      "source": "supplier-9",
+      "target": "product-9",
+      "properties": {
+        "lead_time_days": 8,
+        "min_order_quantity": 882,
+        "unit_cost": 92.72,
+        "contract_start_date": "2023-03-11T12:33:27.944993"
+      }
+    },
+    {
+      "id": "supplies-8-10",
+      "type": "SUPPLIES",
+      "source": "supplier-8",
+      "target": "product-10",
+      "properties": {
+        "lead_time_days": 24,
+        "min_order_quantity": 882,
+        "unit_cost": 287.18,
+        "contract_start_date": "2023-03-29T06:02:57.112123"
+      }
+    },
+    {
+      "id": "supplies-18-11",
+      "type": "SUPPLIES",
+      "source": "supplier-18",
+      "target": "product-11",
+      "properties": {
+        "lead_time_days": 37,
+        "min_order_quantity": 399,
+        "unit_cost": 213.53,
+        "contract_start_date": "2024-07-18T15:23:47.213469"
+      }
+    },
+    {
+      "id": "supplies-8-12",
+      "type": "SUPPLIES",
+      "source": "supplier-8",
+      "target": "product-12",
+      "properties": {
+        "lead_time_days": 23,
+        "min_order_quantity": 651,
+        "unit_cost": 599.88,
+        "contract_start_date": "2022-07-05T07:09:35.622514"
+      }
+    },
+    {
+      "id": "supplies-19-13",
+      "type": "SUPPLIES",
+      "source": "supplier-19",
+      "target": "product-13",
+      "properties": {
+        "lead_time_days": 34,
+        "min_order_quantity": 903,
+        "unit_cost": 173.64,
+        "contract_start_date": "2023-08-31T23:05:50.766902"
+      }
+    },
+    {
+      "id": "supplies-15-14",
+      "type": "SUPPLIES",
+      "source": "supplier-15",
+      "target": "product-14",
+      "properties": {
+        "lead_time_days": 37,
+        "min_order_quantity": 46,
+        "unit_cost": 307.61,
+        "contract_start_date": "2025-04-14T20:01:00.150615"
+      }
+    },
+    {
+      "id": "supplies-9-15",
+      "type": "SUPPLIES",
+      "source": "supplier-9",
+      "target": "product-15",
+      "properties": {
+        "lead_time_days": 42,
+        "min_order_quantity": 80,
+        "unit_cost": 158.73,
+        "contract_start_date": "2025-04-12T06:00:29.311782"
+      }
+    },
+    {
+      "id": "supplies-5-16",
+      "type": "SUPPLIES",
+      "source": "supplier-5",
+      "target": "product-16",
+      "properties": {
+        "lead_time_days": 18,
+        "min_order_quantity": 656,
+        "unit_cost": 294.31,
+        "contract_start_date": "2022-07-06T02:01:51.330873"
+      }
+    },
+    {
+      "id": "supplies-5-17",
+      "type": "SUPPLIES",
+      "source": "supplier-5",
+      "target": "product-17",
+      "properties": {
+        "lead_time_days": 21,
+        "min_order_quantity": 242,
+        "unit_cost": 564.45,
+        "contract_start_date": "2022-12-06T08:50:16.342865"
+      }
+    },
+    {
+      "id": "supplies-20-18",
+      "type": "SUPPLIES",
+      "source": "supplier-20",
+      "target": "product-18",
+      "properties": {
+        "lead_time_days": 8,
+        "min_order_quantity": 454,
+        "unit_cost": 332.59,
+        "contract_start_date": "2023-02-01T09:30:12.953958"
+      }
+    },
+    {
+      "id": "supplies-1-19",
+      "type": "SUPPLIES",
+      "source": "supplier-1",
+      "target": "product-19",
+      "properties": {
+        "lead_time_days": 9,
+        "min_order_quantity": 788,
+        "unit_cost": 723.0,
+        "contract_start_date": "2025-02-02T09:34:13.459239"
+      }
+    },
+    {
+      "id": "supplies-9-20",
+      "type": "SUPPLIES",
+      "source": "supplier-9",
+      "target": "product-20",
+      "properties": {
+        "lead_time_days": 43,
+        "min_order_quantity": 730,
+        "unit_cost": 421.06,
+        "contract_start_date": "2024-12-06T23:43:27.431541"
+      }
+    },
+    {
+      "id": "supplies-1-21",
+      "type": "SUPPLIES",
+      "source": "supplier-1",
+      "target": "product-21",
+      "properties": {
+        "lead_time_days": 9,
+        "min_order_quantity": 464,
+        "unit_cost": 139.24,
+        "contract_start_date": "2024-12-05T05:48:30.206935"
+      }
+    },
+    {
+      "id": "supplies-10-22",
+      "type": "SUPPLIES",
+      "source": "supplier-10",
+      "target": "product-22",
+      "properties": {
+        "lead_time_days": 13,
+        "min_order_quantity": 720,
+        "unit_cost": 226.86,
+        "contract_start_date": "2023-05-26T17:00:03.322793"
+      }
+    },
+    {
+      "id": "supplies-18-23",
+      "type": "SUPPLIES",
+      "source": "supplier-18",
+      "target": "product-23",
+      "properties": {
+        "lead_time_days": 22,
+        "min_order_quantity": 935,
+        "unit_cost": 113.72,
+        "contract_start_date": "2022-10-06T15:46:38.641741"
+      }
+    },
+    {
+      "id": "supplies-12-24",
+      "type": "SUPPLIES",
+      "source": "supplier-12",
+      "target": "product-24",
+      "properties": {
+        "lead_time_days": 4,
+        "min_order_quantity": 57,
+        "unit_cost": 134.94,
+        "contract_start_date": "2024-10-16T08:37:18.126518"
+      }
+    },
+    {
+      "id": "supplies-3-25",
+      "type": "SUPPLIES",
+      "source": "supplier-3",
+      "target": "product-25",
+      "properties": {
+        "lead_time_days": 23,
+        "min_order_quantity": 825,
+        "unit_cost": 155.77,
+        "contract_start_date": "2024-05-26T16:35:47.769953"
+      }
+    },
+    {
+      "id": "supplies-18-26",
+      "type": "SUPPLIES",
+      "source": "supplier-18",
+      "target": "product-26",
+      "properties": {
+        "lead_time_days": 6,
+        "min_order_quantity": 310,
+        "unit_cost": 647.09,
+        "contract_start_date": "2024-02-16T00:52:51.106255"
+      }
+    },
+    {
+      "id": "supplies-17-27",
+      "type": "SUPPLIES",
+      "source": "supplier-17",
+      "target": "product-27",
+      "properties": {
+        "lead_time_days": 25,
+        "min_order_quantity": 393,
+        "unit_cost": 441.53,
+        "contract_start_date": "2025-04-02T12:55:34.074569"
+      }
+    },
+    {
+      "id": "supplies-7-28",
+      "type": "SUPPLIES",
+      "source": "supplier-7",
+      "target": "product-28",
+      "properties": {
+        "lead_time_days": 30,
+        "min_order_quantity": 159,
+        "unit_cost": 652.69,
+        "contract_start_date": "2024-04-02T09:12:48.593275"
+      }
+    },
+    {
+      "id": "supplies-4-29",
+      "type": "SUPPLIES",
+      "source": "supplier-4",
+      "target": "product-29",
+      "properties": {
+        "lead_time_days": 18,
+        "min_order_quantity": 553,
+        "unit_cost": 269.35,
+        "contract_start_date": "2022-04-25T09:12:22.364983"
+      }
+    },
+    {
+      "id": "supplies-8-30",
+      "type": "SUPPLIES",
+      "source": "supplier-8",
+      "target": "product-30",
+      "properties": {
+        "lead_time_days": 29,
+        "min_order_quantity": 589,
+        "unit_cost": 219.0,
+        "contract_start_date": "2024-09-28T03:00:54.271552"
+      }
+    },
+    {
+      "id": "stored_in-1-2",
+      "type": "STORED_IN",
+      "source": "product-1",
+      "target": "warehouse-2",
+      "properties": {
+        "quantity": 90,
+        "reorder_level": 83,
+        "bin_location": "D-80-8"
+      }
+    },
+    {
+      "id": "stored_in-1-6",
+      "type": "STORED_IN",
+      "source": "product-1",
+      "target": "warehouse-6",
+      "properties": {
+        "quantity": 519,
+        "reorder_level": 79,
+        "bin_location": "B-30-15"
+      }
+    },
+    {
+      "id": "stored_in-1-5",
+      "type": "STORED_IN",
+      "source": "product-1",
+      "target": "warehouse-5",
+      "properties": {
+        "quantity": 663,
+        "reorder_level": 37,
+        "bin_location": "D-33-1"
+      }
+    },
+    {
+      "id": "stored_in-2-3",
+      "type": "STORED_IN",
+      "source": "product-2",
+      "target": "warehouse-3",
+      "properties": {
+        "quantity": 171,
+        "reorder_level": 14,
+        "bin_location": "D-45-19"
+      }
+    },
+    {
+      "id": "stored_in-2-5",
+      "type": "STORED_IN",
+      "source": "product-2",
+      "target": "warehouse-5",
+      "properties": {
+        "quantity": 316,
+        "reorder_level": 86,
+        "bin_location": "D-89-9"
+      }
+    },
+    {
+      "id": "stored_in-3-3",
+      "type": "STORED_IN",
+      "source": "product-3",
+      "target": "warehouse-3",
+      "properties": {
+        "quantity": 403,
+        "reorder_level": 66,
+        "bin_location": "A-31-13"
+      }
+    },
+    {
+      "id": "stored_in-3-2",
+      "type": "STORED_IN",
+      "source": "product-3",
+      "target": "warehouse-2",
+      "properties": {
+        "quantity": 595,
+        "reorder_level": 50,
+        "bin_location": "E-38-10"
+      }
+    },
+    {
+      "id": "stored_in-4-6",
+      "type": "STORED_IN",
+      "source": "product-4",
+      "target": "warehouse-6",
+      "properties": {
+        "quantity": 415,
+        "reorder_level": 40,
+        "bin_location": "A-73-2"
+      }
+    },
+    {
+      "id": "stored_in-5-6",
+      "type": "STORED_IN",
+      "source": "product-5",
+      "target": "warehouse-6",
+      "properties": {
+        "quantity": 804,
+        "reorder_level": 34,
+        "bin_location": "E-46-8"
+      }
+    },
+    {
+      "id": "stored_in-5-4",
+      "type": "STORED_IN",
+      "source": "product-5",
+      "target": "warehouse-4",
+      "properties": {
+        "quantity": 661,
+        "reorder_level": 29,
+        "bin_location": "E-33-5"
+      }
+    },
+    {
+      "id": "stored_in-5-3",
+      "type": "STORED_IN",
+      "source": "product-5",
+      "target": "warehouse-3",
+      "properties": {
+        "quantity": 653,
+        "reorder_level": 17,
+        "bin_location": "A-40-15"
+      }
+    },
+    {
+      "id": "stored_in-6-5",
+      "type": "STORED_IN",
+      "source": "product-6",
+      "target": "warehouse-5",
+      "properties": {
+        "quantity": 383,
+        "reorder_level": 98,
+        "bin_location": "B-12-10"
+      }
+    },
+    {
+      "id": "stored_in-7-6",
+      "type": "STORED_IN",
+      "source": "product-7",
+      "target": "warehouse-6",
+      "properties": {
+        "quantity": 189,
+        "reorder_level": 30,
+        "bin_location": "B-70-12"
+      }
+    },
+    {
+      "id": "stored_in-7-4",
+      "type": "STORED_IN",
+      "source": "product-7",
+      "target": "warehouse-4",
+      "properties": {
+        "quantity": 553,
+        "reorder_level": 69,
+        "bin_location": "C-22-9"
+      }
+    },
+    {
+      "id": "stored_in-8-3",
+      "type": "STORED_IN",
+      "source": "product-8",
+      "target": "warehouse-3",
+      "properties": {
+        "quantity": 833,
+        "reorder_level": 19,
+        "bin_location": "D-10-5"
+      }
+    },
+    {
+      "id": "stored_in-8-6",
+      "type": "STORED_IN",
+      "source": "product-8",
+      "target": "warehouse-6",
+      "properties": {
+        "quantity": 782,
+        "reorder_level": 33,
+        "bin_location": "D-72-12"
+      }
+    },
+    {
+      "id": "stored_in-9-4",
+      "type": "STORED_IN",
+      "source": "product-9",
+      "target": "warehouse-4",
+      "properties": {
+        "quantity": 24,
+        "reorder_level": 38,
+        "bin_location": "E-16-15"
+      }
+    },
+    {
+      "id": "stored_in-10-6",
+      "type": "STORED_IN",
+      "source": "product-10",
+      "target": "warehouse-6",
+      "properties": {
+        "quantity": 608,
+        "reorder_level": 53,
+        "bin_location": "C-14-8"
+      }
+    },
+    {
+      "id": "stored_in-10-3",
+      "type": "STORED_IN",
+      "source": "product-10",
+      "target": "warehouse-3",
+      "properties": {
+        "quantity": 492,
+        "reorder_level": 8,
+        "bin_location": "E-72-11"
+      }
+    },
+    {
+      "id": "stored_in-11-2",
+      "type": "STORED_IN",
+      "source": "product-11",
+      "target": "warehouse-2",
+      "properties": {
+        "quantity": 941,
+        "reorder_level": 94,
+        "bin_location": "C-84-14"
+      }
+    },
+    {
+      "id": "stored_in-11-1",
+      "type": "STORED_IN",
+      "source": "product-11",
+      "target": "warehouse-1",
+      "properties": {
+        "quantity": 129,
+        "reorder_level": 22,
+        "bin_location": "A-5-10"
+      }
+    },
+    {
+      "id": "stored_in-11-4",
+      "type": "STORED_IN",
+      "source": "product-11",
+      "target": "warehouse-4",
+      "properties": {
+        "quantity": 514,
+        "reorder_level": 19,
+        "bin_location": "A-31-18"
+      }
+    },
+    {
+      "id": "stored_in-12-4",
+      "type": "STORED_IN",
+      "source": "product-12",
+      "target": "warehouse-4",
+      "properties": {
+        "quantity": 474,
+        "reorder_level": 52,
+        "bin_location": "E-54-19"
+      }
+    },
+    {
+      "id": "stored_in-13-6",
+      "type": "STORED_IN",
+      "source": "product-13",
+      "target": "warehouse-6",
+      "properties": {
+        "quantity": 680,
+        "reorder_level": 17,
+        "bin_location": "D-79-14"
+      }
+    },
+    {
+      "id": "stored_in-13-2",
+      "type": "STORED_IN",
+      "source": "product-13",
+      "target": "warehouse-2",
+      "properties": {
+        "quantity": 971,
+        "reorder_level": 40,
+        "bin_location": "A-89-12"
+      }
+    },
+    {
+      "id": "stored_in-13-4",
+      "type": "STORED_IN",
+      "source": "product-13",
+      "target": "warehouse-4",
+      "properties": {
+        "quantity": 232,
+        "reorder_level": 61,
+        "bin_location": "D-31-12"
+      }
+    },
+    {
+      "id": "stored_in-14-6",
+      "type": "STORED_IN",
+      "source": "product-14",
+      "target": "warehouse-6",
+      "properties": {
+        "quantity": 386,
+        "reorder_level": 74,
+        "bin_location": "C-8-13"
+      }
+    },
+    {
+      "id": "stored_in-15-2",
+      "type": "STORED_IN",
+      "source": "product-15",
+      "target": "warehouse-2",
+      "properties": {
+        "quantity": 981,
+        "reorder_level": 63,
+        "bin_location": "A-85-7"
+      }
+    },
+    {
+      "id": "stored_in-15-1",
+      "type": "STORED_IN",
+      "source": "product-15",
+      "target": "warehouse-1",
+      "properties": {
+        "quantity": 667,
+        "reorder_level": 86,
+        "bin_location": "E-3-2"
+      }
+    },
+    {
+      "id": "stored_in-16-2",
+      "type": "STORED_IN",
+      "source": "product-16",
+      "target": "warehouse-2",
+      "properties": {
+        "quantity": 815,
+        "reorder_level": 77,
+        "bin_location": "B-9-18"
+      }
+    },
+    {
+      "id": "stored_in-16-6",
+      "type": "STORED_IN",
+      "source": "product-16",
+      "target": "warehouse-6",
+      "properties": {
+        "quantity": 222,
+        "reorder_level": 80,
+        "bin_location": "B-30-11"
+      }
+    },
+    {
+      "id": "stored_in-17-5",
+      "type": "STORED_IN",
+      "source": "product-17",
+      "target": "warehouse-5",
+      "properties": {
+        "quantity": 12,
+        "reorder_level": 40,
+        "bin_location": "B-17-18"
+      }
+    },
+    {
+      "id": "stored_in-18-2",
+      "type": "STORED_IN",
+      "source": "product-18",
+      "target": "warehouse-2",
+      "properties": {
+        "quantity": 686,
+        "reorder_level": 8,
+        "bin_location": "B-2-12"
+      }
+    },
+    {
+      "id": "stored_in-18-1",
+      "type": "STORED_IN",
+      "source": "product-18",
+      "target": "warehouse-1",
+      "properties": {
+        "quantity": 818,
+        "reorder_level": 35,
+        "bin_location": "E-42-1"
+      }
+    },
+    {
+      "id": "stored_in-19-3",
+      "type": "STORED_IN",
+      "source": "product-19",
+      "target": "warehouse-3",
+      "properties": {
+        "quantity": 63,
+        "reorder_level": 21,
+        "bin_location": "D-68-4"
+      }
+    },
+    {
+      "id": "stored_in-20-1",
+      "type": "STORED_IN",
+      "source": "product-20",
+      "target": "warehouse-1",
+      "properties": {
+        "quantity": 806,
+        "reorder_level": 51,
+        "bin_location": "E-76-4"
+      }
+    },
+    {
+      "id": "stored_in-20-4",
+      "type": "STORED_IN",
+      "source": "product-20",
+      "target": "warehouse-4",
+      "properties": {
+        "quantity": 472,
+        "reorder_level": 69,
+        "bin_location": "B-79-2"
+      }
+    },
+    {
+      "id": "stored_in-20-5",
+      "type": "STORED_IN",
+      "source": "product-20",
+      "target": "warehouse-5",
+      "properties": {
+        "quantity": 754,
+        "reorder_level": 89,
+        "bin_location": "E-39-15"
+      }
+    },
+    {
+      "id": "stored_in-21-1",
+      "type": "STORED_IN",
+      "source": "product-21",
+      "target": "warehouse-1",
+      "properties": {
+        "quantity": 877,
+        "reorder_level": 56,
+        "bin_location": "D-88-4"
+      }
+    },
+    {
+      "id": "stored_in-21-6",
+      "type": "STORED_IN",
+      "source": "product-21",
+      "target": "warehouse-6",
+      "properties": {
+        "quantity": 512,
+        "reorder_level": 96,
+        "bin_location": "D-10-3"
+      }
+    },
+    {
+      "id": "stored_in-21-4",
+      "type": "STORED_IN",
+      "source": "product-21",
+      "target": "warehouse-4",
+      "properties": {
+        "quantity": 339,
+        "reorder_level": 82,
+        "bin_location": "B-9-5"
+      }
+    },
+    {
+      "id": "stored_in-22-5",
+      "type": "STORED_IN",
+      "source": "product-22",
+      "target": "warehouse-5",
+      "properties": {
+        "quantity": 571,
+        "reorder_level": 96,
+        "bin_location": "C-49-20"
+      }
+    },
+    {
+      "id": "stored_in-22-6",
+      "type": "STORED_IN",
+      "source": "product-22",
+      "target": "warehouse-6",
+      "properties": {
+        "quantity": 553,
+        "reorder_level": 42,
+        "bin_location": "D-65-20"
+      }
+    },
+    {
+      "id": "stored_in-23-1",
+      "type": "STORED_IN",
+      "source": "product-23",
+      "target": "warehouse-1",
+      "properties": {
+        "quantity": 883,
+        "reorder_level": 88,
+        "bin_location": "E-93-7"
+      }
+    },
+    {
+      "id": "stored_in-23-6",
+      "type": "STORED_IN",
+      "source": "product-23",
+      "target": "warehouse-6",
+      "properties": {
+        "quantity": 450,
+        "reorder_level": 62,
+        "bin_location": "B-53-11"
+      }
+    },
+    {
+      "id": "stored_in-24-4",
+      "type": "STORED_IN",
+      "source": "product-24",
+      "target": "warehouse-4",
+      "properties": {
+        "quantity": 757,
+        "reorder_level": 17,
+        "bin_location": "C-55-11"
+      }
+    },
+    {
+      "id": "stored_in-24-6",
+      "type": "STORED_IN",
+      "source": "product-24",
+      "target": "warehouse-6",
+      "properties": {
+        "quantity": 691,
+        "reorder_level": 37,
+        "bin_location": "C-20-16"
+      }
+    },
+    {
+      "id": "stored_in-25-1",
+      "type": "STORED_IN",
+      "source": "product-25",
+      "target": "warehouse-1",
+      "properties": {
+        "quantity": 861,
+        "reorder_level": 15,
+        "bin_location": "A-56-4"
+      }
+    },
+    {
+      "id": "stored_in-26-6",
+      "type": "STORED_IN",
+      "source": "product-26",
+      "target": "warehouse-6",
+      "properties": {
+        "quantity": 579,
+        "reorder_level": 12,
+        "bin_location": "E-72-18"
+      }
+    },
+    {
+      "id": "stored_in-26-3",
+      "type": "STORED_IN",
+      "source": "product-26",
+      "target": "warehouse-3",
+      "properties": {
+        "quantity": 347,
+        "reorder_level": 90,
+        "bin_location": "A-53-12"
+      }
+    },
+    {
+      "id": "stored_in-26-2",
+      "type": "STORED_IN",
+      "source": "product-26",
+      "target": "warehouse-2",
+      "properties": {
+        "quantity": 904,
+        "reorder_level": 90,
+        "bin_location": "D-93-2"
+      }
+    },
+    {
+      "id": "stored_in-27-5",
+      "type": "STORED_IN",
+      "source": "product-27",
+      "target": "warehouse-5",
+      "properties": {
+        "quantity": 370,
+        "reorder_level": 18,
+        "bin_location": "E-65-7"
+      }
+    },
+    {
+      "id": "stored_in-27-3",
+      "type": "STORED_IN",
+      "source": "product-27",
+      "target": "warehouse-3",
+      "properties": {
+        "quantity": 168,
+        "reorder_level": 89,
+        "bin_location": "D-29-4"
+      }
+    },
+    {
+      "id": "stored_in-28-5",
+      "type": "STORED_IN",
+      "source": "product-28",
+      "target": "warehouse-5",
+      "properties": {
+        "quantity": 127,
+        "reorder_level": 40,
+        "bin_location": "E-29-14"
+      }
+    },
+    {
+      "id": "stored_in-28-3",
+      "type": "STORED_IN",
+      "source": "product-28",
+      "target": "warehouse-3",
+      "properties": {
+        "quantity": 875,
+        "reorder_level": 76,
+        "bin_location": "E-79-18"
+      }
+    },
+    {
+      "id": "stored_in-29-5",
+      "type": "STORED_IN",
+      "source": "product-29",
+      "target": "warehouse-5",
+      "properties": {
+        "quantity": 961,
+        "reorder_level": 89,
+        "bin_location": "C-4-6"
+      }
+    },
+    {
+      "id": "stored_in-30-6",
+      "type": "STORED_IN",
+      "source": "product-30",
+      "target": "warehouse-6",
+      "properties": {
+        "quantity": 953,
+        "reorder_level": 48,
+        "bin_location": "C-1-6"
+      }
+    },
+    {
+      "id": "stored_in-30-3",
+      "type": "STORED_IN",
+      "source": "product-30",
+      "target": "warehouse-3",
+      "properties": {
+        "quantity": 900,
+        "reorder_level": 23,
+        "bin_location": "E-85-13"
+      }
+    },
+    {
+      "id": "supplies-1-1",
+      "type": "SUPPLIES",
+      "source": "warehouse-1",
+      "target": "distribution_center-1",
+      "properties": {
+        "shipping_frequency": "bi-weekly",
+        "shipping_method": "truck",
+        "transit_time_days": 2
+      }
+    },
+    {
+      "id": "supplies-2-2",
+      "type": "SUPPLIES",
+      "source": "warehouse-2",
+      "target": "distribution_center-2",
+      "properties": {
+        "shipping_frequency": "weekly",
+        "shipping_method": "sea",
+        "transit_time_days": 6
+      }
+    },
+    {
+      "id": "supplies-3-2",
+      "type": "SUPPLIES",
+      "source": "warehouse-3",
+      "target": "distribution_center-2",
+      "properties": {
+        "shipping_frequency": "weekly",
+        "shipping_method": "air",
+        "transit_time_days": 13
+      }
+    },
+    {
+      "id": "supplies-4-1",
+      "type": "SUPPLIES",
+      "source": "warehouse-4",
+      "target": "distribution_center-1",
+      "properties": {
+        "shipping_frequency": "daily",
+        "shipping_method": "rail",
+        "transit_time_days": 13
+      }
+    },
+    {
+      "id": "supplies-5-3",
+      "type": "SUPPLIES",
+      "source": "warehouse-5",
+      "target": "distribution_center-3",
+      "properties": {
+        "shipping_frequency": "daily",
+        "shipping_method": "air",
+        "transit_time_days": 8
+      }
+    },
+    {
+      "id": "supplies-6-2",
+      "type": "SUPPLIES",
+      "source": "warehouse-6",
+      "target": "distribution_center-2",
+      "properties": {
+        "shipping_frequency": "weekly",
+        "shipping_method": "air",
+        "transit_time_days": 4
+      }
+    },
+    {
+      "id": "supplies-6-3",
+      "type": "SUPPLIES",
+      "source": "warehouse-6",
+      "target": "distribution_center-3",
+      "properties": {
+        "shipping_frequency": "bi-weekly",
+        "shipping_method": "truck",
+        "transit_time_days": 6
+      }
+    },
+    {
+      "id": "competes_with-1-7",
+      "type": "COMPETES_WITH",
+      "source": "supplier-1",
+      "target": "supplier-7",
+      "properties": {
+        "established_date": "2017-12-26T05:42:04.224657",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "partners_with-1-8",
+      "type": "PARTNERS_WITH",
+      "source": "supplier-1",
+      "target": "supplier-8",
+      "properties": {
+        "established_date": "2021-04-05T19:07:00.892074",
+        "relationship_strength": "moderate"
+      }
+    },
+    {
+      "id": "competes_with-1-13",
+      "type": "COMPETES_WITH",
+      "source": "supplier-1",
+      "target": "supplier-13",
+      "properties": {
+        "established_date": "2023-09-28T13:04:34.307659",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "subsidiary_of-15-1",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-15",
+      "target": "supplier-1",
+      "properties": {
+        "established_date": "2016-07-01T13:38:01.196516",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "competes_with-2-5",
+      "type": "COMPETES_WITH",
+      "source": "supplier-2",
+      "target": "supplier-5",
+      "properties": {
+        "established_date": "2016-04-30T13:32:26.713220",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "subsidiary_of-2-12",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-2",
+      "target": "supplier-12",
+      "properties": {
+        "established_date": "2016-04-02T23:25:32.819702",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "partners_with-2-14",
+      "type": "PARTNERS_WITH",
+      "source": "supplier-2",
+      "target": "supplier-14",
+      "properties": {
+        "established_date": "2020-04-08T15:59:29.459249",
+        "relationship_strength": "weak"
+      }
+    },
+    {
+      "id": "competes_with-2-17",
+      "type": "COMPETES_WITH",
+      "source": "supplier-2",
+      "target": "supplier-17",
+      "properties": {
+        "established_date": "2017-09-28T09:12:43.724815",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "subsidiary_of-20-2",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-20",
+      "target": "supplier-2",
+      "properties": {
+        "established_date": "2020-09-25T07:17:54.588666",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "partners_with-3-11",
+      "type": "PARTNERS_WITH",
+      "source": "supplier-3",
+      "target": "supplier-11",
+      "properties": {
+        "established_date": "2021-10-01T00:54:23.059295",
+        "relationship_strength": "weak"
+      }
+    },
+    {
+      "id": "subsidiary_of-3-15",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-3",
+      "target": "supplier-15",
+      "properties": {
+        "established_date": "2017-02-14T09:19:37.718843",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "partners_with-4-8",
+      "type": "PARTNERS_WITH",
+      "source": "supplier-4",
+      "target": "supplier-8",
+      "properties": {
+        "established_date": "2020-12-30T23:21:36.467438",
+        "relationship_strength": "moderate"
+      }
+    },
+    {
+      "id": "subsidiary_of-4-12",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-4",
+      "target": "supplier-12",
+      "properties": {
+        "established_date": "2017-08-31T21:20:10.628007",
+        "relationship_strength": "moderate"
+      }
+    },
+    {
+      "id": "competes_with-4-14",
+      "type": "COMPETES_WITH",
+      "source": "supplier-4",
+      "target": "supplier-14",
+      "properties": {
+        "established_date": "2019-09-09T00:20:14.172820",
+        "relationship_strength": "weak"
+      }
+    },
+    {
+      "id": "subsidiary_of-17-4",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-17",
+      "target": "supplier-4",
+      "properties": {
+        "established_date": "2023-06-10T02:49:19.761409",
+        "relationship_strength": "moderate"
+      }
+    },
+    {
+      "id": "subsidiary_of-6-5",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-6",
+      "target": "supplier-5",
+      "properties": {
+        "established_date": "2022-11-27T09:50:21.581589",
+        "relationship_strength": "moderate"
+      }
+    },
+    {
+      "id": "subsidiary_of-5-14",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-5",
+      "target": "supplier-14",
+      "properties": {
+        "established_date": "2016-02-14T12:45:23.409337",
+        "relationship_strength": "weak"
+      }
+    },
+    {
+      "id": "subsidiary_of-10-6",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-10",
+      "target": "supplier-6",
+      "properties": {
+        "established_date": "2019-02-07T11:49:57.477106",
+        "relationship_strength": "weak"
+      }
+    },
+    {
+      "id": "partners_with-6-18",
+      "type": "PARTNERS_WITH",
+      "source": "supplier-6",
+      "target": "supplier-18",
+      "properties": {
+        "established_date": "2017-10-12T14:58:21.058819",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "subsidiary_of-11-7",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-11",
+      "target": "supplier-7",
+      "properties": {
+        "established_date": "2015-04-28T18:53:11.370331",
+        "relationship_strength": "moderate"
+      }
+    },
+    {
+      "id": "subsidiary_of-15-7",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-15",
+      "target": "supplier-7",
+      "properties": {
+        "established_date": "2022-03-25T22:10:29.708200",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "subsidiary_of-7-18",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-7",
+      "target": "supplier-18",
+      "properties": {
+        "established_date": "2021-01-09T10:12:25.846112",
+        "relationship_strength": "moderate"
+      }
+    },
+    {
+      "id": "competes_with-7-19",
+      "type": "COMPETES_WITH",
+      "source": "supplier-7",
+      "target": "supplier-19",
+      "properties": {
+        "established_date": "2017-08-25T05:17:35.544063",
+        "relationship_strength": "weak"
+      }
+    },
+    {
+      "id": "partners_with-8-11",
+      "type": "PARTNERS_WITH",
+      "source": "supplier-8",
+      "target": "supplier-11",
+      "properties": {
+        "established_date": "2021-12-17T16:13:50.807983",
+        "relationship_strength": "weak"
+      }
+    },
+    {
+      "id": "partners_with-8-12",
+      "type": "PARTNERS_WITH",
+      "source": "supplier-8",
+      "target": "supplier-12",
+      "properties": {
+        "established_date": "2020-04-03T14:14:38.652689",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "competes_with-8-16",
+      "type": "COMPETES_WITH",
+      "source": "supplier-8",
+      "target": "supplier-16",
+      "properties": {
+        "established_date": "2019-02-21T00:10:06.736340",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "competes_with-8-17",
+      "type": "COMPETES_WITH",
+      "source": "supplier-8",
+      "target": "supplier-17",
+      "properties": {
+        "established_date": "2015-05-18T22:01:15.419657",
+        "relationship_strength": "weak"
+      }
+    },
+    {
+      "id": "subsidiary_of-18-8",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-18",
+      "target": "supplier-8",
+      "properties": {
+        "established_date": "2015-12-20T11:17:13.651719",
+        "relationship_strength": "weak"
+      }
+    },
+    {
+      "id": "competes_with-8-20",
+      "type": "COMPETES_WITH",
+      "source": "supplier-8",
+      "target": "supplier-20",
+      "properties": {
+        "established_date": "2023-03-29T01:02:55.819563",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "subsidiary_of-20-9",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-20",
+      "target": "supplier-9",
+      "properties": {
+        "established_date": "2023-06-05T11:44:55.660154",
+        "relationship_strength": "moderate"
+      }
+    },
+    {
+      "id": "competes_with-10-18",
+      "type": "COMPETES_WITH",
+      "source": "supplier-10",
+      "target": "supplier-18",
+      "properties": {
+        "established_date": "2020-03-14T13:46:56.485601",
+        "relationship_strength": "weak"
+      }
+    },
+    {
+      "id": "subsidiary_of-13-11",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-13",
+      "target": "supplier-11",
+      "properties": {
+        "established_date": "2022-10-20T13:53:50.385120",
+        "relationship_strength": "moderate"
+      }
+    },
+    {
+      "id": "partners_with-11-14",
+      "type": "PARTNERS_WITH",
+      "source": "supplier-11",
+      "target": "supplier-14",
+      "properties": {
+        "established_date": "2020-07-13T22:24:43.464736",
+        "relationship_strength": "moderate"
+      }
+    },
+    {
+      "id": "partners_with-11-18",
+      "type": "PARTNERS_WITH",
+      "source": "supplier-11",
+      "target": "supplier-18",
+      "properties": {
+        "established_date": "2016-08-15T22:33:06.449543",
+        "relationship_strength": "moderate"
+      }
+    },
+    {
+      "id": "partners_with-12-17",
+      "type": "PARTNERS_WITH",
+      "source": "supplier-12",
+      "target": "supplier-17",
+      "properties": {
+        "established_date": "2016-06-09T01:34:19.457324",
+        "relationship_strength": "weak"
+      }
+    },
+    {
+      "id": "subsidiary_of-19-12",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-19",
+      "target": "supplier-12",
+      "properties": {
+        "established_date": "2018-01-24T10:13:44.316868",
+        "relationship_strength": "weak"
+      }
+    },
+    {
+      "id": "competes_with-12-20",
+      "type": "COMPETES_WITH",
+      "source": "supplier-12",
+      "target": "supplier-20",
+      "properties": {
+        "established_date": "2023-05-20T05:27:51.582232",
+        "relationship_strength": "moderate"
+      }
+    },
+    {
+      "id": "subsidiary_of-13-15",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-13",
+      "target": "supplier-15",
+      "properties": {
+        "established_date": "2022-06-16T02:42:50.591571",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "partners_with-13-16",
+      "type": "PARTNERS_WITH",
+      "source": "supplier-13",
+      "target": "supplier-16",
+      "properties": {
+        "established_date": "2023-01-14T09:34:15.392488",
+        "relationship_strength": "weak"
+      }
+    },
+    {
+      "id": "competes_with-14-16",
+      "type": "COMPETES_WITH",
+      "source": "supplier-14",
+      "target": "supplier-16",
+      "properties": {
+        "established_date": "2023-05-20T00:58:44.948857",
+        "relationship_strength": "weak"
+      }
+    },
+    {
+      "id": "competes_with-14-18",
+      "type": "COMPETES_WITH",
+      "source": "supplier-14",
+      "target": "supplier-18",
+      "properties": {
+        "established_date": "2017-03-07T16:29:06.741633",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "competes_with-15-16",
+      "type": "COMPETES_WITH",
+      "source": "supplier-15",
+      "target": "supplier-16",
+      "properties": {
+        "established_date": "2017-07-15T09:01:14.943260",
+        "relationship_strength": "strong"
+      }
+    },
+    {
+      "id": "competes_with-16-18",
+      "type": "COMPETES_WITH",
+      "source": "supplier-16",
+      "target": "supplier-18",
+      "properties": {
+        "established_date": "2016-03-20T00:44:18.634224",
+        "relationship_strength": "weak"
+      }
+    },
+    {
+      "id": "subsidiary_of-16-20",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-16",
+      "target": "supplier-20",
+      "properties": {
+        "established_date": "2022-04-24T11:57:58.646443",
+        "relationship_strength": "moderate"
+      }
+    },
+    {
+      "id": "subsidiary_of-18-17",
+      "type": "SUBSIDIARY_OF",
+      "source": "supplier-18",
+      "target": "supplier-17",
+      "properties": {
+        "established_date": "2023-04-01T10:10:26.259155",
+        "relationship_strength": "strong"
+      }
+    }
+  ],
+  "metadata": {
+    "graph_type": "supply_chain_network",
+    "generated_at": "2025-04-16T12:45:38.485282",
+    "seed": 42,
+    "node_count": 59,
+    "edge_count": 140
+  }
+}

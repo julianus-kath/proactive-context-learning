@@ -1,0 +1,1645 @@
+{
+  "nodes": [
+    {
+      "id": "product-1",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 1,
+        "name": "mesh bricks-and-clicks e-business",
+        "category": "Electronics",
+        "subcategory": "Audio",
+        "price": 206.85,
+        "supplier_id": 18
+      }
+    },
+    {
+      "id": "product-2",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 2,
+        "name": "syndicate collaborative action-items",
+        "category": "Furniture",
+        "subcategory": "Sofas",
+        "price": 593.37,
+        "supplier_id": 1
+      }
+    },
+    {
+      "id": "product-3",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 3,
+        "name": "harness dynamic action-items",
+        "category": "Health & Beauty",
+        "subcategory": "Personal Hygiene",
+        "price": 346.85,
+        "supplier_id": 11
+      }
+    },
+    {
+      "id": "product-4",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 4,
+        "name": "orchestrate intuitive info-mediaries",
+        "category": "Electronics",
+        "subcategory": "Accessories",
+        "price": 105.75,
+        "supplier_id": 20
+      }
+    },
+    {
+      "id": "product-5",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 5,
+        "name": "innovate front-end e-services",
+        "category": "Sports & Outdoors",
+        "subcategory": "Fitness",
+        "price": 732.43,
+        "supplier_id": 13
+      }
+    },
+    {
+      "id": "product-6",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 6,
+        "name": "disintermediate user-centric eyeballs",
+        "category": "Food & Beverage",
+        "subcategory": "Canned Goods",
+        "price": 831.11,
+        "supplier_id": 12
+      }
+    },
+    {
+      "id": "product-7",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 7,
+        "name": "productize front-end methodologies",
+        "category": "Furniture",
+        "subcategory": "Chairs",
+        "price": 55.37,
+        "supplier_id": 10
+      }
+    },
+    {
+      "id": "product-8",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 8,
+        "name": "empower value-added networks",
+        "category": "Sports & Outdoors",
+        "subcategory": "Camping",
+        "price": 867.82,
+        "supplier_id": 15
+      }
+    },
+    {
+      "id": "product-9",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 9,
+        "name": "morph global functionalities",
+        "category": "Sports & Outdoors",
+        "subcategory": "Team Sports",
+        "price": 171.03,
+        "supplier_id": 9
+      }
+    },
+    {
+      "id": "product-10",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 10,
+        "name": "deliver real-time communities",
+        "category": "Health & Beauty",
+        "subcategory": "Skincare",
+        "price": 613.04,
+        "supplier_id": 8
+      }
+    },
+    {
+      "id": "product-11",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 11,
+        "name": "disintermediate e-business interfaces",
+        "category": "Office Supplies",
+        "subcategory": "Binders",
+        "price": 277.25,
+        "supplier_id": 18
+      }
+    },
+    {
+      "id": "product-12",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 12,
+        "name": "transition out-of-the-box platforms",
+        "category": "Health & Beauty",
+        "subcategory": "Cosmetics",
+        "price": 844.42,
+        "supplier_id": 8
+      }
+    },
+    {
+      "id": "product-13",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 13,
+        "name": "embrace mission-critical action-items",
+        "category": "Sports & Outdoors",
+        "subcategory": "Team Sports",
+        "price": 407.15,
+        "supplier_id": 19
+      }
+    },
+    {
+      "id": "product-14",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 14,
+        "name": "transform out-of-the-box users",
+        "category": "Furniture",
+        "subcategory": "Sofas",
+        "price": 401.68,
+        "supplier_id": 15
+      }
+    },
+    {
+      "id": "product-15",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 15,
+        "name": "generate clicks-and-mortar niches",
+        "category": "Clothing",
+        "subcategory": "Pants",
+        "price": 254.16,
+        "supplier_id": 9
+      }
+    },
+    {
+      "id": "product-16",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 16,
+        "name": "reinvent back-end markets",
+        "category": "Office Supplies",
+        "subcategory": "Binders",
+        "price": 368.38,
+        "supplier_id": 5
+      }
+    },
+    {
+      "id": "product-17",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 17,
+        "name": "utilize leading-edge info-mediaries",
+        "category": "Office Supplies",
+        "subcategory": "Paper",
+        "price": 758.22,
+        "supplier_id": 5
+      }
+    },
+    {
+      "id": "product-18",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 18,
+        "name": "iterate killer e-commerce",
+        "category": "Furniture",
+        "subcategory": "Sofas",
+        "price": 600.44,
+        "supplier_id": 20
+      }
+    },
+    {
+      "id": "product-19",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 19,
+        "name": "streamline open-source web services",
+        "category": "Food & Beverage",
+        "subcategory": "Canned Goods",
+        "price": 971.37,
+        "supplier_id": 1
+      }
+    },
+    {
+      "id": "product-20",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 20,
+        "name": "embrace efficient networks",
+        "category": "Health & Beauty",
+        "subcategory": "Skincare",
+        "price": 684.89,
+        "supplier_id": 9
+      }
+    },
+    {
+      "id": "product-21",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 21,
+        "name": "reinvent B2B networks",
+        "category": "Clothing",
+        "subcategory": "Shirts",
+        "price": 300.57,
+        "supplier_id": 1
+      }
+    },
+    {
+      "id": "product-22",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 22,
+        "name": "brand holistic metrics",
+        "category": "Food & Beverage",
+        "subcategory": "Beverages",
+        "price": 512.6,
+        "supplier_id": 10
+      }
+    },
+    {
+      "id": "product-23",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 23,
+        "name": "brand virtual channels",
+        "category": "Food & Beverage",
+        "subcategory": "Beverages",
+        "price": 161.31,
+        "supplier_id": 18
+      }
+    },
+    {
+      "id": "product-24",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 24,
+        "name": "exploit ubiquitous relationships",
+        "category": "Electronics",
+        "subcategory": "Audio",
+        "price": 330.91,
+        "supplier_id": 12
+      }
+    },
+    {
+      "id": "product-25",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 25,
+        "name": "revolutionize cross-media convergence",
+        "category": "Furniture",
+        "subcategory": "Chairs",
+        "price": 248.46,
+        "supplier_id": 3
+      }
+    },
+    {
+      "id": "product-26",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 26,
+        "name": "engineer customized methodologies",
+        "category": "Health & Beauty",
+        "subcategory": "Personal Hygiene",
+        "price": 817.86,
+        "supplier_id": 18
+      }
+    },
+    {
+      "id": "product-27",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 27,
+        "name": "generate revolutionary systems",
+        "category": "Furniture",
+        "subcategory": "Sofas",
+        "price": 947.38,
+        "supplier_id": 17
+      }
+    },
+    {
+      "id": "product-28",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 28,
+        "name": "generate open-source partnerships",
+        "category": "Office Supplies",
+        "subcategory": "Writing Instruments",
+        "price": 929.62,
+        "supplier_id": 7
+      }
+    },
+    {
+      "id": "product-29",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 29,
+        "name": "innovate e-business experiences",
+        "category": "Office Supplies",
+        "subcategory": "Organizers",
+        "price": 443.72,
+        "supplier_id": 4
+      }
+    },
+    {
+      "id": "product-30",
+      "labels": [
+        "Product"
+      ],
+      "properties": {
+        "product_id": 30,
+        "name": "leverage viral e-business",
+        "category": "Furniture",
+        "subcategory": "Chairs",
+        "price": 344.7,
+        "supplier_id": 8
+      }
+    },
+    {
+      "id": "category-furniture",
+      "labels": [
+        "Category"
+      ],
+      "properties": {
+        "name": "Furniture",
+        "product_count": 7
+      }
+    },
+    {
+      "id": "category-sports_outdoors",
+      "labels": [
+        "Category"
+      ],
+      "properties": {
+        "name": "Sports & Outdoors",
+        "product_count": 4
+      }
+    },
+    {
+      "id": "category-food_beverage",
+      "labels": [
+        "Category"
+      ],
+      "properties": {
+        "name": "Food & Beverage",
+        "product_count": 4
+      }
+    },
+    {
+      "id": "category-office_supplies",
+      "labels": [
+        "Category"
+      ],
+      "properties": {
+        "name": "Office Supplies",
+        "product_count": 5
+      }
+    },
+    {
+      "id": "category-clothing",
+      "labels": [
+        "Category"
+      ],
+      "properties": {
+        "name": "Clothing",
+        "product_count": 2
+      }
+    },
+    {
+      "id": "category-health_beauty",
+      "labels": [
+        "Category"
+      ],
+      "properties": {
+        "name": "Health & Beauty",
+        "product_count": 5
+      }
+    },
+    {
+      "id": "category-electronics",
+      "labels": [
+        "Category"
+      ],
+      "properties": {
+        "name": "Electronics",
+        "product_count": 3
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "belongs_to-1-category-electronics",
+      "type": "BELONGS_TO",
+      "source": "product-1",
+      "target": "category-electronics",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-2-category-furniture",
+      "type": "BELONGS_TO",
+      "source": "product-2",
+      "target": "category-furniture",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-3-category-health_beauty",
+      "type": "BELONGS_TO",
+      "source": "product-3",
+      "target": "category-health_beauty",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-4-category-electronics",
+      "type": "BELONGS_TO",
+      "source": "product-4",
+      "target": "category-electronics",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-5-category-sports_outdoors",
+      "type": "BELONGS_TO",
+      "source": "product-5",
+      "target": "category-sports_outdoors",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-6-category-food_beverage",
+      "type": "BELONGS_TO",
+      "source": "product-6",
+      "target": "category-food_beverage",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-7-category-furniture",
+      "type": "BELONGS_TO",
+      "source": "product-7",
+      "target": "category-furniture",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-8-category-sports_outdoors",
+      "type": "BELONGS_TO",
+      "source": "product-8",
+      "target": "category-sports_outdoors",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-9-category-sports_outdoors",
+      "type": "BELONGS_TO",
+      "source": "product-9",
+      "target": "category-sports_outdoors",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-10-category-health_beauty",
+      "type": "BELONGS_TO",
+      "source": "product-10",
+      "target": "category-health_beauty",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-11-category-office_supplies",
+      "type": "BELONGS_TO",
+      "source": "product-11",
+      "target": "category-office_supplies",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-12-category-health_beauty",
+      "type": "BELONGS_TO",
+      "source": "product-12",
+      "target": "category-health_beauty",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-13-category-sports_outdoors",
+      "type": "BELONGS_TO",
+      "source": "product-13",
+      "target": "category-sports_outdoors",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-14-category-furniture",
+      "type": "BELONGS_TO",
+      "source": "product-14",
+      "target": "category-furniture",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-15-category-clothing",
+      "type": "BELONGS_TO",
+      "source": "product-15",
+      "target": "category-clothing",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-16-category-office_supplies",
+      "type": "BELONGS_TO",
+      "source": "product-16",
+      "target": "category-office_supplies",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-17-category-office_supplies",
+      "type": "BELONGS_TO",
+      "source": "product-17",
+      "target": "category-office_supplies",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-18-category-furniture",
+      "type": "BELONGS_TO",
+      "source": "product-18",
+      "target": "category-furniture",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-19-category-food_beverage",
+      "type": "BELONGS_TO",
+      "source": "product-19",
+      "target": "category-food_beverage",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-20-category-health_beauty",
+      "type": "BELONGS_TO",
+      "source": "product-20",
+      "target": "category-health_beauty",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-21-category-clothing",
+      "type": "BELONGS_TO",
+      "source": "product-21",
+      "target": "category-clothing",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-22-category-food_beverage",
+      "type": "BELONGS_TO",
+      "source": "product-22",
+      "target": "category-food_beverage",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-23-category-food_beverage",
+      "type": "BELONGS_TO",
+      "source": "product-23",
+      "target": "category-food_beverage",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-24-category-electronics",
+      "type": "BELONGS_TO",
+      "source": "product-24",
+      "target": "category-electronics",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-25-category-furniture",
+      "type": "BELONGS_TO",
+      "source": "product-25",
+      "target": "category-furniture",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-26-category-health_beauty",
+      "type": "BELONGS_TO",
+      "source": "product-26",
+      "target": "category-health_beauty",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-27-category-furniture",
+      "type": "BELONGS_TO",
+      "source": "product-27",
+      "target": "category-furniture",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-28-category-office_supplies",
+      "type": "BELONGS_TO",
+      "source": "product-28",
+      "target": "category-office_supplies",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-29-category-office_supplies",
+      "type": "BELONGS_TO",
+      "source": "product-29",
+      "target": "category-office_supplies",
+      "properties": {}
+    },
+    {
+      "id": "belongs_to-30-category-furniture",
+      "type": "BELONGS_TO",
+      "source": "product-30",
+      "target": "category-furniture",
+      "properties": {}
+    },
+    {
+      "id": "related_to-1-4",
+      "type": "RELATED_TO",
+      "source": "product-1",
+      "target": "product-4",
+      "properties": {
+        "strength": 0.59,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-1-24",
+      "type": "SIMILAR_TO",
+      "source": "product-1",
+      "target": "product-24",
+      "properties": {
+        "strength": 0.18,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "similar_to-2-14",
+      "type": "SIMILAR_TO",
+      "source": "product-2",
+      "target": "product-14",
+      "properties": {
+        "strength": 0.47,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "similar_to-2-18",
+      "type": "SIMILAR_TO",
+      "source": "product-2",
+      "target": "product-18",
+      "properties": {
+        "strength": 0.88,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "similar_to-2-27",
+      "type": "SIMILAR_TO",
+      "source": "product-2",
+      "target": "product-27",
+      "properties": {
+        "strength": 0.1,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "related_to-2-30",
+      "type": "RELATED_TO",
+      "source": "product-2",
+      "target": "product-30",
+      "properties": {
+        "strength": 0.93,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-3-12",
+      "type": "RELATED_TO",
+      "source": "product-3",
+      "target": "product-12",
+      "properties": {
+        "strength": 0.73,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-4-1",
+      "type": "RELATED_TO",
+      "source": "product-4",
+      "target": "product-1",
+      "properties": {
+        "strength": 0.54,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-4-24",
+      "type": "RELATED_TO",
+      "source": "product-4",
+      "target": "product-24",
+      "properties": {
+        "strength": 0.3,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-5-8",
+      "type": "RELATED_TO",
+      "source": "product-5",
+      "target": "product-8",
+      "properties": {
+        "strength": 0.76,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-5-9",
+      "type": "RELATED_TO",
+      "source": "product-5",
+      "target": "product-9",
+      "properties": {
+        "strength": 0.38,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-5-13",
+      "type": "RELATED_TO",
+      "source": "product-5",
+      "target": "product-13",
+      "properties": {
+        "strength": 0.53,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-6-22",
+      "type": "RELATED_TO",
+      "source": "product-6",
+      "target": "product-22",
+      "properties": {
+        "strength": 0.15,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-6-23",
+      "type": "RELATED_TO",
+      "source": "product-6",
+      "target": "product-23",
+      "properties": {
+        "strength": 0.87,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-7-2",
+      "type": "RELATED_TO",
+      "source": "product-7",
+      "target": "product-2",
+      "properties": {
+        "strength": 0.16,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-7-18",
+      "type": "RELATED_TO",
+      "source": "product-7",
+      "target": "product-18",
+      "properties": {
+        "strength": 0.95,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-7-25",
+      "type": "SIMILAR_TO",
+      "source": "product-7",
+      "target": "product-25",
+      "properties": {
+        "strength": 0.62,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "related_to-7-27",
+      "type": "RELATED_TO",
+      "source": "product-7",
+      "target": "product-27",
+      "properties": {
+        "strength": 0.17,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-7-30",
+      "type": "SIMILAR_TO",
+      "source": "product-7",
+      "target": "product-30",
+      "properties": {
+        "strength": 0.61,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "related_to-8-5",
+      "type": "RELATED_TO",
+      "source": "product-8",
+      "target": "product-5",
+      "properties": {
+        "strength": 0.33,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-8-9",
+      "type": "RELATED_TO",
+      "source": "product-8",
+      "target": "product-9",
+      "properties": {
+        "strength": 0.38,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-8-13",
+      "type": "RELATED_TO",
+      "source": "product-8",
+      "target": "product-13",
+      "properties": {
+        "strength": 0.22,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-9-5",
+      "type": "RELATED_TO",
+      "source": "product-9",
+      "target": "product-5",
+      "properties": {
+        "strength": 0.51,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-10-3",
+      "type": "RELATED_TO",
+      "source": "product-10",
+      "target": "product-3",
+      "properties": {
+        "strength": 0.66,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-10-12",
+      "type": "RELATED_TO",
+      "source": "product-10",
+      "target": "product-12",
+      "properties": {
+        "strength": 0.19,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-10-20",
+      "type": "SIMILAR_TO",
+      "source": "product-10",
+      "target": "product-20",
+      "properties": {
+        "strength": 0.56,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "related_to-10-26",
+      "type": "RELATED_TO",
+      "source": "product-10",
+      "target": "product-26",
+      "properties": {
+        "strength": 0.41,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-11-16",
+      "type": "SIMILAR_TO",
+      "source": "product-11",
+      "target": "product-16",
+      "properties": {
+        "strength": 0.32,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "related_to-11-17",
+      "type": "RELATED_TO",
+      "source": "product-11",
+      "target": "product-17",
+      "properties": {
+        "strength": 0.49,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-11-28",
+      "type": "RELATED_TO",
+      "source": "product-11",
+      "target": "product-28",
+      "properties": {
+        "strength": 0.37,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-12-10",
+      "type": "RELATED_TO",
+      "source": "product-12",
+      "target": "product-10",
+      "properties": {
+        "strength": 0.7,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-12-20",
+      "type": "RELATED_TO",
+      "source": "product-12",
+      "target": "product-20",
+      "properties": {
+        "strength": 0.94,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-12-26",
+      "type": "RELATED_TO",
+      "source": "product-12",
+      "target": "product-26",
+      "properties": {
+        "strength": 0.89,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-13-5",
+      "type": "RELATED_TO",
+      "source": "product-13",
+      "target": "product-5",
+      "properties": {
+        "strength": 0.9,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-13-9",
+      "type": "SIMILAR_TO",
+      "source": "product-13",
+      "target": "product-9",
+      "properties": {
+        "strength": 0.35,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "similar_to-14-2",
+      "type": "SIMILAR_TO",
+      "source": "product-14",
+      "target": "product-2",
+      "properties": {
+        "strength": 0.41,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "related_to-14-7",
+      "type": "RELATED_TO",
+      "source": "product-14",
+      "target": "product-7",
+      "properties": {
+        "strength": 0.87,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-14-18",
+      "type": "SIMILAR_TO",
+      "source": "product-14",
+      "target": "product-18",
+      "properties": {
+        "strength": 0.33,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "similar_to-14-27",
+      "type": "SIMILAR_TO",
+      "source": "product-14",
+      "target": "product-27",
+      "properties": {
+        "strength": 0.67,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "related_to-15-21",
+      "type": "RELATED_TO",
+      "source": "product-15",
+      "target": "product-21",
+      "properties": {
+        "strength": 0.4,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-16-11",
+      "type": "SIMILAR_TO",
+      "source": "product-16",
+      "target": "product-11",
+      "properties": {
+        "strength": 0.98,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "related_to-16-17",
+      "type": "RELATED_TO",
+      "source": "product-16",
+      "target": "product-17",
+      "properties": {
+        "strength": 0.5,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-16-29",
+      "type": "RELATED_TO",
+      "source": "product-16",
+      "target": "product-29",
+      "properties": {
+        "strength": 0.2,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-17-16",
+      "type": "RELATED_TO",
+      "source": "product-17",
+      "target": "product-16",
+      "properties": {
+        "strength": 0.23,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-17-28",
+      "type": "RELATED_TO",
+      "source": "product-17",
+      "target": "product-28",
+      "properties": {
+        "strength": 0.43,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-17-29",
+      "type": "RELATED_TO",
+      "source": "product-17",
+      "target": "product-29",
+      "properties": {
+        "strength": 0.49,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-18-2",
+      "type": "SIMILAR_TO",
+      "source": "product-18",
+      "target": "product-2",
+      "properties": {
+        "strength": 0.43,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "related_to-18-25",
+      "type": "RELATED_TO",
+      "source": "product-18",
+      "target": "product-25",
+      "properties": {
+        "strength": 0.42,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-18-27",
+      "type": "SIMILAR_TO",
+      "source": "product-18",
+      "target": "product-27",
+      "properties": {
+        "strength": 0.7,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "related_to-18-30",
+      "type": "RELATED_TO",
+      "source": "product-18",
+      "target": "product-30",
+      "properties": {
+        "strength": 0.6,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-20-10",
+      "type": "SIMILAR_TO",
+      "source": "product-20",
+      "target": "product-10",
+      "properties": {
+        "strength": 0.25,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "related_to-20-26",
+      "type": "RELATED_TO",
+      "source": "product-20",
+      "target": "product-26",
+      "properties": {
+        "strength": 0.47,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-21-15",
+      "type": "RELATED_TO",
+      "source": "product-21",
+      "target": "product-15",
+      "properties": {
+        "strength": 0.93,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-22-19",
+      "type": "RELATED_TO",
+      "source": "product-22",
+      "target": "product-19",
+      "properties": {
+        "strength": 0.7,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-23-6",
+      "type": "RELATED_TO",
+      "source": "product-23",
+      "target": "product-6",
+      "properties": {
+        "strength": 0.24,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-23-22",
+      "type": "SIMILAR_TO",
+      "source": "product-23",
+      "target": "product-22",
+      "properties": {
+        "strength": 0.13,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "similar_to-24-1",
+      "type": "SIMILAR_TO",
+      "source": "product-24",
+      "target": "product-1",
+      "properties": {
+        "strength": 0.28,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "related_to-25-2",
+      "type": "RELATED_TO",
+      "source": "product-25",
+      "target": "product-2",
+      "properties": {
+        "strength": 0.84,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-25-14",
+      "type": "RELATED_TO",
+      "source": "product-25",
+      "target": "product-14",
+      "properties": {
+        "strength": 0.69,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-25-18",
+      "type": "RELATED_TO",
+      "source": "product-25",
+      "target": "product-18",
+      "properties": {
+        "strength": 0.35,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-25-27",
+      "type": "RELATED_TO",
+      "source": "product-25",
+      "target": "product-27",
+      "properties": {
+        "strength": 0.8,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-25-30",
+      "type": "SIMILAR_TO",
+      "source": "product-25",
+      "target": "product-30",
+      "properties": {
+        "strength": 0.56,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "similar_to-26-3",
+      "type": "SIMILAR_TO",
+      "source": "product-26",
+      "target": "product-3",
+      "properties": {
+        "strength": 0.86,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "related_to-26-10",
+      "type": "RELATED_TO",
+      "source": "product-26",
+      "target": "product-10",
+      "properties": {
+        "strength": 0.12,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-26-20",
+      "type": "RELATED_TO",
+      "source": "product-26",
+      "target": "product-20",
+      "properties": {
+        "strength": 0.62,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-27-7",
+      "type": "RELATED_TO",
+      "source": "product-27",
+      "target": "product-7",
+      "properties": {
+        "strength": 0.64,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-27-14",
+      "type": "SIMILAR_TO",
+      "source": "product-27",
+      "target": "product-14",
+      "properties": {
+        "strength": 0.81,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "similar_to-27-18",
+      "type": "SIMILAR_TO",
+      "source": "product-27",
+      "target": "product-18",
+      "properties": {
+        "strength": 0.99,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "related_to-27-25",
+      "type": "RELATED_TO",
+      "source": "product-27",
+      "target": "product-25",
+      "properties": {
+        "strength": 0.91,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-27-30",
+      "type": "RELATED_TO",
+      "source": "product-27",
+      "target": "product-30",
+      "properties": {
+        "strength": 0.14,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-28-11",
+      "type": "RELATED_TO",
+      "source": "product-28",
+      "target": "product-11",
+      "properties": {
+        "strength": 0.57,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-28-17",
+      "type": "RELATED_TO",
+      "source": "product-28",
+      "target": "product-17",
+      "properties": {
+        "strength": 0.95,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-29-11",
+      "type": "RELATED_TO",
+      "source": "product-29",
+      "target": "product-11",
+      "properties": {
+        "strength": 0.49,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-29-28",
+      "type": "RELATED_TO",
+      "source": "product-29",
+      "target": "product-28",
+      "properties": {
+        "strength": 0.7,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-30-2",
+      "type": "RELATED_TO",
+      "source": "product-30",
+      "target": "product-2",
+      "properties": {
+        "strength": 0.91,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-30-7",
+      "type": "SIMILAR_TO",
+      "source": "product-30",
+      "target": "product-7",
+      "properties": {
+        "strength": 0.7,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "related_to-30-14",
+      "type": "RELATED_TO",
+      "source": "product-30",
+      "target": "product-14",
+      "properties": {
+        "strength": 0.73,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "related_to-30-18",
+      "type": "RELATED_TO",
+      "source": "product-30",
+      "target": "product-18",
+      "properties": {
+        "strength": 0.27,
+        "relation_basis": "same_category"
+      }
+    },
+    {
+      "id": "similar_to-30-25",
+      "type": "SIMILAR_TO",
+      "source": "product-30",
+      "target": "product-25",
+      "properties": {
+        "strength": 0.44,
+        "relation_basis": "same_subcategory"
+      }
+    },
+    {
+      "id": "frequently_bought_with-24-29",
+      "type": "FREQUENTLY_BOUGHT_WITH",
+      "source": "product-24",
+      "target": "product-29",
+      "properties": {
+        "confidence": 0.24,
+        "support": 0.118,
+        "lift": 2.68
+      }
+    },
+    {
+      "id": "frequently_bought_with-27-1",
+      "type": "FREQUENTLY_BOUGHT_WITH",
+      "source": "product-27",
+      "target": "product-1",
+      "properties": {
+        "confidence": 0.34,
+        "support": 0.05,
+        "lift": 4.16
+      }
+    },
+    {
+      "id": "frequently_bought_with-20-21",
+      "type": "FREQUENTLY_BOUGHT_WITH",
+      "source": "product-20",
+      "target": "product-21",
+      "properties": {
+        "confidence": 0.36,
+        "support": 0.094,
+        "lift": 3.73
+      }
+    },
+    {
+      "id": "frequently_bought_with-17-16",
+      "type": "FREQUENTLY_BOUGHT_WITH",
+      "source": "product-17",
+      "target": "product-16",
+      "properties": {
+        "confidence": 0.73,
+        "support": 0.192,
+        "lift": 3.97
+      }
+    },
+    {
+      "id": "frequently_bought_with-22-3",
+      "type": "FREQUENTLY_BOUGHT_WITH",
+      "source": "product-22",
+      "target": "product-3",
+      "properties": {
+        "confidence": 0.33,
+        "support": 0.136,
+        "lift": 3.52
+      }
+    },
+    {
+      "id": "frequently_bought_with-3-27",
+      "type": "FREQUENTLY_BOUGHT_WITH",
+      "source": "product-3",
+      "target": "product-27",
+      "properties": {
+        "confidence": 0.86,
+        "support": 0.055,
+        "lift": 2.31
+      }
+    },
+    {
+      "id": "frequently_bought_with-26-7",
+      "type": "FREQUENTLY_BOUGHT_WITH",
+      "source": "product-26",
+      "target": "product-7",
+      "properties": {
+        "confidence": 0.22,
+        "support": 0.019,
+        "lift": 4.94
+      }
+    },
+    {
+      "id": "frequently_bought_with-20-28",
+      "type": "FREQUENTLY_BOUGHT_WITH",
+      "source": "product-20",
+      "target": "product-28",
+      "properties": {
+        "confidence": 0.71,
+        "support": 0.097,
+        "lift": 4.56
+      }
+    },
+    {
+      "id": "frequently_bought_with-19-7",
+      "type": "FREQUENTLY_BOUGHT_WITH",
+      "source": "product-19",
+      "target": "product-7",
+      "properties": {
+        "confidence": 0.67,
+        "support": 0.083,
+        "lift": 2.66
+      }
+    },
+    {
+      "id": "frequently_bought_with-5-21",
+      "type": "FREQUENTLY_BOUGHT_WITH",
+      "source": "product-5",
+      "target": "product-21",
+      "properties": {
+        "confidence": 0.65,
+        "support": 0.18,
+        "lift": 4.46
+      }
+    },
+    {
+      "id": "frequently_bought_with-29-4",
+      "type": "FREQUENTLY_BOUGHT_WITH",
+      "source": "product-29",
+      "target": "product-4",
+      "properties": {
+        "confidence": 0.72,
+        "support": 0.052,
+        "lift": 4.24
+      }
+    },
+    {
+      "id": "frequently_bought_with-23-17",
+      "type": "FREQUENTLY_BOUGHT_WITH",
+      "source": "product-23",
+      "target": "product-17",
+      "properties": {
+        "confidence": 0.47,
+        "support": 0.116,
+        "lift": 4.68
+      }
+    },
+    {
+      "id": "accessory_for-18-17",
+      "type": "ACCESSORY_FOR",
+      "source": "product-18",
+      "target": "product-17",
+      "properties": {
+        "compatibility": "enhances",
+        "recommendation_score": 0.39
+      }
+    }
+  ],
+  "metadata": {
+    "graph_type": "product_network",
+    "generated_at": "2025-04-16T12:45:38.479835",
+    "seed": 42,
+    "node_count": 37,
+    "edge_count": 122
+  }
+}
