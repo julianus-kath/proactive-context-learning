@@ -354,16 +354,18 @@ fi
 # Start LangGraph Service
 echo -e "${YELLOW}🔧 Starting LangGraph Service...${NC}"
 cd "$PROJECT_ROOT/chatbot_ui"
-python3 langgraph_service.py > "$LOG_DIR/langgraph_service.log" 2>&1 &
+# Use uvicorn directly with nohup for reliable background execution
+nohup python3 -m uvicorn langgraph_service:app --host 0.0.0.0 --port 5001 > "$LOG_DIR/langgraph_service.log" 2>&1 &
 LANGGRAPH_PID=$!
 echo -e "${GREEN}✅ LangGraph Service started (PID: $LANGGRAPH_PID)${NC}"
 
 # Wait for LangGraph service to be ready
-sleep 5
+sleep 8
 
 # Start Streamlit UI
 echo -e "${YELLOW}🔧 Starting Streamlit UI...${NC}"
-streamlit run app.py --server.port 8501 --server.headless true > "$LOG_DIR/streamlit.log" 2>&1 &
+# Use nohup with explicit server address for reliable background execution
+nohup streamlit run app.py --server.port 8501 --server.address 0.0.0.0 > "$LOG_DIR/streamlit.log" 2>&1 &
 STREAMLIT_PID=$!
 echo -e "${GREEN}✅ Streamlit UI started (PID: $STREAMLIT_PID)${NC}"
 
@@ -371,7 +373,7 @@ cd "$PROJECT_ROOT"
 
 # Wait for services to be ready
 echo -e "${BLUE}⏳ Waiting for services to be ready...${NC}"
-sleep 10
+sleep 15
 
 # Check service status
 echo -e "${BLUE}📊 Service Status:${NC}"
@@ -386,7 +388,12 @@ fi
 
 # Check LangGraph Service
 if check_port 5001; then
-    echo -e "${GREEN}✅ LangGraph Service: http://localhost:5001${NC}"
+    # Additional health check
+    if curl -s http://localhost:5001/health >/dev/null 2>&1; then
+        echo -e "${GREEN}✅ LangGraph Service: http://localhost:5001 (Healthy)${NC}"
+    else
+        echo -e "${YELLOW}⚠️  LangGraph Service: http://localhost:5001 (Starting...)${NC}"
+    fi
 else
     echo -e "${RED}❌ LangGraph Service: Failed to start${NC}"
 fi
