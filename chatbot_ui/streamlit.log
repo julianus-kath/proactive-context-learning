@@ -8,3 +8,40 @@
   $ xcode-select --install
   $ pip install watchdog
             
+🔍 Sending payload to LangGraph service:
+   Messages count: 1
+   Latest message: {'role': 'user', 'content': 'what systems do we have access to?'}
+💾 Chat logged to chat_logs.json
+🔍 Sending payload to LangGraph service:
+   Messages count: 3
+   Latest message: {'role': 'user', 'content': 'how many entries do we have in the products table?'}
+💾 Chat logged to chat_logs.json
+🔍 Sending payload to LangGraph service:
+   Messages count: 5
+   Latest message: {'role': 'user', 'content': 'what products do we have?'}
+💾 Chat logged to chat_logs.json
+🔍 Sending payload to LangGraph service:
+   Messages count: 7
+   Latest message: {'role': 'user', 'content': 'whats the most expensive one?'}
+💾 Chat logged to chat_logs.json
+🔍 Sending payload to LangGraph service:
+   Messages count: 9
+   Latest message: {'role': 'user', 'content': 'how many times has it been bought?'}
+💾 Chat logged to chat_logs.json
+🔍 Sending payload to LangGraph service:
+   Messages count: 11
+   Latest message: {'role': 'user', 'content': 'who bought it?'}
+💾 Chat logged to chat_logs.json
+🔍 Sending payload to LangGraph service:
+   Messages count: 13
+   Latest message: {'role': 'user', 'content': 'where is their HQ?'}
+💾 Chat logged to chat_logs.json
+🔍 Sending payload to LangGraph service:
+   Messages count: 15
+   Latest message: {'role': 'user', 'content': 'do we have other clients there?'}
+💾 Chat logged to chat_logs.json
+🔍 Sending payload to LangGraph service:
+   Messages count: 17
+   Latest message: {'role': 'user', 'content': 'and besides them?'}
+💾 Chat logged to chat_logs.json
+  Stopping...
