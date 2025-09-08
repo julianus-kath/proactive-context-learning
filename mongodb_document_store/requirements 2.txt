@@ -1,0 +1,27 @@
+# MongoDB Document Store Requirements
+
+# MongoDB driver
+pymongo>=4.6.0
+motor>=3.3.0  # Async MongoDB driver
+
+# Data generation
+faker>=20.1.0
+python-dotenv>=1.0.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Date/time utilities
+python-dateutil>=2.8.2
+
+# Logging and utilities
+colorlog>=6.7.0
+tqdm>=4.66.0
+
+# Optional: For advanced text generation
+openai>=1.0.0  # For generating more realistic reviews (optional)
+
+# Development and testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
