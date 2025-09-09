@@ -36,8 +36,9 @@ app.add_middleware(
 # API Key authentication
 API_KEY = os.getenv("MCP_API_KEY", "supersecretapikey")
 
-# Global database manager
+# Global database managers
 db_manager = None
+mongo_query_interface = None
 
 def verify_api_key(x_api_key: str = Header(None), authorization: str = Header(None)):
     # Check X-API-Key header first
@@ -68,12 +69,32 @@ class JSONRPCResponse(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize the database connection on startup."""
-    global db_manager
+    """Initialize the database connections on startup."""
+    global db_manager, mongo_query_interface
     try:
+        # Initialize SQL database
         from db import DatabaseManager
         db_manager = DatabaseManager()
         await db_manager.initialize()
+        logger.info("✅ SQL Database initialized successfully")
+        
+        # Initialize MongoDB connection
+        try:
+            import sys
+            import os
+            # Add mongodb_document_store to path
+            mongodb_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'mongodb_document_store')
+            if mongodb_path not in sys.path:
+                sys.path.append(mongodb_path)
+            
+            from query_interface import MongoQueryInterface
+            mongo_query_interface = MongoQueryInterface()
+            logger.info("✅ MongoDB Document Store initialized successfully")
+        except Exception as mongo_error:
+            logger.warning(f"⚠️ MongoDB initialization failed: {mongo_error}")
+            logger.warning("MongoDB features will be unavailable")
+            mongo_query_interface = None
+        
         logger.info("✅ MCP Database Server initialized successfully")
     except Exception as e:
         logger.error(f"❌ Failed to initialize MCP Database Server: {e}")
@@ -116,7 +137,7 @@ async def mcp_endpoint(
             tool_name = request.params.get("name")
             arguments = request.params.get("arguments", {})
             
-            result = await MCPTools.execute_tool(tool_name, arguments, db_manager)
+            result = await MCPTools.execute_tool(tool_name, arguments, db_manager, mongo_query_interface)
             return JSONRPCResponse(result=result.dict(), id=request.id)
         else:
             return JSONRPCResponse(

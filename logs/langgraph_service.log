@@ -1,121 +1,12 @@
-/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/chatbot_ui/langgraph_service.py:80: DeprecationWarning: 
-        on_event is deprecated, use lifespan event handlers instead.
-
-        Read more about it in the
-        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
-        
-  @app.on_event("startup")
-INFO:     Started server process [35099]
+INFO:     Started server process [3220]
 INFO:     Waiting for application startup.
 INFO:langgraph_integration.graph_definition:Testing OpenAI API key...
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:5001 (Press CTRL+C to quit)
-🚀 Starting LangGraph Service...
-📋 Make sure the following are running:
-   - MCP Server (http://localhost:8000)
-   - PostgreSQL database
-   - OpenAI API key is set
-
 🚀 Initializing LangGraph workflow...
 ✅ LangGraph workflow initialized successfully
-INFO:     127.0.0.1:61759 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61761 - "GET /health HTTP/1.1" 200 OK
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact records table', 'warehouse dispatch records table']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you provide details on the tables or data sources you have for contact records and warehouse d...
-📝 Processing conversation with 1 messages...
-📝 Last user message: What proportion of the customer base has not been contacted in the past year, but has had at least o...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61763 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61766 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61768 - "GET /health HTTP/1.1" 200 OK
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['table names for contact records', 'table names for warehouse dispatch records']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know the names of the tables that contain the contact records and warehouse dispatc...
-📝 Processing conversation with 3 messages...
-📝 Last user message: What tables do we have available?...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61770 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61774 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61776 - "GET /health HTTP/1.1" 200 OK
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['table_names for contact records', 'table_names for warehouse dispatch records']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know if there are specific tables in the database that you believe might contain co...
-📝 Processing conversation with 5 messages...
-📝 Last user message: "What tables are available in the database?"...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61778 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61781 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61784 - "GET /health HTTP/1.1" 200 OK
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact records table', 'warehouse dispatch records table']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Do you know if there are specific tables in the database that contain contact records and warehouse ...
-📝 Processing conversation with 7 messages...
-📝 Last user message: customer table maybe?...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61786 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61790 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61792 - "GET /health HTTP/1.1" 200 OK
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact records table', 'warehouse dispatch records table']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know if there are any specific tables in the database that you suspect might contai...
-📝 Processing conversation with 9 messages...
-📝 Last user message: explore the database...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61794 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61797 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61803 - "GET /health HTTP/1.1" 200 OK
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact records table', 'warehouse dispatch records table']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know if there are any specific tables you suspect might contain the contact records...
-📝 Processing conversation with 11 messages...
-📝 Last user message: list all available tables...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61805 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61808 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61810 - "GET /health HTTP/1.1" 200 OK
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact records table', 'warehouse dispatch records table']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know if you have access to a database management system where you can run a query t...
-📝 Processing conversation with 13 messages...
-📝 Last user message: list the available tables...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61812 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61815 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61817 - "GET /health HTTP/1.1" 200 OK
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact records table', 'warehouse dispatch records table']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know if you have any specific database management system in mind, like MySQL or Pos...
-📝 Processing conversation with 15 messages...
-📝 Last user message: you have the database, please tell me what tables we have access to...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61819 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61822 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61824 - "GET /health HTTP/1.1" 200 OK
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact records table', 'warehouse dispatch records table']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know if there are any specific tables in the database that you suspect might contai...
-📝 Processing conversation with 17 messages...
-📝 Last user message: I dont know, you should know though...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61826 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61830 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61832 - "GET /health HTTP/1.1" 200 OK
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact_records_table', 'warehouse_dispatch_records_table']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know if there are specific tables in the database that contain the contact records ...
-📝 Processing conversation with 19 messages...
-📝 Last user message: customers table...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61834 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61837 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61345 - "GET /health HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3220]

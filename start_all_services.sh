@@ -127,23 +127,25 @@ else
     exit 1
 fi
 
+# Get database name from shared config or use default
+DB_NAME_TO_USE="mywebshop"
+
 # Check if the database exists
-echo -e "${YELLOW}🔍 Checking database 'synthetic_erp_data'...${NC}"
-if ! psql -h localhost -p 5432 -U juli -d synthetic_erp_data -c "SELECT 1;" >/dev/null 2>&1; then
-    echo -e "${YELLOW}⚠️  Database 'synthetic_erp_data' not found. Creating it...${NC}"
-    createdb -h localhost -p 5432 -U juli synthetic_erp_data 2>/dev/null || {
-        echo -e "${RED}❌ Failed to create database${NC}"
-        echo -e "${YELLOW}💡 Please create the database manually:${NC}"
-        echo -e "   createdb -U juli synthetic_erp_data"
-        exit 1
-    }
+echo -e "${YELLOW}🔍 Checking database '${DB_NAME_TO_USE}'...${NC}"
+if ! psql -h localhost -p 5432 -U postgres -d ${DB_NAME_TO_USE} -c "SELECT 1;" >/dev/null 2>&1; then
+    echo -e "${YELLOW}⚠️  Database '${DB_NAME_TO_USE}' not found. Please create it first.${NC}"
+    echo -e "${YELLOW}💡 Create the database manually:${NC}"
+    echo -e "   createdb -U postgres ${DB_NAME_TO_USE}"
+    echo -e "   or use: createdb -U juli ${DB_NAME_TO_USE}"
+    exit 1
 fi
 
-# Check and restore database data if needed
-echo -e "${YELLOW}🔍 Checking database data...${NC}"
-if ! psql -h localhost -p 5432 -U juli -d synthetic_erp_data -c "SELECT COUNT(*) FROM products;" >/dev/null 2>&1; then
-    echo -e "${YELLOW}⚠️  Database tables missing. Restoring...${NC}"
-    python3 restore_database.py
+# Check if database has tables - skip restore for existing databases
+echo -e "${YELLOW}🔍 Checking database data in '${DB_NAME_TO_USE}'...${NC}"
+if psql -h localhost -p 5432 -U postgres -d ${DB_NAME_TO_USE} -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';" >/dev/null 2>&1; then
+    echo -e "${GREEN}✅ Database '${DB_NAME_TO_USE}' is ready${NC}"
+else
+    echo -e "${YELLOW}⚠️  Database has no tables. Please set up your database first.${NC}"
 fi
 
 echo -e "${GREEN}✅ Database setup complete${NC}"
@@ -201,8 +203,8 @@ API_KEY=supersecretapikey
 DB_TYPE=postgresql
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=synthetic_erp_data
-DB_USER=juli
+DB_NAME=mywebshop
+DB_USER=postgres
 DB_PASSWORD=
 
 # MCP Server Configuration

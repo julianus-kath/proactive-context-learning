@@ -1,36 +1,60 @@
 """
 Configuration settings for the synthetic data service.
+
+NOTE: Database configuration now comes from the global shared_config.py
+This ensures all services use the same database connection details.
 """
 
 import os
+import sys
 from dataclasses import dataclass
 
+# Add the parent directory to the path to import shared_config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-@dataclass
-class DatabaseConfig:
-    """Database configuration settings."""
-    # Default to PostgreSQL for production use
-    db_type: str = "postgresql"
-    db_name: str = "synthetic_erp_data"
-    db_path: str = None  # Custom path for SQLite database (legacy)
-    db_host: str = "localhost"
-    db_port: int = 5432
-    db_user: str = "postgres"
-    db_password: str = "postgres"
+try:
+    from shared_config import global_db_config
+    # Use the global database configuration
+    DatabaseConfig = type('DatabaseConfig', (), {
+        'db_type': global_db_config.db_type,
+        'db_name': global_db_config.db_name,
+        'db_path': None,  # Legacy SQLite support
+        'db_host': global_db_config.db_host,
+        'db_port': global_db_config.db_port,
+        'db_user': global_db_config.db_user,
+        'db_password': global_db_config.db_password,
+        'db_schema': global_db_config.db_schema,
+        'connection_string': property(lambda self: global_db_config.connection_string)
+    })
     
-    @property
-    def connection_string(self) -> str:
-        """Generate the database connection string based on the configuration."""
-        if self.db_type == "sqlite":
-            # Use custom path if provided, otherwise use db_name in current directory
-            db_file = self.db_path if self.db_path else self.db_name
-            return f"sqlite:///{db_file}"
-        elif self.db_type == "postgresql":
-            return f"postgresql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
-        elif self.db_type == "mysql":
-            return f"mysql+pymysql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
-        else:
-            raise ValueError(f"Unsupported database type: {self.db_type}")
+except ImportError:
+    # Fallback to local configuration if shared_config is not available
+    @dataclass
+    class DatabaseConfig:
+        """Database configuration settings."""
+        # Default to PostgreSQL for production use
+        db_type: str = "postgresql"
+        db_name: str = "mywebshop"
+        db_path: str = None  # Custom path for SQLite database (legacy)
+        db_host: str = "localhost"
+        db_port: int = 5432
+        db_user: str = "postgres"
+        db_password: str = "your_password_here"
+        db_schema: str = "webshop"
+        
+        @property
+        def connection_string(self) -> str:
+            """Generate the database connection string based on the configuration."""
+            if self.db_type == "sqlite":
+                # Use custom path if provided, otherwise use db_name in current directory
+                db_file = self.db_path if self.db_path else self.db_name
+                return f"sqlite:///{db_file}"
+            elif self.db_type == "postgresql":
+                return f"postgresql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
+            elif self.db_type == "mysql":
+                return f"mysql+pymysql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
+            else:
+                raise ValueError(f"Unsupported database type: {self.db_type}")
 
 
 @dataclass

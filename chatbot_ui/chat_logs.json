@@ -328,5 +328,71 @@
     "user_input": "and besides them?",
     "bot_response": "No other customers in San Francisco.",
     "session_id": "session_20250901_123902_389"
+  },
+  {
+    "timestamp": "2025-09-08T13:37:48.233092",
+    "user_input": "how many customers do we have?",
+    "bot_response": "10 customers",
+    "session_id": "session_20250908_133737_3967"
+  },
+  {
+    "timestamp": "2025-09-08T14:02:53.471149",
+    "user_input": "how many customers do we have?",
+    "bot_response": "10 customers",
+    "session_id": "session_20250908_140244_5424"
+  },
+  {
+    "timestamp": "2025-09-08T14:03:45.995355",
+    "user_input": "what tables do we have?",
+    "bot_response": "A: \"customers, products, suppliers, employees, sales, warehouse\"",
+    "session_id": "session_20250908_140244_5424"
+  },
+  {
+    "timestamp": "2025-09-08T14:03:56.238120",
+    "user_input": "how many employees?",
+    "bot_response": "5 employees",
+    "session_id": "session_20250908_140244_5424"
+  },
+  {
+    "timestamp": "2025-09-08T14:13:36.894928",
+    "user_input": "how many customers do we have?",
+    "bot_response": "10 customers",
+    "session_id": "session_20250908_141213_87"
+  },
+  {
+    "timestamp": "2025-09-08T14:13:55.529449",
+    "user_input": "what tables do we have access to?",
+    "bot_response": "A: \"customers, products, suppliers, employees, sales, warehouse\"",
+    "session_id": "session_20250908_141213_87"
+  },
+  {
+    "timestamp": "2025-09-08T14:28:46.268267",
+    "user_input": "what tables do we have access to?",
+    "bot_response": "A: \"public_table\"",
+    "session_id": "session_20250908_142836_3066"
+  },
+  {
+    "timestamp": "2025-09-08T14:28:59.772385",
+    "user_input": "whats the contents of the public table?",
+    "bot_response": "🤔 Could you please specify which columns or types of data you're interested in from the \"public_table\"? Since the schema details are not provided, knowing what specific information you need will help me assist you better.",
+    "session_id": "session_20250908_142836_3066"
+  },
+  {
+    "timestamp": "2025-09-08T14:32:33.691463",
+    "user_input": "how many customers do we have?",
+    "bot_response": "🤔 Could you please let me know if there is a specific column in the \"public_table\" that represents customer information, such as a \"customer_id\" or \"customer_name\"? This will help me determine how to count the number of customers.",
+    "session_id": "session_20250908_142836_3066"
+  },
+  {
+    "timestamp": "2025-09-08T14:32:52.632945",
+    "user_input": "list the first 3 customer names",
+    "bot_response": "🤔 Could you please let me know if there is a specific column in the \"public_table\" that contains customer names, such as \"customer_name\" or something similar? This will help me list the first 3 customer names for you.",
+    "session_id": "session_20250908_142836_3066"
+  },
+  {
+    "timestamp": "2025-09-08T14:33:13.827654",
+    "user_input": "what columns are in the public_table?",
+    "bot_response": "🤔 It seems that the schema details for \"public_table\" are not provided, so I can't list the columns directly. Could you let me know if there's a way to access the schema details, or if there's a specific type of data or column name you're looking for in the \"public_table\"? This will help me assist you better.",
+    "session_id": "session_20250908_142836_3066"
   }
 ]

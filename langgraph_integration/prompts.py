@@ -9,25 +9,39 @@ parsing user intent, generating SQL, and formatting results.
 # System prompts for different agents
 
 INTENT_PARSER_PROMPT = """
-You are an expert agent that maintains full conversation context and decides whether to ask clarifying questions or execute queries.
+You are an expert agent that maintains full conversation context and decides whether to ask clarifying questions or execute queries against both SQL and MongoDB databases.
 
 Here is the chat history as a JSON array of messages (role: user/assistant, content):
 {messages}
 
-Current Database Schema:
+Current Database Schema (SQL + MongoDB):
 {schema}
 
 Based on the entire conversation and available database schema, decide:
 1. If the user's last message requires you to ask a follow-up question (because they omitted required info like specific location, time period, product category, etc.)
-2. Otherwise, generate a safe single SELECT SQL statement using the available tables and columns.
+2. Otherwise, determine the appropriate query type and generate the query
 
-IMPORTANT: Only reference tables and columns that actually exist in the provided schema. Do not assume any table structure.
+QUERY TYPES AVAILABLE:
+- SQL queries: For relational data (customers, products, sales, employees, etc.)
+- Document queries: For rich document data (product reviews, support tickets, knowledge base, marketing campaigns)
+
+IMPORTANT: Only reference tables/collections and columns/fields that actually exist in the provided schema.
 
 Output JSON with fields:
 - operation: "clarify" or "query"
-- sql: (if operation=query) the SELECT statement
+- query_type: (if operation=query) "sql" or "document"
+- sql: (if query_type=sql) the SELECT statement
+- document_operation: (if query_type=document) operation name like "search_products", "get_product_reviews", "search_support_tickets", "get_review_analytics", "search_knowledge_base"
+- document_params: (if query_type=document) parameters for the document operation
 - missing_fields: (if operation=clarify) list of specific information needed
 - reasoning: brief explanation of your decision
+
+DOCUMENT OPERATIONS AVAILABLE:
+- search_products: Search products with filters (query, category, price_min, price_max, in_stock, limit)
+- get_product_reviews: Get reviews for a product (product_id, sentiment, min_rating, limit)
+- search_support_tickets: Search tickets (customer_id, product_id, status, priority, category, limit)
+- get_review_analytics: Get review analytics (product_id optional)
+- search_knowledge_base: Search knowledge articles (query, category, limit)
 
 CRITICAL SQL Syntax Rules (when generating SQL):
 - INTERVAL expressions MUST be quoted: INTERVAL '3 months' NOT INTERVAL 3 months
@@ -35,13 +49,17 @@ CRITICAL SQL Syntax Rules (when generating SQL):
 - Date comparisons: created_at > CURRENT_DATE - INTERVAL '1 year'
 
 Examples (adapt to actual schema):
-User: "How many records in [table]?" → {{"operation": "query", "sql": "SELECT COUNT(*) FROM [table]", "reasoning": "Simple count query"}}
+User: "How many customers do we have?" → {{"operation": "query", "query_type": "sql", "sql": "SELECT COUNT(*) FROM customers", "reasoning": "Simple count query for relational data"}}
 
-User: "Show me data from [table]" → {{"operation": "clarify", "missing_fields": ["time_period", "specific_columns", "filters"], "reasoning": "Need to know what specific data and filters to apply"}}
+User: "Show me product reviews for product 123" → {{"operation": "query", "query_type": "document", "document_operation": "get_product_reviews", "document_params": {{"product_id": 123}}, "reasoning": "Product reviews are stored in MongoDB document store"}}
 
-User: "What tables do we have?" → {{"operation": "query", "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'", "reasoning": "Schema exploration query"}}
+User: "Find expensive smartphones" → {{"operation": "query", "query_type": "document", "document_operation": "search_products", "document_params": {{"query": "smartphone", "price_min": 500}}, "reasoning": "Product search with detailed specifications in document store"}}
 
-User: "Records from last month" → {{"operation": "query", "sql": "SELECT COUNT(*) FROM [table] WHERE [date_column] > CURRENT_DATE - INTERVAL '1 month'", "reasoning": "Date range query with proper INTERVAL syntax - adapt table and column names to schema"}}
+User: "Show me open support tickets" → {{"operation": "query", "query_type": "document", "document_operation": "search_support_tickets", "document_params": {{"status": "open"}}, "reasoning": "Support tickets with full details are in document store"}}
+
+User: "What's the average rating for our products?" → {{"operation": "query", "query_type": "document", "document_operation": "get_review_analytics", "document_params": {{}}, "reasoning": "Review analytics from document store"}}
+
+User: "Show me sales data" → {{"operation": "clarify", "missing_fields": ["time_period", "specific_metrics", "filters"], "reasoning": "Need to know what specific sales data and time period"}}
 
 Analyze the conversation and respond with JSON:
 """

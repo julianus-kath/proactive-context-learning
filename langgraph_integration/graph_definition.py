@@ -25,7 +25,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 
-from .direct_db_client import get_database_schema, execute_sql_query, get_table_information, health_check
+from .hybrid_db_client import get_database_schema, execute_sql_query, execute_document_query, get_table_information, health_check
 from .prompts import (
     format_intent_parser_prompt,
     format_sql_generator_prompt,
@@ -48,6 +48,8 @@ class WorkflowState(TypedDict):
     intent_analysis: Optional[Dict[str, Any]]
     schema: Optional[str]
     sql_query: Optional[str]
+    document_operation: Optional[str]
+    document_params: Optional[Dict[str, Any]]
     query_results: Optional[str]
     error_info: Optional[Dict[str, Any]]
     final_response: Optional[str]
@@ -114,6 +116,7 @@ class DatabaseWorkflow:
         workflow.add_node("get_schema", self._get_schema)
         workflow.add_node("generate_sql", self._generate_sql)
         workflow.add_node("execute_query", self._execute_query)
+        workflow.add_node("execute_document_query", self._execute_document_query)
         workflow.add_node("execute_direct", self._execute_direct)
         workflow.add_node("format_results", self._format_results)
         workflow.add_node("handle_error", self._handle_error)
@@ -129,7 +132,8 @@ class DatabaseWorkflow:
             self._route_after_intent,
             {
                 "clarify": "clarify",
-                "query": "generate_sql",
+                "sql_query": "generate_sql",
+                "document_query": "execute_document_query",
                 "execute_direct": "execute_direct",
                 "schema_query": "explain_schema",
                 "data_query": "generate_sql",
@@ -154,6 +158,16 @@ class DatabaseWorkflow:
         )
         workflow.add_conditional_edges(
             "execute_query",
+            self._route_after_execution,
+            {
+                "format": "format_results",
+                "error": "handle_error"
+            }
+        )
+        
+        # Document query execution path
+        workflow.add_conditional_edges(
+            "execute_document_query",
             self._route_after_execution,
             {
                 "format": "format_results",
@@ -470,6 +484,44 @@ class DatabaseWorkflow:
         
         return state
     
+    async def _execute_document_query(self, state: WorkflowState) -> WorkflowState:
+        """
+        Execute document query against MongoDB.
+        
+        Args:
+            state: Current workflow state
+            
+        Returns:
+            Updated state with query results
+        """
+        try:
+            intent = state["intent_analysis"]
+            document_operation = intent.get("document_operation")
+            document_params = intent.get("document_params", {})
+            
+            if not document_operation:
+                raise ValueError("No document operation specified")
+            
+            # Store operation and params in state for reference
+            state["document_operation"] = document_operation
+            state["document_params"] = document_params
+            
+            # Execute the document query
+            results = await execute_document_query(document_operation, **document_params)
+            
+            state["query_results"] = results
+            logger.info(f"Document query executed successfully: {document_operation}")
+            
+        except Exception as e:
+            logger.error(f"Error executing document query: {e}")
+            state["error_info"] = {
+                "type": "document_query_execution_error",
+                "message": str(e),
+                "context": f"Failed to execute document operation: {state.get('document_operation', 'Unknown operation')}"
+            }
+        
+        return state
+    
     async def _format_results(self, state: WorkflowState) -> WorkflowState:
         """
         Format results for user presentation.
@@ -485,12 +537,23 @@ class DatabaseWorkflow:
             
             # Handle different types of responses
             if state.get("query_results"):
-                # Data query results
-                prompt = format_result_formatter_prompt(
-                    user_input=user_input,
-                    sql_query=state["sql_query"],
-                    raw_results=state["query_results"]
-                )
+                # Check if this is a document query or SQL query
+                if state.get("document_operation"):
+                    # Document query results - use simpler formatting since results are already formatted
+                    prompt = f"""
+User asked: {user_input}
+Document operation: {state.get('document_operation')}
+Results: {state['query_results']}
+
+Provide a concise, helpful response based on these document query results. Keep it brief and directly answer the user's question.
+"""
+                else:
+                    # SQL query results
+                    prompt = format_result_formatter_prompt(
+                        user_input=user_input,
+                        sql_query=state.get("sql_query", ""),
+                        raw_results=state["query_results"]
+                    )
             elif state.get("schema"):
                 # Schema explanation
                 prompt = format_schema_explainer_prompt(
@@ -691,11 +754,13 @@ class DatabaseWorkflow:
         if operation == "clarify":
             return "clarify"
         elif operation == "query":
-            # Check if SQL is already provided
-            if "sql" in intent and intent["sql"]:
+            query_type = intent.get("query_type", "sql")
+            if query_type == "document":
+                return "document_query"
+            elif "sql" in intent and intent["sql"]:
                 return "execute_direct"  # Skip schema and SQL generation
             else:
-                return "query"  # Go through normal flow
+                return "sql_query"  # Go through normal SQL flow
         
         # Handle legacy operations
         routing_map = {
