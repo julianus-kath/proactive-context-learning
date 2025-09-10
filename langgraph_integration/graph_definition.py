@@ -25,7 +25,15 @@ from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 
-from .direct_db_client import get_database_schema, execute_sql_query, get_table_information, health_check
+from .direct_db_client import (
+    get_database_schema, 
+    execute_sql_query, 
+    execute_sql_query_with_retry,
+    get_table_information, 
+    health_check,
+    index_database,
+    get_all_schemas
+)
 from .prompts import (
     format_intent_parser_prompt,
     format_sql_generator_prompt,
@@ -47,10 +55,12 @@ class WorkflowState(TypedDict):
     user_input: str
     intent_analysis: Optional[Dict[str, Any]]
     schema: Optional[str]
+    database_index: Optional[Dict[str, Any]]
     sql_query: Optional[str]
     query_results: Optional[str]
     error_info: Optional[Dict[str, Any]]
     final_response: Optional[str]
+    retry_count: int
 
 
 @dataclass
@@ -109,20 +119,23 @@ class DatabaseWorkflow:
         workflow = StateGraph(WorkflowState)
         
         # Add nodes
+        workflow.add_node("index_database", self._index_database)
         workflow.add_node("parse_intent", self._parse_intent)
         workflow.add_node("clarify", self._clarify)
         workflow.add_node("get_schema", self._get_schema)
         workflow.add_node("generate_sql", self._generate_sql)
         workflow.add_node("execute_query", self._execute_query)
         workflow.add_node("execute_direct", self._execute_direct)
+        workflow.add_node("retry_query", self._retry_query)
         workflow.add_node("format_results", self._format_results)
         workflow.add_node("handle_error", self._handle_error)
         workflow.add_node("explain_schema", self._explain_schema)
         workflow.add_node("show_sample_data", self._show_sample_data)
         workflow.add_node("health_check", self._health_check)
         
-        # Define the workflow edges - get schema first for informed intent parsing
-        workflow.add_edge(START, "get_schema")
+        # Define the workflow edges - index database first, then get schema for informed intent parsing
+        workflow.add_edge(START, "index_database")
+        workflow.add_edge("index_database", "get_schema")
         workflow.add_edge("get_schema", "parse_intent")
         workflow.add_conditional_edges(
             "parse_intent",
@@ -157,6 +170,7 @@ class DatabaseWorkflow:
             self._route_after_execution,
             {
                 "format": "format_results",
+                "retry": "retry_query",
                 "error": "handle_error"
             }
         )
@@ -167,12 +181,23 @@ class DatabaseWorkflow:
         # Health check path
         workflow.add_edge("health_check", "format_results")
         
+        # Retry query path
+        workflow.add_conditional_edges(
+            "retry_query",
+            self._route_after_retry,
+            {
+                "format": "format_results",
+                "error": "handle_error"
+            }
+        )
+        
         # Direct execution path (when SQL is provided by intent parser)
         workflow.add_conditional_edges(
             "execute_direct",
             self._route_after_execution,
             {
                 "format": "format_results",
+                "retry": "retry_query",
                 "error": "handle_error"
             }
         )
@@ -185,6 +210,35 @@ class DatabaseWorkflow:
         workflow.add_edge("handle_error", END)
         
         return workflow.compile()
+    
+    async def _index_database(self, state: WorkflowState) -> WorkflowState:
+        """
+        Index the database on startup to discover all schemas and tables.
+        
+        Args:
+            state: Current workflow state
+            
+        Returns:
+            Updated state with database index information
+        """
+        try:
+            database_index = await index_database()
+            state["database_index"] = database_index
+            
+            # Log the indexing results
+            total_tables = database_index.get("total_tables", 0)
+            schemas = database_index.get("schemas", [])
+            logger.info(f"Database indexed: {total_tables} tables across {len(schemas)} schemas: {', '.join(schemas)}")
+            
+        except Exception as e:
+            logger.error(f"Error indexing database: {e}")
+            state["error_info"] = {
+                "type": "database_indexing_error",
+                "message": str(e),
+                "context": "Failed to index database on startup"
+            }
+        
+        return state
     
     async def _parse_intent(self, state: WorkflowState) -> WorkflowState:
         """
@@ -420,8 +474,21 @@ class DatabaseWorkflow:
             sql_query = state["sql_query"]
             results = await execute_sql_query(sql_query)
             
-            state["query_results"] = results
-            logger.info("Query executed successfully")
+            # Check if the result indicates an error
+            if results.startswith("QUERY_ERROR:"):
+                error_msg = results[12:]  # Remove "QUERY_ERROR:" prefix
+                state["error_info"] = {
+                    "type": "query_execution_error",
+                    "message": error_msg,
+                    "context": f"Failed to execute SQL: {sql_query}",
+                    "sql_query": sql_query
+                }
+                # Initialize retry count if not set
+                if "retry_count" not in state:
+                    state["retry_count"] = 0
+            else:
+                state["query_results"] = results
+                logger.info("Query executed successfully")
             
         except Exception as e:
             logger.error(f"Error executing query: {e}")
@@ -457,8 +524,21 @@ class DatabaseWorkflow:
             # Execute the query
             results = await execute_sql_query(sql_query)
             
-            state["query_results"] = results
-            logger.info(f"Direct query executed successfully: {sql_query}")
+            # Check if the result indicates an error
+            if results.startswith("QUERY_ERROR:"):
+                error_msg = results[12:]  # Remove "QUERY_ERROR:" prefix
+                state["error_info"] = {
+                    "type": "direct_query_execution_error",
+                    "message": error_msg,
+                    "context": f"Failed to execute direct SQL: {sql_query}",
+                    "sql_query": sql_query
+                }
+                # Initialize retry count if not set
+                if "retry_count" not in state:
+                    state["retry_count"] = 0
+            else:
+                state["query_results"] = results
+                logger.info(f"Direct query executed successfully: {sql_query}")
             
         except Exception as e:
             logger.error(f"Error executing direct query: {e}")
@@ -466,6 +546,65 @@ class DatabaseWorkflow:
                 "type": "direct_query_execution_error",
                 "message": str(e),
                 "context": f"Failed to execute direct SQL: {state.get('intent_analysis', {}).get('sql', 'Unknown query')}"
+            }
+        
+        return state
+    
+    async def _retry_query(self, state: WorkflowState) -> WorkflowState:
+        """
+        Retry SQL query with automatic error correction.
+        
+        Args:
+            state: Current workflow state
+            
+        Returns:
+            Updated state with retry results
+        """
+        try:
+            retry_count = state.get("retry_count", 0)
+            max_retries = 2
+            
+            if retry_count >= max_retries:
+                # Max retries exceeded, keep the error
+                logger.error(f"Max retries ({max_retries}) exceeded for query")
+                return state
+            
+            # Increment retry count
+            state["retry_count"] = retry_count + 1
+            
+            # Get the original SQL and schema
+            sql_query = state.get("sql_query", "")
+            schema = state.get("schema", "")
+            error_info = state.get("error_info", {})
+            error_msg = error_info.get("message", "")
+            
+            logger.info(f"Attempting to retry query (attempt {state['retry_count']}): {sql_query}")
+            
+            # Use the retry function with error correction
+            results = await execute_sql_query_with_retry(sql_query, schema, max_retries=1)
+            
+            # Check if the retry was successful
+            if results.startswith("QUERY_ERROR:"):
+                error_msg = results[12:]  # Remove "QUERY_ERROR:" prefix
+                state["error_info"] = {
+                    "type": "query_retry_error",
+                    "message": error_msg,
+                    "context": f"Failed to execute SQL after retry: {sql_query}",
+                    "sql_query": sql_query,
+                    "retry_count": state["retry_count"]
+                }
+            else:
+                # Success! Clear error info and set results
+                state["query_results"] = results
+                state["error_info"] = None
+                logger.info(f"Query retry successful after {state['retry_count']} attempts")
+            
+        except Exception as e:
+            logger.error(f"Error in query retry: {e}")
+            state["error_info"] = {
+                "type": "query_retry_error",
+                "message": str(e),
+                "context": f"Failed during query retry process"
             }
         
         return state
@@ -716,6 +855,22 @@ class DatabaseWorkflow:
     
     def _route_after_execution(self, state: WorkflowState) -> str:
         """Route workflow after query execution."""
+        error_info = state.get("error_info")
+        if error_info:
+            # Check if this is a retryable error
+            error_type = error_info.get("type", "")
+            retry_count = state.get("retry_count", 0)
+            max_retries = 2
+            
+            if (error_type in ["query_execution_error", "direct_query_execution_error"] and 
+                retry_count < max_retries):
+                return "retry"
+            else:
+                return "error"
+        return "format"
+    
+    def _route_after_retry(self, state: WorkflowState) -> str:
+        """Route workflow after query retry."""
         if state.get("error_info"):
             return "error"
         return "format"
@@ -735,10 +890,12 @@ class DatabaseWorkflow:
             user_input=user_input,
             intent_analysis=None,
             schema=None,
+            database_index=None,
             sql_query=None,
             query_results=None,
             error_info=None,
-            final_response=None
+            final_response=None,
+            retry_count=0
         )
         
         try:
@@ -771,10 +928,12 @@ class DatabaseWorkflow:
             user_input=last_user_message,
             intent_analysis=None,
             schema=None,
+            database_index=None,
             sql_query=None,
             query_results=None,
             error_info=None,
-            final_response=None
+            final_response=None,
+            retry_count=0
         )
         
         try:

@@ -1,121 +1,134 @@
-/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/chatbot_ui/langgraph_service.py:80: DeprecationWarning: 
-        on_event is deprecated, use lifespan event handlers instead.
-
-        Read more about it in the
-        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
-        
-  @app.on_event("startup")
-INFO:     Started server process [35099]
+INFO:     Started server process [92914]
 INFO:     Waiting for application startup.
 INFO:langgraph_integration.graph_definition:Testing OpenAI API key...
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:5001 (Press CTRL+C to quit)
-🚀 Starting LangGraph Service...
-📋 Make sure the following are running:
-   - MCP Server (http://localhost:8000)
-   - PostgreSQL database
-   - OpenAI API key is set
-
 🚀 Initializing LangGraph workflow...
 ✅ LangGraph workflow initialized successfully
-INFO:     127.0.0.1:61759 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61761 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55218 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55220 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55226 - "GET /health HTTP/1.1" 200 OK
+INFO:mcp_server.db:Database connection pool initialized
+INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact records table', 'warehouse dispatch records table']
+INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT CONCAT(table_schema, '.', table_name) as fu...
+INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT CONCAT(table_schema, '.', table_name) as full_table_name FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast') ORDER BY table_schema, table_name
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you provide details on the tables or data sources you have for contact records and warehouse d...
+INFO:langgraph_integration.graph_definition:Results formatted successfully
 📝 Processing conversation with 1 messages...
-📝 Last user message: What proportion of the customer base has not been contacted in the past year, but has had at least o...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61763 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61766 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61768 - "GET /health HTTP/1.1" 200 OK
+📝 Last user message: what tables do you have access to?...
+✅ Conversation processed successfully - Operation: query
+INFO:     127.0.0.1:55228 - "POST /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55237 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55246 - "GET /health HTTP/1.1" 200 OK
+INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['table names for contact records', 'table names for warehouse dispatch records']
+INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT * FROM webshop.stock...
+INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT * FROM webshop.stock
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know the names of the tables that contain the contact records and warehouse dispatc...
+INFO:langgraph_integration.graph_definition:Results formatted successfully
 📝 Processing conversation with 3 messages...
-📝 Last user message: What tables do we have available?...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61770 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61774 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61776 - "GET /health HTTP/1.1" 200 OK
+📝 Last user message: whats in the stock table?...
+✅ Conversation processed successfully - Operation: query
+INFO:     127.0.0.1:55248 - "POST /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55251 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55262 - "GET /health HTTP/1.1" 200 OK
+INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['table_names for contact records', 'table_names for warehouse dispatch records']
+INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['specific information about what the user wants to know about the stock table']
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know if there are specific tables in the database that you believe might contain co...
+INFO:langgraph_integration.graph_definition:Generated clarification: Could you please clarify what specific information you're looking for about the `webshop.stock` tabl...
 📝 Processing conversation with 5 messages...
-📝 Last user message: "What tables are available in the database?"...
+📝 Last user message: what is it about?...
 ✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61778 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61781 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61784 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55264 - "POST /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55267 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55275 - "GET /health HTTP/1.1" 200 OK
+INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact records table', 'warehouse dispatch records table']
+INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['specific details about the kind of information needed (e.g., article details, stock levels, timestamps)']
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Do you know if there are specific tables in the database that contain contact records and warehouse ...
+INFO:langgraph_integration.graph_definition:Generated clarification: Could you please specify if you're interested in understanding the details about the `articleid` ass...
 📝 Processing conversation with 7 messages...
-📝 Last user message: customer table maybe?...
+📝 Last user message: explain to me what kind of information is stored? Summarise the table for me...
 ✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61786 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61790 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61792 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55277 - "POST /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55280 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55288 - "GET /health HTTP/1.1" 200 OK
+INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact records table', 'warehouse dispatch records table']
+INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT articleid, count FROM webshop.stock...
+INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT articleid, count FROM webshop.stock
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know if there are any specific tables in the database that you suspect might contai...
+INFO:langgraph_integration.graph_definition:Results formatted successfully
 📝 Processing conversation with 9 messages...
-📝 Last user message: explore the database...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61794 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61797 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61803 - "GET /health HTTP/1.1" 200 OK
+📝 Last user message: sure how much do we have available of each of the items in our stock...
+✅ Conversation processed successfully - Operation: query
+INFO:     127.0.0.1:55290 - "POST /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55293 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55301 - "GET /health HTTP/1.1" 200 OK
+INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact records table', 'warehouse dispatch records table']
+INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT a.description, s.count FROM webshop.stock s...
+INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT a.description, s.count FROM webshop.stock s JOIN webshop.articles a ON s.articleid = a.id LIMIT 3
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know if there are any specific tables you suspect might contain the contact records...
+INFO:langgraph_integration.graph_definition:Results formatted successfully
 📝 Processing conversation with 11 messages...
-📝 Last user message: list all available tables...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61805 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61808 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61810 - "GET /health HTTP/1.1" 200 OK
+📝 Last user message: name 3 of those...
+✅ Conversation processed successfully - Operation: query
+INFO:     127.0.0.1:55303 - "POST /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55306 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55313 - "GET /health HTTP/1.1" 200 OK
+INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact records table', 'warehouse dispatch records table']
+INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT a.description, SUM(op.amount) AS total_sold...
+INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT a.description, SUM(op.amount) AS total_sold FROM webshop.order_positions op JOIN webshop.articles a ON op.articleid = a.id GROUP BY a.description ORDER BY total_sold DESC LIMIT 1
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know if you have access to a database management system where you can run a query t...
+INFO:langgraph_integration.graph_definition:Results formatted successfully
 📝 Processing conversation with 13 messages...
-📝 Last user message: list the available tables...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61812 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61815 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61817 - "GET /health HTTP/1.1" 200 OK
+📝 Last user message: which of these is the most popular?...
+✅ Conversation processed successfully - Operation: query
+INFO:     127.0.0.1:55315 - "POST /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55319 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55329 - "GET /health HTTP/1.1" 200 OK
+INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact records table', 'warehouse dispatch records table']
+INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT COUNT(DISTINCT o.customer) FROM webshop.ord...
+INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT COUNT(DISTINCT o.customer) FROM webshop.order o JOIN webshop.order_positions op ON o.id = op.orderid JOIN webshop.articles a ON op.articleid = a.id WHERE a.description = 'Gray Sports Jacket Size S' AND o.ordertimestamp > CURRENT_DATE - INTERVAL '3 months'
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know if you have any specific database management system in mind, like MySQL or Pos...
+INFO:langgraph_integration.graph_definition:Results formatted successfully
 📝 Processing conversation with 15 messages...
-📝 Last user message: you have the database, please tell me what tables we have access to...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61819 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61822 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61824 - "GET /health HTTP/1.1" 200 OK
+📝 Last user message: how many people have bought this in the last 3 months?...
+✅ Conversation processed successfully - Operation: query
+INFO:     127.0.0.1:55331 - "POST /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55334 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55341 - "GET /health HTTP/1.1" 200 OK
+INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact records table', 'warehouse dispatch records table']
+INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT s.count FROM webshop.stock s JOIN webshop.a...
+INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT s.count FROM webshop.stock s JOIN webshop.articles a ON s.articleid = a.id WHERE a.description = 'Gray Sports Jacket Size S'
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know if there are any specific tables in the database that you suspect might contai...
+INFO:langgraph_integration.graph_definition:Results formatted successfully
 📝 Processing conversation with 17 messages...
-📝 Last user message: I dont know, you should know though...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61826 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61830 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61832 - "GET /health HTTP/1.1" 200 OK
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['contact_records_table', 'warehouse_dispatch_records_table']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you let me know if there are specific tables in the database that contain the contact records ...
-📝 Processing conversation with 19 messages...
-📝 Last user message: customers table...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:61834 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61837 - "GET /health HTTP/1.1" 200 OK
+📝 Last user message: how many are on stock right now? When should we order new ones?...
+✅ Conversation processed successfully - Operation: query
+INFO:     127.0.0.1:55343 - "POST /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55346 - "GET /health HTTP/1.1" 200 OK

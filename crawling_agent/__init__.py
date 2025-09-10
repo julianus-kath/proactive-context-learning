@@ -1,3 +1,0 @@
-"""
-Crawling Agent package.
-"""
