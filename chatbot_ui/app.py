@@ -1,6 +1,14 @@
 """
 ERP Chatbot UI - Phase 3 Blueprint Implementation
 A user-friendly Streamlit interface for querying the ERP database through LangGraph.
+
+🚀 NEW: Modern Web UI Available!
+For a better experience, try the new web interface:
+- Run: python start_web_ui.py
+- Open: http://localhost:3000
+- Features: Responsive design, conversation history, modern UI
+
+This Streamlit version is kept for compatibility.
 """
 
 import os
@@ -393,6 +401,9 @@ def main():
     # Header
     st.markdown('<h1 class="main-header">🤖 ERP Chatbot</h1>', unsafe_allow_html=True)
     st.markdown("Ask questions about your ERP data in natural language!")
+    
+    # New Web UI notification
+    st.info("🚀 **NEW**: Try our modern web interface! Run `python start_web_ui.py` and visit http://localhost:3000 for a better experience with responsive design and conversation history.")
     
     # Service health check
     col1, col2, col3 = st.columns([1, 2, 1])

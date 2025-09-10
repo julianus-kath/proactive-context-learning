@@ -16,7 +16,7 @@ The Phase 3 Blueprint has been successfully implemented and tested. The ERP Chat
 ```
 
 ### ✅ **Required Components**
-- **✅ Streamlit UI** (`app.py`) - User-friendly interface
+- **✅ Modern Web UI** (`web_app.py`, `index.html`) - Responsive user interface
 - **✅ HTTP Service** (`langgraph_service.py`) - FastAPI wrapper on port 5001
 - **✅ Environment Config** (`.env`, `.env.example`) - Configuration management
 - **✅ Dependencies** (`requirements.txt`) - All required packages
@@ -34,7 +34,7 @@ The Phase 3 Blueprint has been successfully implemented and tested. The ERP Chat
 ### **Services Running:**
 - **✅ MCP Server**: `http://localhost:8000` (Database access)
 - **✅ LangGraph Service**: `http://localhost:5001` (AI workflow)
-- **✅ Streamlit UI**: Ready to start on `http://localhost:8501`
+- **✅ Modern Web UI**: Ready to start on `http://localhost:3000`
 
 ### **Test Results:**
 ```bash
@@ -71,7 +71,7 @@ $ python test_complete_system.py
 cd chatbot_ui
 python start_services.py
 ```
-This starts both LangGraph service and Streamlit UI automatically.
+This starts both LangGraph service and Modern Web UI automatically.
 
 ### **Option 2: Manual Startup**
 ```bash
@@ -79,9 +79,9 @@ This starts both LangGraph service and Streamlit UI automatically.
 cd chatbot_ui
 python langgraph_service.py
 
-# Terminal 2: Start Streamlit UI  
+# Terminal 2: Start Modern Web UI  
 cd chatbot_ui
-streamlit run app.py
+python web_app.py
 ```
 
 ### **Option 3: Test API Directly**
@@ -94,11 +94,11 @@ curl -X POST http://localhost:5001/process_query \
 ## 📱 **USER INTERFACE FEATURES**
 
 ### **Main Interface**
-- **🎨 Clean Design**: Modern Streamlit interface with custom CSS
+- **🎨 Clean Design**: Modern responsive web interface with professional styling
 - **💬 Chat Interface**: Real-time conversation with the AI
-- **📝 Input Box**: Natural language query input
+- **📝 Input Box**: Natural language query input with auto-resize
 - **🔘 Send Button**: Process queries with one click
-- **⏳ Loading Spinners**: Visual feedback during processing
+- **⏳ Loading Indicators**: Visual feedback during processing
 
 ### **Chat History**
 - **📚 Session Memory**: Maintains conversation history
@@ -132,11 +132,11 @@ curl -X POST http://localhost:5001/process_query \
 
 ## 🏗️ **TECHNICAL ARCHITECTURE**
 
-### **Frontend (Streamlit)**
-- **Framework**: Streamlit 1.47.1
-- **Features**: Real-time chat, session state, custom CSS
-- **Port**: 8501
-- **Responsive**: Works on desktop and mobile
+### **Frontend (Modern Web UI)**
+- **Framework**: Pure HTML/CSS/JavaScript with FastAPI backend
+- **Features**: Real-time chat, conversation history, responsive design
+- **Port**: 3000
+- **Responsive**: Optimized for desktop and mobile
 
 ### **Backend (FastAPI)**
 - **Framework**: FastAPI with Uvicorn

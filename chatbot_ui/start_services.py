@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Startup script for the ERP Chatbot system.
-Starts both the LangGraph service and the Streamlit UI.
+Starts both the LangGraph service and the Modern Web UI.
 """
 
 import os
@@ -14,7 +14,6 @@ from pathlib import Path
 def check_dependencies():
     """Check if required dependencies are installed."""
     try:
-        import streamlit
         import requests
         import fastapi
         import uvicorn
@@ -52,11 +51,11 @@ def start_langgraph_service():
         sys.executable, "langgraph_service.py"
     ], cwd=Path(__file__).parent)
 
-def start_streamlit_ui():
-    """Start the Streamlit UI."""
-    print("🚀 Starting Streamlit UI...")
+def start_web_ui():
+    """Start the Modern Web UI."""
+    print("🚀 Starting Modern Web UI...")
     return subprocess.Popen([
-        "streamlit", "run", "app.py", "--server.port", "8501"
+        sys.executable, "web_app.py"
     ], cwd=Path(__file__).parent)
 
 def main():
@@ -84,15 +83,15 @@ def main():
         print("⏳ Waiting for LangGraph service to start...")
         time.sleep(5)
         
-        # Start Streamlit UI
-        streamlit_process = start_streamlit_ui()
-        processes.append(streamlit_process)
+        # Start Web UI
+        web_ui_process = start_web_ui()
+        processes.append(web_ui_process)
         
         print("\n✅ Services started successfully!")
         print("📋 Service URLs:")
-        print("   - LangGraph Service: http://localhost:5000")
-        print("   - Streamlit UI: http://localhost:8501")
-        print("   - API Documentation: http://localhost:5000/docs")
+        print("   - LangGraph Service: http://localhost:5001")
+        print("   - Modern Web UI: http://localhost:3000")
+        print("   - API Documentation: http://localhost:5001/docs")
         print("\n🔧 Make sure the following are also running:")
         print("   - MCP Server: http://localhost:8000")
         print("   - PostgreSQL database")

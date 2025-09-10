@@ -69,8 +69,8 @@ free_port() {
 # Stop services
 echo -e "${BLUE}🔍 Checking running services...${NC}"
 
-# Stop Streamlit
-kill_process "streamlit run" "Streamlit UI"
+# Stop Web UI
+kill_process "web_app.py" "Modern Web UI"
 
 # Stop LangGraph service
 kill_process "uvicorn.*langgraph_service" "LangGraph Service"
@@ -82,14 +82,14 @@ echo ""
 echo -e "${BLUE}🔍 Checking ports...${NC}"
 
 # Free up ports
-free_port 8501 "Streamlit"
+free_port 3000 "Modern Web UI"
 free_port 5001 "LangGraph API"
 
 echo ""
 echo -e "${BLUE}🧹 Cleaning up...${NC}"
 
 # Clean up any remaining background processes
-pkill -f "streamlit.*app.py" 2>/dev/null && echo -e "${GREEN}✅ Cleaned up Streamlit processes${NC}"
+pkill -f "web_app.py" 2>/dev/null && echo -e "${GREEN}✅ Cleaned up Web UI processes${NC}"
 pkill -f "uvicorn.*langgraph_service" 2>/dev/null && echo -e "${GREEN}✅ Cleaned up LangGraph processes${NC}"
 
 # Optional: Stop PostgreSQL if it was started by our script

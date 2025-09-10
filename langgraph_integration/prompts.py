@@ -113,11 +113,12 @@ RULES - FOLLOW EXACTLY:
 4. If asking for count → just give the number
 5. If asking for list → just list items
 6. NO technical details or descriptions
+7. DO NOT start your response with "A:" or any prefix - just give the direct answer
 
 EXAMPLES:
-Q: "How many customers?" → A: "10 customers"
-Q: "What tables?" → A: "customers table"
-Q: "Show schema" → A: "customers table with 20 columns"
+Q: "How many customers?" → "10 customers"
+Q: "What tables?" → "customers table"
+Q: "Show schema" → "customers table with 20 columns"
 
 Your answer (keep it SHORT):
 """
@@ -153,10 +154,11 @@ RULES:
 2. Just list table names as they are in the schema - do not translate them
 3. NO detailed explanations or examples
 4. NO sample queries or technical details
+5. DO NOT start your response with "A:" or any prefix - just give the direct answer
 
 EXAMPLES:
-Q: "What tables?" → A: "customers table"
-Q: "Show schema" → A: "customers table with customer_id, name, email, phone columns"
+Q: "What tables?" → "customers table"
+Q: "Show schema" → "customers table with customer_id, name, email, phone columns"
 
 Your SHORT answer:
 """

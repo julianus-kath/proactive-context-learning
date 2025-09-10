@@ -1,6 +1,35 @@
 # ERP Chatbot UI - Phase 3 Blueprint
 
-A user-friendly Streamlit interface for querying ERP data through natural language, powered by LangGraph and MCP.
+A user-friendly interface for querying ERP data through natural language, powered by LangGraph and MCP.
+
+## 🚀 **NEW: Modern Web UI Available!**
+
+We now offer two interface options:
+
+### **🌐 Modern Web UI (Recommended)**
+- **Sleek Design**: Professional dark theme with blue accents
+- **Responsive**: Works perfectly on desktop and mobile
+- **Enhanced UX**: Conversation history, real-time typing, smooth animations
+- **Better Performance**: Pure HTML/CSS/JS frontend
+
+**Quick Start:**
+```bash
+cd chatbot_ui
+python start_web_ui.py
+# Open: http://localhost:3000
+```
+
+### **📊 Streamlit UI (Legacy)**
+- Original Streamlit-based interface
+- Kept for compatibility
+- Full feature parity with web UI
+
+**Quick Start:**
+```bash
+cd chatbot_ui
+python start_services.py
+# Open: http://localhost:8501
+```
 
 ## 🎯 **Phase 3 Blueprint Implementation**
 
@@ -17,12 +46,19 @@ This implementation follows the exact Phase 3 Blueprint specifications:
 
 ```
 chatbot_ui/
-├── app.py                 # Main Streamlit application
+├── index.html             # Modern Web UI interface
+├── styles.css             # Professional styling and responsive design
+├── script.js              # JavaScript functionality
+├── web_app.py             # FastAPI server for web interface
 ├── langgraph_service.py   # FastAPI wrapper for LangGraph workflow
-├── start_services.py      # Startup script for both services
+├── start_web_ui.py        # Startup script for modern web UI
+├── start_services.py      # Legacy startup script (updated for web UI)
+├── app.py                 # Legacy Streamlit application (kept for compatibility)
 ├── requirements.txt       # Python dependencies
 ├── .env.example          # Environment configuration template
 ├── .env                  # Environment configuration (create from example)
+├── WEB_UI_README.md      # Comprehensive web UI documentation
+├── migrate_to_web_ui.py  # Migration helper script
 └── README.md             # This file
 ```
 

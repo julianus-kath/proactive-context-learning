@@ -15,7 +15,6 @@ def check_python_dependencies():
     print("🔍 Checking Python dependencies...")
     
     required_packages = [
-        ('streamlit', 'streamlit'),
         ('fastapi', 'fastapi'),
         ('uvicorn', 'uvicorn'),
         ('langgraph', 'langgraph'),
@@ -23,7 +22,8 @@ def check_python_dependencies():
         ('langchain-openai', 'langchain_openai'),
         ('psycopg2-binary', 'psycopg2'),
         ('requests', 'requests'),
-        ('python-dotenv', 'dotenv')
+        ('python-dotenv', 'dotenv'),
+        ('aiofiles', 'aiofiles')
     ]
     
     missing_packages = []
@@ -166,7 +166,7 @@ def check_ports():
     import socket
     
     ports = {
-        8501: "Streamlit UI",
+        3000: "Modern Web UI",
         5001: "LangGraph Service", 
         8000: "MCP Server",
         5432: "PostgreSQL"
@@ -226,10 +226,10 @@ def main():
         print("\n📋 What will happen:")
         print("   1. MCP Server will start on port 8000")
         print("   2. LangGraph Service will start on port 5001")
-        print("   3. Streamlit UI will start on port 8501")
+        print("   3. Modern Web UI will start on port 3000")
         print("   4. All services will be connected and ready for Phase 4 multi-turn dialogue")
         print("\n🌐 Access URLs:")
-        print("   • Chatbot UI: http://localhost:8501")
+        print("   • Modern Web UI: http://localhost:3000")
         print("   • LangGraph API: http://localhost:5001/docs")
         print("   • MCP Server: http://localhost:8000/docs")
         return True

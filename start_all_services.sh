@@ -72,12 +72,12 @@ cleanup() {
     echo -e "\n${YELLOW}🛑 Shutting down services...${NC}"
     
     # Kill services on known ports
-    kill_port 8501  # Streamlit
+    kill_port 3000  # Web UI
     kill_port 5001  # LangGraph Service
     kill_port 8000  # MCP Server
     
     # Kill any remaining Python processes related to our services
-    pkill -f "streamlit run" 2>/dev/null || true
+    pkill -f "web_app.py" 2>/dev/null || true
     pkill -f "langgraph_service.py" 2>/dev/null || true
     pkill -f "uvicorn" 2>/dev/null || true
     
@@ -228,7 +228,7 @@ echo -e "${GREEN}✅ Environment variables configured${NC}"
 
 # Clean up any existing processes
 echo -e "${YELLOW}🧹 Cleaning up existing processes...${NC}"
-kill_port 8501
+kill_port 3000
 kill_port 5001
 kill_port 8000
 
@@ -362,12 +362,12 @@ echo -e "${GREEN}✅ LangGraph Service started (PID: $LANGGRAPH_PID)${NC}"
 # Wait for LangGraph service to be ready
 sleep 8
 
-# Start Streamlit UI
-echo -e "${YELLOW}🔧 Starting Streamlit UI...${NC}"
-# Use nohup with explicit server address for reliable background execution
-nohup streamlit run app.py --server.port 8501 --server.address 0.0.0.0 > "$LOG_DIR/streamlit.log" 2>&1 &
-STREAMLIT_PID=$!
-echo -e "${GREEN}✅ Streamlit UI started (PID: $STREAMLIT_PID)${NC}"
+# Start Web UI
+echo -e "${YELLOW}🔧 Starting Modern Web UI...${NC}"
+# Use uvicorn directly with nohup for reliable background execution
+nohup python3 -m uvicorn web_app:app --host 0.0.0.0 --port 3000 > "$LOG_DIR/web_ui.log" 2>&1 &
+WEB_UI_PID=$!
+echo -e "${GREEN}✅ Modern Web UI started (PID: $WEB_UI_PID)${NC}"
 
 cd "$PROJECT_ROOT"
 
@@ -379,11 +379,11 @@ sleep 15
 echo -e "${BLUE}📊 Service Status:${NC}"
 echo -e "${BLUE}==================${NC}"
 
-# Check Streamlit
-if check_port 8501; then
-    echo -e "${GREEN}✅ Streamlit UI: http://localhost:8501${NC}"
+# Check Web UI
+if check_port 3000; then
+    echo -e "${GREEN}✅ Modern Web UI: http://localhost:3000${NC}"
 else
-    echo -e "${RED}❌ Streamlit UI: Failed to start${NC}"
+    echo -e "${RED}❌ Modern Web UI: Failed to start${NC}"
 fi
 
 # Check LangGraph Service
@@ -414,7 +414,7 @@ fi
 
 echo -e "\n${BLUE}📋 Quick Access URLs:${NC}"
 echo -e "${BLUE}=====================${NC}"
-echo -e "🤖 Chatbot UI:        http://localhost:8501"
+echo -e "🌐 Modern Web UI:     http://localhost:3000"
 echo -e "🔧 LangGraph Service: http://localhost:5001"
 echo -e "📊 API Docs:          http://localhost:5001/docs"
 echo -e "🗄️  MCP Server:        http://localhost:8000"
@@ -422,7 +422,7 @@ echo -e "📖 MCP Docs:          http://localhost:8000/docs"
 
 echo -e "\n${BLUE}📁 Log Files:${NC}"
 echo -e "${BLUE}==============${NC}"
-echo -e "📄 Streamlit:         $LOG_DIR/streamlit.log"
+echo -e "📄 Web UI:            $LOG_DIR/web_ui.log"
 echo -e "📄 LangGraph:         $LOG_DIR/langgraph_service.log"
 echo -e "📄 MCP Server:        $LOG_DIR/mcp_server.log"
 
@@ -434,8 +434,8 @@ while true; do
     sleep 10
     
     # Check if critical services are still running
-    if ! check_port 8501; then
-        echo -e "${RED}❌ Streamlit UI stopped unexpectedly${NC}"
+    if ! check_port 3000; then
+        echo -e "${RED}❌ Web UI stopped unexpectedly${NC}"
         break
     fi
     
