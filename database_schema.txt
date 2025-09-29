@@ -1,0 +1,92 @@
+Schema: public
+==============
+Table: public.customers (BASE TABLE)
+Columns:
+  - customer_id (integer) NOT NULL DEFAULT nextval('customers_customer_id_seq'::regclass)
+  - name (character varying(255)) NOT NULL
+  - email (character varying(255)) NOT NULL
+  - phone (character varying(50))
+  - address (text)
+  - city (character varying(100))
+  - state (character varying(50))
+  - postal_code (character varying(20))
+  - country (character varying(50))
+  - region (character varying(50))
+  - industry (character varying(100))
+  - company_size (character varying(50))
+  - annual_revenue (numeric)
+  - employee_count (integer)
+  - credit_limit (numeric)
+  - credit_rating (character varying(10))
+  - is_active (boolean) DEFAULT true
+  - website (character varying(255))
+  - tax_id (character varying(50))
+  - created_at (timestamp without time zone) DEFAULT CURRENT_TIMESTAMP
+
+Table: public.employees (BASE TABLE)
+Columns:
+  - employee_id (integer) NOT NULL DEFAULT nextval('employees_employee_id_seq'::regclass)
+  - first_name (character varying(100)) NOT NULL
+  - last_name (character varying(100)) NOT NULL
+  - email (character varying(255))
+  - phone (character varying(50))
+  - department (character varying(100))
+  - position (character varying(100))
+  - salary (numeric)
+  - hire_date (date)
+  - manager_id (integer)
+  - is_active (boolean) DEFAULT true
+  - created_at (timestamp without time zone) DEFAULT CURRENT_TIMESTAMP
+
+Table: public.products (BASE TABLE)
+Columns:
+  - product_id (integer) NOT NULL DEFAULT nextval('products_product_id_seq'::regclass)
+  - name (character varying(255)) NOT NULL
+  - description (text)
+  - category (character varying(100))
+  - price (numeric)
+  - cost (numeric)
+  - sku (character varying(50))
+  - stock_quantity (integer) DEFAULT 0
+  - reorder_level (integer) DEFAULT 10
+  - supplier_id (integer)
+  - is_active (boolean) DEFAULT true
+  - created_at (timestamp without time zone) DEFAULT CURRENT_TIMESTAMP
+
+Table: public.sales (BASE TABLE)
+Columns:
+  - sale_id (integer) NOT NULL DEFAULT nextval('sales_sale_id_seq'::regclass)
+  - customer_id (integer)
+  - employee_id (integer)
+  - product_id (integer)
+  - quantity (integer) NOT NULL
+  - unit_price (numeric) NOT NULL
+  - total_amount (numeric) NOT NULL
+  - sale_date (date) NOT NULL
+  - status (character varying(50)) DEFAULT 'completed'::character varying
+  - created_at (timestamp without time zone) DEFAULT CURRENT_TIMESTAMP
+
+Table: public.suppliers (BASE TABLE)
+Columns:
+  - supplier_id (integer) NOT NULL DEFAULT nextval('suppliers_supplier_id_seq'::regclass)
+  - name (character varying(255)) NOT NULL
+  - contact_person (character varying(255))
+  - email (character varying(255))
+  - phone (character varying(50))
+  - address (text)
+  - city (character varying(100))
+  - state (character varying(50))
+  - postal_code (character varying(20))
+  - country (character varying(100))
+  - is_active (boolean) DEFAULT true
+  - created_at (timestamp without time zone) DEFAULT CURRENT_TIMESTAMP
+
+Table: public.warehouse (BASE TABLE)
+Columns:
+  - warehouse_id (integer) NOT NULL DEFAULT nextval('warehouse_warehouse_id_seq'::regclass)
+  - product_id (integer)
+  - location (character varying(100))
+  - quantity (integer) DEFAULT 0
+  - reserved_quantity (integer) DEFAULT 0
+  - last_updated (timestamp without time zone) DEFAULT CURRENT_TIMESTAMP
+
