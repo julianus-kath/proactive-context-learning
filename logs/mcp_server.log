@@ -12,7 +12,7 @@
         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
         
   @app.on_event("shutdown")
-INFO:     Started server process [95125]
+INFO:     Started server process [75051]
 INFO:     Waiting for application startup.
 INFO:db:Database connection pool initialized
 INFO:__main__:✅ MCP Database Server initialized successfully

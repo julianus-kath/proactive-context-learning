@@ -196,105 +196,105 @@ classDiagram
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant StreamlitUI as Streamlit UI
-    participant FastAPI as LangGraph Service
-    participant Workflow as DatabaseWorkflow
-    participant OpenAI as OpenAI GPT-4
-    participant DBClient as Database Client
-    participant PostgreSQL as PostgreSQL DB
+    participant U as User
+    participant UI as Streamlit UI
+    participant API as LangGraph Service
+    participant WF as DatabaseWorkflow
+    participant AI as OpenAI GPT-4
+    participant DB as Database Client
+    participant PG as PostgreSQL DB
     
-    User->>StreamlitUI: Enter natural language query
-    StreamlitUI->>StreamlitUI: Validate input
-    StreamlitUI->>FastAPI: POST /process_query
-    Note over StreamlitUI,FastAPI: {"user_input": "How many customers?", "api_key": "..."}
+    U->>UI: Enter natural language query
+    UI->>UI: Validate input
+    UI->>API: POST /process_query
+    Note over UI,API: Request: user_input + api_key
     
-    FastAPI->>FastAPI: Validate API key
-    FastAPI->>Workflow: process_query(user_input)
+    API->>API: Validate API key
+    API->>WF: process_query(user_input)
     
-    Workflow->>DBClient: get_schema()
-    DBClient->>PostgreSQL: SELECT table_name, column_name...
-    PostgreSQL-->>DBClient: Schema metadata
-    DBClient-->>Workflow: Formatted schema string
+    WF->>DB: get_schema()
+    DB->>PG: SELECT table_name, column_name...
+    PG-->>DB: Schema metadata
+    DB-->>WF: Formatted schema string
     
-    Workflow->>OpenAI: Analyze intent + schema context
-    Note over Workflow,OpenAI: System prompt + user query + schema
-    OpenAI-->>Workflow: Intent: QUERY, SQL: SELECT COUNT(*)...
+    WF->>AI: Analyze intent + schema context
+    Note over WF,AI: System prompt + user query + schema
+    AI-->>WF: Intent: QUERY, SQL: SELECT COUNT(*)...
     
-    Workflow->>DBClient: execute_query(sql)
-    DBClient->>PostgreSQL: Execute SQL query
-    PostgreSQL-->>DBClient: Query results
-    DBClient-->>Workflow: Formatted results
+    WF->>DB: execute_query(sql)
+    DB->>PG: Execute SQL query
+    PG-->>DB: Query results
+    DB-->>WF: Formatted results
     
-    Workflow->>OpenAI: Format response for user
-    Note over Workflow,OpenAI: Results + formatting instructions
-    OpenAI-->>Workflow: "You have 10 customers"
+    WF->>AI: Format response for user
+    Note over WF,AI: Results + formatting instructions
+    AI-->>WF: User-friendly response
     
-    Workflow-->>FastAPI: final_response
-    FastAPI-->>StreamlitUI: QueryResponse JSON
-    StreamlitUI->>StreamlitUI: Display response
-    StreamlitUI-->>User: Show formatted answer
+    WF-->>API: final_response
+    API-->>UI: QueryResponse JSON
+    UI->>UI: Display response
+    UI-->>U: Show formatted answer
 ```
 
 #### 3.2 Schema Discovery Process
 
 ```mermaid
 sequenceDiagram
-    participant Workflow as DatabaseWorkflow
-    participant DBClient as Database Client
-    participant PostgreSQL as PostgreSQL DB
+    participant WF as DatabaseWorkflow
+    participant DB as Database Client
+    participant PG as PostgreSQL DB
     
-    Workflow->>DBClient: get_schema()
-    DBClient->>PostgreSQL: Query information_schema.tables
-    PostgreSQL-->>DBClient: Table names
+    WF->>DB: get_schema()
+    DB->>PG: Query information_schema.tables
+    PG-->>DB: Table names
     
     loop For each table
-        DBClient->>PostgreSQL: Query information_schema.columns
-        PostgreSQL-->>DBClient: Column details (name, type, nullable)
-        DBClient->>PostgreSQL: Query table constraints
-        PostgreSQL-->>DBClient: Primary keys, foreign keys
+        DB->>PG: Query information_schema.columns
+        PG-->>DB: Column details (name, type, nullable)
+        DB->>PG: Query table constraints
+        PG-->>DB: Primary keys, foreign keys
     end
     
-    DBClient->>DBClient: Format schema as structured text
-    Note over DBClient: Creates human-readable schema description
-    DBClient-->>Workflow: Complete schema string
+    DB->>DB: Format schema as structured text
+    Note over DB: Creates human-readable schema description
+    DB-->>WF: Complete schema string
 ```
 
 #### 3.3 Error Handling and Clarification Flow
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant StreamlitUI as Streamlit UI
-    participant Workflow as DatabaseWorkflow
-    participant OpenAI as OpenAI GPT-4
-    participant DBClient as Database Client
+    participant U as User
+    participant UI as Streamlit UI
+    participant WF as DatabaseWorkflow
+    participant AI as OpenAI GPT-4
+    participant DB as Database Client
     
-    User->>StreamlitUI: "Show me sales data"
-    StreamlitUI->>Workflow: process_query()
+    U->>UI: "Show me sales data"
+    UI->>WF: process_query()
     
-    Workflow->>DBClient: get_schema()
-    DBClient-->>Workflow: Schema with sales table
+    WF->>DB: get_schema()
+    DB-->>WF: Schema with sales table
     
-    Workflow->>OpenAI: Analyze ambiguous query
-    OpenAI-->>Workflow: Intent: CLARIFY
-    Note over OpenAI,Workflow: Query too vague, needs clarification
+    WF->>AI: Analyze ambiguous query
+    AI-->>WF: Intent: CLARIFY
+    Note over AI,WF: Query too vague, needs clarification
     
-    Workflow->>OpenAI: Generate clarification question
-    OpenAI-->>Workflow: "What specific sales data? Recent sales, by customer, by product?"
+    WF->>AI: Generate clarification question
+    AI-->>WF: Clarification question
     
-    Workflow-->>StreamlitUI: Clarification response
-    StreamlitUI-->>User: Display clarification question
+    WF-->>UI: Clarification response
+    UI-->>U: Display clarification question
     
-    User->>StreamlitUI: "Recent sales from last month"
-    StreamlitUI->>Workflow: process_query() with context
+    U->>UI: "Recent sales from last month"
+    UI->>WF: process_query() with context
     
-    Workflow->>OpenAI: Analyze with clarification
-    OpenAI-->>Workflow: Intent: QUERY, SQL with date filter
+    WF->>AI: Analyze with clarification
+    AI-->>WF: Intent: QUERY, SQL with date filter
     
-    Workflow->>DBClient: execute_query()
-    DBClient-->>Workflow: Results
-    Workflow-->>StreamlitUI: Final response
+    WF->>DB: execute_query()
+    DB-->>WF: Results
+    WF-->>UI: Final response
 ```
 
 ## Technical Implementation Details
@@ -302,7 +302,7 @@ sequenceDiagram
 ### 4. Data Flow Architecture
 
 ```mermaid
-flowchart TD
+graph TD
     A[User Input] --> B{Input Validation}
     B -->|Valid| C[API Authentication]
     B -->|Invalid| Z[Error Response]
@@ -685,33 +685,38 @@ graph TB
 ### 13. Roadmap Architecture
 
 ```mermaid
-timeline
+gantt
     title System Evolution Roadmap
-    
+    dateFormat  YYYY-MM-DD
     section Phase 1 (Current)
-        Basic NL to SQL : Single database support
-                        : Direct PostgreSQL connection
-                        : OpenAI GPT-4 integration
+    Basic NL to SQL           :done, phase1, 2024-01-01, 2024-12-31
+    Single database support   :done, phase1a, 2024-01-01, 2024-06-30
+    Direct PostgreSQL connection :done, phase1b, 2024-07-01, 2024-09-30
+    OpenAI GPT-4 integration  :done, phase1c, 2024-10-01, 2024-12-31
     
     section Phase 2 (Q1 2025)
-        Multi-database : MySQL, SQLite support
-                       : Database abstraction layer
-                       : Connection management
+    Multi-database support    :phase2, 2025-01-01, 2025-03-31
+    MySQL, SQLite support     :phase2a, 2025-01-01, 2025-02-28
+    Database abstraction layer :phase2b, 2025-02-01, 2025-03-31
+    Connection management     :phase2c, 2025-03-01, 2025-03-31
     
     section Phase 3 (Q2 2025)
-        Advanced Features : Query optimization
-                          : Result caching
-                          : User preferences
+    Advanced Features         :phase3, 2025-04-01, 2025-06-30
+    Query optimization        :phase3a, 2025-04-01, 2025-05-15
+    Result caching           :phase3b, 2025-05-01, 2025-06-15
+    User preferences         :phase3c, 2025-06-01, 2025-06-30
     
     section Phase 4 (Q3 2025)
-        Enterprise Features : Multi-tenant support
-                            : Advanced security
-                            : Audit logging
+    Enterprise Features       :phase4, 2025-07-01, 2025-09-30
+    Multi-tenant support     :phase4a, 2025-07-01, 2025-08-15
+    Advanced security        :phase4b, 2025-08-01, 2025-09-15
+    Audit logging           :phase4c, 2025-09-01, 2025-09-30
     
     section Phase 5 (Q4 2025)
-        AI Enhancements : Custom model fine-tuning
-                        : Advanced reasoning
-                        : Predictive analytics
+    AI Enhancements          :phase5, 2025-10-01, 2025-12-31
+    Custom model fine-tuning :phase5a, 2025-10-01, 2025-11-15
+    Advanced reasoning       :phase5b, 2025-11-01, 2025-12-15
+    Predictive analytics     :phase5c, 2025-12-01, 2025-12-31
 ```
 
 ## Consequences
