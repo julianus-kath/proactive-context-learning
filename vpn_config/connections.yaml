@@ -6,6 +6,6 @@ connections:
     port: 1433
     database: "master"  # or your target database
     user: "SimonM"  # Your SQL Server username
-    password: "${SQLSERVER_PASSWORD}"
+    password: "${SQLSERVER_PASSWORD:-your_password_here}"  # Use env var or fallback
     encrypt: true
     trust_server_certificate: true

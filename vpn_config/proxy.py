@@ -100,32 +100,58 @@ limiter = Limiter(
 )
 limiter.init_app(app)
 
-# Validate required configuration
-if not PROXY_API_KEY:
-    raise RuntimeError("PROXY_API_KEY environment variable is required")
+# Validate configuration (made optional for development)
+DEVELOPMENT_MODE = os.getenv("PROXY_DEVELOPMENT_MODE", "false").lower() == "true"
 
-if not PROXY_TLS_CERT_FILE or not PROXY_TLS_KEY_FILE:
-    raise RuntimeError("Both PROXY_TLS_CERT_FILE and PROXY_TLS_KEY_FILE environment variables are required for HTTPS")
+if not DEVELOPMENT_MODE:
+    # Production mode - require all security features
+    if not PROXY_API_KEY:
+        raise RuntimeError("PROXY_API_KEY environment variable is required")
 
-if not os.path.exists(PROXY_TLS_CERT_FILE):
-    raise RuntimeError(f"TLS certificate file not found: {PROXY_TLS_CERT_FILE}")
+    if not PROXY_TLS_CERT_FILE or not PROXY_TLS_KEY_FILE:
+        raise RuntimeError("Both PROXY_TLS_CERT_FILE and PROXY_TLS_KEY_FILE environment variables are required for HTTPS")
 
-if not os.path.exists(PROXY_TLS_KEY_FILE):
-    raise RuntimeError(f"TLS key file not found: {PROXY_TLS_KEY_FILE}")
+    if not os.path.exists(PROXY_TLS_CERT_FILE):
+        raise RuntimeError(f"TLS certificate file not found: {PROXY_TLS_CERT_FILE}")
+
+    if not os.path.exists(PROXY_TLS_KEY_FILE):
+        raise RuntimeError(f"TLS key file not found: {PROXY_TLS_KEY_FILE}")
+else:
+    # Development mode - make security optional
+    safe_print("⚠️  DEVELOPMENT MODE ENABLED - Security features are optional!")
+    if not PROXY_API_KEY:
+        safe_print("⚠️  No API key set - authentication disabled")
+    if not PROXY_TLS_CERT_FILE or not PROXY_TLS_KEY_FILE:
+        safe_print("⚠️  No TLS certificates - HTTP mode enabled")
 
 # --- Multi-Database Configuration (YAML-based) ---
 
 def expand_env_vars(text):
-    """Expand ${VAR} environment variables in text."""
+    """Expand ${VAR} environment variables in text with optional defaults."""
     if not isinstance(text, str):
         return text
     
-    # Use string.Template for safe environment variable expansion
-    template = string.Template(text)
-    try:
-        return template.substitute(os.environ)
-    except KeyError as e:
-        raise RuntimeError(f"Environment variable not found: {e}")
+    # Handle ${VAR:-default} syntax manually
+    import re
+    def replace_with_default(match):
+        var_expr = match.group(1)
+        if ':-' in var_expr:
+            var_name, default_value = var_expr.split(':-', 1)
+            return os.environ.get(var_name, default_value)
+        else:
+            var_name = var_expr
+            if var_name not in os.environ:
+                if DEVELOPMENT_MODE:
+                    # In development mode, warn but don't fail
+                    safe_print(f"⚠️  Environment variable {var_name} not set, using placeholder")
+                    return f"MISSING_{var_name}"
+                else:
+                    raise RuntimeError(f"Environment variable not found: {var_name}")
+            return os.environ[var_name]
+    
+    # Replace ${VAR} and ${VAR:-default} patterns
+    result = re.sub(r'\$\{([^}]+)\}', replace_with_default, text)
+    return result
 
 
 def load_connections_config():
@@ -292,7 +318,11 @@ def before_request():
     if request.endpoint == 'health':
         return
     
-    # Check for API key header
+    # Check for API key header (optional in development mode)
+    if DEVELOPMENT_MODE and not PROXY_API_KEY:
+        # Development mode with no API key - skip authentication
+        return
+    
     api_key = request.headers.get('X-API-Key')
     if not api_key or api_key != PROXY_API_KEY:
         return jsonify({"ok": False, "error": "unauthorized", "code": "UNAUTHORIZED"}), 401
@@ -627,18 +657,35 @@ def query():
 
 
 if __name__ == "__main__":
-    # Create SSL context for HTTPS
-    ssl_context = (PROXY_TLS_CERT_FILE, PROXY_TLS_KEY_FILE)
+    # Determine if we should use HTTPS or HTTP
+    use_https = (PROXY_TLS_CERT_FILE and PROXY_TLS_KEY_FILE and 
+                 os.path.exists(PROXY_TLS_CERT_FILE) and 
+                 os.path.exists(PROXY_TLS_KEY_FILE))
     
-    safe_print(f"Starting HTTPS proxy server on {PROXY_BIND_HOST}:{PROXY_PORT}")
-    safe_print(f"Using certificate: {PROXY_TLS_CERT_FILE}")
-    safe_print(f"Using key: {PROXY_TLS_KEY_FILE}")
+    if use_https:
+        # HTTPS mode
+        ssl_context = (PROXY_TLS_CERT_FILE, PROXY_TLS_KEY_FILE)
+        safe_print(f"Starting HTTPS proxy server on {PROXY_BIND_HOST}:{PROXY_PORT}")
+        safe_print(f"Using certificate: {PROXY_TLS_CERT_FILE}")
+        safe_print(f"Using key: {PROXY_TLS_KEY_FILE}")
+        
+        app.run(
+            host=PROXY_BIND_HOST,
+            port=PROXY_PORT,
+            ssl_context=ssl_context,
+            debug=False  # Disable debug mode to prevent secret leakage
+        )
+    else:
+        # HTTP mode (development)
+        safe_print(f"Starting HTTP proxy server on {PROXY_BIND_HOST}:{PROXY_PORT}")
+        if DEVELOPMENT_MODE:
+            safe_print("⚠️  HTTP mode - not secure for production!")
+        
+        app.run(
+            host=PROXY_BIND_HOST,
+            port=PROXY_PORT,
+            debug=False  # Disable debug mode to prevent secret leakage
+        )
+    
     safe_print("Proxy ready for connections!")
-    
-    app.run(
-        host=PROXY_BIND_HOST,
-        port=PROXY_PORT,
-        ssl_context=ssl_context,
-        debug=False  # Disable debug mode to prevent secret leakage
-    )
 
