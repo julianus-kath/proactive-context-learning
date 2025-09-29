@@ -100,29 +100,12 @@ limiter = Limiter(
 )
 limiter.init_app(app)
 
-# Validate configuration (made optional for development)
-DEVELOPMENT_MODE = os.getenv("PROXY_DEVELOPMENT_MODE", "false").lower() == "true"
-
-if not DEVELOPMENT_MODE:
-    # Production mode - require all security features
-    if not PROXY_API_KEY:
-        raise RuntimeError("PROXY_API_KEY environment variable is required")
-
-    if not PROXY_TLS_CERT_FILE or not PROXY_TLS_KEY_FILE:
-        raise RuntimeError("Both PROXY_TLS_CERT_FILE and PROXY_TLS_KEY_FILE environment variables are required for HTTPS")
-
-    if not os.path.exists(PROXY_TLS_CERT_FILE):
-        raise RuntimeError(f"TLS certificate file not found: {PROXY_TLS_CERT_FILE}")
-
-    if not os.path.exists(PROXY_TLS_KEY_FILE):
-        raise RuntimeError(f"TLS key file not found: {PROXY_TLS_KEY_FILE}")
-else:
-    # Development mode - make security optional
-    safe_print("⚠️  DEVELOPMENT MODE ENABLED - Security features are optional!")
-    if not PROXY_API_KEY:
-        safe_print("⚠️  No API key set - authentication disabled")
-    if not PROXY_TLS_CERT_FILE or not PROXY_TLS_KEY_FILE:
-        safe_print("⚠️  No TLS certificates - HTTP mode enabled")
+# Simple configuration - no mandatory security for development
+safe_print("🚀 SQL Proxy starting in simple mode...")
+if not PROXY_API_KEY:
+    safe_print("⚠️  No API key set - authentication disabled")
+if not PROXY_TLS_CERT_FILE or not PROXY_TLS_KEY_FILE:
+    safe_print("⚠️  No TLS certificates - HTTP mode enabled")
 
 # --- Multi-Database Configuration (YAML-based) ---
 
@@ -141,12 +124,9 @@ def expand_env_vars(text):
         else:
             var_name = var_expr
             if var_name not in os.environ:
-                if DEVELOPMENT_MODE:
-                    # In development mode, warn but don't fail
-                    safe_print(f"⚠️  Environment variable {var_name} not set, using placeholder")
-                    return f"MISSING_{var_name}"
-                else:
-                    raise RuntimeError(f"Environment variable not found: {var_name}")
+                # Just warn and use placeholder - don't fail
+                safe_print(f"⚠️  Environment variable {var_name} not set, using placeholder")
+                return f"MISSING_{var_name}"
             return os.environ[var_name]
     
     # Replace ${VAR} and ${VAR:-default} patterns
@@ -318,9 +298,9 @@ def before_request():
     if request.endpoint == 'health':
         return
     
-    # Check for API key header (optional in development mode)
-    if DEVELOPMENT_MODE and not PROXY_API_KEY:
-        # Development mode with no API key - skip authentication
+    # Check for API key header (optional if no key is set)
+    if not PROXY_API_KEY:
+        # No API key configured - skip authentication
         return
     
     api_key = request.headers.get('X-API-Key')
@@ -665,7 +645,7 @@ if __name__ == "__main__":
     if use_https:
         # HTTPS mode
         ssl_context = (PROXY_TLS_CERT_FILE, PROXY_TLS_KEY_FILE)
-        safe_print(f"Starting HTTPS proxy server on {PROXY_BIND_HOST}:{PROXY_PORT}")
+        safe_print(f"🔒 Starting HTTPS proxy server on {PROXY_BIND_HOST}:{PROXY_PORT}")
         safe_print(f"Using certificate: {PROXY_TLS_CERT_FILE}")
         safe_print(f"Using key: {PROXY_TLS_KEY_FILE}")
         
@@ -673,19 +653,23 @@ if __name__ == "__main__":
             host=PROXY_BIND_HOST,
             port=PROXY_PORT,
             ssl_context=ssl_context,
-            debug=False  # Disable debug mode to prevent secret leakage
+            debug=False
         )
     else:
-        # HTTP mode (development)
-        safe_print(f"Starting HTTP proxy server on {PROXY_BIND_HOST}:{PROXY_PORT}")
-        if DEVELOPMENT_MODE:
-            safe_print("⚠️  HTTP mode - not secure for production!")
+        # HTTP mode - simple and works out of the box
+        safe_print(f"🌐 Starting HTTP proxy server on {PROXY_BIND_HOST}:{PROXY_PORT}")
+        safe_print("⚠️  HTTP mode - add TLS certificates for production security")
+        safe_print("")
+        safe_print("🎯 Access URLs:")
+        safe_print(f"   Health: http://{PROXY_BIND_HOST}:{PROXY_PORT}/health")
+        safe_print(f"   Diag:   http://{PROXY_BIND_HOST}:{PROXY_PORT}/diag")
+        safe_print("")
+        safe_print("Press Ctrl+C to stop")
+        safe_print("=" * 50)
         
         app.run(
             host=PROXY_BIND_HOST,
             port=PROXY_PORT,
-            debug=False  # Disable debug mode to prevent secret leakage
+            debug=False
         )
-    
-    safe_print("Proxy ready for connections!")
 
