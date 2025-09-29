@@ -1,7 +1,7 @@
 connections:
   corp_sql_erp:
     type: mssql
-    driver: "ODBC Driver 18 for SQL Server"
+    driver: "ODBC Driver 17 for SQL Server"
     host: "192.168.200.16"  # Your SQL Server IP
     port: 1433
     database: "master"  # or your target database
