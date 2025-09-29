@@ -95,10 +95,10 @@ app.config['MAX_CONTENT_LENGTH'] = PROXY_MAX_REQUEST_SIZE
 
 # Initialize rate limiter
 limiter = Limiter(
-    app,
     key_func=get_remote_address,
     default_limits=[f"{PROXY_RATE_LIMIT_PER_MINUTE} per minute"]
 )
+limiter.init_app(app)
 
 # Validate required configuration
 if not PROXY_API_KEY:
