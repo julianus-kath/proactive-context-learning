@@ -74,7 +74,6 @@ This makes SQL Server reachable for development without direct VPN or complex tu
 ## Consequences
 
 * ✅ **Mac can now access SQL Server** indirectly for dev/testing.
-* ✅ Works on Eduroam or hotspot (any LAN with both devices).
 * ✅ No changes needed on SonicWall or SQL Server config.
 * ⚠️ Requires the Windows laptop to be on, VPN connected, and proxy running.
 * ⚠️ Credentials are stored in environment variables → must be handled carefully.
