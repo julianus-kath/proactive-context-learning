@@ -17,43 +17,70 @@ We have implemented a multi-layered architecture with the following key componen
 
 ```mermaid
 graph TB
-    subgraph "User Interface Layer"
-        UI[Streamlit Web UI<br/>Port 8501]
-        CLI[CLI Interface<br/>Optional]
+    subgraph "Mac Development Environment"
+        subgraph "User Interface Layer"
+            UI[Streamlit Web UI<br/>Port 3000]
+            CLI[CLI Interface<br/>Optional]
+        end
+        
+        subgraph "API Gateway Layer"
+            LG[LangGraph Service<br/>FastAPI - Port 5001]
+        end
+        
+        subgraph "Core Processing Layer"
+            WF[DatabaseWorkflow<br/>LangGraph Orchestrator]
+            AI[OpenAI GPT-4<br/>Language Model]
+        end
+        
+        subgraph "Data Access Layer"
+            ADAPTER[Database Adapter<br/>Proxy Integration]
+            DB_CLIENT[Database Client<br/>Unified Interface]
+            MCP[MCP Server<br/>Port 8000 - Optional]
+        end
+        
+        subgraph "Local Development"
+            PG[(PostgreSQL<br/>synthetic_erp_data<br/>Port 5432)]
+        end
     end
     
-    subgraph "API Gateway Layer"
-        LG[LangGraph Service<br/>FastAPI - Port 5001]
+    subgraph "Network Boundary"
+        HTTPS[HTTPS/TLS<br/>Encrypted Communication]
     end
     
-    subgraph "Core Processing Layer"
-        WF[DatabaseWorkflow<br/>LangGraph Orchestrator]
-        AI[OpenAI GPT-4<br/>Language Model]
-    end
-    
-    subgraph "Data Access Layer"
-        DB_CLIENT[Direct Database Client<br/>asyncpg]
-        MCP[MCP Server<br/>Port 8000 - Optional]
-    end
-    
-    subgraph "Data Storage Layer"
-        PG[(PostgreSQL<br/>synthetic_erp_data<br/>Port 5432)]
+    subgraph "Windows Proxy Environment"
+        PROXY[SQL Proxy Server<br/>Python Flask<br/>Port 5000]
+        
+        subgraph "Production ERP Databases"
+            SQL1[(SQL Server<br/>ERP Database)]
+            SQL2[(SQL Server<br/>Analytics DB)]
+        end
     end
     
     UI --> LG
     CLI --> WF
     LG --> WF
     WF --> AI
-    WF --> DB_CLIENT
+    WF --> ADAPTER
     WF --> MCP
-    DB_CLIENT --> PG
-    MCP --> PG
+    ADAPTER --> DB_CLIENT
+    MCP --> ADAPTER
+    
+    DB_CLIENT -->|DB_MODE=direct| PG
+    DB_CLIENT -->|DB_MODE=proxy| HTTPS
+    
+    HTTPS --> PROXY
+    PROXY --> SQL1
+    PROXY --> SQL2
     
     style UI fill:#e1f5fe
     style LG fill:#f3e5f5
     style WF fill:#fff3e0
+    style ADAPTER fill:#e8f5e8
     style DB_CLIENT fill:#e8f5e8
-    style PG fill:#fce4ec
+    style PROXY fill:#fff8e1
+    style SQL1 fill:#fce4ec
+    style SQL2 fill:#fce4ec
+    style HTTPS fill:#ffebee
 ```
 
 ## System Architecture
@@ -88,9 +115,10 @@ graph LR
     end
     
     subgraph "Database Layer"
-        N[Database Client<br/>Direct Connection]
-        O[Connection Pool<br/>asyncpg]
-        P[Query Execution<br/>Safe SQL Execution]
+        N[Database Client<br/>Unified Interface]
+        O[Database Adapter<br/>Compatibility Layer]
+        P[Proxy Handler<br/>HTTPS Communication]
+        Q[Direct Handler<br/>asyncpg Connection]
     end
     
     A --> D
@@ -106,9 +134,10 @@ graph LR
     J --> K
     K --> L
     K --> M
-    G --> N
-    N --> O
+    G --> O
+    O --> N
     N --> P
+    N --> Q
 ```
 
 ### 2. Class Diagram
@@ -148,13 +177,31 @@ classDiagram
     }
     
     class DatabaseClient {
-        -pool: asyncpg.Pool
-        -connection_string: str
-        +__init__(connection_string: str)
-        +initialize_pool()
+        -mode: str
+        -proxy_config: ProxyConfig
+        -pg_config: PostgreSQLConfig
+        +__init__(mode: str)
         +get_schema() str
         +execute_query(sql: str) List[Dict]
-        +close()
+        +test_connection() bool
+        -_execute_proxy_query(sql: str) List[Dict]
+        -_execute_direct_query(sql: str) List[Dict]
+    }
+    
+    class DatabaseAdapter {
+        -client: DatabaseClient
+        +get_available_tools() List[Tool]
+        +call_tool(name: str, args: Dict) ToolResult
+        -_handle_sql_differences(sql: str) str
+        -_format_schema_info(schema: str) str
+    }
+    
+    class ProxyDBClient {
+        -client: DatabaseClient
+        +get_schema() str
+        +execute_query(sql: str) List[Dict]
+        +fix_query_syntax(sql: str) str
+        -_convert_limit_to_top(sql: str) str
     }
     
     class QueryRequest {
@@ -182,7 +229,10 @@ classDiagram
     
     StreamlitApp --> LangGraphService : HTTP Requests
     LangGraphService --> DatabaseWorkflow : Direct Calls
-    DatabaseWorkflow --> DatabaseClient : Database Operations
+    DatabaseWorkflow --> DatabaseAdapter : MCP Integration
+    DatabaseWorkflow --> ProxyDBClient : LangGraph Integration
+    DatabaseAdapter --> DatabaseClient : Database Operations
+    ProxyDBClient --> DatabaseClient : Database Operations
     DatabaseWorkflow --> ChatOpenAI : AI Processing
     LangGraphService ..> QueryRequest : Uses
     LangGraphService ..> QueryResponse : Returns
@@ -202,6 +252,8 @@ sequenceDiagram
     participant WF as DatabaseWorkflow
     participant AI as OpenAI GPT-4
     participant DB as Database Client
+    participant PROXY as Windows Proxy
+    participant SQL as SQL Server
     participant PG as PostgreSQL DB
     
     U->>UI: Enter natural language query
@@ -213,8 +265,18 @@ sequenceDiagram
     API->>WF: process_query(user_input)
     
     WF->>DB: get_schema()
-    DB->>PG: SELECT table_name, column_name...
-    PG-->>DB: Schema metadata
+    
+    alt DB_MODE=proxy
+        DB->>PROXY: GET /schema (HTTPS)
+        PROXY->>SQL: Query information_schema
+        SQL-->>PROXY: Schema metadata
+        PROXY-->>DB: JSON schema response
+        DB->>DB: Convert SQL Server to PostgreSQL format
+    else DB_MODE=direct
+        DB->>PG: SELECT table_name, column_name...
+        PG-->>DB: Schema metadata
+    end
+    
     DB-->>WF: Formatted schema string
     
     WF->>AI: Analyze intent + schema context
@@ -222,8 +284,18 @@ sequenceDiagram
     AI-->>WF: Intent: QUERY, SQL: SELECT COUNT(*)...
     
     WF->>DB: execute_query(sql)
-    DB->>PG: Execute SQL query
-    PG-->>DB: Query results
+    
+    alt DB_MODE=proxy
+        DB->>DB: Convert PostgreSQL to SQL Server syntax
+        DB->>PROXY: POST /query (HTTPS)
+        PROXY->>SQL: Execute SQL query
+        SQL-->>PROXY: Query results
+        PROXY-->>DB: JSON results
+    else DB_MODE=direct
+        DB->>PG: Execute SQL query
+        PG-->>DB: Query results
+    end
+    
     DB-->>WF: Formatted results
     
     WF->>AI: Format response for user
@@ -423,13 +495,14 @@ erDiagram
 
 ### 6. Architecture Decisions
 
-#### 6.1 Direct Database Connection vs HTTP Layer
-**Decision**: Use direct database connection with asyncpg  
+#### 6.1 Hybrid Database Access Architecture
+**Decision**: Support both direct database connection and proxy-based access  
 **Rationale**: 
-- Eliminates HTTP overhead and potential connection issues
-- Provides better performance and reliability
-- Simplifies the architecture by removing the MCP server dependency
-- Enables connection pooling for better resource management
+- Direct mode (asyncpg) for local development with synthetic data
+- Proxy mode (HTTPS) for secure production ERP database access
+- Environment-based switching via DB_MODE configuration
+- Maintains security boundaries between development and production environments
+- Enables adapter pattern for seamless integration
 
 #### 6.2 LangGraph for Workflow Orchestration
 **Decision**: Use LangGraph StateGraph for query processing workflow  

@@ -1,22 +1,9 @@
-INFO:     Started server process [75060]
+INFO:     Started server process [6859]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:3000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:65038 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65038 - "GET /script.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65039 - "GET /styles.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65049 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65060 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65421 - "GET / HTTP/1.1" 200 OK
-WARNING:  Invalid HTTP request received.
-WARNING:  Invalid HTTP request received.
-WARNING:  Invalid HTTP request received.
-WARNING:  Invalid HTTP request received.
-WARNING:  Invalid HTTP request received.
-WARNING:  Invalid HTTP request received.
-WARNING:  Invalid HTTP request received.
-WARNING:  Invalid HTTP request received.
-WARNING:  Invalid HTTP request received.
-WARNING:  Invalid HTTP request received.
-WARNING:  Invalid HTTP request received.
-WARNING:  Invalid HTTP request received.
+INFO:     127.0.0.1:61217 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61217 - "GET /styles.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61221 - "GET /script.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61227 - "GET /apple-touch-icon-precomposed.png HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61227 - "GET /apple-touch-icon.png HTTP/1.1" 404 Not Found

@@ -71,8 +71,8 @@ async def startup_event():
     """Initialize the database connection on startup."""
     global db_manager
     try:
-        from db import DatabaseManager
-        db_manager = DatabaseManager()
+        from database_adapter import DatabaseAdapter
+        db_manager = DatabaseAdapter()
         await db_manager.initialize()
         logger.info("✅ MCP Database Server initialized successfully")
     except Exception as e:

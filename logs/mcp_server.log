@@ -12,9 +12,12 @@
         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
         
   @app.on_event("shutdown")
-INFO:     Started server process [75051]
+INFO:     Started server process [6849]
 INFO:     Waiting for application startup.
-INFO:db:Database connection pool initialized
+INFO:app.db.client:DatabaseClient initialized in proxy mode: http://192.168.1.35:5000
+INFO:app.db.client:Default connection: corp_sql_erp
+INFO:database_adapter:DatabaseAdapter initialized in proxy mode
+INFO:database_adapter:✅ Proxy connection verified
 INFO:__main__:✅ MCP Database Server initialized successfully
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)

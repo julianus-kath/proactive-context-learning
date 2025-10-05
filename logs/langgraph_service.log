@@ -1,390 +1,172 @@
-INFO:     Started server process [75052]
+2025-10-05 12:56:13.587 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-10-05 12:56:13.588 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-10-05 12:56:13.690 
+  [33m[1mWarning:[0m to view this Streamlit app on a browser, run it with the following
+  command:
+
+    streamlit run /Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/.venv/lib/python3.11/site-packages/uvicorn/__main__.py [ARGUMENTS]
+2025-10-05 12:56:13.690 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-10-05 12:56:13.690 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+INFO:     Started server process [6850]
 INFO:     Waiting for application startup.
 INFO:langgraph_integration.graph_definition:Testing OpenAI API key...
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:5001 (Press CTRL+C to quit)
 🚀 Initializing LangGraph workflow...
 ✅ LangGraph workflow initialized successfully
-INFO:     127.0.0.1:64912 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65029 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65036 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65042 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65047 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65051 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65062 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65067 - "OPTIONS /process_conversation HTTP/1.1" 200 OK
-INFO:mcp_server.db:Database connection pool initialized
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
+INFO:     127.0.0.1:61214 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61224 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61234 - "OPTIONS /process_conversation HTTP/1.1" 200 OK
+INFO:db.client:DatabaseClient initialized in proxy mode: http://192.168.1.35:5000
+INFO:db.client:Default connection: corp_sql_erp
+INFO:langgraph_integration.proxy_db_client:ProxyDatabaseClient initialized in proxy mode
+INFO:langgraph_integration.proxy_db_client:Proxy URL: http://192.168.1.35:5000
+INFO:langgraph_integration.proxy_db_client:Default connection: corp_sql_erp
+ERROR:db.client:Proxy request failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+ERROR:langgraph_integration.proxy_db_client:Error getting schemas: Proxy connection failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_db: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_dev: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_usg: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_monitor: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_values: unsupported operand type(s) for +=: 'int' and 'str'
+INFO:langgraph_integration.proxy_db_client:Database indexed: 10 tables, 0 columns across 1 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 1 schemas: dbo
+INFO:db.schema_cache:InMemorySchemaCache initialized with TTL=3600s
+INFO:db.schema_cache:Schema cache initialized: backend=memory, ttl=3600s
+INFO:langgraph_integration.proxy_db_client:Fetching schema from database (cache miss or refresh)
+ERROR:db.client:Proxy request failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+ERROR:langgraph_integration.proxy_db_client:Error getting schemas: Proxy connection failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+INFO:db.schema_cache:Schema cached: 5 tables indexed at 2025-10-05T12:56:58.977747
+INFO:langgraph_integration.proxy_db_client:Schema cached: 5 tables indexed
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully (cached if available)
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT p.name, SUM(op.amount) AS total_sold FROM w...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT p.name, SUM(op.amount) AS total_sold FROM webshop.order_positions op JOIN webshop.articles a ON op.articleid = a.id JOIN webshop.products p ON a.productid = p.id JOIN webshop.order o ON op.orderid = o.id WHERE EXTRACT(MONTH FROM o.ordertimestamp) = 5 GROUP BY p.name ORDER BY total_sold DESC LIMIT 1
+INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT CONCAT('dbo.', table_name) as full_table_na...
+INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT CONCAT('dbo.', table_name) as full_table_name FROM information_schema.tables WHERE table_schema = 'dbo' ORDER BY table_name
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
 INFO:langgraph_integration.graph_definition:Results formatted successfully
 📝 Processing conversation with 2 messages...
-📝 Last user message: What was our most popular product in May...
+📝 Last user message: what tables do you have access to?...
 ✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65067 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT p.name, SUM(op.amount) AS total_sold FROM w...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT p.name, SUM(op.amount) AS total_sold FROM webshop.order_positions op JOIN webshop.articles a ON op.articleid = a.id JOIN webshop.products p ON a.productid = p.id JOIN webshop.order o ON op.orderid = o.id WHERE EXTRACT(MONTH FROM o.ordertimestamp) = 6 GROUP BY p.name ORDER BY total_sold DESC LIMIT 1
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 5 messages...
-📝 Last user message: and in June?...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65075 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT p.name, EXTRACT(MONTH FROM o.ordertimestamp...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT p.name, EXTRACT(MONTH FROM o.ordertimestamp) AS month, SUM(op.amount) AS total_sold FROM webshop.order_positions op JOIN webshop.order o ON op.orderid = o.id JOIN webshop.articles a ON op.articleid = a.id JOIN webshop.products p ON a.productid = p.id WHERE p.name != 'Classic T-Shirt' GROUP BY p.name, month ORDER BY total_sold DESC
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 8 messages...
-📝 Last user message: What months were other products more popular?...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65084 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT p.name, EXTRACT(MONTH FROM o.ordertimestamp...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT p.name, EXTRACT(MONTH FROM o.ordertimestamp) AS month, SUM(op.amount) AS total_sold FROM webshop.order_positions op JOIN webshop.order o ON op.orderid = o.id JOIN webshop.articles a ON op.articleid = a.id JOIN webshop.products p ON a.productid = p.id WHERE EXTRACT(MONTH FROM o.ordertimestamp) = 5 OR EXTRACT(MONTH FROM o.ordertimestamp) = 6 GROUP BY p.name, month ORDER BY month, total_sold DESC
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 11 messages...
-📝 Last user message: But you just said Classic T-shirt was the most popular in May...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65094 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT COUNT(*) FROM webshop.order_positions op JO...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT COUNT(*) FROM webshop.order_positions op JOIN webshop.articles a ON op.articleid = a.id JOIN webshop.products p ON a.productid = p.id WHERE p.name = 'Sports Jacket'
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 14 messages...
-📝 Last user message: And how often was the Sports Jacket sold?...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65101 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT SUM(op.amount) FROM webshop.order_positions...
-ERROR:mcp_server.db:Query execution failed: column op.created does not exist
-HINT:  Perhaps you meant to reference the column "p.created".
-ERROR:langgraph_integration.direct_db_client:Error executing query: column op.created does not exist
-HINT:  Perhaps you meant to reference the column "p.created".
-INFO:langgraph_integration.graph_definition:Attempting to retry query (attempt 1): SELECT SUM(op.amount) FROM webshop.order_positions op JOIN webshop.articles a ON op.articleid = a.id JOIN webshop.products p ON a.productid = p.id WHERE p.name = 'Sports Jacket' AND EXTRACT(MONTH FROM op.created) = 5
-ERROR:mcp_server.db:Query execution failed: column op.created does not exist
-HINT:  Perhaps you meant to reference the column "p.created".
-ERROR:langgraph_integration.direct_db_client:Error executing query: column op.created does not exist
-HINT:  Perhaps you meant to reference the column "p.created".
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Error handled successfully
-📝 Processing conversation with 17 messages...
-📝 Last user message: in may...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65104 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT COUNT(op.id) FROM webshop.order_positions o...
-ERROR:mcp_server.db:Query execution failed: column op.created does not exist
-HINT:  Perhaps you meant to reference the column "p.created".
-ERROR:langgraph_integration.direct_db_client:Error executing query: column op.created does not exist
-HINT:  Perhaps you meant to reference the column "p.created".
-INFO:langgraph_integration.graph_definition:Attempting to retry query (attempt 1): SELECT COUNT(op.id) FROM webshop.order_positions op JOIN webshop.articles a ON op.articleid = a.id JOIN webshop.products p ON a.productid = p.id WHERE p.name = 'Sports Jacket' AND EXTRACT(MONTH FROM op.created) = 5
-ERROR:mcp_server.db:Query execution failed: column op.created does not exist
-HINT:  Perhaps you meant to reference the column "p.created".
-ERROR:langgraph_integration.direct_db_client:Error executing query: column op.created does not exist
-HINT:  Perhaps you meant to reference the column "p.created".
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Error handled successfully
-📝 Processing conversation with 20 messages...
-📝 Last user message: yes use this extract month function...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65110 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['specific criteria for ordering new t-shirts, such as stock levels, sales trends, or time period']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: To determine when to order new t-shirts, it would be helpful to know what criteria you want to use. ...
-📝 Processing conversation with 23 messages...
-📝 Last user message: hmm okay. When should we order new t-shirts?...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:65116 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT p.name, SUM(op.amount) AS total_sold, s.cou...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT p.name, SUM(op.amount) AS total_sold, s.count AS current_stock FROM webshop.products p JOIN webshop.articles a ON p.id = a.productid JOIN webshop.order_positions op ON a.id = op.articleid JOIN webshop.stock s ON a.id = s.articleid GROUP BY p.name, s.count ORDER BY total_sold DESC LIMIT 1
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 26 messages...
-📝 Last user message: Take the current stock levels and look at the orders for different stock items. Which was the most p...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65126 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['specific time period for reordering']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: To determine the best time to reorder the most popular item, would you like to consider a specific t...
-📝 Processing conversation with 29 messages...
-📝 Last user message: And when should we order them?...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:65132 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT p.name, SUM(op.amount) AS total_sold FROM w...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT p.name, SUM(op.amount) AS total_sold FROM webshop.order_positions op JOIN webshop.articles a ON op.articleid = a.id JOIN webshop.products p ON a.productid = p.id GROUP BY p.name ORDER BY total_sold DESC LIMIT 1
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 32 messages...
-📝 Last user message: yes take the month with the highest number of items sold as reference...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65146 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT EXTRACT(MONTH FROM o.ordertimestamp) AS mon...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT EXTRACT(MONTH FROM o.ordertimestamp) AS month, SUM(op.amount) AS total_sold FROM webshop.order o JOIN webshop.order_positions op ON o.id = op.orderid JOIN webshop.articles a ON op.articleid = a.id JOIN webshop.products p ON a.productid = p.id WHERE p.name = 'Classic T-Shirt' GROUP BY month ORDER BY total_sold DESC LIMIT 1
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 35 messages...
-📝 Last user message: During which month?...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65159 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT EXTRACT(MONTH FROM o.ordertimestamp) AS mon...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT EXTRACT(MONTH FROM o.ordertimestamp) AS month, SUM(op.amount) AS total_units_sold, p.name AS most_sold_product, MIN(s.count) AS reorder_threshold FROM webshop.order o JOIN webshop.order_positions op ON o.id = op.orderid JOIN webshop.articles a ON op.articleid = a.id JOIN webshop.products p ON a.productid = p.id JOIN webshop.stock s ON a.id = s.articleid GROUP BY month, p.name ORDER BY total_units_sold DESC LIMIT 1
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 38 messages...
-📝 Last user message: Okay now everything in one response. Which month had the highest number of units sold, what was the ...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65191 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['current stock level of Classic T-Shirt']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: To clarify the reorder point for the Classic T-Shirt, could you please provide the current stock lev...
-📝 Processing conversation with 41 messages...
-📝 Last user message: but earlier you said below 40?...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:65195 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT ws.count FROM webshop.stock ws JOIN webshop...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT ws.count FROM webshop.stock ws JOIN webshop.articles wa ON ws.articleid = wa.id JOIN webshop.products wp ON wa.productid = wp.id WHERE wp.name = 'Classic T-Shirt'
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 44 messages...
-📝 Last user message: whats the current stock level...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65202 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['specific product names corresponding to stock levels']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you please provide the specific product names or IDs that correspond to the current stock leve...
-📝 Processing conversation with 47 messages...
-📝 Last user message: to which items?...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:65239 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT p.name, p.id, s.count FROM webshop.products...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT p.name, p.id, s.count FROM webshop.products p JOIN webshop.articles a ON p.id = a.productid JOIN webshop.stock s ON a.id = s.articleid
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 50 messages...
-📝 Last user message: I dont know what they are, you should tell me? You gave me several numbers and I dont know what ID/ ...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65255 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65275 - "OPTIONS /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT p.name, SUM(s.count) AS stock FROM webshop....
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT p.name, SUM(s.count) AS stock FROM webshop.products p JOIN webshop.articles a ON p.id = a.productid JOIN webshop.stock s ON a.id = s.articleid GROUP BY p.name
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 53 messages...
-📝 Last user message: Whats the stock of our different items? Name the item and the stock...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65275 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT p.name, s.count FROM webshop.products p JOI...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT p.name, s.count FROM webshop.products p JOIN webshop.articles a ON p.id = a.productid JOIN webshop.stock s ON a.id = s.articleid
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 56 messages...
-📝 Last user message: Whats the stock of our different items? Name the item and the stock...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65283 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT p.name, SUM(s.count) AS stock FROM webshop....
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT p.name, SUM(s.count) AS stock FROM webshop.products p JOIN webshop.articles a ON p.id = a.productid JOIN webshop.stock s ON a.id = s.articleid GROUP BY p.name
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 59 messages...
-📝 Last user message: Whats the stock of our different items? Name the item and the stock...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65283 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT p.name, SUM(s.count) AS stock FROM webshop....
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT p.name, SUM(s.count) AS stock FROM webshop.products p JOIN webshop.articles a ON p.id = a.productid JOIN webshop.stock s ON a.id = s.articleid GROUP BY p.name
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 62 messages...
-📝 Last user message: Whats the stock of our different items? Name the item and the stock...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65287 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT p.name, SUM(s.count) AS stock FROM webshop....
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT p.name, SUM(s.count) AS stock FROM webshop.products p JOIN webshop.articles a ON p.id = a.productid JOIN webshop.stock s ON a.id = s.articleid GROUP BY p.name
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 65 messages...
-📝 Last user message: Whats the stock of our different items? Name the item and the stock...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65287 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT CONCAT(table_schema, '.', table_name) as fu...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT CONCAT(table_schema, '.', table_name) as full_table_name, column_name FROM information_schema.columns WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast') ORDER BY table_schema, table_name, ordinal_position
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 68 messages...
-📝 Last user message: what are the tables you have available an d columns for each one...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65352 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
+INFO:     127.0.0.1:61234 - "POST /process_conversation HTTP/1.1" 200 OK
+ERROR:db.client:Proxy request failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+ERROR:langgraph_integration.proxy_db_client:Error getting schemas: Proxy connection failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_db: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_dev: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_usg: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_monitor: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_values: unsupported operand type(s) for +=: 'int' and 'str'
+INFO:langgraph_integration.proxy_db_client:Database indexed: 10 tables, 0 columns across 1 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 1 schemas: dbo
+INFO:langgraph_integration.proxy_db_client:Using cached schema (cache hit)
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully (cached if available)
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
 INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT CONCAT(table_schema, '.', table_name) as fu...
 INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT CONCAT(table_schema, '.', table_name) as full_table_name FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast') ORDER BY table_schema, table_name
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
 INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 71 messages...
-📝 Last user message: name all tables...
+📝 Processing conversation with 5 messages...
+📝 Last user message: is that it?...
 ✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65358 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
+INFO:     127.0.0.1:61253 - "POST /process_conversation HTTP/1.1" 200 OK
+ERROR:db.client:Proxy request failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+ERROR:langgraph_integration.proxy_db_client:Error getting schemas: Proxy connection failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_db: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_dev: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_usg: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_monitor: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_values: unsupported operand type(s) for +=: 'int' and 'str'
+INFO:langgraph_integration.proxy_db_client:Database indexed: 10 tables, 0 columns across 1 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 1 schemas: dbo
+INFO:langgraph_integration.proxy_db_client:Using cached schema (cache hit)
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully (cached if available)
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT column_name FROM information_schema.columns...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT column_name FROM information_schema.columns WHERE table_schema = 'webshop' AND table_name = 'order'
+INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT COUNT(*) FROM (SELECT 'dbo.spt_fallback_db'...
+ERROR:db.client:Proxy request failed: 429 Client Error: TOO MANY REQUESTS for url: http://192.168.1.35:5000/query
+ERROR:langgraph_integration.proxy_db_client:Error executing query: Proxy connection failed: 429 Client Error: TOO MANY REQUESTS for url: http://192.168.1.35:5000/query
+INFO:langgraph_integration.graph_definition:Attempting to retry query (attempt 1): SELECT COUNT(*) FROM (SELECT 'dbo.spt_fallback_db' AS table_name UNION ALL SELECT 'dbo.spt_fallback_dev' UNION ALL SELECT 'dbo.spt_fallback_usg' UNION ALL SELECT 'dbo.spt_monitor' UNION ALL SELECT 'dbo.spt_values') AS tables
+ERROR:db.client:Proxy request failed: 429 Client Error: TOO MANY REQUESTS for url: http://192.168.1.35:5000/query
+ERROR:langgraph_integration.proxy_db_client:Error executing query: Proxy connection failed: 429 Client Error: TOO MANY REQUESTS for url: http://192.168.1.35:5000/query
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:langgraph_integration.graph_definition:Error handled successfully
+📝 Processing conversation with 8 messages...
+📝 Last user message: wie viele Tabellen siehst du?...
+✅ Conversation processed successfully - Operation: query
+INFO:     127.0.0.1:61372 - "POST /process_conversation HTTP/1.1" 200 OK
+ERROR:db.client:Proxy request failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+ERROR:langgraph_integration.proxy_db_client:Error getting schemas: Proxy connection failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_db: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_dev: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_usg: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_monitor: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_values: unsupported operand type(s) for +=: 'int' and 'str'
+INFO:langgraph_integration.proxy_db_client:Database indexed: 10 tables, 0 columns across 1 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 1 schemas: dbo
+INFO:langgraph_integration.proxy_db_client:Using cached schema (cache hit)
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully (cached if available)
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT 'dbo.spt_fallback_db', 'dbo.spt_fallback_de...
+INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT 'dbo.spt_fallback_db', 'dbo.spt_fallback_dev', 'dbo.spt_fallback_usg', 'dbo.spt_monitor', 'dbo.spt_values'
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
 INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 74 messages...
-📝 Last user message: column in webshop.order?...
+📝 Processing conversation with 11 messages...
+📝 Last user message: Auf welche Tabellen hast du zugriff?...
 ✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65365 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
+INFO:     127.0.0.1:61391 - "POST /process_conversation HTTP/1.1" 200 OK
+ERROR:db.client:Proxy request failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+ERROR:langgraph_integration.proxy_db_client:Error getting schemas: Proxy connection failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_db: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_dev: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_usg: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_monitor: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_values: unsupported operand type(s) for +=: 'int' and 'str'
+INFO:langgraph_integration.proxy_db_client:Database indexed: 10 tables, 0 columns across 1 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 1 schemas: dbo
+INFO:langgraph_integration.proxy_db_client:Using cached schema (cache hit)
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully (cached if available)
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT ordertimestamp FROM webshop.order ORDER BY ...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT ordertimestamp FROM webshop.order ORDER BY ordertimestamp LIMIT 5
+INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ["specific product category or identifier for 'Ø56 Material'", 'time period for when the material needs to be ordered']
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:langgraph_integration.graph_definition:Generated clarification: Could you please provide more details about the 'Ø56 Material'? Specifically, do you have a product ...
+📝 Processing conversation with 14 messages...
+📝 Last user message: Wann müssen wir neues Ø56 Material bestellen...
+✅ Conversation processed successfully - Operation: clarify
+INFO:     127.0.0.1:61405 - "POST /process_conversation HTTP/1.1" 200 OK
+ERROR:db.client:Proxy request failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+ERROR:langgraph_integration.proxy_db_client:Error getting schemas: Proxy connection failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_db: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_dev: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_usg: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_monitor: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_values: unsupported operand type(s) for +=: 'int' and 'str'
+INFO:langgraph_integration.proxy_db_client:Database indexed: 10 tables, 0 columns across 1 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 1 schemas: dbo
+INFO:langgraph_integration.proxy_db_client:Using cached schema (cache hit)
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully (cached if available)
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ["specific product identifier for 'Ø56 Material'", 'table containing inventory data', 'table containing order data', 'table containing lead time data']
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:langgraph_integration.graph_definition:Generated clarification: Could you please provide the specific product identifier or name for the 'Ø56 Material'? Additionall...
+📝 Processing conversation with 17 messages...
+📝 Last user message: Hängt ab von aktuellem Lagerbestand (Rohmaterial, Halbfertigprodukte), Bestellungen und Wiederbescha...
+✅ Conversation processed successfully - Operation: clarify
+INFO:     127.0.0.1:61430 - "POST /process_conversation HTTP/1.1" 200 OK
+ERROR:db.client:Proxy request failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+ERROR:langgraph_integration.proxy_db_client:Error getting schemas: Proxy connection failed: 400 Client Error: BAD REQUEST for url: http://192.168.1.35:5000/query
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_db: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_dev: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_fallback_usg: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_monitor: unsupported operand type(s) for +=: 'int' and 'str'
+WARNING:langgraph_integration.proxy_db_client:Could not get column count for dbo.spt_values: unsupported operand type(s) for +=: 'int' and 'str'
+INFO:langgraph_integration.proxy_db_client:Database indexed: 10 tables, 0 columns across 1 schemas
+INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 1 schemas: dbo
+INFO:langgraph_integration.proxy_db_client:Using cached schema (cache hit)
+INFO:langgraph_integration.graph_definition:Schema retrieved successfully (cached if available)
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT CONCAT(table_schema, '.', table_name) as fu...
+INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT CONCAT(table_schema, '.', table_name) as full_table_name FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast') ORDER BY table_schema, table_name
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
 INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 77 messages...
-📝 Last user message: name me the first 5 ordertimstamp entries...
+📝 Processing conversation with 20 messages...
+📝 Last user message: What do you see I the current schema?...
 ✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65371 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT COUNT(*) FROM webshop.order...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT COUNT(*) FROM webshop.order
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 80 messages...
-📝 Last user message: how many orders do we have in total...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65376 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT EXTRACT(YEAR FROM ordertimestamp) AS year, ...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT EXTRACT(YEAR FROM ordertimestamp) AS year, COUNT(*) AS order_count FROM webshop.order WHERE EXTRACT(YEAR FROM ordertimestamp) IN (2023, 2024, 2025) GROUP BY year
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 83 messages...
-📝 Last user message: okay and how many were done in 2023, 2024 and 2025...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65381 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT EXTRACT(YEAR FROM ordertimestamp) AS year, ...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT EXTRACT(YEAR FROM ordertimestamp) AS year, COUNT(*) AS order_count FROM webshop.order GROUP BY year ORDER BY order_count DESC LIMIT 1
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 86 messages...
-📝 Last user message: In which year did we have the most orders?...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65385 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:65424 - "GET /health HTTP/1.1" 200 OK
-INFO:langgraph_integration.direct_db_client:Database indexed: 10 tables across 2 schemas
-INFO:langgraph_integration.graph_definition:Database indexed: 10 tables across 2 schemas: public, webshop
-INFO:langgraph_integration.graph_definition:Schema retrieved successfully
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT COUNT(*) FROM webshop.order WHERE EXTRACT(Y...
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT COUNT(*) FROM webshop.order WHERE EXTRACT(YEAR FROM ordertimestamp) = 2023
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 2 messages...
-📝 Last user message: How many orders did we have in 2023...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:65429 - "POST /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61446 - "POST /process_conversation HTTP/1.1" 200 OK

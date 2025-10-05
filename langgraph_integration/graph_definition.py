@@ -25,14 +25,17 @@ from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 
-from .direct_db_client import (
+from .proxy_db_client import (
     get_database_schema, 
     execute_sql_query, 
     execute_sql_query_with_retry,
     get_table_information, 
     health_check,
     index_database,
-    get_all_schemas
+    get_all_schemas,
+    # PHASE 1: New imports for selective schema loading
+    get_schema_index,
+    get_selective_schema
 )
 from .prompts import (
     format_intent_parser_prompt,
@@ -50,7 +53,12 @@ logger = logging.getLogger(__name__)
 
 # State definition for the workflow
 class WorkflowState(TypedDict):
-    """State for the LangGraph workflow."""
+    """
+    State for the LangGraph workflow.
+    
+    PHASE 1 ENHANCEMENT: Added session_used_tables and relevant_tables
+    for selective schema loading.
+    """
     messages: List[Dict[str, Any]]
     user_input: str
     intent_analysis: Optional[Dict[str, Any]]
@@ -61,6 +69,9 @@ class WorkflowState(TypedDict):
     error_info: Optional[Dict[str, Any]]
     final_response: Optional[str]
     retry_count: int
+    # PHASE 1: New fields for selective schema loading
+    session_used_tables: Optional[List[str]]  # Tables used in this session
+    relevant_tables: Optional[List[str]]  # Tables selected for current query
 
 
 @dataclass
@@ -123,6 +134,7 @@ class DatabaseWorkflow:
         workflow.add_node("parse_intent", self._parse_intent)
         workflow.add_node("clarify", self._clarify)
         workflow.add_node("get_schema", self._get_schema)
+        workflow.add_node("select_tables", self._select_tables)  # PHASE 1: New node
         workflow.add_node("generate_sql", self._generate_sql)
         workflow.add_node("execute_query", self._execute_query)
         workflow.add_node("execute_direct", self._execute_direct)
@@ -142,16 +154,19 @@ class DatabaseWorkflow:
             self._route_after_intent,
             {
                 "clarify": "clarify",
-                "query": "generate_sql",
+                "query": "select_tables",  # PHASE 1: Route to table selection first
                 "execute_direct": "execute_direct",
                 "schema_query": "explain_schema",
-                "data_query": "generate_sql",
-                "analysis_query": "generate_sql",
+                "data_query": "select_tables",  # PHASE 1: Route to table selection first
+                "analysis_query": "select_tables",  # PHASE 1: Route to table selection first
                 "sample_data": "show_sample_data",
                 "health_check": "health_check",
                 "error": "handle_error"
             }
         )
+        
+        # PHASE 1: Table selection before SQL generation
+        workflow.add_edge("select_tables", "generate_sql")
         
         # Schema query path
         workflow.add_edge("explain_schema", "format_results")
@@ -359,6 +374,9 @@ class DatabaseWorkflow:
         """
         Get database schema from MCP server.
         
+        PHASE 1 NOTE: This now uses caching internally. First call indexes,
+        subsequent calls use cached data.
+        
         Args:
             state: Current workflow state
             
@@ -368,7 +386,7 @@ class DatabaseWorkflow:
         try:
             schema = await get_database_schema()
             state["schema"] = schema
-            logger.info("Schema retrieved successfully")
+            logger.info("Schema retrieved successfully (cached if available)")
             
         except Exception as e:
             logger.error(f"Error getting schema: {e}")
@@ -377,6 +395,59 @@ class DatabaseWorkflow:
                 "message": str(e),
                 "context": "Failed to retrieve database schema"
             }
+        
+        return state
+    
+    async def _select_tables(self, state: WorkflowState) -> WorkflowState:
+        """
+        Select relevant tables for the query.
+        
+        PHASE 1 NEW METHOD: Uses heuristic-based table selection to identify
+        the 1-3 most relevant tables for the user's query. This dramatically
+        reduces prompt size and improves LLM focus.
+        
+        Args:
+            state: Current workflow state
+            
+        Returns:
+            Updated state with relevant_tables and selective schema
+        """
+        try:
+            from app.db.table_selector import select_relevant_tables
+            
+            user_input = state["user_input"]
+            session_tables = state.get("session_used_tables", [])
+            
+            # Get schema index
+            schema_index = await get_schema_index()
+            
+            if not schema_index:
+                logger.warning("Schema index not available, using full schema")
+                return state
+            
+            # Select relevant tables
+            relevant_tables = select_relevant_tables(
+                query=user_input,
+                schema_index=schema_index,
+                session_tables=session_tables,
+                top_k=3
+            )
+            
+            state["relevant_tables"] = relevant_tables
+            logger.info(f"Selected {len(relevant_tables)} relevant tables: {relevant_tables}")
+            
+            # Build selective schema snippet
+            if relevant_tables:
+                schema_snippet = await get_selective_schema(relevant_tables)
+                state["schema"] = schema_snippet
+                logger.info(f"Using selective schema ({len(schema_snippet)} chars vs full schema)")
+            else:
+                logger.warning("No relevant tables found, using full schema")
+            
+        except Exception as e:
+            logger.error(f"Error selecting tables: {e}")
+            # Don't fail the workflow, just use full schema
+            logger.info("Falling back to full schema")
         
         return state
     
@@ -464,6 +535,8 @@ class DatabaseWorkflow:
         """
         Execute SQL query via MCP server.
         
+        PHASE 1 ENHANCEMENT: Now tracks used tables for session context.
+        
         Args:
             state: Current workflow state
             
@@ -489,6 +562,17 @@ class DatabaseWorkflow:
             else:
                 state["query_results"] = results
                 logger.info("Query executed successfully")
+                
+                # PHASE 1: Track used tables for session context
+                if state.get("relevant_tables"):
+                    session_tables = state.get("session_used_tables", [])
+                    # Add relevant tables to session (keep last 5 unique)
+                    for table in state["relevant_tables"]:
+                        if table not in session_tables:
+                            session_tables.append(table)
+                    # Keep only last 5 tables
+                    state["session_used_tables"] = session_tables[-5:]
+                    logger.debug(f"Session tables updated: {state['session_used_tables']}")
             
         except Exception as e:
             logger.error(f"Error executing query: {e}")

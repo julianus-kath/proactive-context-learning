@@ -96,57 +96,166 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-# Check if PostgreSQL is running
-echo -e "${YELLOW}🔍 Checking PostgreSQL...${NC}"
-if ! pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
-    echo -e "${YELLOW}⚠️  PostgreSQL is not running. Starting it...${NC}"
+# Load environment variables early to check DB_MODE
+if [ -f ".env" ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+fi
+
+# Determine database mode
+DB_MODE=${DB_MODE:-"local"}
+echo -e "${BLUE}🔍 Database Mode: ${DB_MODE}${NC}"
+
+if [ "$DB_MODE" = "proxy" ]; then
+    # ============================================
+    # PROXY MODE - Check Windows proxy connection
+    # ============================================
+    echo -e "${YELLOW}🔍 Checking Windows proxy connection...${NC}"
     
-    # Try to start PostgreSQL using Homebrew
-    if command -v brew &> /dev/null; then
-        brew services start postgresql@14 2>/dev/null || brew services start postgresql 2>/dev/null || {
-            echo -e "${RED}❌ Failed to start PostgreSQL with Homebrew${NC}"
-            echo -e "${YELLOW}💡 Please start PostgreSQL manually:${NC}"
-            echo -e "   brew services start postgresql"
-            echo -e "   or"
-            echo -e "   sudo systemctl start postgresql"
-            exit 1
-        }
-        sleep 3
-    else
-        echo -e "${RED}❌ PostgreSQL is not running and Homebrew is not available${NC}"
-        echo -e "${YELLOW}💡 Please start PostgreSQL manually${NC}"
+    PROXY_BASE_URL=${PROXY_BASE_URL:-""}
+    PROXY_API_KEY=${PROXY_API_KEY:-""}
+    
+    if [ -z "$PROXY_BASE_URL" ]; then
+        echo -e "${RED}❌ PROXY_BASE_URL not set in .env${NC}"
+        echo -e "${YELLOW}💡 Please configure proxy settings in .env:${NC}"
+        echo -e "   DB_MODE=proxy"
+        echo -e "   PROXY_BASE_URL=http://your-windows-ip:5000"
+        echo -e "   PROXY_API_KEY=your-api-key (or leave empty if no auth)"
+        echo -e "   PROXY_DEFAULT_CONN=corp_sql_erp"
         exit 1
     fi
-fi
-
-# Verify PostgreSQL is now running
-if pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
-    echo -e "${GREEN}✅ PostgreSQL is running${NC}"
-else
-    echo -e "${RED}❌ PostgreSQL failed to start${NC}"
-    exit 1
-fi
-
-# Check if the database exists
-echo -e "${YELLOW}🔍 Checking database 'synthetic_erp_data'...${NC}"
-if ! psql -h localhost -p 5432 -U juli -d synthetic_erp_data -c "SELECT 1;" >/dev/null 2>&1; then
-    echo -e "${YELLOW}⚠️  Database 'synthetic_erp_data' not found. Creating it...${NC}"
-    createdb -h localhost -p 5432 -U juli synthetic_erp_data 2>/dev/null || {
-        echo -e "${RED}❌ Failed to create database${NC}"
-        echo -e "${YELLOW}💡 Please create the database manually:${NC}"
-        echo -e "   createdb -U juli synthetic_erp_data"
+    
+    # Parse proxy URL for connectivity test
+    PROXY_HOST=$(echo $PROXY_BASE_URL | sed -e 's|^[^/]*//||' -e 's|:.*||')
+    PROXY_PORT=$(echo $PROXY_BASE_URL | sed -e 's|^[^:]*:||' -e 's|/.*||' | grep -o '[0-9]*')
+    PROXY_PORT=${PROXY_PORT:-5000}
+    
+    echo -e "${YELLOW}   Testing connection to ${PROXY_HOST}:${PROXY_PORT}...${NC}"
+    
+    # Test network connectivity
+    if command -v nc &> /dev/null; then
+        if nc -z -w 5 $PROXY_HOST $PROXY_PORT 2>/dev/null; then
+            echo -e "${GREEN}✅ Proxy server is reachable${NC}"
+        else
+            echo -e "${RED}❌ Cannot connect to proxy server${NC}"
+            echo -e "${YELLOW}💡 Please check:${NC}"
+            echo -e "   1. Windows proxy is running: python vpn_config/proxy.py"
+            echo -e "   2. Windows firewall allows port ${PROXY_PORT}"
+            echo -e "   3. IP address is correct: ${PROXY_HOST}"
+            exit 1
+        fi
+    else
+        # Fallback to curl if nc not available
+        if curl -s --connect-timeout 5 "${PROXY_BASE_URL}/health" >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ Proxy server is reachable${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Cannot verify proxy connectivity (install 'nc' for better checks)${NC}"
+            echo -e "${YELLOW}   Continuing anyway...${NC}"
+        fi
+    fi
+    
+    # Test proxy health endpoint
+    echo -e "${YELLOW}   Testing proxy health endpoint...${NC}"
+    
+    if [ -n "$PROXY_API_KEY" ]; then
+        HEALTH_RESPONSE=$(curl -s -w "\n%{http_code}" --connect-timeout 10 \
+            -H "X-API-Key: ${PROXY_API_KEY}" \
+            "${PROXY_BASE_URL}/health" 2>/dev/null)
+    else
+        HEALTH_RESPONSE=$(curl -s -w "\n%{http_code}" --connect-timeout 10 \
+            "${PROXY_BASE_URL}/health" 2>/dev/null)
+    fi
+    
+    HTTP_CODE=$(echo "$HEALTH_RESPONSE" | tail -n1)
+    
+    if [ "$HTTP_CODE" = "200" ]; then
+        echo -e "${GREEN}✅ Proxy health check passed${NC}"
+        
+        # Show proxy info if available (BSD-compatible: remove last line)
+        PROXY_INFO=$(echo "$HEALTH_RESPONSE" | sed '$d')
+        if echo "$PROXY_INFO" | grep -q "connections"; then
+            CONN_COUNT=$(echo "$PROXY_INFO" | grep -o '"connections":\[[^]]*\]' | grep -o '{' | wc -l | tr -d ' ')
+            if [ "$CONN_COUNT" -gt 0 ]; then
+                echo -e "${GREEN}   Found ${CONN_COUNT} database connection(s)${NC}"
+            fi
+        fi
+    elif [ "$HTTP_CODE" = "401" ]; then
+        echo -e "${RED}❌ Proxy authentication failed${NC}"
+        echo -e "${YELLOW}💡 Check PROXY_API_KEY in .env matches Windows proxy${NC}"
         exit 1
-    }
+    elif [ -z "$HTTP_CODE" ]; then
+        echo -e "${RED}❌ Proxy is not responding${NC}"
+        echo -e "${YELLOW}💡 Please start Windows proxy: python vpn_config/proxy.py${NC}"
+        exit 1
+    else
+        echo -e "${YELLOW}⚠️  Proxy returned status code: ${HTTP_CODE}${NC}"
+        echo -e "${YELLOW}   Continuing anyway...${NC}"
+    fi
+    
+    echo -e "${GREEN}✅ Proxy mode configured and ready${NC}"
+    
+else
+    # ============================================
+    # LOCAL MODE - Check PostgreSQL
+    # ============================================
+    echo -e "${YELLOW}🔍 Checking PostgreSQL...${NC}"
+    
+    if ! pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
+        echo -e "${YELLOW}⚠️  PostgreSQL is not running. Starting it...${NC}"
+        
+        # Try to start PostgreSQL using Homebrew
+        if command -v brew &> /dev/null; then
+            brew services start postgresql@14 2>/dev/null || brew services start postgresql 2>/dev/null || {
+                echo -e "${RED}❌ Failed to start PostgreSQL with Homebrew${NC}"
+                echo -e "${YELLOW}💡 Please start PostgreSQL manually:${NC}"
+                echo -e "   brew services start postgresql"
+                echo -e "   or"
+                echo -e "   sudo systemctl start postgresql"
+                exit 1
+            }
+            sleep 3
+        else
+            echo -e "${RED}❌ PostgreSQL is not running and Homebrew is not available${NC}"
+            echo -e "${YELLOW}💡 Please start PostgreSQL manually${NC}"
+            exit 1
+        fi
+    fi
+    
+    # Verify PostgreSQL is now running
+    if pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
+        echo -e "${GREEN}✅ PostgreSQL is running${NC}"
+    else
+        echo -e "${RED}❌ PostgreSQL failed to start${NC}"
+        exit 1
+    fi
+    
+    # Check if the database exists
+    DB_NAME=${DB_NAME:-"synthetic_erp_data"}
+    DB_USER=${DB_USER:-"juli"}
+    
+    echo -e "${YELLOW}🔍 Checking database '${DB_NAME}'...${NC}"
+    if ! psql -h localhost -p 5432 -U $DB_USER -d $DB_NAME -c "SELECT 1;" >/dev/null 2>&1; then
+        echo -e "${YELLOW}⚠️  Database '${DB_NAME}' not found. Creating it...${NC}"
+        createdb -h localhost -p 5432 -U $DB_USER $DB_NAME 2>/dev/null || {
+            echo -e "${RED}❌ Failed to create database${NC}"
+            echo -e "${YELLOW}💡 Please create the database manually:${NC}"
+            echo -e "   createdb -U $DB_USER $DB_NAME"
+            exit 1
+        }
+    fi
+    
+    # Check and restore database data if needed
+    echo -e "${YELLOW}🔍 Checking database data...${NC}"
+    if ! psql -h localhost -p 5432 -U $DB_USER -d $DB_NAME -c "SELECT COUNT(*) FROM products;" >/dev/null 2>&1; then
+        echo -e "${YELLOW}⚠️  Database tables missing. Restoring...${NC}"
+        if [ -f "restore_database.py" ]; then
+            python3 restore_database.py
+        else
+            echo -e "${YELLOW}⚠️  restore_database.py not found, skipping...${NC}"
+        fi
+    fi
+    
+    echo -e "${GREEN}✅ Local database setup complete${NC}"
 fi
-
-# Check and restore database data if needed
-echo -e "${YELLOW}🔍 Checking database data...${NC}"
-if ! psql -h localhost -p 5432 -U juli -d synthetic_erp_data -c "SELECT COUNT(*) FROM products;" >/dev/null 2>&1; then
-    echo -e "${YELLOW}⚠️  Database tables missing. Restoring...${NC}"
-    python3 restore_database.py
-fi
-
-echo -e "${GREEN}✅ Database setup complete${NC}"
 
 # Check and install dependencies
 echo -e "${YELLOW}🔍 Checking Python dependencies...${NC}"
@@ -197,19 +306,31 @@ OPENAI_API_KEY=your_openai_api_key_here
 LANGGRAPH_URL=http://localhost:5001
 API_KEY=supersecretapikey
 
-# Database Configuration
+# Database Configuration Mode
+# Options: "local" (PostgreSQL on Mac) or "proxy" (Windows proxy server)
+DB_MODE=local
+
+# Local PostgreSQL Configuration (used when DB_MODE=local)
 DB_TYPE=postgresql
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=mywebshop
+DB_NAME=synthetic_erp_data
 DB_USER=juli
 DB_PASSWORD=
+
+# Proxy Configuration (used when DB_MODE=proxy)
+# Uncomment and configure these if using Windows proxy:
+# PROXY_BASE_URL=http://192.168.1.35:5000
+# PROXY_API_KEY=your-api-key-here
+# PROXY_DEFAULT_CONN=corp_sql_erp
+# PROXY_TLS_VERIFY=false
 
 # MCP Server Configuration
 MCP_SERVER_URL=http://localhost:8000
 MCP_API_KEY=supersecretapikey
 EOF
     echo -e "${YELLOW}⚠️  Please edit .env file and add your OPENAI_API_KEY${NC}"
+    echo -e "${YELLOW}⚠️  Configure DB_MODE (local or proxy) based on your setup${NC}"
 fi
 
 # Load environment variables
@@ -405,11 +526,15 @@ else
     echo -e "${YELLOW}⚠️  MCP Server: Not running${NC}"
 fi
 
-# Check PostgreSQL
-if pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
-    echo -e "${GREEN}✅ PostgreSQL: Running on port 5432${NC}"
+# Check Database Backend
+if [ "$DB_MODE" = "proxy" ]; then
+    echo -e "${GREEN}✅ Database: Proxy mode (${PROXY_BASE_URL})${NC}"
 else
-    echo -e "${RED}❌ PostgreSQL: Not running${NC}"
+    if pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
+        echo -e "${GREEN}✅ Database: Local PostgreSQL on port 5432${NC}"
+    else
+        echo -e "${RED}❌ Database: PostgreSQL not running${NC}"
+    fi
 fi
 
 echo -e "\n${BLUE}📋 Quick Access URLs:${NC}"
