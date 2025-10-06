@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions
 
 echo.
 echo ========================================
@@ -7,70 +7,43 @@ echo   MCP Server Startup (Windows)
 echo ========================================
 echo.
 
-rem --- Normalize script directory (remove trailing backslash) ---
-set "SCRIPT_DIR=%~dp0"
-if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
+rem --- Resolve PROJECT_ROOT robustly (parent of this folder) ---
+pushd "%~dp0\.."
+set "PROJECT_ROOT=%CD%"
+popd
 
-rem --- Compute project root (one level above vpn_config) ---
-for %%I in ("%SCRIPT_DIR%\..") do set "PROJECT_ROOT=%%~fI"
+rem --- Prefer project virtualenv python (no fancy string ops) ---
+set "PYTHON_CMD=%PROJECT_ROOT%\.venv\Scripts\python.exe"
+if not exist "%PYTHON_CMD%" set "PYTHON_CMD=%PROJECT_ROOT%\venv\Scripts\python.exe"
+
+if not exist "%PYTHON_CMD%" (
+  echo [ERROR] No project venv found at:
+  echo   %PROJECT_ROOT%\.venv\Scripts\python.exe
+  echo   %PROJECT_ROOT%\venv\Scripts\python.exe
+  echo Create one and install deps, e.g.:
+  echo   python -m venv .venv
+  echo   .venv\Scripts\pip install -r mcp_server\requirements.txt
+  exit /b 1
+)
 
 echo Project Root: %PROJECT_ROOT%
+echo Using Python: %PYTHON_CMD%
 echo.
 
-rem --- Detect Python interpreter ---
-set "PYTHON_CMD="
-
-if exist "%PROJECT_ROOT%\.venv\Scripts\python.exe" (
-    set "PYTHON_CMD=%PROJECT_ROOT%\.venv\Scripts\python.exe"
-) else if exist "%PROJECT_ROOT%\venv\Scripts\python.exe" (
-    set "PYTHON_CMD=%PROJECT_ROOT%\venv\Scripts\python.exe"
-) else (
-    for /f "delims=" %%I in ('where py 2^>nul') do set "PYTHON_CMD=py -3.11"
-    if not defined PYTHON_CMD for /f "delims=" %%I in ('where python 2^>nul') do set "PYTHON_CMD=python"
+rem --- Optional: ensure uvicorn is present in THIS venv ---
+"%PYTHON_CMD%" -m uvicorn --version >nul 2>nul || (
+  echo Installing uvicorn into project venv...
+  "%PYTHON_CMD%" -m pip install -q --upgrade pip
+  "%PYTHON_CMD%" -m pip install -q "uvicorn[standard]" fastapi
 )
 
-if not defined PYTHON_CMD (
-    echo [ERROR] Kein Python gefunden (.venv, py -3.11, oder python auf PATH).
-    pause
-    exit /b 1
-)
-
-echo Verwende Python: %PYTHON_CMD%
-%PYTHON_CMD% --version || (
-    echo [ERROR] Python ist nicht lauffähig.
-    pause
-    exit /b 1
-)
-
-rem --- Ensure uvicorn is installed ---
-echo Überprüfe uvicorn Installation...
-%PYTHON_CMD% -m uvicorn --version >nul 2>nul
-if errorlevel 1 (
-    echo Installiere erforderliche Pakete...
-    %PYTHON_CMD% -m pip install --quiet --upgrade pip
-    %PYTHON_CMD% -m pip install --quiet "uvicorn[standard]" fastapi
-)
-
-rem --- Start the server ---
-if not exist "%PROJECT_ROOT%\mcp_server" (
-    echo [ERROR] Ordner mcp_server nicht gefunden.
-    pause
-    exit /b 1
-)
-
+rem --- Start the server from the correct working directory ---
 pushd "%PROJECT_ROOT%\mcp_server"
-echo Starte MCP Server auf 0.0.0.0:8000 ...
-echo (Mit Strg+C beenden)
+echo Starting MCP server on 0.0.0.0:8000 ...
+echo (Ctrl+C to stop)
 echo ========================================
-
-%PYTHON_CMD% -m uvicorn server:app --host 0.0.0.0 --port 8000 --reload --log-level debug
-
+"%PYTHON_CMD%" -m uvicorn server:app --host 0.0.0.0 --port 8000 --reload --log-level debug
 set "EC=%ERRORLEVEL%"
 popd
-echo.
-if not "%EC%"=="0" (
-    echo [ERROR] Uvicorn ist mit Code %EC% beendet.
-    echo - Prüfe Importpfade, belegte Ports oder fehlende Pakete.
-)
-pause
+
 exit /b %EC%
