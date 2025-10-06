@@ -1,10 +1,18 @@
 """
 MCP tools implementation for database operations.
+Phase 2: Added query_bounded tool with comprehensive safety controls.
+Phase 4: Added discovery tools (list_tables, search_tables, describe_table, list_relations).
+Phase 6: Added structured logging and observability.
 """
 
 import logging
+import json
 from typing import Dict, Any, List
 from models import MCPTool, MCPToolResult
+from mcp_server.bounded_query import execute_bounded_query
+from mcp_server.config import config
+from mcp_server.discovery_tools import DiscoveryTools
+from mcp_server.observability import log_tool_call
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +35,7 @@ class MCPTools:
             ),
             MCPTool(
                 name="query",
-                description="Execute a SELECT query against the database",
+                description="Execute a SELECT query against the database (legacy - use query_bounded for production)",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -47,8 +55,34 @@ class MCPTools:
                 }
             ),
             MCPTool(
+                name="query_bounded",
+                description="Execute a bounded SELECT query with comprehensive safety controls (validation, row caps, timeout, redaction)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "sql": {
+                            "type": "string",
+                            "description": "SQL SELECT query to execute"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum number of rows to return (default: 100, max: 1000)",
+                            "default": 100,
+                            "minimum": 1,
+                            "maximum": 1000
+                        },
+                        "enable_redaction": {
+                            "type": "boolean",
+                            "description": "Enable sensitive column redaction (default: true)",
+                            "default": True
+                        }
+                    },
+                    "required": ["sql"]
+                }
+            ),
+            MCPTool(
                 name="get_table_info",
-                description="Get detailed information about a specific table",
+                description="Get detailed information about a specific table (legacy - use describe_table for Phase 4)",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -60,37 +94,172 @@ class MCPTools:
                     "required": ["table_name"]
                 }
             ),
+            # Phase 4: Discovery tools
+            MCPTool(
+                name="list_tables",
+                description="List database tables with pagination and optional filtering (Phase 4 - catalog-backed, no DB hits)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "page": {
+                            "type": "integer",
+                            "description": "Page number (1-indexed, default: 1)",
+                            "default": 1,
+                            "minimum": 1
+                        },
+                        "page_size": {
+                            "type": "integer",
+                            "description": "Number of items per page (default: 25, max: 100)",
+                            "default": 25,
+                            "minimum": 1,
+                            "maximum": 100
+                        },
+                        "schema": {
+                            "type": "string",
+                            "description": "Filter by schema name (optional)"
+                        },
+                        "pattern": {
+                            "type": "string",
+                            "description": "Filter by table name pattern (optional, case-insensitive)"
+                        }
+                    },
+                    "required": []
+                }
+            ),
+            MCPTool(
+                name="search_tables",
+                description="Search tables by keyword across table names, schemas, and column names (Phase 4 - catalog-backed, no DB hits)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query (case-insensitive)"
+                        },
+                        "page": {
+                            "type": "integer",
+                            "description": "Page number (1-indexed, default: 1)",
+                            "default": 1,
+                            "minimum": 1
+                        },
+                        "page_size": {
+                            "type": "integer",
+                            "description": "Number of items per page (default: 25, max: 100)",
+                            "default": 25,
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    "required": ["query"]
+                }
+            ),
+            MCPTool(
+                name="describe_table",
+                description="Get detailed information about a specific table including columns, foreign keys, and primary keys (Phase 4 - catalog-backed, O(1) lookup)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "table_name": {
+                            "type": "string",
+                            "description": "Fully qualified table name (schema.table) or just table name"
+                        },
+                        "include_sample": {
+                            "type": "boolean",
+                            "description": "Include sample data (requires DB query, default: false)",
+                            "default": False
+                        }
+                    },
+                    "required": ["table_name"]
+                }
+            ),
+            MCPTool(
+                name="list_relations",
+                description="Get relationships (neighbors) for a specific table with join columns (Phase 4 - catalog-backed, O(1) lookup)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "table_name": {
+                            "type": "string",
+                            "description": "Fully qualified table name (schema.table) or just table name"
+                        }
+                    },
+                    "required": ["table_name"]
+                }
+            ),
         ]
     
     @staticmethod
     async def execute_tool(tool_name: str, arguments: Dict[str, Any], db_manager=None) -> MCPToolResult:
-        """Execute a specific tool."""
-        try:
-            if tool_name == "get_schema":
-                return await MCPTools._get_schema(arguments, db_manager)
-            elif tool_name == "query":
-                return await MCPTools._query(arguments, db_manager)
-            elif tool_name == "get_table_info":
-                return await MCPTools._get_table_info(arguments, db_manager)
-            elif tool_name == "get_sample_data":
-                return await MCPTools._get_sample_data(arguments, db_manager)
-            else:
+        """
+        Execute a specific tool with structured logging.
+        
+        Phase 6: All tool calls are logged with:
+        - Tool name
+        - Duration (ms)
+        - Cache hit/miss
+        - Row count (if applicable)
+        - Error details (if failed)
+        """
+        # Phase 6: Structured logging
+        with log_tool_call(tool_name, arguments) as metrics:
+            try:
+                result = None
+                
+                if tool_name == "get_schema":
+                    result = await MCPTools._get_schema(arguments, db_manager)
+                elif tool_name == "query":
+                    result = await MCPTools._query(arguments, db_manager)
+                elif tool_name == "query_bounded":
+                    result = await MCPTools._query_bounded(arguments, db_manager)
+                elif tool_name == "get_table_info":
+                    result = await MCPTools._get_table_info(arguments, db_manager)
+                elif tool_name == "get_sample_data":
+                    result = await MCPTools._get_sample_data(arguments, db_manager)
+                elif tool_name == "list_tables":
+                    result = await MCPTools._list_tables(arguments, db_manager)
+                elif tool_name == "search_tables":
+                    result = await MCPTools._search_tables(arguments, db_manager)
+                elif tool_name == "describe_table":
+                    result = await MCPTools._describe_table(arguments, db_manager)
+                elif tool_name == "list_relations":
+                    result = await MCPTools._list_relations(arguments, db_manager)
+                else:
+                    metrics.success = False
+                    metrics.error_code = "UNKNOWN_TOOL"
+                    metrics.error_category = "validation"
+                    return MCPToolResult(
+                        content=[{
+                            "type": "text",
+                            "text": f"Unknown tool: {tool_name}"
+                        }],
+                        isError=True
+                    )
+                
+                # Extract metrics from result if available
+                if result and hasattr(result, 'content') and result.content:
+                    content = result.content[0]
+                    if isinstance(content, dict) and content.get('type') == 'text':
+                        text = content.get('text', '')
+                        # Try to extract row count from result text
+                        if 'rows' in text.lower():
+                            import re
+                            match = re.search(r'(\d+)\s+rows?', text, re.IGNORECASE)
+                            if match:
+                                metrics.row_count = int(match.group(1))
+                
+                return result
+                
+            except Exception as e:
+                logger.error(f"Tool execution failed for {tool_name}: {e}")
+                metrics.success = False
+                metrics.error_message = str(e)
                 return MCPToolResult(
                     content=[{
                         "type": "text",
-                        "text": f"Unknown tool: {tool_name}"
+                        "text": f"Tool execution failed: {str(e)}"
                     }],
                     isError=True
                 )
-        except Exception as e:
-            logger.error(f"Tool execution failed for {tool_name}: {e}")
-            return MCPToolResult(
-                content=[{
-                    "type": "text",
-                    "text": f"Tool execution failed: {str(e)}"
-                }],
-                isError=True
-            )
     
     @staticmethod
     async def _get_schema(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
@@ -177,6 +346,112 @@ class MCPTools:
                 content=[{
                     "type": "text",
                     "text": f"Query execution failed: {str(e)}"
+                }],
+                isError=True
+            )
+    
+    @staticmethod
+    async def _query_bounded(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """
+        Execute a bounded SQL query with comprehensive safety controls.
+        
+        This is the production-ready query tool that provides:
+        - Query validation (SELECT-only, single statement)
+        - Row cap injection (LIMIT/TOP)
+        - Timeout enforcement
+        - Column redaction
+        - Structured error responses
+        """
+        sql = arguments.get("sql", "").strip()
+        limit = arguments.get("limit", 100)
+        enable_redaction = arguments.get("enable_redaction", True)
+        
+        if not sql:
+            return MCPToolResult(
+                content=[{
+                    "type": "text",
+                    "text": json.dumps({
+                        "ok": False,
+                        "error_code": "EMPTY_QUERY",
+                        "error_message": "SQL query is required"
+                    })
+                }],
+                isError=True
+            )
+        
+        try:
+            # Execute bounded query
+            response = await execute_bounded_query(
+                query=sql,
+                db_adapter=db_manager,
+                dialect=config.db_dialect,
+                max_rows=config.max_query_results,
+                query_timeout=config.query_timeout,
+                requested_limit=limit,
+                enable_redaction=enable_redaction
+            )
+            
+            # Convert response to JSON
+            response_dict = response.to_dict()
+            
+            # Format as human-readable text + JSON
+            if response.ok:
+                result_text = f"✅ Query executed successfully\n\n"
+                result_text += f"Rows returned: {response.row_count}\n"
+                result_text += f"Execution time: {response.execution_time_ms}ms\n"
+                
+                if response.truncated:
+                    result_text += f"⚠️ Results truncated (limit: {response.metadata.get('applied_limit')})\n"
+                
+                if response.redacted_columns:
+                    result_text += f"🔒 Redacted columns: {', '.join(response.redacted_columns)}\n"
+                
+                result_text += f"\nColumns: {', '.join(response.columns)}\n\n"
+                
+                # Add sample rows (first 5)
+                if response.rows:
+                    result_text += "Sample rows:\n"
+                    for i, row in enumerate(response.rows[:5]):
+                        result_text += f"  Row {i+1}: {json.dumps(row)}\n"
+                    
+                    if len(response.rows) > 5:
+                        result_text += f"  ... and {len(response.rows) - 5} more rows\n"
+                
+                result_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                
+                return MCPToolResult(
+                    content=[{
+                        "type": "text",
+                        "text": result_text
+                    }],
+                    isError=False
+                )
+            else:
+                # Error response
+                error_text = f"❌ Query failed\n\n"
+                error_text += f"Error code: {response.error_code}\n"
+                error_text += f"Error message: {response.error_message}\n"
+                error_text += f"Execution time: {response.execution_time_ms}ms\n"
+                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                
+                return MCPToolResult(
+                    content=[{
+                        "type": "text",
+                        "text": error_text
+                    }],
+                    isError=True
+                )
+                
+        except Exception as e:
+            logger.error(f"Bounded query execution failed: {e}")
+            return MCPToolResult(
+                content=[{
+                    "type": "text",
+                    "text": json.dumps({
+                        "ok": False,
+                        "error_code": "INTERNAL_ERROR",
+                        "error_message": f"Internal error: {str(e)}"
+                    })
                 }],
                 isError=True
             )
@@ -298,6 +573,320 @@ class MCPTools:
                 content=[{
                     "type": "text",
                     "text": f"Failed to get sample data: {str(e)}"
+                }],
+                isError=True
+            )
+    
+    # Phase 4: Discovery tool implementations
+    
+    @staticmethod
+    async def _list_tables(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """List tables with pagination (Phase 4)."""
+        page = arguments.get("page", 1)
+        page_size = arguments.get("page_size", 25)
+        schema = arguments.get("schema")
+        pattern = arguments.get("pattern")
+        
+        try:
+            response = await DiscoveryTools.list_tables(
+                db_adapter=db_manager,
+                page=page,
+                page_size=page_size,
+                schema=schema,
+                pattern=pattern
+            )
+            
+            response_dict = response.to_dict()
+            
+            if response.ok:
+                # Format human-readable text
+                data = response_dict["data"]
+                page_info = response_dict.get("page_info", {})
+                
+                result_text = f"📋 Database Tables (Page {page_info.get('page', 1)} of {page_info.get('total_pages', 1)})\n\n"
+                result_text += f"Total tables: {page_info.get('total_items', 0)}\n"
+                
+                if schema or pattern:
+                    result_text += f"Filters: "
+                    if schema:
+                        result_text += f"schema={schema} "
+                    if pattern:
+                        result_text += f"pattern={pattern}"
+                    result_text += "\n"
+                
+                result_text += f"\n"
+                
+                for table in data.get("tables", []):
+                    result_text += f"• {table['full_name']} ({table['type']})\n"
+                    result_text += f"  Columns: {table['column_count']}, Rows: ~{table['estimated_rows']:,}\n"
+                    if table['has_foreign_keys']:
+                        result_text += f"  Has foreign keys\n"
+                    if table['has_primary_keys']:
+                        result_text += f"  Has primary keys\n"
+                    result_text += "\n"
+                
+                if page_info.get("has_next"):
+                    result_text += f"➡️ More results available (use page={page_info.get('page', 1) + 1})\n"
+                
+                result_text += f"\n⏱️ Execution time: {response.execution_time_ms:.2f}ms"
+                if response.cached:
+                    result_text += " (cached)"
+                
+                result_text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                
+                return MCPToolResult(
+                    content=[{
+                        "type": "text",
+                        "text": result_text
+                    }],
+                    isError=False
+                )
+            else:
+                error_text = f"❌ list_tables failed\n\n"
+                error_text += f"Error: {response.error}\n"
+                error_text += f"Error code: {response.error_code}\n"
+                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                
+                return MCPToolResult(
+                    content=[{
+                        "type": "text",
+                        "text": error_text
+                    }],
+                    isError=True
+                )
+                
+        except Exception as e:
+            logger.error(f"list_tables failed: {e}")
+            return MCPToolResult(
+                content=[{
+                    "type": "text",
+                    "text": f"Internal error: {str(e)}"
+                }],
+                isError=True
+            )
+    
+    @staticmethod
+    async def _search_tables(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """Search tables by keyword (Phase 4)."""
+        query = arguments.get("query", "").strip()
+        page = arguments.get("page", 1)
+        page_size = arguments.get("page_size", 25)
+        
+        try:
+            response = await DiscoveryTools.search_tables(
+                db_adapter=db_manager,
+                query=query,
+                page=page,
+                page_size=page_size
+            )
+            
+            response_dict = response.to_dict()
+            
+            if response.ok:
+                # Format human-readable text
+                data = response_dict["data"]
+                page_info = response_dict.get("page_info", {})
+                
+                result_text = f"🔍 Search Results for '{query}' (Page {page_info.get('page', 1)} of {page_info.get('total_pages', 1)})\n\n"
+                result_text += f"Total matches: {page_info.get('total_items', 0)}\n\n"
+                
+                for result in data.get("results", []):
+                    result_text += f"• {result['full_name']} ({result['type']}) - Score: {result['relevance_score']}\n"
+                    result_text += f"  Columns: {result['column_count']}, Rows: ~{result['estimated_rows']:,}\n"
+                    if result.get('matched_columns'):
+                        result_text += f"  Matched columns: {', '.join(result['matched_columns'])}\n"
+                    result_text += "\n"
+                
+                if page_info.get("has_next"):
+                    result_text += f"➡️ More results available (use page={page_info.get('page', 1) + 1})\n"
+                
+                result_text += f"\n⏱️ Execution time: {response.execution_time_ms:.2f}ms"
+                if response.cached:
+                    result_text += " (cached)"
+                
+                result_text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                
+                return MCPToolResult(
+                    content=[{
+                        "type": "text",
+                        "text": result_text
+                    }],
+                    isError=False
+                )
+            else:
+                error_text = f"❌ search_tables failed\n\n"
+                error_text += f"Error: {response.error}\n"
+                error_text += f"Error code: {response.error_code}\n"
+                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                
+                return MCPToolResult(
+                    content=[{
+                        "type": "text",
+                        "text": error_text
+                    }],
+                    isError=True
+                )
+                
+        except Exception as e:
+            logger.error(f"search_tables failed: {e}")
+            return MCPToolResult(
+                content=[{
+                    "type": "text",
+                    "text": f"Internal error: {str(e)}"
+                }],
+                isError=True
+            )
+    
+    @staticmethod
+    async def _describe_table(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """Describe a specific table (Phase 4)."""
+        table_name = arguments.get("table_name", "").strip()
+        include_sample = arguments.get("include_sample", False)
+        
+        try:
+            response = await DiscoveryTools.describe_table(
+                db_adapter=db_manager,
+                table_name=table_name,
+                include_sample=include_sample
+            )
+            
+            response_dict = response.to_dict()
+            
+            if response.ok:
+                # Format human-readable text
+                data = response_dict["data"]
+                
+                result_text = f"📊 Table: {data['full_name']}\n\n"
+                result_text += f"Type: {data['type']}\n"
+                result_text += f"Estimated rows: ~{data['estimated_rows']:,}\n"
+                result_text += f"Columns: {len(data['columns'])}\n\n"
+                
+                # Primary keys
+                if data.get('primary_keys'):
+                    result_text += f"🔑 Primary Keys: {', '.join(data['primary_keys'])}\n\n"
+                
+                # Foreign keys
+                if data.get('foreign_keys'):
+                    result_text += f"🔗 Foreign Keys ({len(data['foreign_keys'])}):\n"
+                    for fk in data['foreign_keys']:
+                        result_text += f"  • {fk['column']} → {fk['referenced_full_name']}.{fk['referenced_column']}\n"
+                    result_text += "\n"
+                
+                # Top columns
+                result_text += f"📋 Top Columns:\n"
+                for col in data.get('top_columns', [])[:10]:
+                    col_info = f"  • {col['name']} ({col['type']})"
+                    if not col['nullable']:
+                        col_info += " NOT NULL"
+                    if col['is_primary_key']:
+                        col_info += " [PK]"
+                    if col['is_foreign_key']:
+                        col_info += " [FK]"
+                    result_text += col_info + "\n"
+                
+                # Sample data
+                if include_sample and data.get('sample_data'):
+                    result_text += f"\n📄 Sample Data ({len(data['sample_data'])} rows):\n"
+                    for i, row in enumerate(data['sample_data'][:3]):
+                        result_text += f"  Row {i+1}: {json.dumps(row)}\n"
+                
+                result_text += f"\n⏱️ Execution time: {response.execution_time_ms:.2f}ms"
+                if response.cached:
+                    result_text += " (cached)"
+                
+                result_text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                
+                return MCPToolResult(
+                    content=[{
+                        "type": "text",
+                        "text": result_text
+                    }],
+                    isError=False
+                )
+            else:
+                error_text = f"❌ describe_table failed\n\n"
+                error_text += f"Error: {response.error}\n"
+                error_text += f"Error code: {response.error_code}\n"
+                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                
+                return MCPToolResult(
+                    content=[{
+                        "type": "text",
+                        "text": error_text
+                    }],
+                    isError=True
+                )
+                
+        except Exception as e:
+            logger.error(f"describe_table failed: {e}")
+            return MCPToolResult(
+                content=[{
+                    "type": "text",
+                    "text": f"Internal error: {str(e)}"
+                }],
+                isError=True
+            )
+    
+    @staticmethod
+    async def _list_relations(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """List relationships for a table (Phase 4)."""
+        table_name = arguments.get("table_name", "").strip()
+        
+        try:
+            response = await DiscoveryTools.list_relations(
+                db_adapter=db_manager,
+                table_name=table_name
+            )
+            
+            response_dict = response.to_dict()
+            
+            if response.ok:
+                # Format human-readable text
+                data = response_dict["data"]
+                
+                result_text = f"🔗 Relationships for {data['table']}\n\n"
+                result_text += f"Total neighbors: {data['neighbor_count']}\n\n"
+                
+                if data['neighbor_count'] > 0:
+                    result_text += "Related tables:\n"
+                    for neighbor in data.get('neighbors', []):
+                        result_text += f"  • {neighbor}\n"
+                else:
+                    result_text += "No related tables found.\n"
+                
+                result_text += f"\n⏱️ Execution time: {response.execution_time_ms:.2f}ms"
+                if response.cached:
+                    result_text += " (cached)"
+                
+                result_text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                
+                return MCPToolResult(
+                    content=[{
+                        "type": "text",
+                        "text": result_text
+                    }],
+                    isError=False
+                )
+            else:
+                error_text = f"❌ list_relations failed\n\n"
+                error_text += f"Error: {response.error}\n"
+                error_text += f"Error code: {response.error_code}\n"
+                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                
+                return MCPToolResult(
+                    content=[{
+                        "type": "text",
+                        "text": error_text
+                    }],
+                    isError=True
+                )
+                
+        except Exception as e:
+            logger.error(f"list_relations failed: {e}")
+            return MCPToolResult(
+                content=[{
+                    "type": "text",
+                    "text": f"Internal error: {str(e)}"
                 }],
                 isError=True
             )

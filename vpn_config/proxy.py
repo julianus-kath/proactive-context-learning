@@ -508,132 +508,65 @@ def health():
 
 @app.route("/query", methods=["POST"])
 def query():
-    """Execute SELECT queries with JSON request/response format."""
-    # Validate Content-Type
-    if not request.is_json:
-        return jsonify({
-            "ok": False,
-            "error": "Content-Type must be application/json",
-            "code": "INVALID_CONTENT_TYPE"
-        }), 400
+    """
+    DEPRECATED: This endpoint has been replaced by MCP JSON-RPC.
     
-    try:
-        data = request.get_json()
-    except Exception as e:
-        return jsonify({
-            "ok": False,
-            "error": f"Invalid JSON: {str(e)}",
-            "code": "INVALID_JSON"
-        }), 400
+    Phase 7: Decommission Old Proxy (Cleanup)
+    - This endpoint returns 410 Gone to indicate permanent deprecation
+    - All database access should go through MCP server (port 8000)
+    - See migration guide below for details
+    """
+    # Log deprecated endpoint usage for monitoring
+    safe_log(
+        "DEPRECATED /query endpoint called - returning 410 Gone",
+        logging.WARNING
+    )
     
-    # Validate required fields
-    if not data or not isinstance(data, dict):
-        return jsonify({
-            "ok": False,
-            "error": "Request body must be a JSON object",
-            "code": "INVALID_REQUEST"
-        }), 400
-    
-    sql = data.get("sql")
-    connection_name = data.get("conn")
-    params = data.get("params")
-    limit = data.get("limit", 1000)  # Default limit
-    timeout_s = data.get("timeout_s", 30)  # Default timeout
-    
-    # Validate required fields
-    if not sql:
-        return jsonify({
-            "ok": False,
-            "error": "Missing required field: 'sql'",
-            "code": "MISSING_SQL"
-        }), 400
-    
-    if not connection_name:
-        return jsonify({
-            "ok": False,
-            "error": "Missing required field: 'conn'",
-            "code": "MISSING_CONNECTION"
-        }), 400
-    
-    # Validate connection exists
-    if connection_name not in CONNECTIONS:
-        return jsonify({
-            "ok": False,
-            "error": f"Unknown connection: {connection_name}",
-            "code": "UNKNOWN_CONNECTION"
-        }), 400
-    
-    # Validate limit and timeout
-    if not isinstance(limit, int) or limit <= 0 or limit > 10000:
-        return jsonify({
-            "ok": False,
-            "error": "Limit must be an integer between 1 and 10000",
-            "code": "INVALID_LIMIT"
-        }), 400
-    
-    if not isinstance(timeout_s, (int, float)) or timeout_s <= 0 or timeout_s > 300:
-        return jsonify({
-            "ok": False,
-            "error": "Timeout must be a number between 0 and 300 seconds",
-            "code": "INVALID_TIMEOUT"
-        }), 400
-    
-    # Validate read-only query
-    try:
-        validate_read_only_query(sql)
-    except ValueError as e:
-        return jsonify({
-            "ok": False,
-            "error": str(e),
-            "code": "BAD_QUERY"
-        }), 400
-    
-    # Apply server-side limit if needed
-    config = CONNECTIONS[connection_name]
-    conn_type = config['type']
-    sql_with_limit = apply_query_limit(sql, limit, conn_type)
-    
-    # Execute query
-    try:
-        # Log query execution (without parameters for security)
-        safe_log(f"Executing query on {connection_name}: {sql_with_limit[:100]}{'...' if len(sql_with_limit) > 100 else ''}")
-        
-        cols, rows, elapsed_ms = run_select(sql_with_limit, connection_name, params, timeout_s)
-        
-        # Convert rows to list of lists for consistent format
-        row_data = []
-        if rows:
-            for row in rows:
-                row_data.append([str(val) if val is not None else None for val in row])
-        
-        # Log successful execution (without data for security)
-        safe_log(f"Query completed: {len(row_data)} rows returned in {elapsed_ms}ms")
-        
-        return jsonify({
-            "ok": True,
-            "connection": connection_name,
-            "columns": cols,
-            "rows": row_data,
-            "rowcount": len(row_data),
-            "elapsed_ms": elapsed_ms
-        })
-        
-    except (pyodbc.Error, psycopg2.Error) as e:
-        # Log database errors (without sensitive details)
-        safe_log(f"Database error on {connection_name}: {type(e).__name__}", logging.ERROR)
-        return jsonify({
-            "ok": False,
-            "error": f"Database error: {str(e)}",
-            "code": "DATABASE_ERROR"
-        }), 400
-    except Exception as e:
-        # Log general errors
-        safe_log(f"Query execution error on {connection_name}: {type(e).__name__}", logging.ERROR)
-        return jsonify({
-            "ok": False,
-            "error": f"Query execution failed: {str(e)}",
-            "code": "EXECUTION_ERROR"
-        }), 400
+    return jsonify({
+        "ok": False,
+        "error": "This endpoint is permanently deprecated. Please use MCP JSON-RPC instead.",
+        "code": "ENDPOINT_DEPRECATED",
+        "status": 410,
+        "migration_guide": {
+            "reason": "Phase 7: Single interface enforcement - MCP is the only database access layer",
+            "new_endpoint": "http://localhost:8000/mcp",
+            "protocol": "MCP JSON-RPC 2.0",
+            "available_tools": [
+                "query_bounded - Execute bounded SELECT queries with safety controls",
+                "search_tables - Search for tables with pagination (never enumerate full schema)",
+                "describe_table - Get detailed table information",
+                "list_relations - Get foreign key relationships",
+                "list_tables - List tables with pagination"
+            ],
+            "example_request": {
+                "jsonrpc": "2.0",
+                "id": "query_1",
+                "method": "tools/call",
+                "params": {
+                    "name": "query_bounded",
+                    "arguments": {
+                        "sql": "SELECT * FROM customers LIMIT 10",
+                        "limit": 10,
+                        "enable_redaction": True
+                    }
+                }
+            },
+            "python_client": "from app.db.mcp_client import MCPDatabaseClient",
+            "documentation": [
+                "docs/PHASE_7_PLAN.md - Migration guide",
+                "docs/PHASE_6_COMPLETE.md - MCP features and usage",
+                "mcp_server/README.md - MCP server documentation"
+            ],
+            "design_guardrails": [
+                "Never enumerate full schema - use search_tables with pagination",
+                "Small, focused prompts - ≤3 tables per query context",
+                "One interface - LangGraph → MCP JSON-RPC only",
+                "Caching everywhere - catalog + response + session",
+                "Backpressure - rate limiting with Retry-After headers"
+            ]
+        },
+        "contact": "See docs/PHASE_7_PLAN.md for detailed migration instructions"
+    }), 410  # 410 Gone - Resource permanently removed
 
 
 if __name__ == "__main__":

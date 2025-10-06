@@ -34,6 +34,10 @@ wheels/
 *.sqlite
 *.sqlite3
 
+# Phase 3: Catalog cache files
+mcp_server/cache/
+cache/
+
 # IDE specific files
 .idea/
 .vscode/

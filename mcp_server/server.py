@@ -89,12 +89,126 @@ async def shutdown_event():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
-    return {
-        "status": "healthy", 
+    """
+    Phase 6: Comprehensive health check endpoint.
+    
+    Returns:
+    - ok: Overall health status
+    - service: Service name and version
+    - db_connected: Database connection status
+    - catalog_stats: Catalog metrics (age, hits, table count)
+    - pool_stats: Connection pool statistics
+    - discovery_tools: Discovery tools cache stats
+    - observability: Recent tool call metrics
+    - last_db_error: Last database error (if any)
+    """
+    import time
+    
+    # Basic health status
+    health_data = {
+        "ok": True,
         "service": "MCP Database Server",
-        "database_ready": db_manager is not None and db_manager.pool is not None
+        "version": "1.0.0",
+        "phase": "6 - Observability & Guardrails",
+        "timestamp": time.time()
     }
+    
+    # Database connectivity
+    if db_manager is None:
+        health_data["ok"] = False
+        health_data["db_connected"] = False
+        health_data["error"] = "Database manager not initialized"
+        return health_data
+    
+    try:
+        # Check if database is connected
+        db_connected = db_manager.pool is not None
+        health_data["db_connected"] = db_connected
+        
+        # Get database dialect/mode
+        if hasattr(db_manager, 'dialect'):
+            health_data["dialects"] = [db_manager.dialect]
+            health_data["db_mode"] = db_manager.dialect
+        elif hasattr(db_manager, 'client'):
+            health_data["dialects"] = [db_manager.client.mode]
+            health_data["db_mode"] = db_manager.client.mode
+        else:
+            health_data["dialects"] = ["unknown"]
+        
+        # Phase 3: Catalog metrics
+        if hasattr(db_manager, 'catalog') and db_manager.catalog:
+            catalog_metrics = db_manager.get_cache_stats()
+            health_data["catalog_stats"] = {
+                "age_s": catalog_metrics.get("catalog_age_s"),
+                "cache_hits": catalog_metrics.get("cache_hits", 0),
+                "cache_misses": catalog_metrics.get("cache_misses", 0),
+                "hit_ratio": catalog_metrics.get("hit_ratio", 0.0),
+                "table_count": catalog_metrics.get("table_count", 0),
+                "warmup_complete": catalog_metrics.get("warmup_complete", False)
+            }
+            
+            # Phase 4: Discovery tools metrics
+            try:
+                from mcp_server.discovery_tools import DiscoveryTools
+                discovery_stats = DiscoveryTools.get_cache_stats()
+                health_data["discovery_tools"] = discovery_stats
+            except Exception as e:
+                logger.warning(f"Failed to get discovery tools stats: {e}")
+        # Legacy cache information (backward compatibility)
+        elif hasattr(db_manager, '_schema_cache'):
+            cache = db_manager._schema_cache
+            health_data["catalog_stats"] = {
+                "cached": cache.get("data") is not None,
+                "age_s": int(time.time() - cache["timestamp"]) if cache.get("timestamp") else None,
+                "cache_hits": cache.get("hits", 0)
+            }
+        else:
+            health_data["catalog_stats"] = {
+                "cached": False,
+                "age_s": None,
+                "cache_hits": 0
+            }
+        
+        # Phase 6: Connection pool statistics
+        try:
+            pool_stats = db_manager.get_pool_stats()
+            health_data["pool_stats"] = pool_stats
+        except Exception as e:
+            logger.warning(f"Failed to get pool stats: {e}")
+            health_data["pool_stats"] = {"error": str(e)}
+        
+        # Phase 6: Observability metrics
+        try:
+            from mcp_server.observability import get_metrics_summary
+            metrics_summary = get_metrics_summary()
+            health_data["observability"] = metrics_summary
+        except Exception as e:
+            logger.warning(f"Failed to get observability metrics: {e}")
+            health_data["observability"] = {"error": str(e)}
+        
+        # Phase 6: Last database error
+        try:
+            last_error = db_manager.get_last_error()
+            if last_error:
+                health_data["last_db_error"] = last_error
+        except Exception as e:
+            logger.warning(f"Failed to get last error: {e}")
+        
+        # Test a simple query if connected
+        if db_connected:
+            try:
+                test_result = await db_manager.fetch("SELECT 1 as test", limit=1)
+                health_data["query_test"] = "passed"
+            except Exception as e:
+                health_data["query_test"] = "failed"
+                health_data["query_error"] = str(e)
+                health_data["ok"] = False
+        
+    except Exception as e:
+        health_data["ok"] = False
+        health_data["error"] = str(e)
+    
+    return health_data
 
 @app.post("/mcp")
 async def mcp_endpoint(

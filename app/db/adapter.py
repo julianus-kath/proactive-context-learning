@@ -1,6 +1,8 @@
 """
-Database Adapter - Provides async interface using DatabaseClient
+Database Adapter - Provides async interface using MCP DatabaseClient
 Maintains compatibility with existing langgraph_integration code
+
+PHASE 7 MIGRATION: Updated to use MCPDatabaseClient (MCP-only architecture)
 """
 
 import asyncio
@@ -12,7 +14,7 @@ import os
 # Add the project root to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from app.db.client import DatabaseClient
+from app.db.mcp_client import MCPDatabaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +22,11 @@ logger = logging.getLogger(__name__)
 _db_client = None
 
 
-def get_client() -> DatabaseClient:
-    """Get or create the global DatabaseClient instance."""
+def get_client() -> MCPDatabaseClient:
+    """Get or create the global MCPDatabaseClient instance."""
     global _db_client
     if _db_client is None:
-        _db_client = DatabaseClient()
+        _db_client = MCPDatabaseClient()
     return _db_client
 
 
@@ -41,95 +43,73 @@ async def get_database_schema(include_all_schemas: bool = True) -> str:
     try:
         client = get_client()
         
-        if client.mode == "proxy":
-            # In proxy mode, we can't get detailed schema info directly
-            # Instead, we'll query the information_schema tables
+        # PHASE 7: MCP-only architecture - use MCP discovery tools instead of raw queries
+        # This is more efficient and respects design guardrails
+        logger.info("Using MCP discovery tools for schema retrieval")
+        
+        # Use MCP's search_tables to get all tables (paginated)
+        tables = client.search_tables("", limit=100)  # Empty pattern = all tables
+        
+        if not tables:
+            return "No tables found in database."
+        
+        # Group by schema
+        schemas = {}
+        for table in tables:
+            # Parse schema.table format
+            if '.' in table:
+                schema_name, table_name = table.split('.', 1)
+            else:
+                schema_name = 'public'
+                table_name = table
             
-            # Get all tables
-            tables_sql = """
-            SELECT table_schema, table_name, table_type 
-            FROM information_schema.tables 
-            WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
-            ORDER BY table_schema, table_name
-            """
+            if schema_name not in schemas:
+                schemas[schema_name] = []
+            schemas[schema_name].append(table_name)
+        
+        # Build formatted schema string
+        schema_parts = []
+        
+        for schema_name, table_names in schemas.items():
+            schema_parts.append(f"Schema: {schema_name}")
+            schema_parts.append("=" * (len(schema_name) + 8))
             
-            columns, rows = client.query(tables_sql)
-            
-            if not rows:
-                return "No tables found in database."
-            
-            # Group by schema
-            schemas = {}
-            for row in rows:
-                schema_name = row[0]  # table_schema
-                table_name = row[1]   # table_name
-                table_type = row[2]   # table_type
+            for table_name in table_names:
+                qualified_name = f"{schema_name}.{table_name}"
                 
-                if schema_name not in schemas:
-                    schemas[schema_name] = []
-                schemas[schema_name].append((table_name, table_type))
-            
-            # Build formatted schema string
-            schema_parts = []
-            
-            for schema_name, tables in schemas.items():
-                schema_parts.append(f"Schema: {schema_name}")
-                schema_parts.append("=" * (len(schema_name) + 8))
-                
-                for table_name, table_type in tables:
-                    # Get column information for each table
-                    columns_sql = f"""
-                    SELECT 
-                        column_name,
-                        data_type,
-                        is_nullable,
-                        column_default,
-                        character_maximum_length
-                    FROM information_schema.columns 
-                    WHERE table_schema = '{schema_name}' AND table_name = '{table_name}'
-                    ORDER BY ordinal_position
-                    """
+                try:
+                    # Use MCP's describe_table for column information
+                    table_info = client.describe_table(qualified_name)
                     
-                    try:
-                        col_columns, col_rows = client.query(columns_sql)
+                    schema_parts.append(f"Table: {qualified_name}")
+                    schema_parts.append("Columns:")
+                    
+                    for col in table_info.get('columns', []):
+                        col_name = col.get('name', 'unknown')
+                        data_type = col.get('type', 'unknown')
+                        is_nullable = col.get('nullable', True)
+                        col_default = col.get('default')
                         
-                        schema_parts.append(f"Table: {schema_name}.{table_name} ({table_type})")
-                        schema_parts.append("Columns:")
+                        col_info = f"  - {col_name} ({data_type})"
                         
-                        for col_row in col_rows:
-                            col_name = col_row[0]      # column_name
-                            data_type = col_row[1]     # data_type
-                            is_nullable = col_row[2]   # is_nullable
-                            col_default = col_row[3]   # column_default
-                            max_length = col_row[4]    # character_maximum_length
-                            
-                            col_info = f"  - {col_name} ({data_type}"
-                            if max_length:
-                                col_info += f"({max_length})"
-                            col_info += ")"
-                            
-                            if is_nullable == 'NO':
-                                col_info += " NOT NULL"
-                            if col_default:
-                                col_info += f" DEFAULT {col_default}"
-                            
-                            schema_parts.append(col_info)
+                        if not is_nullable:
+                            col_info += " NOT NULL"
+                        if col_default:
+                            col_info += f" DEFAULT {col_default}"
                         
-                        schema_parts.append("")  # Empty line between tables
-                        
-                    except Exception as e:
-                        logger.warning(f"Failed to get columns for {schema_name}.{table_name}: {e}")
-                        schema_parts.append(f"Table: {schema_name}.{table_name} ({table_type})")
-                        schema_parts.append("  - Column information unavailable")
-                        schema_parts.append("")
-                
-                schema_parts.append("")  # Empty line between schemas
+                        schema_parts.append(col_info)
+                    
+                    schema_parts.append("")  # Empty line between tables
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to describe table {qualified_name}: {e}")
+                    schema_parts.append(f"Table: {qualified_name}")
+                    schema_parts.append("  - Column information unavailable")
+                    schema_parts.append("")
             
-            return "\n".join(schema_parts)
-            
-        else:
-            # Direct mode would use the existing implementation
-            raise NotImplementedError("Direct mode schema retrieval not implemented yet")
+            schema_parts.append("")  # Empty line between schemas
+        
+        return "\n".join(schema_parts)
             
     except Exception as e:
         logger.error(f"Error getting schema: {e}")

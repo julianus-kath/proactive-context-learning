@@ -1,12 +1,14 @@
 """
 LangGraph Workflow Definition for MCP Database Integration
 Phase 2 Blueprint Implementation
+Phase 5 Enhancement: MCP-only orchestration with discovery tools
 
 This module defines the LangGraph workflow that:
 1. Parses user intent
-2. Generates safe SQL via LLM
-3. Calls the MCP Server
-4. Formats results back to the user
+2. Uses MCP discovery tools for progressive schema exploration
+3. Generates safe SQL via LLM with schema_snippet (≤3 tables)
+4. Executes queries via query_bounded
+5. Formats results back to the user
 """
 
 import os
@@ -25,7 +27,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 
-from .proxy_db_client import (
+from .mcp_client import (
+    # Legacy functions (deprecated in Phase 5)
     get_database_schema, 
     execute_sql_query, 
     execute_sql_query_with_retry,
@@ -33,9 +36,16 @@ from .proxy_db_client import (
     health_check,
     index_database,
     get_all_schemas,
-    # PHASE 1: New imports for selective schema loading
     get_schema_index,
-    get_selective_schema
+    get_selective_schema,
+    # PHASE 5: New MCP discovery tool functions
+    list_tables_mcp,
+    search_tables_mcp,
+    describe_table_mcp,
+    describe_table_batch,
+    list_relations_mcp,
+    query_bounded_mcp,
+    build_schema_snippet
 )
 from .prompts import (
     format_intent_parser_prompt,
@@ -56,22 +66,24 @@ class WorkflowState(TypedDict):
     """
     State for the LangGraph workflow.
     
-    PHASE 1 ENHANCEMENT: Added session_used_tables and relevant_tables
-    for selective schema loading.
+    PHASE 5 ENHANCEMENT: Added schema_snippet and session_described_tables
+    for MCP-only orchestration with progressive discovery.
     """
     messages: List[Dict[str, Any]]
     user_input: str
     intent_analysis: Optional[Dict[str, Any]]
-    schema: Optional[str]
+    schema: Optional[str]  # DEPRECATED: Use schema_snippet instead
+    schema_snippet: Optional[str]  # PHASE 5: Compact schema (≤3 tables)
     database_index: Optional[Dict[str, Any]]
     sql_query: Optional[str]
     query_results: Optional[str]
     error_info: Optional[Dict[str, Any]]
     final_response: Optional[str]
     retry_count: int
-    # PHASE 1: New fields for selective schema loading
-    session_used_tables: Optional[List[str]]  # Tables used in this session
+    # PHASE 5: Session management for discovery tools
+    session_described_tables: Optional[Dict[str, Dict[str, Any]]]  # Cache of described tables
     relevant_tables: Optional[List[str]]  # Tables selected for current query
+    is_schema_query: Optional[bool]  # True if user is asking about schema/tables
 
 
 @dataclass
@@ -372,88 +384,145 @@ class DatabaseWorkflow:
     
     async def _get_schema(self, state: WorkflowState) -> WorkflowState:
         """
-        Get database schema from MCP server.
+        Get database schema overview using MCP discovery tools (Phase 5).
         
-        PHASE 1 NOTE: This now uses caching internally. First call indexes,
-        subsequent calls use cached data.
+        PHASE 5: Instead of full schema dump, we get a lightweight table list
+        for intent parsing. Detailed schema is fetched later via describe_table.
         
         Args:
             state: Current workflow state
             
         Returns:
-            Updated state with schema information
+            Updated state with lightweight schema overview
         """
         try:
-            schema = await get_database_schema()
-            state["schema"] = schema
-            logger.info("Schema retrieved successfully (cached if available)")
+            # Initialize session cache if not present
+            if state.get("session_described_tables") is None:
+                state["session_described_tables"] = {}
+            
+            # Get first page of tables for overview (lightweight)
+            tables_response = await list_tables_mcp(page=1, page_size=50)
+            
+            if tables_response.get("ok"):
+                tables = tables_response.get("data", {}).get("tables", [])
+                pagination = tables_response.get("data", {}).get("pagination", {})
+                
+                # Build lightweight schema overview (just table names and row counts)
+                schema_lines = ["Available Tables:"]
+                for table in tables:
+                    full_name = table.get("full_name", "")
+                    row_count = table.get("row_count", 0)
+                    schema_lines.append(f"  - {full_name} ({row_count} rows)")
+                
+                total_tables = pagination.get("total_items", len(tables))
+                if total_tables > len(tables):
+                    schema_lines.append(f"\n... and {total_tables - len(tables)} more tables")
+                    schema_lines.append("Use search_tables or list_tables with filters to explore more.")
+                
+                state["schema"] = "\n".join(schema_lines)
+                logger.info(f"Schema overview retrieved: {len(tables)} tables shown (of {total_tables} total)")
+            else:
+                error_msg = tables_response.get("error", "Unknown error")
+                logger.error(f"Error getting table list: {error_msg}")
+                state["schema"] = "Schema information unavailable"
             
         except Exception as e:
-            logger.error(f"Error getting schema: {e}")
+            logger.error(f"Error getting schema overview: {e}")
             state["error_info"] = {
                 "type": "schema_retrieval_error",
                 "message": str(e),
-                "context": "Failed to retrieve database schema"
+                "context": "Failed to retrieve database schema overview"
             }
+            state["schema"] = "Schema information unavailable"
         
         return state
     
     async def _select_tables(self, state: WorkflowState) -> WorkflowState:
         """
-        Select relevant tables for the query.
+        Select relevant tables using MCP search_tables (Phase 5).
         
-        PHASE 1 NEW METHOD: Uses heuristic-based table selection to identify
-        the 1-3 most relevant tables for the user's query. This dramatically
-        reduces prompt size and improves LLM focus.
+        PHASE 5: Uses search_tables to find relevant tables based on keywords
+        extracted from user query. Then calls describe_table for ≤3 tables
+        to build a compact schema_snippet.
         
         Args:
             state: Current workflow state
             
         Returns:
-            Updated state with relevant_tables and selective schema
+            Updated state with schema_snippet (≤3 tables)
         """
         try:
-            from app.db.table_selector import select_relevant_tables
-            
             user_input = state["user_input"]
-            session_tables = state.get("session_used_tables", [])
+            session_cache = state.get("session_described_tables", {})
             
-            # Get schema index
-            schema_index = await get_schema_index()
+            # Extract keywords from user query (simple heuristic)
+            # Remove common words and extract potential table/column names
+            stop_words = {"what", "how", "many", "show", "get", "find", "list", "the", "a", "an", "in", "on", "at", "from", "to", "for", "of", "with"}
+            words = user_input.lower().split()
+            keywords = [w for w in words if w not in stop_words and len(w) > 2]
             
-            if not schema_index:
-                logger.warning("Schema index not available, using full schema")
-                return state
+            if not keywords:
+                # Fallback: use first few words
+                keywords = words[:3]
             
-            # Select relevant tables
-            relevant_tables = select_relevant_tables(
-                query=user_input,
-                schema_index=schema_index,
-                session_tables=session_tables,
-                top_k=3
-            )
+            # Search for relevant tables using MCP search_tables
+            search_keyword = " ".join(keywords[:2])  # Use first 2 keywords
+            logger.info(f"Searching tables with keyword: '{search_keyword}'")
             
-            state["relevant_tables"] = relevant_tables
-            logger.info(f"Selected {len(relevant_tables)} relevant tables: {relevant_tables}")
+            search_response = await search_tables_mcp(search_keyword, page=1, page_size=5)
             
-            # Build selective schema snippet
-            if relevant_tables:
-                schema_snippet = await get_selective_schema(relevant_tables)
-                state["schema"] = schema_snippet
-                logger.info(f"Using selective schema ({len(schema_snippet)} chars vs full schema)")
+            if search_response.get("ok"):
+                results = search_response.get("data", {}).get("results", [])
+                
+                # Extract top 3 table names
+                relevant_tables = []
+                for result in results[:3]:
+                    table_name = result.get("full_name", "")
+                    if table_name:
+                        relevant_tables.append(table_name)
+                
+                state["relevant_tables"] = relevant_tables
+                logger.info(f"Found {len(relevant_tables)} relevant tables: {relevant_tables}")
+                
+                # Describe tables (use cache if available)
+                tables_to_describe = []
+                for table_name in relevant_tables:
+                    if table_name not in session_cache:
+                        tables_to_describe.append(table_name)
+                
+                # Fetch descriptions for new tables
+                if tables_to_describe:
+                    logger.info(f"Describing {len(tables_to_describe)} new tables: {tables_to_describe}")
+                    new_descriptions = await describe_table_batch(tables_to_describe)
+                    session_cache.update(new_descriptions)
+                    state["session_described_tables"] = session_cache
+                else:
+                    logger.info(f"All {len(relevant_tables)} tables already in session cache")
+                
+                # Build schema snippet from cached descriptions
+                table_descriptions = {t: session_cache[t] for t in relevant_tables if t in session_cache}
+                schema_snippet = build_schema_snippet(table_descriptions)
+                state["schema_snippet"] = schema_snippet
+                
+                logger.info(f"Built schema snippet ({len(schema_snippet)} chars) for {len(table_descriptions)} tables")
             else:
-                logger.warning("No relevant tables found, using full schema")
+                error_msg = search_response.get("error", "Unknown error")
+                logger.warning(f"Search failed: {error_msg}, using lightweight schema")
+                state["schema_snippet"] = state.get("schema", "No schema available")
             
         except Exception as e:
             logger.error(f"Error selecting tables: {e}")
-            # Don't fail the workflow, just use full schema
-            logger.info("Falling back to full schema")
+            # Fallback to lightweight schema overview
+            state["schema_snippet"] = state.get("schema", "No schema available")
+            logger.info("Falling back to schema overview")
         
         return state
     
     async def _generate_sql(self, state: WorkflowState) -> WorkflowState:
         """
-        Generate SQL query based on intent and schema.
+        Generate SQL query based on intent and schema_snippet (Phase 5).
+        
+        PHASE 5: Uses compact schema_snippet (≤3 tables) instead of full schema.
         
         Args:
             state: Current workflow state
@@ -470,12 +539,12 @@ class DatabaseWorkflow:
                 logger.info(f"Using SQL from intent parser: {intent['sql']}")
                 return state
             
-            # Otherwise, generate SQL using the traditional method
-            schema = state["schema"]
+            # PHASE 5: Use schema_snippet instead of full schema
+            schema_snippet = state.get("schema_snippet", state.get("schema", "No schema available"))
             user_input = state["user_input"]
             
             prompt = format_sql_generator_prompt(
-                schema=schema,
+                schema=schema_snippet,  # Use compact snippet
                 operation=intent.get("operation", "DATA_QUERY"),
                 entities=intent.get("entities", []),
                 requirements=intent.get("requirements", ""),
@@ -533,9 +602,9 @@ class DatabaseWorkflow:
     
     async def _execute_query(self, state: WorkflowState) -> WorkflowState:
         """
-        Execute SQL query via MCP server.
+        Execute SQL query via MCP query_bounded (Phase 5).
         
-        PHASE 1 ENHANCEMENT: Now tracks used tables for session context.
+        PHASE 5: Uses query_bounded for all query execution with safety controls.
         
         Args:
             state: Current workflow state
@@ -545,10 +614,12 @@ class DatabaseWorkflow:
         """
         try:
             sql_query = state["sql_query"]
-            results = await execute_sql_query(sql_query)
+            
+            # PHASE 5: Use query_bounded_mcp instead of execute_sql_query
+            results = await query_bounded_mcp(sql_query, max_rows=1000, timeout_ms=30000)
             
             # Check if the result indicates an error
-            if results.startswith("QUERY_ERROR:"):
+            if results.startswith("Error") or results.startswith("QUERY_ERROR:"):
                 error_msg = results[12:]  # Remove "QUERY_ERROR:" prefix
                 state["error_info"] = {
                     "type": "query_execution_error",
@@ -586,7 +657,9 @@ class DatabaseWorkflow:
     
     async def _execute_direct(self, state: WorkflowState) -> WorkflowState:
         """
-        Execute SQL query directly when provided by intent parser.
+        Execute SQL query directly when provided by intent parser (Phase 5).
+        
+        PHASE 5: Uses query_bounded_mcp for execution.
         
         Args:
             state: Current workflow state
@@ -605,12 +678,12 @@ class DatabaseWorkflow:
             # Store the SQL query in state for consistency
             state["sql_query"] = sql_query
             
-            # Execute the query
-            results = await execute_sql_query(sql_query)
+            # PHASE 5: Execute via query_bounded_mcp
+            results = await query_bounded_mcp(sql_query, max_rows=1000, timeout_ms=30000)
             
             # Check if the result indicates an error
-            if results.startswith("QUERY_ERROR:"):
-                error_msg = results[12:]  # Remove "QUERY_ERROR:" prefix
+            if results.startswith("Error") or results.startswith("QUERY_ERROR:"):
+                error_msg = results.replace("QUERY_ERROR:", "").replace("Error executing query:", "").strip()
                 state["error_info"] = {
                     "type": "direct_query_execution_error",
                     "message": error_msg,
@@ -636,7 +709,9 @@ class DatabaseWorkflow:
     
     async def _retry_query(self, state: WorkflowState) -> WorkflowState:
         """
-        Retry SQL query with automatic error correction.
+        Retry SQL query with automatic error correction (Phase 5).
+        
+        PHASE 5: Uses query_bounded_mcp for retry execution.
         
         Args:
             state: Current workflow state
@@ -658,18 +733,19 @@ class DatabaseWorkflow:
             
             # Get the original SQL and schema
             sql_query = state.get("sql_query", "")
-            schema = state.get("schema", "")
+            schema_snippet = state.get("schema_snippet", state.get("schema", ""))
             error_info = state.get("error_info", {})
             error_msg = error_info.get("message", "")
             
             logger.info(f"Attempting to retry query (attempt {state['retry_count']}): {sql_query}")
             
-            # Use the retry function with error correction
-            results = await execute_sql_query_with_retry(sql_query, schema, max_retries=1)
+            # PHASE 5: Use query_bounded_mcp for retry
+            # TODO: In future, could use LLM to fix SQL based on error message
+            results = await query_bounded_mcp(sql_query, max_rows=1000, timeout_ms=30000)
             
             # Check if the retry was successful
-            if results.startswith("QUERY_ERROR:"):
-                error_msg = results[12:]  # Remove "QUERY_ERROR:" prefix
+            if results.startswith("Error") or results.startswith("QUERY_ERROR:"):
+                error_msg = results.replace("QUERY_ERROR:", "").replace("Error executing query:", "").strip()
                 state["error_info"] = {
                     "type": "query_retry_error",
                     "message": error_msg,

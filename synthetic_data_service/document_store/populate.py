@@ -1,5 +1,17 @@
 """
 Script to populate the MongoDB document store with synthetic data.
+
+⚠️  DEPRECATED WARNING (Phase 7):
+This script uses the legacy /query endpoint which has been deprecated.
+The endpoint now returns 410 Gone.
+
+Status: EXPERIMENTAL - Document store integration is out of scope for Phase 7.
+This script is kept for backward compatibility but should be migrated to MCP in Phase 8+.
+
+Migration Path (Phase 8+):
+- Replace /query calls with MCP JSON-RPC (query_bounded tool)
+- Use: from app.db.mcp_client import MCPDatabaseClient
+- See: docs/PHASE_7_PLAN.md for migration guide
 """
 import os
 import json
@@ -8,6 +20,7 @@ import asyncio
 import aiohttp
 import argparse
 import random
+import warnings
 from typing import Dict, List, Any, Optional
 
 from synthetic_data_service.document_store.generator import DocumentGenerator
@@ -15,6 +28,19 @@ from synthetic_data_service.document_store.generator import DocumentGenerator
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Emit deprecation warning
+warnings.warn(
+    "populate.py uses deprecated /query endpoint. "
+    "This script is EXPERIMENTAL and will be migrated to MCP in Phase 8+. "
+    "See docs/PHASE_7_PLAN.md for details.",
+    DeprecationWarning,
+    stacklevel=2
+)
+logger.warning(
+    "⚠️  DEPRECATED: This script uses legacy /query endpoint (returns 410 Gone). "
+    "Document store is experimental (Phase 8+). See docs/PHASE_7_PLAN.md"
+)
 
 
 async def get_product_ids(erp_api_url: str) -> List[int]:

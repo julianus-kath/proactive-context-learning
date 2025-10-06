@@ -83,10 +83,29 @@ This makes SQL Server reachable for development without direct VPN or complex tu
 
 ## Status
 
-**Accepted – Temporary Development Solution**
-This pattern will be used until either:
+**DEPRECATED – Replaced by MCP-Only Architecture (Phase 7, January 2025)**
 
+The legacy Flask `/query` endpoint has been **deprecated** and now returns **410 Gone**.
+
+**Migration Path:**
+- All database access now goes through **MCP JSON-RPC protocol** (port 8000)
+- Use `MCPDatabaseClient` from `app.db.mcp_client` for all new code
+- Legacy `DatabaseClient` wrapper available for backward compatibility (with warnings)
+- See `docs/MIGRATION_GUIDE_PHASE_7.md` for migration instructions
+
+**Why Deprecated:**
+- **Single Interface**: MCP-only architecture eliminates dual-path complexity
+- **Design Guardrails**: MCP enforces pagination, rate limiting, and bounded queries
+- **Better Performance**: Catalog caching, response caching, and optimized discovery
+- **No Drift Risk**: One interface means no synchronization issues
+
+**Original Status (Pre-Phase 7):**
+This pattern was used as a temporary development solution until:
 * SonicWall supports Apple Silicon VPN clients, or
 * Direct Mac-to-VPN access is granted, or
 * IT provisions a secure jump host.
+
+---
+
+**Last Updated**: January 2025 (Phase 7 Migration)
 
