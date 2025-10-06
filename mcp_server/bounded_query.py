@@ -28,8 +28,8 @@ import logging
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, asdict
 
-from mcp_server.query_validator import QueryValidator, ValidationResult, ValidationErrorCode
-from mcp_server.column_redactor import ColumnRedactor, RedactionConfig
+from query_validator import QueryValidator, ValidationResult, ValidationErrorCode
+from column_redactor import ColumnRedactor, RedactionConfig
 
 logger = logging.getLogger(__name__)
 

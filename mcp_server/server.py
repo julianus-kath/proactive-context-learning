@@ -149,7 +149,7 @@ async def health_check():
             
             # Phase 4: Discovery tools metrics
             try:
-                from mcp_server.discovery_tools import DiscoveryTools
+                from discovery_tools import DiscoveryTools
                 discovery_stats = DiscoveryTools.get_cache_stats()
                 health_data["discovery_tools"] = discovery_stats
             except Exception as e:
@@ -179,7 +179,7 @@ async def health_check():
         
         # Phase 6: Observability metrics
         try:
-            from mcp_server.observability import get_metrics_summary
+            from observability import get_metrics_summary
             metrics_summary = get_metrics_summary()
             health_data["observability"] = metrics_summary
         except Exception as e:

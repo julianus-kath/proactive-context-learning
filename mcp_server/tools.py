@@ -9,10 +9,10 @@ import logging
 import json
 from typing import Dict, Any, List
 from models import MCPTool, MCPToolResult
-from mcp_server.bounded_query import execute_bounded_query
-from mcp_server.config import config
-from mcp_server.discovery_tools import DiscoveryTools
-from mcp_server.observability import log_tool_call
+from bounded_query import execute_bounded_query
+from config import config
+from discovery_tools import DiscoveryTools
+from observability import log_tool_call
 
 logger = logging.getLogger(__name__)
 
