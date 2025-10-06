@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableDelayedExpansion
+setlocal EnableExtensions EnableDelayedExpansion
 
 echo.
 echo ========================================
@@ -7,12 +7,10 @@ echo   MCP Server Startup (Windows)
 echo ========================================
 echo.
 
-rem --- Go to script directory ---
-cd /d "%~dp0"
-rem --- Move up one directory to project root ---
-cd ..
+rem --- Derive absolute project root from script path ---
+set "SCRIPT_DIR=%~dp0"
+for %%I in ("%SCRIPT_DIR%..") do set "PROJECT_ROOT=%%~fI"
 
-set "PROJECT_ROOT=%CD%"
 echo Project Root: %PROJECT_ROOT%
 echo.
 
@@ -57,7 +55,7 @@ if not exist "%PROJECT_ROOT%\mcp_server" (
     exit /b 1
 )
 
-cd "%PROJECT_ROOT%\mcp_server"
+pushd "%PROJECT_ROOT%\mcp_server"
 echo Starte MCP Server auf 0.0.0.0:8000 ...
 echo (Mit Strg+C beenden)
 echo ========================================
@@ -65,6 +63,7 @@ echo ========================================
 %PYTHON_CMD% -m uvicorn server:app --host 0.0.0.0 --port 8000 --reload --log-level debug
 
 set "EC=%ERRORLEVEL%"
+popd
 echo.
 if not "%EC%"=="0" (
     echo [ERROR] Uvicorn ist mit Code %EC% beendet.
