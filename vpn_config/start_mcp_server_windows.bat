@@ -7,50 +7,59 @@ echo   MCP Server Startup (Windows)
 echo ========================================
 echo.
 
-REM Go to project root (parent of this script folder)
-cd /d "%~dp0\.."
+rem ---- Determine project root ----
+cd /d "%~dp0"
+cd ..
 set "PROJECT_ROOT=%CD%"
 echo Project Root: %PROJECT_ROOT%
 echo.
 
-REM --- Resolve a Python command ---
+rem ---- Choose Python interpreter ----
 set "PYTHON_CMD="
 
-REM 1) Prefer project venv if it exists
-if exist "%PROJECT_ROOT%\venv\Scripts\python.exe" (
-  set "PYTHON_CMD=%PROJECT_ROOT%\venv\Scripts\python.exe"
-)
-
-REM 2) Try the Windows py launcher (3.11)
-if not defined PYTHON_CMD (
-  where py >nul 2>nul && set "PYTHON_CMD=py -3.11"
-)
-
-REM 3) Fall back to python on PATH
-if not defined PYTHON_CMD (
-  where python >nul 2>nul && set "PYTHON_CMD=python"
-)
+if exist "%PROJECT_ROOT%\.venv\Scripts\python.exe" set "PYTHON_CMD=%PROJECT_ROOT%\.venv\Scripts\python.exe"
+if not defined PYTHON_CMD if exist "%PROJECT_ROOT%\venv\Scripts\python.exe" set "PYTHON_CMD=%PROJECT_ROOT%\venv\Scripts\python.exe"
+if not defined PYTHON_CMD where py >nul 2>nul && set "PYTHON_CMD=py -3.11"
+if not defined PYTHON_CMD where python >nul 2>nul && set "PYTHON_CMD=python"
 
 if not defined PYTHON_CMD (
-  echo [ERROR] No Python found.
-  echo Tried: venv\Scripts\python.exe, py -3.11, and python on PATH.
-  echo Install Python 3.11+ OR create a venv: python -m venv venv
-  exit /b 1
+    echo [ERROR] No Python found (.venv, py -3.11, or python).
+    pause
+    exit /b 1
 )
 
 echo Using Python: %PYTHON_CMD%
 %PYTHON_CMD% --version || (
-  echo [ERROR] Python command failed: %PYTHON_CMD%
-  exit /b 1
+    echo [ERROR] Python is not runnable.
+    pause
+    exit /b 1
 )
-echo.
 
-REM --- Optional: install deps (uncomment if needed) ---
-REM %PYTHON_CMD% -m pip install -r "%PROJECT_ROOT%\mcp_server\requirements.txt" || exit /b 1
+rem ---- Ensure required packages ----
+echo Checking uvicorn installation...
+%PYTHON_CMD% -m uvicorn --version >nul 2>nul || (
+    echo Installing required packages...
+    %PYTHON_CMD% -m pip install --quiet --upgrade pip
+    %PYTHON_CMD% -m pip install --quiet "uvicorn[standard]" fastapi
+)
 
-REM --- Start the server ---
-cd "%PROJECT_ROOT%\mcp_server"
+rem ---- Launch server ----
+cd "%PROJECT_ROOT%\mcp_server" || (
+    echo [ERROR] mcp_server folder not found.
+    pause
+    exit /b 1
+)
+
 echo Starting MCP server on 0.0.0.0:8000 ...
-%PYTHON_CMD% -m uvicorn server:app --host 0.0.0.0 --port 8000 --reload
+echo (Press Ctrl+C to stop)
+echo ========================================
+%PYTHON_CMD% -m uvicorn server:app --host 0.0.0.0 --port 8000 --reload --log-level debug
 
-endlocal
+set "EC=%ERRORLEVEL%"
+echo.
+if not "%EC%"=="0" (
+    echo [ERROR] Uvicorn exited with code %EC%.
+    echo - Check for missing imports or occupied port.
+)
+pause
+exit /b %EC%
