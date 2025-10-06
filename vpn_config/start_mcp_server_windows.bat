@@ -7,9 +7,12 @@ echo   MCP Server Startup (Windows)
 echo ========================================
 echo.
 
-rem --- Derive absolute project root from script path ---
+rem --- Normalize script directory (remove trailing backslash) ---
 set "SCRIPT_DIR=%~dp0"
-for %%I in ("%SCRIPT_DIR%..") do set "PROJECT_ROOT=%%~fI"
+if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
+
+rem --- Compute project root (one level above vpn_config) ---
+for %%I in ("%SCRIPT_DIR%\..") do set "PROJECT_ROOT=%%~fI"
 
 echo Project Root: %PROJECT_ROOT%
 echo.
@@ -39,7 +42,7 @@ echo Verwende Python: %PYTHON_CMD%
     exit /b 1
 )
 
-rem --- Check for uvicorn ---
+rem --- Ensure uvicorn is installed ---
 echo Überprüfe uvicorn Installation...
 %PYTHON_CMD% -m uvicorn --version >nul 2>nul
 if errorlevel 1 (
@@ -48,7 +51,7 @@ if errorlevel 1 (
     %PYTHON_CMD% -m pip install --quiet "uvicorn[standard]" fastapi
 )
 
-rem --- Start server ---
+rem --- Start the server ---
 if not exist "%PROJECT_ROOT%\mcp_server" (
     echo [ERROR] Ordner mcp_server nicht gefunden.
     pause
