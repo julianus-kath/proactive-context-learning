@@ -1,7 +1,11 @@
 """
 Database adapter for MCP server with direct database connectors.
 Supports both PostgreSQL (dev) and SQL Server (production) via DB_DIALECT.
-This replaces the proxy layer with direct database access.
+
+Architecture:
+- On Mac: MCP server connects to local PostgreSQL for development
+- On Windows: MCP server connects to SQL Server via VPN for production
+- Mac services (Web UI, LangGraph) call MCP server via HTTP
 """
 
 import os
@@ -25,15 +29,16 @@ logger = logging.getLogger(__name__)
 
 class DatabaseAdapter:
     """
-    Database adapter with direct connectors for PostgreSQL and SQL Server.
+    Database adapter with support for multiple database backends.
     
-    This adapter replaces the proxy layer with direct database access,
-    eliminating 429 errors and improving performance.
+    Supported Dialects:
+    - postgres: Direct PostgreSQL connection (dev mode)
+    - mssql: Direct SQL Server connection (production mode)
     
     Features:
     - Direct PostgreSQL connector (asyncpg)
     - Direct SQL Server connector (pyodbc)
-    - Schema caching (5-minute TTL)
+    - Schema caching with Phase 3 catalog
     - Read-only enforcement
     - Connection pooling
     - Statement timeouts
@@ -41,21 +46,9 @@ class DatabaseAdapter:
     
     def __init__(self):
         """Initialize the database adapter based on DB_DIALECT."""
+        # Get database dialect from config
         self.dialect = config.db_dialect
-        self.connector: Union[PostgresConnector, MSSQLConnector, None] = None
         
-        # Phase 3: Schema catalog (replaces simple cache)
-        self.catalog: Optional[SchemaCatalog] = None
-        
-        # Legacy schema cache (kept for backward compatibility)
-        self._schema_cache = {
-            "data": None,
-            "timestamp": None,
-            "hits": 0,
-            "ttl": 300  # Cache for 5 minutes
-        }
-        
-        # Initialize the appropriate connector
         if self.dialect == "postgres":
             self.connector = PostgresConnector(
                 host=config.postgres_host,
@@ -84,6 +77,17 @@ class DatabaseAdapter:
         
         else:
             raise ValueError(f"Unsupported database dialect: {self.dialect}. Must be 'postgres' or 'mssql'")
+        
+        # Phase 3: Schema catalog (replaces simple cache)
+        self.catalog: Optional[SchemaCatalog] = None
+        
+        # Legacy schema cache (kept for backward compatibility)
+        self._schema_cache = {
+            "data": None,
+            "timestamp": None,
+            "hits": 0,
+            "ttl": 300  # Cache for 5 minutes
+        }
         
         logger.info(f"DatabaseAdapter initialized in {self.dialect} mode")
     

@@ -1,0 +1,170 @@
+================================================================================
+ARCHITECTURE CLEANUP - CHANGES SUMMARY
+================================================================================
+
+Date: 2024
+Objective: Remove proxy mode, clarify Mac + Windows deployment architecture
+
+================================================================================
+WHAT WAS DONE
+================================================================================
+
+1. REMOVED PROXY MODE FROM MCP SERVER
+   ✅ Modified: /mcp_server/database_adapter.py
+      - Removed ProxyConnector import
+      - Removed proxy mode logic
+      - Simplified to postgres/mssql only
+      - Updated docstring
+
+2. CREATED WINDOWS STARTUP SCRIPTS
+   ✅ Created: /vpn_config/start_mcp_server_windows.bat
+      - For Windows Command Prompt
+      - Checks Python, ODBC Driver, .env
+      - Starts MCP server on 0.0.0.0:8000
+   
+   ✅ Created: /vpn_config/start_mcp_server_windows.sh
+      - For Git Bash/WSL on Windows
+      - Same functionality as .bat
+
+3. CREATED MAC STARTUP SCRIPT
+   ✅ Created: /start_all_services_mac.sh
+      - Replaces old start_all_services.sh
+      - Does NOT start MCP server
+      - Checks Windows MCP server connection
+      - Starts LangGraph (5001) + Web UI (3000)
+
+4. CREATED DOCUMENTATION
+   ✅ Created: /DEPLOYMENT_GUIDE.md
+      - Full deployment guide
+      - Architecture diagram
+      - Step-by-step setup for both machines
+      - Configuration examples
+      - Troubleshooting guide
+   
+   ✅ Created: /ARCHITECTURE_CLEANUP_SUMMARY.md
+      - Summary of changes
+      - Before/after architecture
+      - Testing checklist
+   
+   ✅ Created: /QUICK_START.md
+      - Quick reference guide
+      - TL;DR commands
+      - Common troubleshooting
+
+5. CREATED CONFIGURATION TEMPLATES
+   ✅ Created: /env.windows.template
+      - Template for Windows .env
+   
+   ✅ Attempted: /env.mac.template
+      - User denied (may have been deleted)
+      - Configuration embedded in DEPLOYMENT_GUIDE.md instead
+
+================================================================================
+ARCHITECTURE CHANGE
+================================================================================
+
+BEFORE (Confused):
+  Mac: Web UI + LangGraph + MCP Server (trying to call proxy)
+  Windows: proxy.py with deprecated /query endpoint
+
+AFTER (Clean):
+  Mac: Web UI + LangGraph → calls Windows MCP server
+  Windows: MCP Server → SQL Server (via VPN)
+
+KEY INSIGHT:
+  - MCP server REPLACES the proxy, doesn't use it
+  - MCP server must run on Windows (has VPN access)
+  - Mac services call Windows MCP server via HTTP
+
+================================================================================
+STARTUP PROCEDURE
+================================================================================
+
+PRODUCTION (Mac + Windows):
+  1. Windows: cd vpn_config && start_mcp_server_windows.bat
+  2. Mac: ./start_all_services_mac.sh
+  3. Access: http://localhost:3000
+
+DEVELOPMENT (Mac only):
+  1. Update .env: MCP_SERVER_URL=http://localhost:8000, DB_DIALECT=postgres
+  2. Start PostgreSQL: brew services start postgresql
+  3. Start MCP locally: cd mcp_server && uvicorn server:app --reload
+  4. Start Mac services: ./start_all_services_mac.sh
+
+================================================================================
+CONFIGURATION
+================================================================================
+
+WINDOWS .env:
+  MCP_SERVER_HOST=0.0.0.0
+  MCP_SERVER_PORT=8000
+  MCP_API_KEY=supersecretapikey
+  DB_DIALECT=mssql
+  MSSQL_SERVER=192.168.200.16
+  MSSQL_DATABASE=master
+  MSSQL_USER=SimonM
+  MSSQL_PASSWORD=your_password_here
+  MSSQL_DRIVER=ODBC Driver 17 for SQL Server
+
+MAC .env:
+  OPENAI_API_KEY=your_openai_api_key_here
+  MCP_SERVER_URL=http://10.255.152.48:8000
+  MCP_API_KEY=supersecretapikey
+  LANGGRAPH_URL=http://localhost:5001
+  LANGGRAPH_API_KEY=supersecretapikey
+
+================================================================================
+FILES THAT CAN BE DELETED (Optional)
+================================================================================
+
+  - /mcp_server/db_proxy.py (no longer used)
+  - /test_proxy_mcp.py (proxy test script)
+  - /PROXY_ISSUE_SOLUTION.md (outdated)
+  - /start_all_services.sh (replaced by start_all_services_mac.sh)
+  - /vpn_config/proxy.py (can keep for reference)
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. TEST ON WINDOWS:
+   - Create .env file with SQL Server credentials
+   - Run: start_mcp_server_windows.bat
+   - Verify: http://localhost:8000/health
+
+2. TEST ON MAC:
+   - Create .env file with Windows MCP server URL
+   - Run: ./start_all_services_mac.sh
+   - Verify: http://localhost:3000
+
+3. VERIFY END-TO-END:
+   - Ask question in Web UI
+   - Check it queries database through Windows MCP server
+   - Verify response is correct
+
+4. UPDATE DOCUMENTATION (if needed):
+   - ADR-0012: Add deployment topology section
+   - README.md: Update with new startup instructions
+
+================================================================================
+BENEFITS
+================================================================================
+
+✅ Clear separation of concerns
+✅ Windows has VPN access to SQL Server
+✅ Mac doesn't need database credentials
+✅ MCP provides intelligent database layer (rate limiting, caching, safety)
+✅ Single HTTP connection from Mac to Windows
+✅ Can develop locally on Mac with PostgreSQL
+✅ System-agnostic (same code runs on both machines)
+
+================================================================================
+QUESTIONS?
+================================================================================
+
+See:
+  - QUICK_START.md for quick reference
+  - DEPLOYMENT_GUIDE.md for full guide
+  - ARCHITECTURE_CLEANUP_SUMMARY.md for detailed changes
+
+================================================================================

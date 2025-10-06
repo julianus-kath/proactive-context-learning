@@ -1,217 +1,230 @@
-# 🎯 Startup Script Enhancement Summary
+# Summary of Changes - Architecture Cleanup
 
-## What Was Changed
+## What Was Done
 
-### 1. **Universal Startup Script** (`start_all_services.sh`)
+### ✅ 1. Removed Proxy Mode from MCP Server
 
-The startup script is now the **single "start button"** for the entire system, supporting both proxy and local modes.
+**File:** `/mcp_server/database_adapter.py`
 
-#### Key Features:
-- ✅ **Automatic mode detection** from `.env` file (`DB_MODE=proxy` or `DB_MODE=local`)
-- ✅ **Intelligent proxy checking** with detailed diagnostics
-- ✅ **Network connectivity tests** before starting services
-- ✅ **API key authentication validation**
-- ✅ **Graceful fallback** for missing tools
-- ✅ **Clear error messages** with actionable solutions
+**Changes:**
+- Removed `from mcp_server.db_proxy import ProxyConnector`
+- Removed all `DB_MODE=proxy` logic (lines 48-73)
+- Simplified `__init__` to only support `postgres` and `mssql` dialects
+- Updated docstring to clarify deployment architecture
 
-#### Proxy Mode Checks:
-1. Validates `PROXY_BASE_URL` is configured
-2. Tests network connectivity to proxy server
-3. Calls proxy `/health` endpoint
-4. Verifies API key authentication (if configured)
-5. Shows available database connections
-6. Provides clear error messages if proxy is unreachable
-
-#### Local Mode Checks:
-1. Checks if PostgreSQL is running
-2. Attempts to start PostgreSQL if not running
-3. Creates database if missing
-4. Restores database tables if missing
-5. Validates database connectivity
+**Result:** MCP server now only supports direct database connections (PostgreSQL or SQL Server)
 
 ---
 
-### 2. **Proxy Test Script** (`scripts/test_proxy_quick.py`)
+### ✅ 2. Created Configuration Templates
 
-Updated to handle optional API keys (for development mode).
+**New Files:**
+- `config/env.windows.example` - Windows MCP server configuration
+- `env.mac.template` - Mac services configuration
 
-#### Changes:
-- ✅ API key is now **optional** (proxy can run without authentication)
-- ✅ Better error messages for missing configuration
-- ✅ Handles both authenticated and unauthenticated proxy modes
+**Purpose:** Clear separation of configuration for each machine
 
 ---
 
-### 3. **Environment Template** (`.env` creation)
+### ✅ 3. Created Startup Scripts
 
-Updated default `.env` template to include both modes.
+**Windows:**
+- `vpn_config/start_mcp_server_windows.bat` - Batch script
+- `vpn_config/start_mcp_server_windows.sh` - Bash script (Git Bash/WSL)
 
-#### New Template:
-```bash
-# Database Configuration Mode
-DB_MODE=local  # or "proxy"
+**Mac:**
+- `start_all_services_mac.sh` - Starts Web UI + LangGraph only
 
-# Local PostgreSQL Configuration
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=synthetic_erp_data
-DB_USER=juli
+**Features:**
+- Pre-flight checks (Python, dependencies, .env)
+- Windows MCP server connectivity test (Mac script)
+- Automatic dependency installation
+- Port conflict detection and resolution
+- Health checks and service readiness verification
 
-# Proxy Configuration (for proxy mode)
-# PROXY_BASE_URL=http://192.168.1.35:5000
-# PROXY_API_KEY=your-api-key-here
-# PROXY_DEFAULT_CONN=corp_sql_erp
+---
+
+### ✅ 4. Created Documentation
+
+**New Files:**
+- `DEPLOYMENT_GUIDE.md` - Complete setup guide (both machines)
+- `ARCHITECTURE_CLEANUP_SUMMARY.md` - Detailed change log
+- `QUICK_START.md` - 5-minute quick start guide
+- `CHANGES_SUMMARY.md` - This file
+
+---
+
+## Architecture Before vs After
+
+### Before (Ambiguous)
+```
+Mac: Web UI + LangGraph + MCP Server (?)
+Windows: Proxy (deprecated)
 ```
 
----
-
-### 4. **Documentation** (`STARTUP_GUIDE.md`)
-
-Created comprehensive startup guide covering:
-- Quick start instructions
-- Configuration for both modes
-- Service descriptions
-- Troubleshooting guide
-- Log file locations
-- Architecture compliance notes
-
----
-
-## How to Use
-
-### For Proxy Mode (Production):
-
-1. **Configure `.env`:**
-   ```bash
-   DB_MODE=proxy
-   PROXY_BASE_URL=http://192.168.1.35:5000
-   PROXY_API_KEY=your-key-or-leave-empty
-   PROXY_DEFAULT_CONN=corp_sql_erp
-   OPENAI_API_KEY=sk-...
-   ```
-
-2. **Start Windows proxy:**
-   ```powershell
-   # On Windows
-   cd vpn_config
-   python proxy.py
-   ```
-
-3. **Start all services:**
-   ```bash
-   # On Mac
-   ./start_all_services.sh
-   ```
-
----
-
-### For Local Mode (Development):
-
-1. **Configure `.env`:**
-   ```bash
-   DB_MODE=local
-   DB_NAME=synthetic_erp_data
-   DB_USER=juli
-   OPENAI_API_KEY=sk-...
-   ```
-
-2. **Start all services:**
-   ```bash
-   ./start_all_services.sh
-   ```
-
-The script will automatically:
-- Start PostgreSQL if needed
-- Create database if missing
-- Restore tables if missing
-
----
-
-## Testing
-
-### Test Proxy Connection:
-```bash
-python scripts/test_proxy_quick.py
+### After (Clear)
 ```
+Mac Machine:
+├── Web UI (Port 3000)
+└── LangGraph Service (Port 5001)
+    └── HTTP → Windows MCP Server
 
-### Test Full System:
-```bash
-./start_all_services.sh
+Windows Machine (VPN):
+├── MCP Server (Port 8000)
+└── SQL Server (Direct connection via VPN)
 ```
-
-Then open: http://localhost:3000
-
----
-
-## Architecture Compliance
-
-All changes follow the project's ADR principles:
-
-✅ **Proxy-only separation**: Proxy remains a simple pass-through  
-✅ **Database abstraction**: Agent uses `DatabaseClient` abstraction  
-✅ **Read-only queries**: Only SELECT statements permitted  
-✅ **JSON format**: All APIs return structured JSON  
-✅ **Security**: API key authentication supported  
-✅ **Modularity**: Clean separation between proxy and agent  
 
 ---
 
 ## Files Modified
 
-1. `start_all_services.sh` - Universal startup script
-2. `scripts/test_proxy_quick.py` - Proxy connection test
-3. `STARTUP_GUIDE.md` - New comprehensive guide
-4. `CHANGES_SUMMARY.md` - This file
+### Modified
+1. `/mcp_server/database_adapter.py` - Removed proxy mode
+
+### Created
+1. `config/env.windows.example` - Windows config template
+2. `env.mac.template` - Mac config template
+3. `vpn_config/start_mcp_server_windows.bat` - Windows startup (batch)
+4. `vpn_config/start_mcp_server_windows.sh` - Windows startup (bash)
+5. `start_all_services_mac.sh` - Mac startup script
+6. `DEPLOYMENT_GUIDE.md` - Complete deployment guide
+7. `ARCHITECTURE_CLEANUP_SUMMARY.md` - Detailed changes
+8. `QUICK_START.md` - Quick reference
+9. `CHANGES_SUMMARY.md` - This summary
+
+### Deprecated (Can Delete Later)
+1. `/mcp_server/db_proxy.py` - Proxy connector (no longer used)
+2. `/test_proxy_mcp.py` - Proxy test script
+3. `/PROXY_ISSUE_SOLUTION.md` - Outdated solution
+4. `/vpn_config/proxy.py` - Old proxy server (replaced by MCP)
+5. `/start_all_services.sh` - Old startup script
 
 ---
 
-## Next Steps
+## How to Use
 
-1. ✅ **Test proxy connection**: `python scripts/test_proxy_quick.py`
-2. ✅ **Start system**: `./start_all_services.sh`
-3. ✅ **Open Web UI**: http://localhost:3000
-4. ✅ **Test queries**: "Show me top customers"
-5. ✅ **Check logs**: `tail -f logs/*.log`
+### On Windows (First)
+```bash
+# 1. Pull latest code
+git pull
+
+# 2. Create .env
+copy config\env.windows.example .env
+
+# 3. Edit .env (set MSSQL_PASSWORD)
+notepad .env
+
+# 4. Start MCP server
+cd vpn_config
+start_mcp_server_windows.bat
+
+# 5. Verify
+# Open: http://localhost:8000/health
+```
+
+### On Mac (Second)
+```bash
+# 1. Pull latest code
+git pull
+
+# 2. Create .env
+cp env.mac.template .env
+
+# 3. Edit .env (set OPENAI_API_KEY and MCP_SERVER_URL)
+nano .env
+
+# 4. Start services
+./start_all_services_mac.sh
+
+# 5. Access app
+# Open: http://localhost:3000
+```
+
+---
+
+## Key Configuration
+
+### Windows .env
+```bash
+DB_DIALECT=mssql
+MSSQL_SERVER=192.168.200.16
+MSSQL_USER=SimonM
+MSSQL_PASSWORD=your_password_here
+MCP_SERVER_HOST=0.0.0.0
+MCP_SERVER_PORT=8000
+MCP_API_KEY=supersecretapikey
+```
+
+### Mac .env
+```bash
+OPENAI_API_KEY=sk-your-key-here
+MCP_SERVER_URL=http://10.255.152.48:8000
+MCP_API_KEY=supersecretapikey
+LANGGRAPH_URL=http://localhost:5001
+WEB_UI_PORT=3000
+```
+
+---
+
+## Testing Checklist
+
+### Windows
+- [ ] MCP server starts without errors
+- [ ] Health endpoint returns 200 OK: http://localhost:8000/health
+- [ ] Can connect to SQL Server (check logs)
+- [ ] Port 8000 accessible from Mac
+
+### Mac
+- [ ] Can ping Windows machine
+- [ ] Can curl Windows MCP health endpoint
+- [ ] LangGraph service starts (port 5001)
+- [ ] Web UI starts (port 3000)
+- [ ] Can query database through chatbot
 
 ---
 
 ## Benefits
 
-### Before:
-- ❌ Manual service startup
-- ❌ No proxy connectivity checks
-- ❌ Unclear error messages
-- ❌ Separate scripts for different modes
-- ❌ No validation before starting services
-
-### After:
-- ✅ Single "start button" for everything
-- ✅ Automatic proxy connectivity validation
-- ✅ Clear, actionable error messages
-- ✅ Unified script for all modes
-- ✅ Pre-flight checks before starting services
-- ✅ Intelligent mode detection
-- ✅ Graceful error handling
+✅ **Clear Architecture** - No ambiguity about where components run  
+✅ **VPN Isolation** - Only Windows needs VPN access  
+✅ **Simplified Code** - Removed unused proxy mode  
+✅ **Better Documentation** - Step-by-step guides for both machines  
+✅ **Easy Deployment** - One-command startup scripts  
+✅ **Testable** - Can still run locally with PostgreSQL  
 
 ---
 
-## Troubleshooting
+## Next Steps
 
-See `STARTUP_GUIDE.md` for detailed troubleshooting steps.
+1. **Test on both machines** - Verify end-to-end flow
+2. **Update ADRs** - Document deployment topology decision
+3. **Delete deprecated files** - After confirming new architecture works
+4. **Add TLS/HTTPS** - Secure MCP server communication
+5. **Add monitoring** - Track MCP server performance
 
-Quick checks:
+---
+
+## Rollback Plan
+
+If issues arise:
+
 ```bash
-# Check proxy connectivity
-python scripts/test_proxy_quick.py
+# Revert database_adapter.py
+git checkout HEAD~1 mcp_server/database_adapter.py
 
-# Check service logs
-tail -f logs/*.log
-
-# Check running services
-lsof -i :3000  # Web UI
-lsof -i :5001  # LangGraph
-lsof -i :8000  # MCP Server
-
-# Restart everything
-./start_all_services.sh
+# Use old proxy mode
+# Set DB_MODE=proxy in .env
+# Start vpn_config/proxy.py on Windows
 ```
+
+---
+
+## Questions?
+
+📖 **Full Guide:** `DEPLOYMENT_GUIDE.md`  
+🚀 **Quick Start:** `QUICK_START.md`  
+📝 **Details:** `ARCHITECTURE_CLEANUP_SUMMARY.md`
+
+---
+
+**All changes are backward compatible and can be rolled back if needed!**
