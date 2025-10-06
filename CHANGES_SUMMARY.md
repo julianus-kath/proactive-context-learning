@@ -16,13 +16,12 @@
 
 ---
 
-### ✅ 2. Created Configuration Templates
+### ✅ 2. Updated Configuration Template
 
-**New Files:**
-- `config/env.windows.example` - Windows MCP server configuration
-- `env.mac.template` - Mac services configuration
+**Modified File:**
+- `.env.template` - Updated with Windows and Mac deployment sections
 
-**Purpose:** Clear separation of configuration for each machine
+**Purpose:** Single template file with clear sections for each deployment mode
 
 ---
 

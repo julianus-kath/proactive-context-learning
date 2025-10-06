@@ -32,9 +32,8 @@ This document summarizes the architectural cleanup that removed the deprecated p
 
 ### 2. **Created Deployment Configuration Templates**
 
-**New Files:**
-- `config/env.windows.example` - Template for Windows MCP server
-- `env.mac.template` - Template for Mac services (Web UI + LangGraph)
+**Updated Files:**
+- `.env.template` - Updated with Windows and Mac configuration sections
 
 **Configuration:**
 

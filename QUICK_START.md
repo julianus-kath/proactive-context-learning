@@ -12,7 +12,7 @@
 git pull
 
 # Create .env from template
-copy config\env.windows.example .env
+copy .env.template .env
 
 # Edit .env - set your password
 notepad .env
@@ -46,7 +46,7 @@ Look for IPv4 Address (e.g., `10.255.152.48`)
 git pull
 
 # Create .env from template
-cp env.mac.template .env
+cp .env.template .env
 
 # Edit .env
 nano .env

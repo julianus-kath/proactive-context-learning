@@ -64,7 +64,7 @@ This system uses a **distributed architecture** where different components run o
 
 2. **Create .env File**
    ```bash
-   copy config\env.windows.example .env
+   copy .env.template .env
    ```
 
 3. **Edit .env File**
@@ -130,7 +130,7 @@ This system uses a **distributed architecture** where different components run o
 
 2. **Create .env File**
    ```bash
-   cp env.mac.template .env
+   cp .env.template .env
    ```
 
 3. **Edit .env File**

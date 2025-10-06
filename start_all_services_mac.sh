@@ -257,7 +257,7 @@ echo ""
 
 # Start LangGraph Service
 echo -e "${YELLOW}🔧 Starting LangGraph Service (Port 5001)...${NC}"
-cd "$PROJECT_ROOT/langgraph_integration"
+cd "$PROJECT_ROOT/chatbot_ui"
 
 if [ ! -f "langgraph_service.py" ]; then
     echo -e "${RED}❌ langgraph_service.py not found${NC}"

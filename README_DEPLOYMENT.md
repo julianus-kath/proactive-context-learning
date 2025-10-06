@@ -131,14 +131,14 @@ WEB_UI_PORT=3000
 
 ## 🔧 Configuration Templates
 
-### Windows
-- **Template:** `config/env.windows.example`
+### Both Machines
+- **Template:** `.env.template`
 - **Copy to:** `.env` (in project root)
-- **Required:** MSSQL_PASSWORD, MCP_API_KEY
 
-### Mac
-- **Template:** `env.mac.template`
-- **Copy to:** `.env` (in project root)
+### Windows Configuration
+- **Required:** MSSQL_PASSWORD, MCP_API_KEY, DB_DIALECT=mssql
+
+### Mac Configuration
 - **Required:** OPENAI_API_KEY, MCP_SERVER_URL, MCP_API_KEY
 
 ---

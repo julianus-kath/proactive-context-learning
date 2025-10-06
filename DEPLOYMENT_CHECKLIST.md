@@ -35,7 +35,7 @@ Use this checklist to ensure proper deployment of the Mac + Windows architecture
 - [ ] Verify latest code is pulled
 
 ### Step 2: Configure Environment
-- [ ] Copy template: `copy config\env.windows.example .env`
+- [ ] Copy template: `copy .env.template .env`
 - [ ] Open .env in editor: `notepad .env`
 - [ ] Set `MSSQL_PASSWORD` to actual password
 - [ ] Verify `MSSQL_SERVER=192.168.200.16`
@@ -103,7 +103,7 @@ Use this checklist to ensure proper deployment of the Mac + Windows architecture
 - [ ] Verify latest code is pulled
 
 ### Step 2: Configure Environment
-- [ ] Copy template: `cp env.mac.template .env`
+- [ ] Copy template: `cp .env.template .env`
 - [ ] Open .env in editor: `nano .env`
 - [ ] Set `OPENAI_API_KEY=sk-your-key-here`
 - [ ] Set `MCP_SERVER_URL=http://10.255.152.48:8000` (use Windows IP)
