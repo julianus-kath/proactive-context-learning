@@ -54,6 +54,7 @@ class MSSQLConnector:
         self.max_rows = max_rows
         
         # Build connection string
+        # TrustServerCertificate=yes is required for internal SQL Servers with self-signed certs
         self.connection_string = (
             f"DRIVER={{{driver}}};"
             f"SERVER={server};"
@@ -61,7 +62,7 @@ class MSSQLConnector:
             f"UID={username};"
             f"PWD={password};"
             f"Encrypt=yes;"
-            f"TrustServerCertificate=no;"
+            f"TrustServerCertificate=yes;"
             f"Connection Timeout={timeout};"
         )
         
