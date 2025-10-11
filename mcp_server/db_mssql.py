@@ -55,9 +55,10 @@ class MSSQLConnector:
         
         # Build connection string
         # TrustServerCertificate=yes is required for internal SQL Servers with self-signed certs
+        # Force TCP/IP protocol to avoid Named Pipes issues
         self.connection_string = (
             f"DRIVER={{{driver}}};"
-            f"SERVER={server};"
+            f"SERVER=tcp:{server};"
             f"DATABASE={database};"
             f"UID={username};"
             f"PWD={password};"
