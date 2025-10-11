@@ -146,9 +146,13 @@ class MSSQLConnector:
                 # Execute query with parameters
                 # (timeout is already set on the connection level)
                 if params:
-                    # Convert dict params to positional params for pyodbc
-                    # This is a simplified approach - in production, use proper parameterization
-                    cursor.execute(sql, params)
+                    # pyodbc requires positional parameters (list/tuple), not dict
+                    if isinstance(params, dict):
+                        # Convert dict to list (order must match ? placeholders in SQL)
+                        param_list = list(params.values())
+                        cursor.execute(sql, param_list)
+                    else:
+                        cursor.execute(sql, params)
                 else:
                     cursor.execute(sql)
                 
@@ -216,7 +220,7 @@ class MSSQLConnector:
                 try:
                     col_columns, col_rows = await self.query(
                         columns_query,
-                        params={'schema': schema_name, 'table': table_name},
+                        params=[schema_name, table_name],  # Use list for positional params
                         limit=1000
                     )
                     

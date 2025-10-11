@@ -433,7 +433,7 @@ class SchemaCatalog:
         try:
             col_columns, col_rows = await self.connector.query(
                 query,
-                params={'schema': schema, 'table': table},
+                params=[schema, table],  # Use list for positional params
                 limit=1000
             )
             
@@ -470,7 +470,7 @@ class SchemaCatalog:
         try:
             col_columns, col_rows = await self.connector.query(
                 query,
-                params={'schema': schema, 'table': table},
+                params=[schema, table],  # Use list for positional params
                 limit=1000
             )
             
@@ -506,7 +506,7 @@ class SchemaCatalog:
         try:
             col_columns, col_rows = await self.connector.query(
                 query,
-                params={'schema': schema, 'table': table},
+                params=[schema, table],  # Use list for positional params
                 limit=100
             )
             
