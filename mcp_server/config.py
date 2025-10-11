@@ -51,7 +51,7 @@ class MCPServerConfig:
     
     # Query limits for safety
     max_query_results: int = int(os.getenv("MAX_QUERY_RESULTS", "1000"))
-    query_timeout: int = int(os.getenv("QUERY_TIMEOUT", "30"))
+    query_timeout: int = int(os.getenv("QUERY_TIMEOUT", "60"))  # Increased to 60s for VPN connections
     
     # Connection pool settings
     min_pool_size: int = int(os.getenv("MIN_POOL_SIZE", "1"))

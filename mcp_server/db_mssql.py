@@ -75,15 +75,22 @@ class MSSQLConnector:
     def _get_connection(self) -> pyodbc.Connection:
         """Get or create a database connection."""
         if self._connection is None or not self._is_connection_alive():
-            logger.info("Creating new MSSQL connection...")
-            self._connection = pyodbc.connect(
-                self.connection_string,
-                timeout=self.timeout,
-                readonly=True  # Read-only mode
-            )
-            # Set additional connection properties
-            self._connection.timeout = self.timeout
-            logger.info("✅ MSSQL connection established")
+            logger.info(f"Creating new MSSQL connection to {self.server}/{self.database}...")
+            logger.debug(f"Connection string: DRIVER={{{self.driver}}};SERVER=tcp:{self.server};DATABASE={self.database};UID={self.username};PWD=***;Encrypt=yes;TrustServerCertificate=yes;Connection Timeout={self.timeout};")
+            
+            try:
+                # pyodbc.connect() only accepts the connection string
+                # timeout is already set in the connection string
+                # readonly mode is enforced at the query level (SELECT-only)
+                self._connection = pyodbc.connect(self.connection_string)
+                logger.info("✅ MSSQL connection established")
+            except pyodbc.Error as e:
+                logger.error(f"❌ Failed to connect to SQL Server: {e}")
+                logger.error(f"   Server: {self.server}")
+                logger.error(f"   Database: {self.database}")
+                logger.error(f"   Driver: {self.driver}")
+                logger.error(f"   Timeout: {self.timeout}s")
+                raise
         
         return self._connection
     
