@@ -4,12 +4,15 @@ Supports both PostgreSQL and SQL Server via DB_DIALECT environment variable.
 """
 
 import os
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional, Literal
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from mcp_server/.env
+# This ensures we load the correct .env file even when running from project root
+env_path = Path(__file__).parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 DatabaseDialect = Literal["postgres", "mssql"]
 
