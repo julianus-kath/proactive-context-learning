@@ -143,10 +143,8 @@ class MSSQLConnector:
         
         try:
             with self._get_cursor() as cursor:
-                # Set query timeout
-                cursor.timeout = self.timeout
-                
                 # Execute query with parameters
+                # (timeout is already set on the connection level)
                 if params:
                     # Convert dict params to positional params for pyodbc
                     # This is a simplified approach - in production, use proper parameterization
