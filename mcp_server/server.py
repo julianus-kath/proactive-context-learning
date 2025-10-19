@@ -4,8 +4,9 @@ MCP Database Server - FastAPI implementation
 
 import os
 import logging
-from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi import FastAPI, HTTPException, Depends, Header, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Dict, Any, Optional, Union
 import uvicorn
@@ -68,13 +69,25 @@ class JSONRPCResponse(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize the database connection on startup."""
+    """Initialize the database connection and run Scout Mode on startup."""
     global db_manager
     try:
         from database_adapter import DatabaseAdapter
+        from scout_mode import run_scout_mode
+        
         db_manager = DatabaseAdapter()
         await db_manager.initialize()
         logger.info("✅ MCP Database Server initialized successfully")
+        
+        # Phase 7: Run Scout Mode (async, doesn't block startup)
+        try:
+            cache_dir = os.path.join(os.path.dirname(__file__), 'cache')
+            scout_report = await run_scout_mode(db_manager, cache_dir=cache_dir)
+            logger.info(f"🔍 Scout Mode Report: {scout_report}")
+        except Exception as scout_error:
+            logger.warning(f"⚠️ Scout Mode startup job failed (non-blocking): {scout_error}")
+            # Don't raise - Scout Mode is optional and shouldn't block startup
+        
     except Exception as e:
         logger.error(f"❌ Failed to initialize MCP Database Server: {e}")
         raise
@@ -215,14 +228,17 @@ async def mcp_endpoint(
     request: JSONRPCRequest,
     api_key: str = Depends(verify_api_key)
 ):
-    """MCP JSON-RPC endpoint."""
+    """MCP JSON-RPC endpoint with proper envelope & error handling."""
     try:
         # Import tools here to avoid circular imports
         from tools import MCPTools
+        import json as json_module
+        
+        response_data = None
         
         if request.method == "tools/list":
             tools = MCPTools.get_available_tools()
-            return JSONRPCResponse(
+            response_data = JSONRPCResponse(
                 result={"tools": [tool.dict() for tool in tools]},
                 id=request.id
             )
@@ -230,18 +246,69 @@ async def mcp_endpoint(
             tool_name = request.params.get("name")
             arguments = request.params.get("arguments", {})
             
-            result = await MCPTools.execute_tool(tool_name, arguments, db_manager)
-            return JSONRPCResponse(result=result.dict(), id=request.id)
+            # Execute tool with error boundary
+            try:
+                result = await MCPTools.execute_tool(tool_name, arguments, db_manager)
+                # Ensure result is properly JSON-serializable
+                result_dict = result.dict() if hasattr(result, 'dict') else result
+                
+                # Validate content structure
+                if isinstance(result_dict, dict) and 'content' in result_dict:
+                    # Ensure content is a list of dicts with proper structure
+                    if not isinstance(result_dict['content'], list):
+                        result_dict['content'] = []
+                    
+                    # Ensure each content item is JSON-serializable
+                    valid_content = []
+                    for item in result_dict.get('content', []):
+                        if isinstance(item, dict):
+                            valid_content.append(item)
+                        else:
+                            valid_content.append({"type": "text", "text": str(item)})
+                    result_dict['content'] = valid_content
+                
+                logger.info(f"✅ Tool '{tool_name}' executed successfully")
+                response_data = JSONRPCResponse(result=result_dict, id=request.id)
+                
+            except Exception as tool_error:
+                logger.error(f"❌ Tool execution failed for '{tool_name}': {tool_error}")
+                response_data = JSONRPCResponse(
+                    error={
+                        "code": -32603,
+                        "message": f"Tool execution error: {str(tool_error)}",
+                        "data": {"tool": tool_name, "error_type": type(tool_error).__name__}
+                    },
+                    id=request.id
+                )
         else:
-            return JSONRPCResponse(
+            response_data = JSONRPCResponse(
                 error={"code": -32601, "message": f"Method not found: {request.method}"},
                 id=request.id
             )
+        
+        # Return with proper JSON content-type header
+        return JSONResponse(
+            content=response_data.dict(exclude_none=True),
+            status_code=200,
+            headers={
+                "Content-Type": "application/json",
+                "X-MCP-Version": "2.0"
+            }
+        )
+        
     except Exception as e:
         logger.error(f"MCP endpoint error: {e}")
-        return JSONRPCResponse(
+        error_response = JSONRPCResponse(
             error={"code": -32603, "message": str(e)},
-            id=request.id
+            id=getattr(request, 'id', None)
+        )
+        return JSONResponse(
+            content=error_response.dict(exclude_none=True),
+            status_code=500,
+            headers={
+                "Content-Type": "application/json",
+                "X-MCP-Version": "2.0"
+            }
         )
 
 if __name__ == "__main__":

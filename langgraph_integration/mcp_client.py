@@ -12,6 +12,7 @@ import aiohttp
 import asyncio
 import logging
 import time
+import json
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
 
@@ -104,32 +105,69 @@ class MCPDatabaseTool:
                 async with session.post(
                     f"{self.mcp_url}/mcp", 
                     json=payload, 
-                    headers=headers
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=30)
                 ) as response:
+                    # Set proper content-type check
+                    content_type = response.headers.get('Content-Type', '')
+                    if 'application/json' not in content_type:
+                        logger.warning(f"Unexpected content-type: {content_type}")
+                    
                     response.raise_for_status()
-                    data = await response.json()
                     
-                    if data is None:
-                        logger.error("MCP call failed: No response data")
-                        raise ValueError("MCP call failed: No response data")
+                    # Safely parse JSON
+                    try:
+                        data = await response.json()
+                    except ValueError as json_err:
+                        logger.error(f"Failed to parse JSON response: {json_err}")
+                        logger.error(f"Response text: {await response.text()}")
+                        raise ValueError(f"Invalid JSON from MCP server: {json_err}")
                     
-                    # Check for JSON-RPC errors
+                    if data is None or not isinstance(data, dict):
+                        logger.error(f"MCP call failed: Invalid response data type: {type(data)}")
+                        raise ValueError("MCP call failed: No response data or invalid type")
+                    
+                    # Check for JSON-RPC errors (standard envelope)
                     if "error" in data and data["error"] is not None:
-                        error_msg = data["error"].get("message", "Unknown MCP error")
-                        logger.error(f"MCP server error: {error_msg}")
+                        error_info = data["error"]
+                        if isinstance(error_info, dict):
+                            error_msg = error_info.get("message", "Unknown MCP error")
+                            error_code = error_info.get("code", -1)
+                            logger.error(f"MCP server error (code {error_code}): {error_msg}")
+                        else:
+                            error_msg = str(error_info)
+                            logger.error(f"MCP server error: {error_msg}")
                         raise ValueError(f"MCP server error: {error_msg}")
                     
-                    # Return the content from the result
+                    # Return the content from the result - handle both formats
                     result = data.get("result", {})
-                    content = result.get("content", [])
                     
+                    # If result is empty or None, this is likely an error state
+                    if not result:
+                        logger.warning("MCP result is empty, checking for alternative response format")
+                        if "data" in data:
+                            # Alternative format support
+                            result = {"content": [{"type": "text", "text": json.dumps(data["data"])}]}
+                        else:
+                            raise ValueError("MCP response has empty result and no alternative data format")
+                    
+                    # Ensure content is a list
+                    content = result.get("content", [])
+                    if not isinstance(content, list):
+                        logger.warning(f"Content is not a list, converting: {type(content)}")
+                        content = [{"type": "text", "text": str(content)}]
+                    
+                    logger.info(f"✅ MCP tool call successful, received {len(content)} content items")
                     return content
                     
         except aiohttp.ClientError as e:
             logger.error(f"HTTP error calling MCP server: {e}")
             raise
+        except ValueError as e:
+            logger.error(f"Validation error in MCP call: {e}")
+            raise
         except Exception as e:
-            logger.error(f"Unexpected error calling MCP server: {e}")
+            logger.error(f"Unexpected error calling MCP server: {e}", exc_info=True)
             raise
     
     async def get_schema(self) -> List[Dict[str, Any]]:
