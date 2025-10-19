@@ -97,3 +97,20 @@ INFO:langgraph_integration.graph_definition:Generated clarification: Könnten Si
 📝 Last user message: Gehe du bitte auf die suche nach den relevanten Tabellen....
 ✅ Conversation processed successfully - Operation: clarify
 INFO:     127.0.0.1:57878 - "POST /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58145 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58148 - "OPTIONS /process_conversation HTTP/1.1" 200 OK
+ERROR:langgraph_integration.mcp_client:Health check failed: Cannot connect to host 192.168.1.35:8000 ssl:default [Operation timed out]
+ERROR:langgraph_integration.mcp_client:MCP server health check failed
+ERROR:langgraph_integration.mcp_client:Error indexing database: Failed to initialize MCP session
+INFO:langgraph_integration.graph_definition:Database indexed: 0 tables across 0 schemas: 
+📝 Processing conversation with 2 messages...
+📝 Last user message: What were our total sales last month?...
+INFO:     127.0.0.1:58185 - "GET /health HTTP/1.1" 200 OK
+ERROR:langgraph_integration.mcp_client:Health check failed: Cannot connect to host 192.168.1.35:8000 ssl:default [Operation timed out]
+ERROR:langgraph_integration.mcp_client:MCP server health check failed
+ERROR:langgraph_integration.mcp_client:Error listing tables: Failed to initialize MCP session
+ERROR:langgraph_integration.graph_definition:Error getting table list: Failed to initialize MCP session
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['specific location', 'product category']
+INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:langgraph_integration.graph_definition:Generated clarification: Could you please specify if you are interested in the total sales for a particular location or produ...

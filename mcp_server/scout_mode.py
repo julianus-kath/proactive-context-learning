@@ -173,7 +173,7 @@ class SemanticCatalogBuilder:
                 raise RuntimeError("No tables found in database")
             
             # Build semantic index
-            catalog = self._build_catalog(tables)
+            catalog = self._build_catalog(tables, db_adapter)
             index = self._build_fuzzy_index(catalog)
             
             # Cache the results
@@ -191,7 +191,7 @@ class SemanticCatalogBuilder:
         
         return report
     
-    def _build_catalog(self, tables: List[Any]) -> Dict[str, Any]:
+    def _build_catalog(self, tables: List[Any], db_adapter=None) -> Dict[str, Any]:
         """Build semantic catalog from table list."""
         catalog = {
             "version": "1.0",
@@ -201,33 +201,35 @@ class SemanticCatalogBuilder:
         }
         
         for table in tables:
+            # ✅ Access as dict, not object
+            schema = table['schema']
+            name = table['name']
+            full_name = table['full_name']
+            
             table_info = {
-                "name": table.name,
-                "schema": table.schema,
-                "full_name": f"{table.schema}.{table.name}",
-                "type": table.type,
-                "estimated_rows": table.estimated_rows,
-                "column_count": len(table.columns),
-                "columns": [
-                    {
-                        "name": col.name,
-                        "type": col.type,
-                        "nullable": col.nullable,
-                        "is_pk": col.is_primary_key,
-                        "is_fk": col.is_foreign_key
-                    }
-                    for col in table.columns
-                ],
-                "primary_keys": table.primary_keys,
-                "foreign_keys": [
-                    {
-                        "column": fk.column,
-                        "referenced_table": f"{fk.referenced_schema}.{fk.referenced_table}",
-                        "referenced_column": fk.referenced_column
-                    }
-                    for fk in table.foreign_keys
-                ]
+                "name": name,
+                "schema": schema,
+                "full_name": full_name,
+                "type": table['type'],
+                "estimated_rows": table['estimated_rows'],
+                "column_count": table.get('column_count', 0),
+                "columns": [],
+                "primary_keys": [],
+                "foreign_keys": []
             }
+            
+            # Try to fetch full table details for columns and foreign keys
+            try:
+                if db_adapter and hasattr(db_adapter, 'catalog') and db_adapter.catalog:
+                    full_table = db_adapter.catalog.get_table(schema, name)
+                    if full_table:
+                        # ✅ Now working with full dict that includes columns
+                        table_info["columns"] = full_table.get('columns', [])
+                        table_info["primary_keys"] = full_table.get('primary_keys', [])
+                        table_info["foreign_keys"] = full_table.get('foreign_keys', [])
+            except Exception as e:
+                logger.warning(f"Could not fetch full details for {full_name}: {e}")
+            
             catalog["tables"].append(table_info)
         
         return catalog
