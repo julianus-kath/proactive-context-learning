@@ -355,6 +355,9 @@ class QueryValidator:
         """
         Inject or clamp TOP clause for SQL Server.
         
+        Important: In SQL Server, TOP must come after DISTINCT if DISTINCT is present.
+        Valid: SELECT DISTINCT TOP n ... (not SELECT TOP n DISTINCT ...)
+        
         Args:
             query: SQL query
             limit: Row limit to enforce
@@ -394,16 +397,30 @@ class QueryValidator:
                 )
         else:
             # No TOP - inject one
-            # Find SELECT keyword and inject TOP after it
-            modified_query = re.sub(
-                r'\bSELECT\b',
-                f'SELECT TOP {limit}',
-                query,
-                count=1,
-                flags=re.IGNORECASE
-            )
+            # Check if query has SELECT DISTINCT (TOP must come after DISTINCT in SQL Server)
+            distinct_match = re.search(r'\bSELECT\s+DISTINCT\b', query, re.IGNORECASE)
             
-            logger.info(f"Injected TOP {limit}")
+            if distinct_match:
+                # SELECT DISTINCT exists - inject TOP after DISTINCT
+                modified_query = re.sub(
+                    r'\bSELECT\s+DISTINCT\b',
+                    f'SELECT DISTINCT TOP {limit}',
+                    query,
+                    count=1,
+                    flags=re.IGNORECASE
+                )
+                logger.info(f"Injected TOP {limit} after DISTINCT")
+            else:
+                # No DISTINCT - inject TOP directly after SELECT
+                modified_query = re.sub(
+                    r'\bSELECT\b',
+                    f'SELECT TOP {limit}',
+                    query,
+                    count=1,
+                    flags=re.IGNORECASE
+                )
+                logger.info(f"Injected TOP {limit}")
+            
             return ValidationResult(
                 valid=True,
                 query=modified_query,

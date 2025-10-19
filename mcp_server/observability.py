@@ -297,3 +297,167 @@ def log_tool_call(tool_name: str, arguments: Dict[str, Any]):
 def get_metrics_summary() -> Dict[str, Any]:
     """Get summary of recent metrics."""
     return structured_logger.get_metrics_summary()
+
+
+# ============================================================================
+# Phase 7: Answer-first Flow Metrics
+# ============================================================================
+
+@dataclass
+class IntentParsingMetrics:
+    """Metrics for intent parsing operations."""
+    query_length: int
+    intent_detected: str
+    confidence: float
+    entities_found: int
+    operations_found: int
+    duration_ms: float
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return asdict(self)
+
+
+@dataclass
+class TableRankingMetrics:
+    """Metrics for table ranking operations."""
+    total_tables_evaluated: int
+    tables_scored_above_threshold: int
+    top_table_score: float
+    tables_selected: int
+    ranking_duration_ms: float
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return asdict(self)
+
+
+@dataclass
+class QueryBlueprintMetrics:
+    """Metrics for query blueprint generation."""
+    intent_type: str
+    tables_involved: int
+    blueprint_generated: bool
+    blueprint_type: str
+    generation_duration_ms: float
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return asdict(self)
+
+
+@dataclass
+class AnswerFirstExecutionMetrics:
+    """End-to-end metrics for answer-first query execution."""
+    user_query: str  # Length only, not content
+    intent_parsing_ms: float
+    table_discovery_ms: float
+    table_ranking_ms: float
+    blueprint_generation_ms: float
+    query_execution_ms: float
+    total_duration_ms: float
+    result_row_count: int
+    intent_confidence: float
+    selected_tables: int
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        result = asdict(self)
+        # Don't log query content, only length
+        if isinstance(result.get('user_query'), str):
+            result['user_query_length'] = len(result.pop('user_query'))
+        return result
+
+
+class AnswerFirstObservability:
+    """
+    Enhanced observability for answer-first query execution pipeline.
+    
+    Tracks metrics for:
+    1. Intent parsing (confidence, entities, operations)
+    2. Table discovery and ranking
+    3. Query blueprint generation
+    4. End-to-end execution timing
+    """
+    
+    def __init__(self):
+        """Initialize answer-first observability."""
+        self._metrics_history: list[AnswerFirstExecutionMetrics] = []
+        self._max_history = 100  # Keep last 100 answer-first flows
+    
+    def log_intent_parsing(self, metrics: IntentParsingMetrics):
+        """Log intent parsing metrics."""
+        log_data = {
+            "event": "intent_parsing",
+            "timestamp": time.time(),
+            **metrics.to_dict()
+        }
+        logger.info(json.dumps(log_data))
+    
+    def log_table_ranking(self, metrics: TableRankingMetrics):
+        """Log table ranking metrics."""
+        log_data = {
+            "event": "table_ranking",
+            "timestamp": time.time(),
+            **metrics.to_dict()
+        }
+        logger.info(json.dumps(log_data))
+    
+    def log_blueprint_generation(self, metrics: QueryBlueprintMetrics):
+        """Log query blueprint generation metrics."""
+        log_data = {
+            "event": "blueprint_generation",
+            "timestamp": time.time(),
+            **metrics.to_dict()
+        }
+        logger.info(json.dumps(log_data))
+    
+    def log_execution(self, metrics: AnswerFirstExecutionMetrics):
+        """Log end-to-end execution metrics."""
+        log_data = {
+            "event": "answer_first_execution",
+            "timestamp": time.time(),
+            **metrics.to_dict()
+        }
+        logger.info(json.dumps(log_data))
+        
+        # Store in history
+        self._metrics_history.append(metrics)
+        if len(self._metrics_history) > self._max_history:
+            self._metrics_history = self._metrics_history[-self._max_history:]
+    
+    def get_execution_summary(self) -> Dict[str, Any]:
+        """Get summary of answer-first executions."""
+        if not self._metrics_history:
+            return {"total_executions": 0}
+        
+        executions = self._metrics_history
+        total = len(executions)
+        
+        # Calculate average timings
+        avg_total_ms = sum(m.total_duration_ms for m in executions) / total
+        avg_intent_ms = sum(m.intent_parsing_ms for m in executions) / total
+        avg_rank_ms = sum(m.table_ranking_ms for m in executions) / total
+        avg_blueprint_ms = sum(m.blueprint_generation_ms for m in executions) / total
+        avg_exec_ms = sum(m.query_execution_ms for m in executions) / total
+        
+        # Confidence analysis
+        avg_confidence = sum(m.intent_confidence for m in executions) / total
+        high_confidence_count = sum(1 for m in executions if m.intent_confidence >= 0.8)
+        
+        return {
+            "total_executions": total,
+            "avg_total_duration_ms": round(avg_total_ms, 2),
+            "avg_intent_parsing_ms": round(avg_intent_ms, 2),
+            "avg_table_ranking_ms": round(avg_rank_ms, 2),
+            "avg_blueprint_generation_ms": round(avg_blueprint_ms, 2),
+            "avg_query_execution_ms": round(avg_exec_ms, 2),
+            "avg_intent_confidence": round(avg_confidence, 2),
+            "high_confidence_percentage": round(high_confidence_count / total * 100, 1) if total > 0 else 0,
+            "avg_tables_per_query": round(sum(m.selected_tables for m in executions) / total, 1) if total > 0 else 0,
+            "avg_result_rows": round(sum(m.result_row_count for m in executions) / total, 0) if total > 0 else 0
+        }
+
+
+# Global answer-first observability instance
+answer_first_obs = AnswerFirstObservability()

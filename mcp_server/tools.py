@@ -186,6 +186,73 @@ class MCPTools:
                     "required": ["table_name"]
                 }
             ),
+            # Phase 7: Answer-first tools
+            MCPTool(
+                name="answer_first",
+                description="Execute a natural language query using answer-first pipeline (autonomous table discovery, ranking, and execution)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Natural language query (e.g., 'Show top 10 products by revenue')"
+                        },
+                        "include_debug": {
+                            "type": "boolean",
+                            "description": "Include debug information in response (default: false)",
+                            "default": False
+                        }
+                    },
+                    "required": ["query"]
+                }
+            ),
+            MCPTool(
+                name="parse_intent",
+                description="Parse user query to extract intent, entities, and operations (Phase 7 - answer-first support)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "User query to analyze"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            ),
+            MCPTool(
+                name="rank_tables",
+                description="Rank database tables by relevance to query intent (Phase 7 - answer-first support)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "intent": {
+                            "type": "string",
+                            "description": "Query intent (SEARCH, AGGREGATE, TREND, REPORT, JOIN, FILTER)"
+                        },
+                        "entities": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Entities from query (e.g., ['customer', 'order'])"
+                        },
+                        "operations": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Operations needed (e.g., ['count', 'sum'])"
+                        }
+                    },
+                    "required": ["intent", "entities"]
+                }
+            ),
+            MCPTool(
+                name="get_execution_metrics",
+                description="Get performance metrics for answer-first query execution (Phase 7 - observability)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            ),
         ]
     
     @staticmethod
@@ -223,6 +290,14 @@ class MCPTools:
                     result = await MCPTools._describe_table(arguments, db_manager)
                 elif tool_name == "list_relations":
                     result = await MCPTools._list_relations(arguments, db_manager)
+                elif tool_name == "answer_first":
+                    result = await MCPTools._answer_first(arguments, db_manager)
+                elif tool_name == "parse_intent":
+                    result = await MCPTools._parse_intent(arguments, db_manager)
+                elif tool_name == "rank_tables":
+                    result = await MCPTools._rank_tables(arguments, db_manager)
+                elif tool_name == "get_execution_metrics":
+                    result = await MCPTools._get_execution_metrics(arguments, db_manager)
                 else:
                     metrics.success = False
                     metrics.error_code = "UNKNOWN_TOOL"
@@ -888,5 +963,161 @@ class MCPTools:
                     "type": "text",
                     "text": f"Internal error: {str(e)}"
                 }],
+                isError=True
+            )
+    
+    # Phase 7: Answer-first tools
+    
+    @staticmethod
+    async def _answer_first(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """Execute query using answer-first pipeline."""
+        try:
+            from answer_first_orchestrator import AnswerFirstOrchestrator
+            from discovery_tools import DiscoveryTools
+            
+            query = arguments.get("query", "").strip()
+            include_debug = arguments.get("include_debug", False)
+            
+            if not query:
+                return MCPToolResult(
+                    content=[{"type": "text", "text": "Query is required"}],
+                    isError=True
+                )
+            
+            # Create orchestrator
+            discovery_tools = DiscoveryTools(db_manager.catalog)
+            orchestrator = AnswerFirstOrchestrator(
+                discovery_tools=discovery_tools,
+                db_adapter=db_manager,
+                catalog=db_manager.catalog,
+                dialect=getattr(db_manager, 'dialect', 'mssql')
+            )
+            
+            # Execute answer-first pipeline
+            result = await orchestrator.execute_answer_first(query)
+            
+            response_text = f"Answer-first Query Execution\n"
+            response_text += f"=" * 50 + "\n\n"
+            response_text += f"Query: {query}\n"
+            response_text += f"Intent: {result.intent}\n"
+            response_text += f"Success: {result.success}\n\n"
+            response_text += f"Answer: {result.answer}\n"
+            if result.tables_used:
+                response_text += f"Tables: {', '.join(result.tables_used)}\n"
+            response_text += f"Execution time: {result.execution_time_ms:.2f}ms\n"
+            
+            if include_debug and result.debug_info:
+                response_text += f"\nDebug Info:\n{json.dumps(result.debug_info, indent=2)}\n"
+            
+            return MCPToolResult(
+                content=[{"type": "text", "text": response_text}],
+                isError=not result.success
+            )
+        
+        except Exception as e:
+            logger.error(f"answer_first failed: {e}", exc_info=True)
+            return MCPToolResult(
+                content=[{"type": "text", "text": f"Error: {str(e)}"}],
+                isError=True
+            )
+    
+    @staticmethod
+    async def _parse_intent(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """Parse user query to extract intent."""
+        try:
+            from intent_parser import parse_intent
+            
+            query = arguments.get("query", "").strip()
+            if not query:
+                return MCPToolResult(
+                    content=[{"type": "text", "text": "Query is required"}],
+                    isError=True
+                )
+            
+            parsed = parse_intent(query)
+            
+            response_text = f"Intent Parsing Result\n"
+            response_text += f"=" * 50 + "\n\n"
+            response_text += f"Query: {query}\n"
+            response_text += f"Intent: {parsed.intent.value}\n"
+            response_text += f"Confidence: {parsed.confidence:.2f}\n"
+            response_text += f"Entities: {', '.join(parsed.entities) if parsed.entities else 'None'}\n"
+            response_text += f"Operations: {', '.join(parsed.operations) if parsed.operations else 'None'}\n"
+            
+            return MCPToolResult(
+                content=[{"type": "text", "text": response_text}]
+            )
+        
+        except Exception as e:
+            logger.error(f"parse_intent failed: {e}")
+            return MCPToolResult(
+                content=[{"type": "text", "text": f"Error: {str(e)}"}],
+                isError=True
+            )
+    
+    @staticmethod
+    async def _rank_tables(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """Rank tables by relevance."""
+        try:
+            from table_ranker import rank_tables
+            
+            intent = arguments.get("intent", "SEARCH")
+            entities = arguments.get("entities", [])
+            operations = arguments.get("operations", [])
+            
+            if not db_manager.catalog:
+                return MCPToolResult(
+                    content=[{"type": "text", "text": "Catalog not initialized"}],
+                    isError=True
+                )
+            
+            # Get all tables from catalog
+            all_tables = db_manager.catalog.get_table_list()
+            
+            # Rank them
+            ranked = rank_tables(all_tables, entities, operations, db_manager.catalog)
+            
+            response_text = f"Table Ranking Results\n"
+            response_text += f"=" * 50 + "\n\n"
+            response_text += f"Intent: {intent}\n"
+            response_text += f"Entities: {', '.join(entities)}\n"
+            response_text += f"Top 10 Tables:\n\n"
+            
+            for i, table in enumerate(ranked[:10], 1):
+                response_text += f"{i}. {table.full_name} (score: {table.score:.2f})\n"
+                for reason in table.reasons[:2]:
+                    response_text += f"   • {reason}\n"
+            
+            return MCPToolResult(
+                content=[{"type": "text", "text": response_text}]
+            )
+        
+        except Exception as e:
+            logger.error(f"rank_tables failed: {e}")
+            return MCPToolResult(
+                content=[{"type": "text", "text": f"Error: {str(e)}"}],
+                isError=True
+            )
+    
+    @staticmethod
+    async def _get_execution_metrics(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """Get answer-first execution metrics."""
+        try:
+            from observability import answer_first_obs
+            
+            summary = answer_first_obs.get_execution_summary()
+            
+            response_text = f"Answer-first Execution Metrics\n"
+            response_text += f"=" * 50 + "\n\n"
+            response_text += json.dumps(summary, indent=2)
+            
+            return MCPToolResult(
+                content=[{"type": "text", "text": response_text}]
+            )
+        
+        except Exception as e:
+            logger.error(f"get_execution_metrics failed: {e}")
+            return MCPToolResult(
+                content=[{"type": "text", "text": f"Error: {str(e)}"}],
                 isError=True
             )
