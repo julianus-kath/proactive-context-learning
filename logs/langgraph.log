@@ -5,7 +5,7 @@
         [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
         
   @app.on_event("startup")
-INFO:     Started server process [15901]
+INFO:     Started server process [19017]
 INFO:     Waiting for application startup.
 INFO:langgraph_integration.graph_definition:Testing OpenAI API key...
 INFO:     Application startup complete.
@@ -18,95 +18,82 @@ INFO:     Uvicorn running on http://0.0.0.0:5001 (Press CTRL+C to quit)
 
 🚀 Initializing LangGraph workflow...
 ✅ LangGraph workflow initialized successfully
-INFO:     127.0.0.1:56379 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56459 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56479 - "OPTIONS /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57797 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57812 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57827 - "OPTIONS /process_conversation HTTP/1.1" 200 OK
 INFO:langgraph_integration.mcp_client:MCP session initialized successfully
+ERROR:langgraph_integration.mcp_client:Unexpected error calling MCP server: 
+Traceback (most recent call last):
+  File "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/chatbot_ui/../langgraph_integration/mcp_client.py", line 105, in call_tool
+    async with session.post(
+  File "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/.venv/lib/python3.11/site-packages/aiohttp/client.py", line 1141, in __aenter__
+    self._resp = await self._coro
+                 ^^^^^^^^^^^^^^^^
+  File "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/.venv/lib/python3.11/site-packages/aiohttp/client.py", line 560, in _request
+    await resp.start(conn)
+  File "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/.venv/lib/python3.11/site-packages/aiohttp/client_reqrep.py", line 894, in start
+    with self._timer:
+  File "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/.venv/lib/python3.11/site-packages/aiohttp/helpers.py", line 721, in __exit__
+    raise asyncio.TimeoutError from None
+TimeoutError
+ERROR:langgraph_integration.mcp_client:Error indexing database: 
 INFO:langgraph_integration.graph_definition:Database indexed: 0 tables across 0 schemas: 
 INFO:langgraph_integration.mcp_client:MCP session initialized successfully
+INFO:langgraph_integration.mcp_client:✅ MCP tool call successful, received 1 content items
 ERROR:langgraph_integration.mcp_client:Error listing tables: Expecting value: line 1 column 1 (char 0)
 ERROR:langgraph_integration.graph_definition:Error getting table list: Expecting value: line 1 column 1 (char 0)
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
 INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT CONCAT(table_schema, '.', table_name) as fu...
 INFO:langgraph_integration.mcp_client:MCP session initialized successfully
+INFO:langgraph_integration.mcp_client:✅ MCP tool call successful, received 1 content items
 INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT CONCAT(table_schema, '.', table_name) as full_table_name FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast') ORDER BY table_schema, table_name
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
 INFO:langgraph_integration.graph_definition:Results formatted successfully
 📝 Processing conversation with 2 messages...
 📝 Last user message: what tables do you have access to?...
 ✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:56479 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     127.0.0.1:56758 - "OPTIONS /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57827 - "POST /process_conversation HTTP/1.1" 200 OK
 INFO:langgraph_integration.mcp_client:MCP session initialized successfully
+INFO:langgraph_integration.mcp_client:✅ MCP tool call successful, received 1 content items
 INFO:langgraph_integration.graph_definition:Database indexed: 0 tables across 0 schemas: 
 INFO:langgraph_integration.mcp_client:MCP session initialized successfully
+INFO:langgraph_integration.mcp_client:✅ MCP tool call successful, received 1 content items
 ERROR:langgraph_integration.mcp_client:Error listing tables: Expecting value: line 1 column 1 (char 0)
 ERROR:langgraph_integration.graph_definition:Error getting table list: Expecting value: line 1 column 1 (char 0)
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['specific table or schema for orders', 'column names for order time and date']
+INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['specific table or schema that contains order delivery information']
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you please specify which table contains the order shipment information, including the date and...
+INFO:langgraph_integration.graph_definition:Generated clarification: Könnten Sie bitte angeben, in welcher Tabelle die Bestell- und Lieferinformationen gespeichert sind,...
 📝 Processing conversation with 5 messages...
-📝 Last user message: Which orders were shipped out Tuesday Morning between 4-7AM? Was it more or less than from 8-11 AM?...
+📝 Last user message: wann wurde die letzte Bestellung ausgeliefert?...
 ✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:56758 - "POST /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57871 - "POST /process_conversation HTTP/1.1" 200 OK
 INFO:langgraph_integration.mcp_client:MCP session initialized successfully
+ERROR:langgraph_integration.mcp_client:Unexpected error calling MCP server: 
+Traceback (most recent call last):
+  File "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/chatbot_ui/../langgraph_integration/mcp_client.py", line 105, in call_tool
+    async with session.post(
+  File "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/.venv/lib/python3.11/site-packages/aiohttp/client.py", line 1141, in __aenter__
+    self._resp = await self._coro
+                 ^^^^^^^^^^^^^^^^
+  File "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/.venv/lib/python3.11/site-packages/aiohttp/client.py", line 560, in _request
+    await resp.start(conn)
+  File "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/.venv/lib/python3.11/site-packages/aiohttp/client_reqrep.py", line 894, in start
+    with self._timer:
+  File "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/.venv/lib/python3.11/site-packages/aiohttp/helpers.py", line 721, in __exit__
+    raise asyncio.TimeoutError from None
+TimeoutError
+ERROR:langgraph_integration.mcp_client:Error indexing database: 
 INFO:langgraph_integration.graph_definition:Database indexed: 0 tables across 0 schemas: 
 INFO:langgraph_integration.mcp_client:MCP session initialized successfully
+INFO:langgraph_integration.mcp_client:✅ MCP tool call successful, received 1 content items
 ERROR:langgraph_integration.mcp_client:Error listing tables: Expecting value: line 1 column 1 (char 0)
 ERROR:langgraph_integration.graph_definition:Error getting table list: Expecting value: line 1 column 1 (char 0)
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['specific table names for order shipment information', 'columns for date and time of shipment']
+INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['specific table name containing order and delivery information']
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you please provide any additional details or hints about the table names or columns that might...
+INFO:langgraph_integration.graph_definition:Generated clarification: Könnten Sie bitte angeben, ob es eine bestimmte Tabelle gibt, die Bestell- und Lieferinformationen e...
 📝 Processing conversation with 8 messages...
-📝 Last user message: Das müsste in der Zeiterfassung und auch im ERP system sein - die genauen Tabellennamen habe ich nci...
+📝 Last user message: Gehe du bitte auf die suche nach den relevanten Tabellen....
 ✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:56780 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.mcp_client:MCP session initialized successfully
-INFO:langgraph_integration.graph_definition:Database indexed: 0 tables across 0 schemas: 
-INFO:langgraph_integration.mcp_client:MCP session initialized successfully
-ERROR:langgraph_integration.mcp_client:Error listing tables: Expecting value: line 1 column 1 (char 0)
-ERROR:langgraph_integration.graph_definition:Error getting table list: Expecting value: line 1 column 1 (char 0)
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['exact table name for order shipments', 'column names for shipment date and time']
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you please confirm if there is a table with a name similar to "BSOffeneVKLieferungen" in the l...
-📝 Processing conversation with 11 messages...
-📝 Last user message: Check the BSOffeneVKLieferungen table. It's not called exactly like this, but similar. Have a look t...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:56791 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.mcp_client:MCP session initialized successfully
-INFO:langgraph_integration.graph_definition:Database indexed: 0 tables across 0 schemas: 
-INFO:langgraph_integration.mcp_client:MCP session initialized successfully
-ERROR:langgraph_integration.mcp_client:Error listing tables: Expecting value: line 1 column 1 (char 0)
-ERROR:langgraph_integration.graph_definition:Error getting table list: Expecting value: line 1 column 1 (char 0)
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT COUNT(*) AS orders_4_7, (SELECT COUNT(*) FR...
-INFO:langgraph_integration.mcp_client:MCP session initialized successfully
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT COUNT(*) AS orders_4_7, (SELECT COUNT(*) FROM duo.vewBSOffeneVKLieferungenReferenz WHERE EXTRACT(DOW FROM shipment_date) = 2 AND EXTRACT(HOUR FROM shipment_time) BETWEEN 8 AND 10) AS orders_8_11 FROM duo.vewBSOffeneVKLieferungenReferenz WHERE EXTRACT(DOW FROM shipment_date) = 2 AND EXTRACT(HOUR FROM shipment_time) BETWEEN 4 AND 6
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 14 messages...
-📝 Last user message: its called duo.vewBSOffeneVKLieferungenReferenz. Have a look there, otherwise go and find more table...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:56804 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:langgraph_integration.mcp_client:MCP session initialized successfully
-INFO:langgraph_integration.graph_definition:Database indexed: 0 tables across 0 schemas: 
-INFO:langgraph_integration.mcp_client:MCP session initialized successfully
-ERROR:langgraph_integration.mcp_client:Error listing tables: Expecting value: line 1 column 1 (char 0)
-ERROR:langgraph_integration.graph_definition:Error getting table list: Expecting value: line 1 column 1 (char 0)
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: SELECT COUNT(*) AS orders_4_7, (SELECT COUNT(*) FR...
-INFO:langgraph_integration.mcp_client:MCP session initialized successfully
-INFO:langgraph_integration.graph_definition:Direct query executed successfully: SELECT COUNT(*) AS orders_4_7, (SELECT COUNT(*) FROM duo.vewBSOffeneVKLieferungenReferenz WHERE EXTRACT(DOW FROM shipment_date) = 2 AND EXTRACT(HOUR FROM shipment_time) BETWEEN 8 AND 10) AS orders_8_11 FROM duo.vewBSOffeneVKLieferungenReferenz WHERE EXTRACT(DOW FROM shipment_date) = 2 AND EXTRACT(HOUR FROM shipment_time) BETWEEN 4 AND 6
-INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Results formatted successfully
-📝 Processing conversation with 17 messages...
-📝 Last user message: answer my question now: Which orders were shipped out Tuesday Morning between 4-7AM? Was it more or ...
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:56822 - "POST /process_conversation HTTP/1.1" 200 OK
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [15901]
+INFO:     127.0.0.1:57878 - "POST /process_conversation HTTP/1.1" 200 OK

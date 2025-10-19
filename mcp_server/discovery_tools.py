@@ -284,24 +284,24 @@ class DiscoveryTools:
             # Apply filters
             filtered_tables = []
             for table in all_tables:
-                # Schema filter
-                if schema and table.schema.lower() != schema.lower():
+                # Schema filter (table is a dict, not an object)
+                if schema and table['schema'].lower() != schema.lower():
                     continue
                 
                 # Pattern filter (case-insensitive)
-                if pattern and pattern.lower() not in table.name.lower():
+                if pattern and pattern.lower() not in table['name'].lower():
                     continue
                 
                 # Create summary
                 summary = TableSummary(
-                    schema=table.schema,
-                    name=table.name,
-                    full_name=table.full_name(),
-                    type=table.type,
-                    estimated_rows=table.estimated_rows,
-                    column_count=len(table.columns),
-                    has_foreign_keys=len(table.foreign_keys) > 0,
-                    has_primary_keys=len(table.primary_keys) > 0
+                    schema=table['schema'],
+                    name=table['name'],
+                    full_name=table['full_name'],
+                    type=table['type'],
+                    estimated_rows=table['estimated_rows'],
+                    column_count=table.get('column_count', 0),
+                    has_foreign_keys=table.get('fk_count', 0) > 0,
+                    has_primary_keys=False  # Not available in list_tables
                 )
                 filtered_tables.append(summary)
             
@@ -433,45 +433,57 @@ class DiscoveryTools:
             # Create summaries with relevance scores
             results = []
             for table in matching_tables:
+                # table is a dict with: schema, name, full_name, type, estimated_rows
                 # Calculate relevance score
                 score = 0
                 
                 # Exact table name match (highest priority)
-                if query == table.name.lower():
+                query_lower = query.lower()
+                table_name_lower = table['name'].lower()
+                if query_lower == table_name_lower:
                     score += 100
-                elif query in table.name.lower():
+                elif query_lower in table_name_lower:
                     score += 50
                 
                 # Schema match
-                if query in table.schema.lower():
+                if query_lower in table['schema'].lower():
                     score += 20
                 
-                # Column name matches
-                for col in table.columns:
-                    if query == col.name.lower():
-                        score += 30
-                    elif query in col.name.lower():
-                        score += 10
-                
-                # Column type matches
-                for col in table.columns:
-                    if query in col.type.lower():
-                        score += 5
+                # Try to fetch full table details for column-level matching
+                matched_columns = []
+                try:
+                    full_table = catalog.get_table(table['schema'], table['name'])
+                    if full_table and 'columns' in full_table:
+                        # Column name matches
+                        for col in full_table['columns']:
+                            col_name_lower = col.get('name', '').lower()
+                            if query_lower == col_name_lower:
+                                score += 30
+                            elif query_lower in col_name_lower:
+                                score += 10
+                            
+                            # Column type matches
+                            col_type_lower = col.get('type', '').lower()
+                            if query_lower in col_type_lower:
+                                score += 5
+                            
+                            # Track matched columns
+                            if query_lower in col_name_lower or query_lower in col_type_lower:
+                                matched_columns.append(col_name_lower)
+                except Exception as col_error:
+                    logger.warning(f"Could not fetch column details for {table['schema']}.{table['name']}: {col_error}")
                 
                 summary = {
-                    "schema": table.schema,
-                    "name": table.name,
-                    "full_name": table.full_name(),
-                    "type": table.type,
-                    "estimated_rows": table.estimated_rows,
-                    "column_count": len(table.columns),
-                    "has_foreign_keys": len(table.foreign_keys) > 0,
-                    "has_primary_keys": len(table.primary_keys) > 0,
+                    "schema": table['schema'],
+                    "name": table['name'],
+                    "full_name": table['full_name'],
+                    "type": table['type'],
+                    "estimated_rows": table['estimated_rows'],
+                    "column_count": table.get('column_count', 0),
+                    "has_foreign_keys": False,  # Not available in search results
+                    "has_primary_keys": False,  # Not available in search results
                     "relevance_score": score,
-                    "matched_columns": [
-                        col.name for col in table.columns
-                        if query in col.name.lower() or query in col.type.lower()
-                    ][:5]  # Top 5 matched columns
+                    "matched_columns": matched_columns[:5]  # Top 5 matched columns
                 }
                 results.append(summary)
             
