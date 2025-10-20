@@ -138,3 +138,141 @@
       "product category"
     ]
 ────────────────────────────────────────────────────────────
+2025-10-20 08:36:25,894 - langgraph - DEBUG - 
+  🔧 Tool Call: get_schema
+  ────────────────────────────────────────────────────────────
+    tool_id: get_schema_0
+    arguments:
+      {}
+    timestamp: 2025-10-20T08:36:25.894872
+  ────────────────────────────────────────────────────────────
+2025-10-20 08:37:07,405 - langgraph - INFO - 
+✅ Tool Result: get_schema
+────────────────────────────────────────────────────────────
+  tool_name: get_schema
+  status: ✅ SUCCESS
+  timestamp: 2025-10-20T08:37:07.405213
+  duration_ms: 41505.71
+  result_preview:
+    {
+      "content_items": 1
+    }
+────────────────────────────────────────────────────────────
+2025-10-20 08:37:07,414 - langgraph - DEBUG - 
+  🔧 Tool Call: list_tables
+  ────────────────────────────────────────────────────────────
+    tool_id: list_tables_0
+    arguments:
+      {
+        "page": 1,
+        "page_size": 50
+      }
+    timestamp: 2025-10-20T08:37:07.414907
+  ────────────────────────────────────────────────────────────
+2025-10-20 08:37:07,485 - langgraph - INFO - 
+✅ Tool Result: list_tables
+────────────────────────────────────────────────────────────
+  tool_name: list_tables
+  status: ✅ SUCCESS
+  timestamp: 2025-10-20T08:37:07.484582
+  duration_ms: 69.11
+  result_preview:
+    {
+      "content_items": 1
+    }
+────────────────────────────────────────────────────────────
+2025-10-20 08:37:07,487 - langgraph - INFO - 
+🔍 Scout Mode: list_tables
+────────────────────────────────────────────────────────────
+  operation: list_tables
+  query: page=1, page_size=50
+  tables_searched:
+    [
+      "BCSPjmAdressenKontakt",
+      "BCSPjmAdressenKontaktFolge",
+      "BCSPjmArtikelObjektVerbrauch",
+      "BCSPjmArtikelObjektZaehler",
+      "BCSPjmDokumente",
+      "BCSPjmEvalForecastDimensions",
+      "BCSPjmEvalForecasts",
+      "BCSPjmEvalQueries",
+      "BCSPjmEvalQueryParameters",
+      "BCSPjmInfoStructure",
+      "BCSPjmKBSupport",
+      "BCSPjmKBSupportActivities",
+      "BCSPjmObjekte",
+      "BCSPjmObjekteRapport",
+      "BCSPjmObjekteRessourcen",
+      "BCSPjmObjekteStapel",
+      "BCSPjmObjekteStapelPositionen",
+      "BCSPjmObjekteZubehoer",
+      "BCSPjmProjekte",
+      "BCSPjmProjektePositionen",
+      "BCSPjmProjektePositionenFlow",
+      "BCSPjmProjekteTemplates",
+      "BCSPjmProjekteVorgaengeLeist",
+      "BCSPjmProjekteVorgaengeZeiten",
+      "BCSPjmProjekteVorgaengeZeitenArchiv",
+      "BCSPjmProjekteVorgaengeZeitenReise",
+      "BCSPjmRessourcen",
+      "BCSPjmVertraege",
+      "BCSPjmVertraegeBedingungen",
+      "BCSPjmVertraegeBedingungenPos",
+      "BCSPjmVorgaenge",
+      "BCSPjmVorgaengeChecklisten",
+      "BCSPjmVorgaengeFragen",
+      "BSBDEGesRm",
+      "BSBDEGesRmSerienNr",
+      "BSBDEStempelGesRm",
+      "BSBDEStempelGesRmSerienNr",
+      "BSCrmAnrufliste",
+      "BSCrmBeziehungen",
+      "BSCrmEvalEscalation",
+      "BSCrmEvalEscalationDone",
+      "BSCrmEvalKampagnenProfile",
+      "BSCrmKalender",
+      "BSCrmKalenderPositionen",
+      "BSCrmKalenderPositionenVerweise",
+      "BSCrmKalenderPositionenVerweiseBlackList",
+      "BSCrmKompetenzen",
+      "BSCrmKonstanten",
+      "BSCrmObjekteAbrechnungen",
+      "BSCrmObjekteZaehlerverlauf"
+    ]
+  result_count: 1
+  timestamp: 2025-10-20T08:37:07.486860
+  results:
+    {
+      "total_tables": 50,
+      "total_pages": 1,
+      "current_page": 1
+    }
+────────────────────────────────────────────────────────────
+2025-10-20 08:37:10,094 - langgraph - INFO - 
+📝 Intent Parsed: query
+────────────────────────────────────────────────────────────
+  user_query: What were our total sales last month?
+  intent_type: query
+  confidence: 1.0
+  timestamp: 2025-10-20T08:37:10.094133
+────────────────────────────────────────────────────────────
+2025-10-20 08:46:14,960 - langgraph - DEBUG - 
+  🔧 Tool Call: get_schema
+  ────────────────────────────────────────────────────────────
+    tool_id: get_schema_0
+    arguments:
+      {}
+    timestamp: 2025-10-20T08:46:14.960126
+  ────────────────────────────────────────────────────────────
+2025-10-20 08:46:56,323 - langgraph - INFO - 
+✅ Tool Result: get_schema
+────────────────────────────────────────────────────────────
+  tool_name: get_schema
+  status: ✅ SUCCESS
+  timestamp: 2025-10-20T08:46:56.322996
+  duration_ms: 41362.15
+  result_preview:
+    {
+      "content_items": 1
+    }
+────────────────────────────────────────────────────────────

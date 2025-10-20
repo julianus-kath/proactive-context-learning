@@ -41,6 +41,12 @@ def _extract_json_from_text(content: str) -> Dict[str, Any]:
     This handles the case where MCP server returns decorated text like:
         "Full response (JSON): {\"data\": {\"tables\": [...], \"page_info\": {...}}}"
     
+    Supports multiple formats:
+    - With "Full response (JSON):" marker
+    - With markdown code fences (```json ... ```)
+    - Plain JSON
+    - Already-parsed dictionaries
+    
     Args:
         content: Text content potentially containing JSON
         
@@ -55,28 +61,64 @@ def _extract_json_from_text(content: str) -> Dict[str, Any]:
         return content
     
     if not isinstance(content, str):
-        raise ValueError(f"Content must be str or dict, got {type(content)}")
+        raise ValueError(f"Content must be str or dict, got {type(content).__name__}")
+    
+    # Trim whitespace
+    original_content = content
+    content = content.strip()
+    
+    if not content:
+        raise ValueError("Content is empty after stripping whitespace")
     
     # Remove common markdown markers
     content = content.replace("```json", "").replace("```", "")
     
-    # Look for the JSON marker
+    # Look for the JSON marker and extract what comes after it
     marker = "Full response (JSON):"
     if marker in content:
-        content = content.split(marker, 1)[1].strip()
+        parts = content.split(marker, 1)
+        if len(parts) > 1:
+            content = parts[1].strip()
+        else:
+            raise ValueError(f"Marker found but nothing after it")
     
-    # Find the first '{' and last '}'
+    # Also handle variations of the marker
+    for alt_marker in ["Full response (json):", "JSON Response:", "json response:"]:
+        if alt_marker.lower() in content.lower():
+            idx = content.lower().find(alt_marker.lower())
+            content = content[idx + len(alt_marker):].strip()
+            break
+    
+    # Try to find JSON object boundaries
     start = content.find("{")
     end = content.rfind("}")
     
-    if start == -1 or end == -1 or end <= start:
-        raise ValueError(f"No JSON object found in content: {content[:100]}")
+    if start == -1:
+        raise ValueError(f"No JSON object found (no opening brace '{{') in content: {content[:200]}")
     
+    if end == -1 or end <= start:
+        raise ValueError(f"No JSON object found (mismatched or no closing brace '}}') in content: {content[:200]}")
+    
+    # Extract the JSON string
+    json_str = content[start:end+1]
+    
+    # Validate it's not empty
+    if not json_str or json_str.strip() == "{}":
+        # Empty JSON might still be valid, but let's try to find if there's better content
+        if json_str == "{}":
+            logger.debug("Extracted empty JSON object: {}")
+        else:
+            raise ValueError(f"Extracted JSON appears empty or malformed: {json_str[:100]}")
+    
+    # Try to parse it
     try:
-        json_str = content[start:end+1]
+        logger.debug(f"Attempting to parse JSON string (length: {len(json_str)})")
         return json.loads(json_str)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Failed to parse JSON: {e}. Content: {content[start:min(start+200, end)]}")
+        # Provide detailed error information
+        error_details = f"JSON decode error at line {e.lineno}, column {e.colno}: {e.msg}"
+        problematic_section = json_str[max(0, e.pos-50):min(len(json_str), e.pos+50)]
+        raise ValueError(f"{error_details}\n   Context: ...{problematic_section}...")
 
 
 class MCPDatabaseTool:
@@ -719,62 +761,120 @@ async def index_database() -> Dict[str, Any]:
     """
     tool = MCPDatabaseTool()
     try:
+        logger.info("📋 Fetching schema from MCP server...")
         schema_content = await tool.get_schema()
-        if schema_content and len(schema_content) > 0:
-            schema_text = schema_content[0].get("text", "")
-            
-            # Parse JSON using the extraction helper
-            try:
-                payload = _extract_json_from_text(schema_text)
-                
-                # Extract tables and page info
-                tables_list = payload.get("data", {}).get("tables", [])
-                page_info = payload.get("data", {}).get("page_info", {})
-                total_items = page_info.get("total_items", len(tables_list))
-                
-                index = {
-                    "status": "SUCCESS",
-                    "tables": {},
-                    "total_tables": total_items,  # Use actual total, not content_items count!
-                    "indexed_at": None,
-                    "page_info": {
-                        "total_pages": page_info.get("total_pages", 1),
-                        "current_page": page_info.get("page", 1)
-                    }
-                }
-                
-                # Build table index from current page
-                for table in tables_list:
-                    table_name = table.get("name", "") or table.get("full_name", "")
-                    if table_name:
-                        index["tables"][table_name] = {
-                            "columns": table.get("columns", []),
-                            "column_count": len(table.get("columns", [])),
-                            "row_count": table.get("row_count", 0)
-                        }
-                
-                logger.info(f"✅ Database indexed: {len(tables_list)} tables on page 1 of {total_items} total")
-                return index
-                
-            except (ValueError, json.JSONDecodeError) as parse_err:
-                # JSON parsing failed - likely format issue
-                error_msg = f"Failed to parse schema JSON: {parse_err}"
-                logger.error(f"❌ {error_msg}")
-                logger.debug(f"   Schema text preview: {schema_text[:200]}")
-                return {
-                    "status": "FAILED",
-                    "error": error_msg,
-                    "tables": {},
-                    "total_tables": 0
-                }
         
-        # No schema content returned
-        return {
-            "status": "FAILED",
-            "error": "No schema content from MCP server",
-            "tables": {},
-            "total_tables": 0
-        }
+        # Debug: Show what we got from get_schema()
+        logger.debug(f"   Schema content type: {type(schema_content)}")
+        logger.debug(f"   Schema content length: {len(schema_content) if isinstance(schema_content, list) else 'N/A'}")
+        
+        if not schema_content or len(schema_content) == 0:
+            error_msg = "MCP server returned empty schema content"
+            logger.error(f"❌ {error_msg}")
+            return {
+                "status": "FAILED",
+                "error": error_msg,
+                "tables": {},
+                "total_tables": 0,
+                "debug_info": "get_schema() returned empty list"
+            }
+        
+        # Extract text from first content item
+        first_item = schema_content[0]
+        logger.debug(f"   First content item keys: {list(first_item.keys()) if isinstance(first_item, dict) else 'N/A'}")
+        
+        schema_text = first_item.get("text", "") if isinstance(first_item, dict) else ""
+        
+        # Debug: Show the raw schema text
+        text_length = len(schema_text) if schema_text else 0
+        logger.debug(f"   Schema text length: {text_length} bytes")
+        if text_length > 0:
+            logger.debug(f"   Schema text preview (first 300 chars):\n{schema_text[:300]}")
+        else:
+            logger.error(f"❌ Schema text is empty. First item: {first_item}")
+            return {
+                "status": "FAILED",
+                "error": "Schema text is empty",
+                "tables": {},
+                "total_tables": 0,
+                "debug_info": f"First item: {str(first_item)[:200]}"
+            }
+        
+        # Parse JSON using the extraction helper
+        try:
+            logger.debug("   Attempting to extract JSON from schema text...")
+            payload = _extract_json_from_text(schema_text)
+            logger.debug(f"   ✓ JSON extraction successful")
+            
+            # Extract tables and page info
+            tables_list = payload.get("data", {}).get("tables", [])
+            page_info = payload.get("data", {}).get("page_info", {})
+            total_items = page_info.get("total_items", len(tables_list))
+            
+            logger.debug(f"   Found {len(tables_list)} tables on current page")
+            logger.debug(f"   Page info: {page_info}")
+            
+            index = {
+                "status": "SUCCESS",
+                "tables": {},
+                "total_tables": total_items,  # Use actual total, not content_items count!
+                "indexed_at": None,
+                "page_info": {
+                    "total_pages": page_info.get("total_pages", 1),
+                    "current_page": page_info.get("page", 1)
+                }
+            }
+            
+            # Build table index from current page
+            for table in tables_list:
+                table_name = table.get("name", "") or table.get("full_name", "")
+                if table_name:
+                    index["tables"][table_name] = {
+                        "columns": table.get("columns", []),
+                        "column_count": len(table.get("columns", [])),
+                        "row_count": table.get("row_count", 0)
+                    }
+            
+            logger.info(f"✅ Database indexed: {len(tables_list)} tables on page 1 of {total_items} total")
+            return index
+                
+        except ValueError as parse_err:
+            # JSON parsing failed - likely format issue
+            error_msg = f"Failed to parse schema JSON: {parse_err}"
+            logger.error(f"❌ {error_msg}")
+            logger.error(f"   Schema text (full, up to 500 chars):\n{schema_text[:500]}")
+            
+            # Try to identify the problem more specifically
+            if not schema_text.strip():
+                logger.error(f"   → Problem: Schema text is empty or whitespace only")
+            elif "{" not in schema_text:
+                logger.error(f"   → Problem: No JSON object found (no opening brace)")
+            elif "}" not in schema_text:
+                logger.error(f"   → Problem: No JSON object found (no closing brace)")
+            elif "Full response (JSON):" not in schema_text:
+                logger.error(f"   → Problem: Expected 'Full response (JSON):' marker not found")
+                logger.error(f"   → The response might be in a different format")
+            
+            return {
+                "status": "FAILED",
+                "error": error_msg,
+                "tables": {},
+                "total_tables": 0,
+                "debug_info": f"JSON parse error: {str(parse_err)[:200]}"
+            }
+        
+        except json.JSONDecodeError as json_err:
+            # Fallback for JSON decode errors
+            error_msg = f"JSON decode error: {json_err}"
+            logger.error(f"❌ {error_msg}")
+            logger.error(f"   Problematic text: {schema_text[:500]}")
+            return {
+                "status": "FAILED",
+                "error": error_msg,
+                "tables": {},
+                "total_tables": 0,
+                "debug_info": f"JSON error at line {json_err.lineno}, col {json_err.colno}"
+            }
         
     except ValueError as e:
         # This is likely a timeout or connection error from call_tool
@@ -789,15 +889,17 @@ async def index_database() -> Dict[str, Any]:
             "status": "FAILED",
             "error": error_str, 
             "tables": {}, 
-            "total_tables": 0
+            "total_tables": 0,
+            "debug_info": "Connection or timeout error"
         }
     except Exception as e:
-        logger.error(f"❌ Unexpected error indexing database: {e}")
+        logger.error(f"❌ Unexpected error indexing database: {e}", exc_info=True)
         return {
             "status": "FAILED",
             "error": str(e), 
             "tables": {}, 
-            "total_tables": 0
+            "total_tables": 0,
+            "debug_info": f"Unexpected error: {type(e).__name__}"
         }
 
 

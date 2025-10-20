@@ -110,6 +110,170 @@ class TableNameNormalizer:
         return best_match
 
 
+class SemanticDescriptionGenerator:
+    """
+    Generate semantic descriptions for tables based on structure analysis.
+    
+    Analyzes table metadata (name, columns, foreign keys, data types) to create
+    human-readable descriptions that help the agent understand table purpose.
+    
+    Examples:
+    - "Stores customer profile information including contact details"
+    - "Records sales transactions with amounts and dates"
+    - "Hub table connecting orders to line items and products"
+    """
+    
+    # Domain keywords mapped to common table purposes
+    DOMAIN_KEYWORDS = {
+        'customer': 'customer management',
+        'client': 'customer management',
+        'order': 'sales/transactions',
+        'sale': 'sales/transactions',
+        'invoice': 'financial/billing',
+        'payment': 'financial/billing',
+        'product': 'inventory/catalog',
+        'inventory': 'inventory/stock',
+        'warehouse': 'inventory/stock',
+        'supplier': 'procurement',
+        'vendor': 'procurement',
+        'employee': 'human resources',
+        'staff': 'human resources',
+        'address': 'contact information',
+        'contact': 'contact information',
+        'phone': 'contact information',
+        'email': 'contact information',
+        'log': 'audit/history',
+        'history': 'audit/history',
+        'transaction': 'financial/transactions',
+        'ledger': 'financial/accounting',
+        'budget': 'financial/planning',
+        'report': 'reporting/analytics',
+        'metric': 'reporting/analytics',
+        'config': 'system configuration',
+        'setting': 'system configuration',
+    }
+    
+    # Common column name patterns
+    COLUMN_PATTERNS = {
+        'amount': 'financial amount',
+        'price': 'pricing information',
+        'quantity': 'quantity/count',
+        'date': 'temporal data',
+        'time': 'temporal data',
+        'created': 'audit timestamp',
+        'modified': 'audit timestamp',
+        'status': 'status/state',
+        'code': 'coded identifier',
+        'name': 'text identifier',
+        'description': 'descriptive text',
+        'comment': 'descriptive text',
+        'note': 'descriptive text',
+    }
+    
+    @staticmethod
+    def _extract_domain_keywords(table_name: str, columns: List[Dict]) -> List[str]:
+        """Extract domain keywords from table and column names."""
+        keywords = []
+        
+        # Check table name
+        name_lower = table_name.lower()
+        for keyword, domain in SemanticDescriptionGenerator.DOMAIN_KEYWORDS.items():
+            if keyword in name_lower:
+                keywords.append(domain)
+        
+        # Check column names
+        if columns:
+            col_names = ' '.join([col.get('name', '').lower() for col in columns])
+            for keyword, domain in SemanticDescriptionGenerator.DOMAIN_KEYWORDS.items():
+                if keyword in col_names and domain not in keywords:
+                    keywords.append(domain)
+        
+        return list(set(keywords))  # Deduplicate
+    
+    @staticmethod
+    def _characterize_table(table_info: Dict[str, Any]) -> str:
+        """
+        Characterize table based on data type composition.
+        
+        Returns a descriptive phrase about the table's nature.
+        """
+        numeric_count = len(table_info.get('numeric_columns', []))
+        date_count = len(table_info.get('date_columns', []))
+        text_count = len(table_info.get('text_columns', []))
+        fk_count = table_info.get('fk_count', 0)
+        col_count = table_info.get('column_count', 0)
+        
+        characteristics = []
+        
+        # Analyze composition
+        if fk_count > 5:
+            characteristics.append("hub/junction table")
+        elif fk_count > 2:
+            characteristics.append("relational table")
+        
+        if numeric_count > col_count * 0.5:
+            characteristics.append("financial/analytical data")
+        
+        if date_count > col_count * 0.3:
+            characteristics.append("temporal data")
+        
+        if text_count > col_count * 0.5:
+            characteristics.append("descriptive/categorical data")
+        
+        return ', '.join(characteristics) if characteristics else "data table"
+    
+    @staticmethod
+    def generate_description(table_info: Dict[str, Any]) -> str:
+        """
+        Generate a semantic description for a table.
+        
+        Args:
+            table_info: Table metadata dict with name, columns, foreign_keys, etc.
+            
+        Returns:
+            Human-readable description (1-2 sentences)
+        """
+        name = table_info.get('name', 'Unknown')
+        columns = table_info.get('columns', [])
+        fk_count = table_info.get('fk_count', 0)
+        
+        # Extract domain keywords
+        domains = SemanticDescriptionGenerator._extract_domain_keywords(name, columns)
+        
+        # Characterize the table
+        characteristics = SemanticDescriptionGenerator._characterize_table(table_info)
+        
+        # Build description
+        parts = []
+        
+        # Main purpose
+        if domains:
+            parts.append(f"Stores {', '.join(domains[:2])} information")
+        else:
+            parts.append(f"Contains {characteristics}")
+        
+        # Additional context
+        context_parts = []
+        
+        # Check for common column types
+        col_names_str = ' '.join([col.get('name', '').lower() for col in columns]).lower()
+        
+        if any(word in col_names_str for word in ['amount', 'price', 'total', 'cost']):
+            context_parts.append("with financial amounts")
+        
+        if any(word in col_names_str for word in ['date', 'time', 'created', 'modified']):
+            context_parts.append("with temporal tracking")
+        
+        if fk_count > 0:
+            context_parts.append(f"connected to {fk_count} other table(s)")
+        
+        if context_parts:
+            parts.append(' '.join(context_parts))
+        
+        description = ' '.join(parts).rstrip('.')
+        return description[:150]  # Cap at 150 chars
+
+
 class SemanticCatalogBuilder:
     """Build semantic catalog with fuzzy matching index."""
     
@@ -210,6 +374,7 @@ class SemanticCatalogBuilder:
                 "name": name,
                 "schema": schema,
                 "full_name": full_name,
+                "uri": f"table://{schema}/{name}",  # 🆕 Semantic URI for agent reference
                 "type": table['type'],
                 "estimated_rows": table['estimated_rows'],
                 "column_count": table.get('column_count', 0),
@@ -220,7 +385,8 @@ class SemanticCatalogBuilder:
                 "numeric_columns": [],
                 "date_columns": [],
                 "text_columns": [],
-                "fk_count": 0
+                "fk_count": 0,
+                "description": ""  # 🆕 Will be filled after fetching columns
             }
             
             # Try to fetch full table details for columns and foreign keys
@@ -253,21 +419,30 @@ class SemanticCatalogBuilder:
             except Exception as e:
                 logger.warning(f"Could not fetch full details for {full_name}: {e}")
             
+            # 🆕 Generate semantic description based on table structure
+            try:
+                table_info["description"] = SemanticDescriptionGenerator.generate_description(table_info)
+            except Exception as e:
+                logger.debug(f"Could not generate description for {full_name}: {e}")
+                table_info["description"] = f"Table {name}"  # Fallback
+            
             catalog["tables"].append(table_info)
         
         return catalog
     
     def _build_fuzzy_index(self, catalog: Dict[str, Any]) -> Dict[str, List[str]]:
-        """Build fuzzy matching index for tables and columns."""
+        """Build fuzzy matching index for tables, columns, and descriptions."""
         index = {
             "table_names": {},
             "column_names": {},
-            "normalized_names": {}
+            "normalized_names": {},
+            "description_keywords": {}  # 🆕 For semantic search
         }
         
         for table in catalog["tables"]:
             full_name = table["full_name"]
             short_name = table["name"]
+            description = table.get("description", "")
             
             # Add to index with normalization
             normalized = TableNameNormalizer.normalize(short_name)
@@ -280,6 +455,18 @@ class SemanticCatalogBuilder:
                 if col_name not in index["column_names"]:
                     index["column_names"][col_name] = []
                 index["column_names"][col_name].append(full_name)
+            
+            # 🆕 Extract keywords from description for semantic search
+            if description:
+                # Split description into keywords
+                keywords = description.lower().split()
+                for keyword in keywords:
+                    if len(keyword) > 2:  # Ignore short words
+                        clean_keyword = keyword.strip('.,;:')
+                        if clean_keyword not in index["description_keywords"]:
+                            index["description_keywords"][clean_keyword] = []
+                        if full_name not in index["description_keywords"][clean_keyword]:
+                            index["description_keywords"][clean_keyword].append(full_name)
         
         return index
     
@@ -333,8 +520,20 @@ class SemanticCatalogBuilder:
                     if query_lower in col["name"].lower():
                         col_matches.append(col["name"])
                 
+                # 🆕 Description match (semantic search)
+                description = table.get("description", "").lower()
+                description_similarity = 0.0
+                if description and query_lower in description:
+                    # Boost if query appears in description
+                    description_similarity = 0.70
+                elif description:
+                    # Try fuzzy match on description
+                    description_similarity = difflib.SequenceMatcher(None, query_lower, description).ratio() * 0.5
+                
+                best_name_similarity = max(best_name_similarity, description_similarity)
+                
                 # Calculate overall similarity
-                if best_name_similarity >= 0.60 or col_matches:
+                if best_name_similarity >= 0.60 or col_matches or description_similarity >= 0.5:
                     # Boost score if there are column matches
                     if col_matches:
                         best_name_similarity = max(best_name_similarity, 0.65)
@@ -344,6 +543,8 @@ class SemanticCatalogBuilder:
                         reason = "component_match"
                     if col_matches:
                         reason = "column_match"
+                    if description_similarity > best_name_similarity * 0.8:  # 🆕 Description match was primary
+                        reason = "description_match"
                     
                     results.append(TableSearchResult(
                         table_name=table["name"],

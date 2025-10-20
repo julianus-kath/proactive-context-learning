@@ -11,7 +11,7 @@
    - PostgreSQL database
    - OpenAI API key is set
 
-INFO:     Started server process [53491]
+INFO:     Started server process [54519]
 INFO:     Waiting for application startup.
 INFO:langgraph_integration.graph_definition:Testing OpenAI API key...
 INFO:     Application startup complete.
@@ -19,28 +19,28 @@ INFO:     Uvicorn running on http://0.0.0.0:5001 (Press CTRL+C to quit)
 🚀 Initializing LangGraph workflow...
 ✅ LangGraph workflow initialized successfully
 ✅ Debug logger initialized
-INFO:     127.0.0.1:52493 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52505 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52505 - "OPTIONS /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53079 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53092 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53092 - "OPTIONS /process_conversation HTTP/1.1" 200 OK
 DEBUG:langgraph:
   🔧 Tool Call: get_schema
   ────────────────────────────────────────────────────────────
     tool_id: get_schema_0
     arguments:
       {}
-    timestamp: 2025-10-20T08:14:52.210523
+    timestamp: 2025-10-20T08:36:25.894872
   ────────────────────────────────────────────────────────────
 INFO:langgraph_integration.mcp_client:MCP session initialized successfully
 INFO:langgraph_integration.mcp_client:✅ MCP tool call successful, received 1 content items
 📝 Processing conversation with 2 messages...
 📝 Last user message: What were our total sales last month?...
-2025-10-20 08:15:35,766 - langgraph - INFO - 
+2025-10-20 08:37:07,405 - langgraph - INFO - 
 ✅ Tool Result: get_schema
 ────────────────────────────────────────────────────────────
   tool_name: get_schema
   status: ✅ SUCCESS
-  timestamp: 2025-10-20T08:15:35.766520
-  duration_ms: 43553.75
+  timestamp: 2025-10-20T08:37:07.405213
+  duration_ms: 41505.71
   result_preview:
     {
       "content_items": 1
@@ -51,14 +51,23 @@ INFO:langgraph:
 ────────────────────────────────────────────────────────────
   tool_name: get_schema
   status: ✅ SUCCESS
-  timestamp: 2025-10-20T08:15:35.766520
-  duration_ms: 43553.75
+  timestamp: 2025-10-20T08:37:07.405213
+  duration_ms: 41505.71
   result_preview:
     {
       "content_items": 1
     }
 ────────────────────────────────────────────────────────────
-INFO:langgraph_integration.graph_definition:Database indexed: 0 tables across 0 schemas: 
+ERROR:langgraph_integration.mcp_client:❌ Failed to parse schema JSON: No JSON object found in content: Database Schema:
+
+Table: BCSPjmAdressenKontakt (BASE TABLE)
+Columns:
+  - Mandant (smallint) NOT NULL
+ERROR:langgraph_integration.graph_definition:❌ Database indexing FAILED: Failed to parse schema JSON: No JSON object found in content: Database Schema:
+
+Table: BCSPjmAdressenKontakt (BASE TABLE)
+Columns:
+  - Mandant (smallint) NOT NULL
 DEBUG:langgraph:
   🔧 Tool Call: list_tables
   ────────────────────────────────────────────────────────────
@@ -68,17 +77,17 @@ DEBUG:langgraph:
         "page": 1,
         "page_size": 50
       }
-    timestamp: 2025-10-20T08:15:35.770737
+    timestamp: 2025-10-20T08:37:07.414907
   ────────────────────────────────────────────────────────────
 INFO:langgraph_integration.mcp_client:MCP session initialized successfully
 INFO:langgraph_integration.mcp_client:✅ MCP tool call successful, received 1 content items
-2025-10-20 08:15:35,836 - langgraph - INFO - 
+2025-10-20 08:37:07,485 - langgraph - INFO - 
 ✅ Tool Result: list_tables
 ────────────────────────────────────────────────────────────
   tool_name: list_tables
   status: ✅ SUCCESS
-  timestamp: 2025-10-20T08:15:35.836280
-  duration_ms: 65.11
+  timestamp: 2025-10-20T08:37:07.484582
+  duration_ms: 69.11
   result_preview:
     {
       "content_items": 1
@@ -89,76 +98,170 @@ INFO:langgraph:
 ────────────────────────────────────────────────────────────
   tool_name: list_tables
   status: ✅ SUCCESS
-  timestamp: 2025-10-20T08:15:35.836280
-  duration_ms: 65.11
+  timestamp: 2025-10-20T08:37:07.484582
+  duration_ms: 69.11
   result_preview:
     {
       "content_items": 1
     }
 ────────────────────────────────────────────────────────────
-2025-10-20 08:15:35,837 - langgraph - INFO - 
+2025-10-20 08:37:07,487 - langgraph - INFO - 
 🔍 Scout Mode: list_tables
 ────────────────────────────────────────────────────────────
   operation: list_tables
-  query: page=1, schema=None, pattern=None
+  query: page=1, page_size=50
   tables_searched:
     [
-      "[{'type': 'text', 'text': '\ud83d\udccb Database Tables (Page 1 of 19)\\n\\nTotal tables: 943\\n\\n\u2022 dbo.BCSPjmAdressenKontakt (BASE TABLE)\\n  Columns: 11, Rows: ~0\\n\\n\u2022 dbo.BCSPjmAdressenKontaktFolge (BASE TABLE)\\n  Columns: 5, Rows: ~0\\n\\n\u2022 dbo.BCSPjmArtikelObjektVerbrauch (BASE TABLE)\\n  Columns: 11, Rows: ~0\\n\\n\u2022 dbo.BCSPjmArtikelObjektZaehler (BASE TABLE)\\n  Columns: 6, Rows: ~0\\n\\n\u2022 dbo.BCSPjmDokumente (BASE TABLE)\\n  Columns: 13, Rows: ~5\\n\\n\u2022 dbo.BCSPjmEvalForecastDimensions (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BCSPjmEvalForecasts (BASE TABLE)\\n  Columns: 18, Rows: ~0\\n\\n\u2022 dbo.BCSPjmEvalQueries (BASE TABLE)\\n  Columns: 15, Rows: ~0\\n\\n\u2022 dbo.BCSPjmEvalQueryParameters (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BCSPjmInfoStructure (BASE TABLE)\\n  Columns: 15, Rows: ~0\\n\\n\u2022 dbo.BCSPjmKBSupport (BASE TABLE)\\n  Columns: 14, Rows: ~0\\n\\n\u2022 dbo.BCSPjmKBSupportActivities (BASE TABLE)\\n  Columns: 8, Rows: ~0\\n\\n\u2022 dbo.BCSPjmObjekte (BASE TABLE)\\n  Columns: 39, Rows: ~0\\n\\n\u2022 dbo.BCSPjmObjekteRapport (BASE TABLE)\\n  Columns: 5, Rows: ~0\\n\\n\u2022 dbo.BCSPjmObjekteRessourcen (BASE TABLE)\\n  Columns: 5, Rows: ~0\\n\\n\u2022 dbo.BCSPjmObjekteStapel (BASE TABLE)\\n  Columns: 5, Rows: ~0\\n\\n\u2022 dbo.BCSPjmObjekteStapelPositionen (BASE TABLE)\\n  Columns: 23, Rows: ~0\\n\\n\u2022 dbo.BCSPjmObjekteZubehoer (BASE TABLE)\\n  Columns: 10, Rows: ~0\\n\\n\u2022 dbo.BCSPjmProjekte (BASE TABLE)\\n  Columns: 21, Rows: ~0\\n\\n\u2022 dbo.BCSPjmProjektePositionen (BASE TABLE)\\n  Columns: 55, Rows: ~2\\n\\n\u2022 dbo.BCSPjmProjektePositionenFlow (BASE TABLE)\\n  Columns: 11, Rows: ~0\\n\\n\u2022 dbo.BCSPjmProjekteTemplates (BASE TABLE)\\n  Columns: 6, Rows: ~67\\n\\n\u2022 dbo.BCSPjmProjekteVorgaengeLeist (BASE TABLE)\\n  Columns: 10, Rows: ~0\\n\\n\u2022 dbo.BCSPjmProjekteVorgaengeZeiten (BASE TABLE)\\n  Columns: 22, Rows: ~0\\n\\n\u2022 dbo.BCSPjmProjekteVorgaengeZeitenArchiv (BASE TABLE)\\n  Columns: 21, Rows: ~0\\n\\n\u2022 dbo.BCSPjmProjekteVorgaengeZeitenReise (BASE TABLE)\\n  Columns: 10, Rows: ~0\\n\\n\u2022 dbo.BCSPjmRessourcen (BASE TABLE)\\n  Columns: 19, Rows: ~0\\n\\n\u2022 dbo.BCSPjmVertraege (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BCSPjmVertraegeBedingungen (BASE TABLE)\\n  Columns: 16, Rows: ~0\\n\\n\u2022 dbo.BCSPjmVertraegeBedingungenPos (BASE TABLE)\\n  Columns: 5, Rows: ~0\\n\\n\u2022 dbo.BCSPjmVorgaenge (BASE TABLE)\\n  Columns: 20, Rows: ~6\\n\\n\u2022 dbo.BCSPjmVorgaengeChecklisten (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BCSPjmVorgaengeFragen (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BSBDEGesRm (BASE TABLE)\\n  Columns: 6, Rows: ~0\\n\\n\u2022 dbo.BSBDEGesRmSerienNr (BASE TABLE)\\n  Columns: 3, Rows: ~0\\n\\n\u2022 dbo.BSBDEStempelGesRm (BASE TABLE)\\n  Columns: 6, Rows: ~0\\n\\n\u2022 dbo.BSBDEStempelGesRmSerienNr (BASE TABLE)\\n  Columns: 3, Rows: ~0\\n\\n\u2022 dbo.BSCrmAnrufliste (BASE TABLE)\\n  Columns: 11, Rows: ~0\\n\\n\u2022 dbo.BSCrmBeziehungen (BASE TABLE)\\n  Columns: 9, Rows: ~0\\n\\n\u2022 dbo.BSCrmEvalEscalation (BASE TABLE)\\n  Columns: 13, Rows: ~0\\n\\n\u2022 dbo.BSCrmEvalEscalationDone (BASE TABLE)\\n  Columns: 6, Rows: ~0\\n\\n\u2022 dbo.BSCrmEvalKampagnenProfile (BASE TABLE)\\n  Columns: 11, Rows: ~0\\n\\n\u2022 dbo.BSCrmKalender (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BSCrmKalenderPositionen (BASE TABLE)\\n  Columns: 18, Rows: ~0\\n\\n\u2022 dbo.BSCrmKalenderPositionenVerweise (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BSCrmKalenderPositionenVerweiseBlackList (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BSCrmKompetenzen (BASE TABLE)\\n  Columns: 6, Rows: ~0\\n\\n\u2022 dbo.BSCrmKonstanten (BASE TABLE)\\n  Columns: 4, Rows: ~214\\n\\n\u2022 dbo.BSCrmObjekteAbrechnungen (BASE TABLE)\\n  Columns: 6, Rows: ~0\\n\\n\u2022 dbo.BSCrmObjekteZaehlerverlauf (BASE TABLE)\\n  Columns: 9, Rows: ~0\\n\\n\u27a1\ufe0f More results available (use page=2)\\n\\n\u23f1\ufe0f Execution time: 3.06ms\\n\\n\ud83d\udcca Full response (JSON):\\n{\\n  \"ok\": true,\\n  \"data\": {\\n    \"tables\": [\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmAdressenKontakt\",\\n        \"full_name\": \"dbo.BCSPjmAdressenKontakt\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 11,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmAdressenKontaktFolge\",\\n        \"full_name\": \"dbo.BCSPjmAdressenKontaktFolge\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 5,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmArtikelObjektVerbrauch\",\\n        \"full_name\": \"dbo.BCSPjmArtikelObjektVerbrauch\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 11,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmArtikelObjektZaehler\",\\n        \"full_name\": \"dbo.BCSPjmArtikelObjektZaehler\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 6,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmDokumente\",\\n        \"full_name\": \"dbo.BCSPjmDokumente\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 5,\\n        \"column_count\": 13,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmEvalForecastDimensions\",\\n        \"full_name\": \"dbo.BCSPjmEvalForecastDimensions\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmEvalForecasts\",\\n        \"full_name\": \"dbo.BCSPjmEvalForecasts\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 18,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmEvalQueries\",\\n        \"full_name\": \"dbo.BCSPjmEvalQueries\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 15,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmEvalQueryParameters\",\\n        \"full_name\": \"dbo.BCSPjmEvalQueryParameters\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmInfoStructure\",\\n        \"full_name\": \"dbo.BCSPjmInfoStructure\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 15,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmKBSupport\",\\n        \"full_name\": \"dbo.BCSPjmKBSupport\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 14,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmKBSupportActivities\",\\n        \"full_name\": \"dbo.BCSPjmKBSupportActivities\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 8,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmObjekte\",\\n        \"full_name\": \"dbo.BCSPjmObjekte\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 39,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmObjekteRapport\",\\n        \"full_name\": \"dbo.BCSPjmObjekteRapport\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 5,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmObjekteRessourcen\",\\n        \"full_name\": \"dbo.BCSPjmObjekteRessourcen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 5,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmObjekteStapel\",\\n        \"full_name\": \"dbo.BCSPjmObjekteStapel\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 5,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmObjekteStapelPositionen\",\\n        \"full_name\": \"dbo.BCSPjmObjekteStapelPositionen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 23,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmObjekteZubehoer\",\\n        \"full_name\": \"dbo.BCSPjmObjekteZubehoer\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 10,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjekte\",\\n        \"full_name\": \"dbo.BCSPjmProjekte\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 21,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjektePositionen\",\\n        \"full_name\": \"dbo.BCSPjmProjektePositionen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 2,\\n        \"column_count\": 55,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjektePositionenFlow\",\\n        \"full_name\": \"dbo.BCSPjmProjektePositionenFlow\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 11,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjekteTemplates\",\\n        \"full_name\": \"dbo.BCSPjmProjekteTemplates\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 67,\\n        \"column_count\": 6,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjekteVorgaengeLeist\",\\n        \"full_name\": \"dbo.BCSPjmProjekteVorgaengeLeist\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 10,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjekteVorgaengeZeiten\",\\n        \"full_name\": \"dbo.BCSPjmProjekteVorgaengeZeiten\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 22,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjekteVorgaengeZeitenArchiv\",\\n        \"full_name\": \"dbo.BCSPjmProjekteVorgaengeZeitenArchiv\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 21,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjekteVorgaengeZeitenReise\",\\n        \"full_name\": \"dbo.BCSPjmProjekteVorgaengeZeitenReise\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 10,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmRessourcen\",\\n        \"full_name\": \"dbo.BCSPjmRessourcen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 19,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmVertraege\",\\n        \"full_name\": \"dbo.BCSPjmVertraege\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmVertraegeBedingungen\",\\n        \"full_name\": \"dbo.BCSPjmVertraegeBedingungen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 16,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmVertraegeBedingungenPos\",\\n        \"full_name\": \"dbo.BCSPjmVertraegeBedingungenPos\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 5,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmVorgaenge\",\\n        \"full_name\": \"dbo.BCSPjmVorgaenge\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 6,\\n        \"column_count\": 20,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmVorgaengeChecklisten\",\\n        \"full_name\": \"dbo.BCSPjmVorgaengeChecklisten\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmVorgaengeFragen\",\\n        \"full_name\": \"dbo.BCSPjmVorgaengeFragen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSBDEGesRm\",\\n        \"full_name\": \"dbo.BSBDEGesRm\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 6,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSBDEGesRmSerienNr\",\\n        \"full_name\": \"dbo.BSBDEGesRmSerienNr\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 3,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSBDEStempelGesRm\",\\n        \"full_name\": \"dbo.BSBDEStempelGesRm\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 6,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSBDEStempelGesRmSerienNr\",\\n        \"full_name\": \"dbo.BSBDEStempelGesRmSerienNr\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 3,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmAnrufliste\",\\n        \"full_name\": \"dbo.BSCrmAnrufliste\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 11,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmBeziehungen\",\\n        \"full_name\": \"dbo.BSCrmBeziehungen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 9,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmEvalEscalation\",\\n        \"full_name\": \"dbo.BSCrmEvalEscalation\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 13,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmEvalEscalationDone\",\\n        \"full_name\": \"dbo.BSCrmEvalEscalationDone\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 6,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmEvalKampagnenProfile\",\\n        \"full_name\": \"dbo.BSCrmEvalKampagnenProfile\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 11,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmKalender\",\\n        \"full_name\": \"dbo.BSCrmKalender\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmKalenderPositionen\",\\n        \"full_name\": \"dbo.BSCrmKalenderPositionen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 18,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmKalenderPositionenVerweise\",\\n        \"full_name\": \"dbo.BSCrmKalenderPositionenVerweise\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmKalenderPositionenVerweiseBlackList\",\\n        \"full_name\": \"dbo.BSCrmKalenderPositionenVerweiseBlackList\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmKompetenzen\",\\n        \"full_name\": \"dbo.BSCrmKompetenzen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 6,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmKonstanten\",\\n        \"full_name\": \"dbo.BSCrmKonstanten\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 214,\\n        \"column_count\": 4,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmObjekteAbrechnungen\",\\n        \"full_name\": \"dbo.BSCrmObjekteAbrechnungen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 6,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmObjekteZaehlerverlauf\",\\n        \"full_name\": \"dbo.BSCrmObjekteZaehlerverlauf\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 9,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      }\\n    ],\\n    \"filters\": {\\n      \"schema\": null,\\n      \"pattern\": null\\n    }\\n  },\\n  \"execution_time_ms\": 3.062009811401367,\\n  \"cached\": false,\\n  \"page_info\": {\\n    \"page\": 1,\\n    \"page_size\": 50,\\n    \"total_items\": 943,\\n    \"total_pages\": 19,\\n    \"has_next\": true,\\n    \"has_prev\": false\\n  }\\n}'}]"
+      "BCSPjmAdressenKontakt",
+      "BCSPjmAdressenKontaktFolge",
+      "BCSPjmArtikelObjektVerbrauch",
+      "BCSPjmArtikelObjektZaehler",
+      "BCSPjmDokumente",
+      "BCSPjmEvalForecastDimensions",
+      "BCSPjmEvalForecasts",
+      "BCSPjmEvalQueries",
+      "BCSPjmEvalQueryParameters",
+      "BCSPjmInfoStructure",
+      "BCSPjmKBSupport",
+      "BCSPjmKBSupportActivities",
+      "BCSPjmObjekte",
+      "BCSPjmObjekteRapport",
+      "BCSPjmObjekteRessourcen",
+      "BCSPjmObjekteStapel",
+      "BCSPjmObjekteStapelPositionen",
+      "BCSPjmObjekteZubehoer",
+      "BCSPjmProjekte",
+      "BCSPjmProjektePositionen",
+      "BCSPjmProjektePositionenFlow",
+      "BCSPjmProjekteTemplates",
+      "BCSPjmProjekteVorgaengeLeist",
+      "BCSPjmProjekteVorgaengeZeiten",
+      "BCSPjmProjekteVorgaengeZeitenArchiv",
+      "BCSPjmProjekteVorgaengeZeitenReise",
+      "BCSPjmRessourcen",
+      "BCSPjmVertraege",
+      "BCSPjmVertraegeBedingungen",
+      "BCSPjmVertraegeBedingungenPos",
+      "BCSPjmVorgaenge",
+      "BCSPjmVorgaengeChecklisten",
+      "BCSPjmVorgaengeFragen",
+      "BSBDEGesRm",
+      "BSBDEGesRmSerienNr",
+      "BSBDEStempelGesRm",
+      "BSBDEStempelGesRmSerienNr",
+      "BSCrmAnrufliste",
+      "BSCrmBeziehungen",
+      "BSCrmEvalEscalation",
+      "BSCrmEvalEscalationDone",
+      "BSCrmEvalKampagnenProfile",
+      "BSCrmKalender",
+      "BSCrmKalenderPositionen",
+      "BSCrmKalenderPositionenVerweise",
+      "BSCrmKalenderPositionenVerweiseBlackList",
+      "BSCrmKompetenzen",
+      "BSCrmKonstanten",
+      "BSCrmObjekteAbrechnungen",
+      "BSCrmObjekteZaehlerverlauf"
     ]
   result_count: 1
-  timestamp: 2025-10-20T08:15:35.837417
+  timestamp: 2025-10-20T08:37:07.486860
   results:
     {
-      "total_tables": 1
+      "total_tables": 50,
+      "total_pages": 1,
+      "current_page": 1
     }
 ────────────────────────────────────────────────────────────
 INFO:langgraph:
 🔍 Scout Mode: list_tables
 ────────────────────────────────────────────────────────────
   operation: list_tables
-  query: page=1, schema=None, pattern=None
+  query: page=1, page_size=50
   tables_searched:
     [
-      "[{'type': 'text', 'text': '\ud83d\udccb Database Tables (Page 1 of 19)\\n\\nTotal tables: 943\\n\\n\u2022 dbo.BCSPjmAdressenKontakt (BASE TABLE)\\n  Columns: 11, Rows: ~0\\n\\n\u2022 dbo.BCSPjmAdressenKontaktFolge (BASE TABLE)\\n  Columns: 5, Rows: ~0\\n\\n\u2022 dbo.BCSPjmArtikelObjektVerbrauch (BASE TABLE)\\n  Columns: 11, Rows: ~0\\n\\n\u2022 dbo.BCSPjmArtikelObjektZaehler (BASE TABLE)\\n  Columns: 6, Rows: ~0\\n\\n\u2022 dbo.BCSPjmDokumente (BASE TABLE)\\n  Columns: 13, Rows: ~5\\n\\n\u2022 dbo.BCSPjmEvalForecastDimensions (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BCSPjmEvalForecasts (BASE TABLE)\\n  Columns: 18, Rows: ~0\\n\\n\u2022 dbo.BCSPjmEvalQueries (BASE TABLE)\\n  Columns: 15, Rows: ~0\\n\\n\u2022 dbo.BCSPjmEvalQueryParameters (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BCSPjmInfoStructure (BASE TABLE)\\n  Columns: 15, Rows: ~0\\n\\n\u2022 dbo.BCSPjmKBSupport (BASE TABLE)\\n  Columns: 14, Rows: ~0\\n\\n\u2022 dbo.BCSPjmKBSupportActivities (BASE TABLE)\\n  Columns: 8, Rows: ~0\\n\\n\u2022 dbo.BCSPjmObjekte (BASE TABLE)\\n  Columns: 39, Rows: ~0\\n\\n\u2022 dbo.BCSPjmObjekteRapport (BASE TABLE)\\n  Columns: 5, Rows: ~0\\n\\n\u2022 dbo.BCSPjmObjekteRessourcen (BASE TABLE)\\n  Columns: 5, Rows: ~0\\n\\n\u2022 dbo.BCSPjmObjekteStapel (BASE TABLE)\\n  Columns: 5, Rows: ~0\\n\\n\u2022 dbo.BCSPjmObjekteStapelPositionen (BASE TABLE)\\n  Columns: 23, Rows: ~0\\n\\n\u2022 dbo.BCSPjmObjekteZubehoer (BASE TABLE)\\n  Columns: 10, Rows: ~0\\n\\n\u2022 dbo.BCSPjmProjekte (BASE TABLE)\\n  Columns: 21, Rows: ~0\\n\\n\u2022 dbo.BCSPjmProjektePositionen (BASE TABLE)\\n  Columns: 55, Rows: ~2\\n\\n\u2022 dbo.BCSPjmProjektePositionenFlow (BASE TABLE)\\n  Columns: 11, Rows: ~0\\n\\n\u2022 dbo.BCSPjmProjekteTemplates (BASE TABLE)\\n  Columns: 6, Rows: ~67\\n\\n\u2022 dbo.BCSPjmProjekteVorgaengeLeist (BASE TABLE)\\n  Columns: 10, Rows: ~0\\n\\n\u2022 dbo.BCSPjmProjekteVorgaengeZeiten (BASE TABLE)\\n  Columns: 22, Rows: ~0\\n\\n\u2022 dbo.BCSPjmProjekteVorgaengeZeitenArchiv (BASE TABLE)\\n  Columns: 21, Rows: ~0\\n\\n\u2022 dbo.BCSPjmProjekteVorgaengeZeitenReise (BASE TABLE)\\n  Columns: 10, Rows: ~0\\n\\n\u2022 dbo.BCSPjmRessourcen (BASE TABLE)\\n  Columns: 19, Rows: ~0\\n\\n\u2022 dbo.BCSPjmVertraege (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BCSPjmVertraegeBedingungen (BASE TABLE)\\n  Columns: 16, Rows: ~0\\n\\n\u2022 dbo.BCSPjmVertraegeBedingungenPos (BASE TABLE)\\n  Columns: 5, Rows: ~0\\n\\n\u2022 dbo.BCSPjmVorgaenge (BASE TABLE)\\n  Columns: 20, Rows: ~6\\n\\n\u2022 dbo.BCSPjmVorgaengeChecklisten (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BCSPjmVorgaengeFragen (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BSBDEGesRm (BASE TABLE)\\n  Columns: 6, Rows: ~0\\n\\n\u2022 dbo.BSBDEGesRmSerienNr (BASE TABLE)\\n  Columns: 3, Rows: ~0\\n\\n\u2022 dbo.BSBDEStempelGesRm (BASE TABLE)\\n  Columns: 6, Rows: ~0\\n\\n\u2022 dbo.BSBDEStempelGesRmSerienNr (BASE TABLE)\\n  Columns: 3, Rows: ~0\\n\\n\u2022 dbo.BSCrmAnrufliste (BASE TABLE)\\n  Columns: 11, Rows: ~0\\n\\n\u2022 dbo.BSCrmBeziehungen (BASE TABLE)\\n  Columns: 9, Rows: ~0\\n\\n\u2022 dbo.BSCrmEvalEscalation (BASE TABLE)\\n  Columns: 13, Rows: ~0\\n\\n\u2022 dbo.BSCrmEvalEscalationDone (BASE TABLE)\\n  Columns: 6, Rows: ~0\\n\\n\u2022 dbo.BSCrmEvalKampagnenProfile (BASE TABLE)\\n  Columns: 11, Rows: ~0\\n\\n\u2022 dbo.BSCrmKalender (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BSCrmKalenderPositionen (BASE TABLE)\\n  Columns: 18, Rows: ~0\\n\\n\u2022 dbo.BSCrmKalenderPositionenVerweise (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BSCrmKalenderPositionenVerweiseBlackList (BASE TABLE)\\n  Columns: 7, Rows: ~0\\n\\n\u2022 dbo.BSCrmKompetenzen (BASE TABLE)\\n  Columns: 6, Rows: ~0\\n\\n\u2022 dbo.BSCrmKonstanten (BASE TABLE)\\n  Columns: 4, Rows: ~214\\n\\n\u2022 dbo.BSCrmObjekteAbrechnungen (BASE TABLE)\\n  Columns: 6, Rows: ~0\\n\\n\u2022 dbo.BSCrmObjekteZaehlerverlauf (BASE TABLE)\\n  Columns: 9, Rows: ~0\\n\\n\u27a1\ufe0f More results available (use page=2)\\n\\n\u23f1\ufe0f Execution time: 3.06ms\\n\\n\ud83d\udcca Full response (JSON):\\n{\\n  \"ok\": true,\\n  \"data\": {\\n    \"tables\": [\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmAdressenKontakt\",\\n        \"full_name\": \"dbo.BCSPjmAdressenKontakt\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 11,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmAdressenKontaktFolge\",\\n        \"full_name\": \"dbo.BCSPjmAdressenKontaktFolge\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 5,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmArtikelObjektVerbrauch\",\\n        \"full_name\": \"dbo.BCSPjmArtikelObjektVerbrauch\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 11,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmArtikelObjektZaehler\",\\n        \"full_name\": \"dbo.BCSPjmArtikelObjektZaehler\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 6,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmDokumente\",\\n        \"full_name\": \"dbo.BCSPjmDokumente\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 5,\\n        \"column_count\": 13,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmEvalForecastDimensions\",\\n        \"full_name\": \"dbo.BCSPjmEvalForecastDimensions\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmEvalForecasts\",\\n        \"full_name\": \"dbo.BCSPjmEvalForecasts\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 18,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmEvalQueries\",\\n        \"full_name\": \"dbo.BCSPjmEvalQueries\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 15,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmEvalQueryParameters\",\\n        \"full_name\": \"dbo.BCSPjmEvalQueryParameters\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmInfoStructure\",\\n        \"full_name\": \"dbo.BCSPjmInfoStructure\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 15,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmKBSupport\",\\n        \"full_name\": \"dbo.BCSPjmKBSupport\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 14,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmKBSupportActivities\",\\n        \"full_name\": \"dbo.BCSPjmKBSupportActivities\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 8,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmObjekte\",\\n        \"full_name\": \"dbo.BCSPjmObjekte\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 39,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmObjekteRapport\",\\n        \"full_name\": \"dbo.BCSPjmObjekteRapport\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 5,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmObjekteRessourcen\",\\n        \"full_name\": \"dbo.BCSPjmObjekteRessourcen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 5,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmObjekteStapel\",\\n        \"full_name\": \"dbo.BCSPjmObjekteStapel\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 5,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmObjekteStapelPositionen\",\\n        \"full_name\": \"dbo.BCSPjmObjekteStapelPositionen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 23,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmObjekteZubehoer\",\\n        \"full_name\": \"dbo.BCSPjmObjekteZubehoer\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 10,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjekte\",\\n        \"full_name\": \"dbo.BCSPjmProjekte\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 21,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjektePositionen\",\\n        \"full_name\": \"dbo.BCSPjmProjektePositionen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 2,\\n        \"column_count\": 55,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjektePositionenFlow\",\\n        \"full_name\": \"dbo.BCSPjmProjektePositionenFlow\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 11,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjekteTemplates\",\\n        \"full_name\": \"dbo.BCSPjmProjekteTemplates\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 67,\\n        \"column_count\": 6,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjekteVorgaengeLeist\",\\n        \"full_name\": \"dbo.BCSPjmProjekteVorgaengeLeist\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 10,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjekteVorgaengeZeiten\",\\n        \"full_name\": \"dbo.BCSPjmProjekteVorgaengeZeiten\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 22,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjekteVorgaengeZeitenArchiv\",\\n        \"full_name\": \"dbo.BCSPjmProjekteVorgaengeZeitenArchiv\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 21,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmProjekteVorgaengeZeitenReise\",\\n        \"full_name\": \"dbo.BCSPjmProjekteVorgaengeZeitenReise\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 10,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmRessourcen\",\\n        \"full_name\": \"dbo.BCSPjmRessourcen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 19,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmVertraege\",\\n        \"full_name\": \"dbo.BCSPjmVertraege\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmVertraegeBedingungen\",\\n        \"full_name\": \"dbo.BCSPjmVertraegeBedingungen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 16,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmVertraegeBedingungenPos\",\\n        \"full_name\": \"dbo.BCSPjmVertraegeBedingungenPos\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 5,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmVorgaenge\",\\n        \"full_name\": \"dbo.BCSPjmVorgaenge\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 6,\\n        \"column_count\": 20,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmVorgaengeChecklisten\",\\n        \"full_name\": \"dbo.BCSPjmVorgaengeChecklisten\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BCSPjmVorgaengeFragen\",\\n        \"full_name\": \"dbo.BCSPjmVorgaengeFragen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSBDEGesRm\",\\n        \"full_name\": \"dbo.BSBDEGesRm\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 6,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSBDEGesRmSerienNr\",\\n        \"full_name\": \"dbo.BSBDEGesRmSerienNr\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 3,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSBDEStempelGesRm\",\\n        \"full_name\": \"dbo.BSBDEStempelGesRm\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 6,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSBDEStempelGesRmSerienNr\",\\n        \"full_name\": \"dbo.BSBDEStempelGesRmSerienNr\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 3,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmAnrufliste\",\\n        \"full_name\": \"dbo.BSCrmAnrufliste\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 11,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmBeziehungen\",\\n        \"full_name\": \"dbo.BSCrmBeziehungen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 9,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmEvalEscalation\",\\n        \"full_name\": \"dbo.BSCrmEvalEscalation\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 13,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmEvalEscalationDone\",\\n        \"full_name\": \"dbo.BSCrmEvalEscalationDone\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 6,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmEvalKampagnenProfile\",\\n        \"full_name\": \"dbo.BSCrmEvalKampagnenProfile\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 11,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmKalender\",\\n        \"full_name\": \"dbo.BSCrmKalender\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmKalenderPositionen\",\\n        \"full_name\": \"dbo.BSCrmKalenderPositionen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 18,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmKalenderPositionenVerweise\",\\n        \"full_name\": \"dbo.BSCrmKalenderPositionenVerweise\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmKalenderPositionenVerweiseBlackList\",\\n        \"full_name\": \"dbo.BSCrmKalenderPositionenVerweiseBlackList\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 7,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmKompetenzen\",\\n        \"full_name\": \"dbo.BSCrmKompetenzen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 6,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmKonstanten\",\\n        \"full_name\": \"dbo.BSCrmKonstanten\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 214,\\n        \"column_count\": 4,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmObjekteAbrechnungen\",\\n        \"full_name\": \"dbo.BSCrmObjekteAbrechnungen\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 6,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      },\\n      {\\n        \"schema\": \"dbo\",\\n        \"name\": \"BSCrmObjekteZaehlerverlauf\",\\n        \"full_name\": \"dbo.BSCrmObjekteZaehlerverlauf\",\\n        \"type\": \"BASE TABLE\",\\n        \"estimated_rows\": 0,\\n        \"column_count\": 9,\\n        \"has_foreign_keys\": false,\\n        \"has_primary_keys\": false\\n      }\\n    ],\\n    \"filters\": {\\n      \"schema\": null,\\n      \"pattern\": null\\n    }\\n  },\\n  \"execution_time_ms\": 3.062009811401367,\\n  \"cached\": false,\\n  \"page_info\": {\\n    \"page\": 1,\\n    \"page_size\": 50,\\n    \"total_items\": 943,\\n    \"total_pages\": 19,\\n    \"has_next\": true,\\n    \"has_prev\": false\\n  }\\n}'}]"
+      "BCSPjmAdressenKontakt",
+      "BCSPjmAdressenKontaktFolge",
+      "BCSPjmArtikelObjektVerbrauch",
+      "BCSPjmArtikelObjektZaehler",
+      "BCSPjmDokumente",
+      "BCSPjmEvalForecastDimensions",
+      "BCSPjmEvalForecasts",
+      "BCSPjmEvalQueries",
+      "BCSPjmEvalQueryParameters",
+      "BCSPjmInfoStructure",
+      "BCSPjmKBSupport",
+      "BCSPjmKBSupportActivities",
+      "BCSPjmObjekte",
+      "BCSPjmObjekteRapport",
+      "BCSPjmObjekteRessourcen",
+      "BCSPjmObjekteStapel",
+      "BCSPjmObjekteStapelPositionen",
+      "BCSPjmObjekteZubehoer",
+      "BCSPjmProjekte",
+      "BCSPjmProjektePositionen",
+      "BCSPjmProjektePositionenFlow",
+      "BCSPjmProjekteTemplates",
+      "BCSPjmProjekteVorgaengeLeist",
+      "BCSPjmProjekteVorgaengeZeiten",
+      "BCSPjmProjekteVorgaengeZeitenArchiv",
+      "BCSPjmProjekteVorgaengeZeitenReise",
+      "BCSPjmRessourcen",
+      "BCSPjmVertraege",
+      "BCSPjmVertraegeBedingungen",
+      "BCSPjmVertraegeBedingungenPos",
+      "BCSPjmVorgaenge",
+      "BCSPjmVorgaengeChecklisten",
+      "BCSPjmVorgaengeFragen",
+      "BSBDEGesRm",
+      "BSBDEGesRmSerienNr",
+      "BSBDEStempelGesRm",
+      "BSBDEStempelGesRmSerienNr",
+      "BSCrmAnrufliste",
+      "BSCrmBeziehungen",
+      "BSCrmEvalEscalation",
+      "BSCrmEvalEscalationDone",
+      "BSCrmEvalKampagnenProfile",
+      "BSCrmKalender",
+      "BSCrmKalenderPositionen",
+      "BSCrmKalenderPositionenVerweise",
+      "BSCrmKalenderPositionenVerweiseBlackList",
+      "BSCrmKompetenzen",
+      "BSCrmKonstanten",
+      "BSCrmObjekteAbrechnungen",
+      "BSCrmObjekteZaehlerverlauf"
     ]
   result_count: 1
-  timestamp: 2025-10-20T08:15:35.837417
+  timestamp: 2025-10-20T08:37:07.486860
   results:
     {
-      "total_tables": 1
+      "total_tables": 50,
+      "total_pages": 1,
+      "current_page": 1
     }
 ────────────────────────────────────────────────────────────
-ERROR:langgraph_integration.mcp_client:Error listing tables: Expecting value: line 1 column 1 (char 0)
-ERROR:langgraph_integration.graph_definition:Error getting table list: Expecting value: line 1 column 1 (char 0)
+INFO:langgraph_integration.mcp_client:✅ list_tables: page 1/1, showing 50 of 50 total tables
+ERROR:langgraph_integration.mcp_client:Error listing tables: 0
+ERROR:langgraph_integration.graph_definition:Error getting table list: 0
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-2025-10-20 08:15:37,871 - langgraph - WARNING - 
-📝 Intent Parsed: clarify
+INFO:langgraph_integration.graph_definition:🎯 Answer-first: Applying defaults instead of asking for {'specific location', 'product category'}
+2025-10-20 08:37:10,094 - langgraph - INFO - 
+📝 Intent Parsed: query
 ────────────────────────────────────────────────────────────
   user_query: What were our total sales last month?
-  intent_type: clarify
+  intent_type: query
   confidence: 1.0
-  timestamp: 2025-10-20T08:15:37.871368
-  missing_fields:
-    [
-      "specific location",
-      "product category"
-    ]
+  timestamp: 2025-10-20T08:37:10.094133
 ────────────────────────────────────────────────────────────
-WARNING:langgraph:
-📝 Intent Parsed: clarify
+INFO:langgraph:
+📝 Intent Parsed: query
 ────────────────────────────────────────────────────────────
   user_query: What were our total sales last month?
-  intent_type: clarify
+  intent_type: query
   confidence: 1.0
-  timestamp: 2025-10-20T08:15:37.871368
-  missing_fields:
-    [
-      "specific location",
-      "product category"
-    ]
+  timestamp: 2025-10-20T08:37:10.094133
 ────────────────────────────────────────────────────────────
-INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['specific location', 'product category']
+INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: ...
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:Generated clarification: Could you please specify if you are interested in the total sales for a particular location or produ...
-✅ Conversation processed successfully - Operation: clarify
-INFO:     127.0.0.1:52505 - "POST /process_conversation HTTP/1.1" 200 OK
+INFO:langgraph_integration.graph_definition:Error handled successfully
+✅ Conversation processed successfully - Operation: query
+INFO:     127.0.0.1:53092 - "POST /process_conversation HTTP/1.1" 200 OK
