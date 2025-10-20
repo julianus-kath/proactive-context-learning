@@ -338,34 +338,22 @@ class MCPTools:
     
     @staticmethod
     async def _get_schema(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
-        """Get database schema information."""
+        """Get database schema information as JSON."""
         schema = await db_manager.fetch_schema()
         
-        # Format schema information
-        schema_text = "Database Schema:\n\n"
-        for table in schema:
-            schema_text += f"Table: {table['name']} ({table['type']})\n"
-            schema_text += "Columns:\n"
-            
-            for column in table['columns']:
-                col_info = f"  - {column['name']} ({column['type']})"
-                if not column['nullable']:
-                    col_info += " NOT NULL"
-                if column.get('default'):
-                    col_info += f" DEFAULT {column['default']}"
-                if column.get('constraint'):
-                    col_info += f" [{column['constraint']}]"
-                if column.get('references'):
-                    ref = column['references']
-                    col_info += f" -> {ref['table']}.{ref['column']}"
-                schema_text += col_info + "\n"
-            
-            schema_text += "\n"
+        # Return schema as JSON (not plain text)
+        # This ensures MCP client can parse it with json.loads()
+        schema_json = {
+            "ok": True,
+            "tables": schema,
+            "table_count": len(schema),
+            "status": "Schema retrieved successfully"
+        }
         
         return MCPToolResult(
             content=[{
                 "type": "text",
-                "text": schema_text
+                "text": json.dumps(schema_json)
             }]
         )
     
