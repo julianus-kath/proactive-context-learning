@@ -635,9 +635,9 @@ class DiscoveryTools:
             if '.' in table_name:
                 schema, name = table_name.split('.', 1)
             else:
-                # Try to find table in any schema
+                # Try to find table in any schema (get_table_list returns dicts)
                 all_tables = catalog.get_table_list()
-                matching = [t for t in all_tables if t.name.lower() == table_name.lower()]
+                matching = [t for t in all_tables if t["name"].lower() == table_name.lower()]
                 
                 if not matching:
                     return DiscoveryResponse(
@@ -649,7 +649,7 @@ class DiscoveryTools:
                     )
                 
                 if len(matching) > 1:
-                    schemas = [t.schema for t in matching]
+                    schemas = [t["schema"] for t in matching]
                     return DiscoveryResponse(
                         ok=False,
                         data=None,
@@ -658,10 +658,10 @@ class DiscoveryTools:
                         execution_time_ms=(time.time() - start_time) * 1000
                     )
                 
-                schema = matching[0].schema
-                name = matching[0].name
+                schema = matching[0]["schema"]
+                name = matching[0]["name"]
             
-            # Get table from catalog
+            # Get table from catalog (returns a dict, not a dataclass object)
             table = catalog.get_table(schema, name)
             
             if not table:
@@ -673,36 +673,18 @@ class DiscoveryTools:
                     execution_time_ms=(time.time() - start_time) * 1000
                 )
             
-            # Build response data
+            # Build response data (catalog.get_table() already returns dict with properly serialized columns and fks)
             data = {
-                "schema": table.schema,
-                "name": table.name,
-                "full_name": table.full_name(),
-                "type": table.type,
-                "estimated_rows": table.estimated_rows,
-                "columns": [
-                    {
-                        "name": col.name,
-                        "type": col.type,
-                        "nullable": col.nullable,
-                        "default": col.default,
-                        "is_primary_key": col.is_primary_key,
-                        "is_foreign_key": col.is_foreign_key
-                    }
-                    for col in table.columns
-                ],
-                "primary_keys": table.primary_keys,
-                "foreign_keys": [
-                    {
-                        "column": fk.column,
-                        "referenced_table": fk.referenced_table,
-                        "referenced_schema": fk.referenced_schema,
-                        "referenced_column": fk.referenced_column,
-                        "referenced_full_name": f"{fk.referenced_schema}.{fk.referenced_table}"
-                    }
-                    for fk in table.foreign_keys
-                ],
-                "top_columns": table.get_top_columns(limit=10)
+                "schema": table["schema"],
+                "name": table["name"],
+                "full_name": table["full_name"],
+                "type": table["type"],
+                "estimated_rows": table["estimated_rows"],
+                "columns": table.get("columns", []),  # Already properly serialized from catalog
+                "primary_keys": table.get("primary_keys", []),
+                "foreign_keys": table.get("foreign_keys", []),  # Already properly serialized from catalog
+                "top_columns": table.get("top_columns", []),  # Already a list of strings
+                "neighbors": table.get("neighbors", [])  # Already a list of strings
             }
             
             # Include sample data if requested (requires DB query)
@@ -801,13 +783,13 @@ class DiscoveryTools:
             
             catalog = db_adapter.catalog
             
-            # Parse table name
+            # Parse table name (get_table_list returns dicts)
             if '.' in table_name:
                 schema, name = table_name.split('.', 1)
             else:
                 # Try to find table in any schema
                 all_tables = catalog.get_table_list()
-                matching = [t for t in all_tables if t.name.lower() == table_name.lower()]
+                matching = [t for t in all_tables if t["name"].lower() == table_name.lower()]
                 
                 if not matching:
                     return DiscoveryResponse(
@@ -819,7 +801,7 @@ class DiscoveryTools:
                     )
                 
                 if len(matching) > 1:
-                    schemas = [t.schema for t in matching]
+                    schemas = [t["schema"] for t in matching]
                     return DiscoveryResponse(
                         ok=False,
                         data=None,
@@ -828,8 +810,8 @@ class DiscoveryTools:
                         execution_time_ms=(time.time() - start_time) * 1000
                     )
                 
-                schema = matching[0].schema
-                name = matching[0].name
+                schema = matching[0]["schema"]
+                name = matching[0]["name"]
             
             # Get neighbors from catalog
             neighbors = catalog.get_neighbors(schema, name)
