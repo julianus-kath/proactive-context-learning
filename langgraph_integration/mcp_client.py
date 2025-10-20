@@ -13,6 +13,7 @@ import asyncio
 import logging
 import time
 import json
+import re
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
 
@@ -31,6 +32,51 @@ try:
     debug_logger = get_debug_logger()
 except ImportError:
     debug_logger = None
+
+
+def _extract_json_from_text(content: str) -> Dict[str, Any]:
+    """
+    Extract JSON from pretty-printed text that contains 'Full response (JSON): {…}'.
+    
+    This handles the case where MCP server returns decorated text like:
+        "Full response (JSON): {\"data\": {\"tables\": [...], \"page_info\": {...}}}"
+    
+    Args:
+        content: Text content potentially containing JSON
+        
+    Returns:
+        Parsed JSON dictionary
+        
+    Raises:
+        ValueError: If no valid JSON object found or parsing fails
+    """
+    # If it's already a dict, return it
+    if isinstance(content, dict):
+        return content
+    
+    if not isinstance(content, str):
+        raise ValueError(f"Content must be str or dict, got {type(content)}")
+    
+    # Remove common markdown markers
+    content = content.replace("```json", "").replace("```", "")
+    
+    # Look for the JSON marker
+    marker = "Full response (JSON):"
+    if marker in content:
+        content = content.split(marker, 1)[1].strip()
+    
+    # Find the first '{' and last '}'
+    start = content.find("{")
+    end = content.rfind("}")
+    
+    if start == -1 or end == -1 or end <= start:
+        raise ValueError(f"No JSON object found in content: {content[:100]}")
+    
+    try:
+        json_str = content[start:end+1]
+        return json.loads(json_str)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Failed to parse JSON: {e}. Content: {content[start:min(start+200, end)]}")
 
 
 class MCPDatabaseTool:
@@ -297,9 +343,10 @@ class MCPDatabaseTool:
         page_size: int = 25, 
         schema: Optional[str] = None, 
         pattern: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+    ) -> Dict[str, Any]:
         """
         List tables with pagination and filtering (Phase 4 discovery tool).
+        Properly handles JSON extraction and returns structured response with pagination info.
         
         Args:
             page: Page number (1-indexed)
@@ -308,7 +355,13 @@ class MCPDatabaseTool:
             pattern: Optional table name pattern (SQL LIKE syntax)
             
         Returns:
-            Paged list of table summaries
+            Dictionary with {
+                "ok": bool,
+                "data": {
+                    "tables": [...],
+                    "pagination": {"total_items": N, "total_pages": P, "page": page, "page_size": page_size}
+                }
+            }
         """
         arguments = {"page": page, "page_size": page_size}
         if schema:
@@ -318,33 +371,54 @@ class MCPDatabaseTool:
         
         result = await self.call_tool("list_tables", arguments)
         
-        # Log scout mode operation
-        if debug_logger and result:
-            try:
-                # Parse result to extract table names
-                tables_found = []
-                if result and len(result) > 0:
-                    result_text = result[0].get("text", "")
-                    import json as json_lib
-                    try:
-                        result_data = json_lib.loads(result_text) if isinstance(result_text, str) else result_text
-                        if isinstance(result_data, dict) and "tables" in result_data:
-                            tables_found = [t.get("name", "") for t in result_data.get("tables", [])]
-                        elif isinstance(result_data, list):
-                            tables_found = [t.get("name", "") if isinstance(t, dict) else str(t) for t in result_data]
-                    except:
-                        tables_found = [str(result)]
+        try:
+            # Extract and parse JSON from content
+            if result and len(result) > 0:
+                content_item = result[0]
+                content_text = content_item.get("text", "")
                 
-                debug_logger.scout_mode_operation(
-                    "list_tables",
-                    f"page={page}, schema={schema}, pattern={pattern}",
-                    tables_found if tables_found else ["(results pending)"],
-                    {"total_tables": len(tables_found)}
-                )
-            except Exception as e:
-                logger.debug(f"Error logging scout mode operation: {e}")
-        
-        return result
+                # Parse JSON, handling "Full response (JSON):" marker
+                payload = _extract_json_from_text(content_text)
+                
+                # Extract tables and pagination info
+                tables = payload.get("data", {}).get("tables", [])
+                page_info = payload.get("data", {}).get("page_info", {})
+                total_items = page_info.get("total_items", len(tables))
+                total_pages = page_info.get("total_pages", 1)
+                
+                # Log scout mode operation with CORRECT total_items
+                if debug_logger:
+                    tables_found = [t.get("name", "") or t.get("full_name", "") for t in tables]
+                    debug_logger.scout_mode_operation(
+                        "list_tables",
+                        f"page={page}, page_size={page_size}",
+                        tables_found if tables_found else ["(no tables)"],
+                        {"total_tables": total_items, "total_pages": total_pages, "current_page": page}
+                    )
+                
+                logger.info(f"✅ list_tables: page {page}/{total_pages}, showing {len(tables)} of {total_items} total tables")
+                
+                return {
+                    "ok": True,
+                    "data": {
+                        "tables": tables,
+                        "pagination": {
+                            "total_items": total_items,
+                            "total_pages": total_pages,
+                            "page": page,
+                            "page_size": page_size
+                        }
+                    }
+                }
+            else:
+                return {"ok": False, "error": "Empty result from MCP server"}
+                
+        except Exception as e:
+            error_msg = f"Failed to parse list_tables response: {e}"
+            logger.error(f"❌ {error_msg}")
+            if debug_logger:
+                debug_logger.tool_error("list_tables", error_msg)
+            return {"ok": False, "error": error_msg}
     
     async def search_tables(
         self, 
@@ -634,9 +708,14 @@ async def health_check() -> bool:
 async def index_database() -> Dict[str, Any]:
     """
     Index the database schema for faster lookups.
+    Properly extracts JSON from MCP responses and reports actual table counts.
     
     Returns:
-        Dictionary containing the schema index
+        Dictionary containing the schema index with:
+        - status: "SUCCESS" or "FAILED"
+        - total_tables: actual count from page_info.total_items
+        - tables: indexed table data
+        - error: (if FAILED) error message
     """
     tool = MCPDatabaseTool()
     try:
@@ -644,59 +723,81 @@ async def index_database() -> Dict[str, Any]:
         if schema_content and len(schema_content) > 0:
             schema_text = schema_content[0].get("text", "")
             
-            # Parse schema text to build index
-            # This is a simplified version - you may want to enhance this
-            import json
+            # Parse JSON using the extraction helper
             try:
-                schema_data = json.loads(schema_text)
-                if isinstance(schema_data, list):
-                    index = {
-                        "tables": {},
-                        "total_tables": len(schema_data),
-                        "indexed_at": None
-                    }
-                    
-                    for table in schema_data:
-                        table_name = table.get("name", "")
-                        if table_name:
-                            index["tables"][table_name] = {
-                                "columns": table.get("columns", []),
-                                "column_count": len(table.get("columns", []))
-                            }
-                    
-                    return index
-            except json.JSONDecodeError:
-                # If schema is not JSON, create a simple index
-                return {
+                payload = _extract_json_from_text(schema_text)
+                
+                # Extract tables and page info
+                tables_list = payload.get("data", {}).get("tables", [])
+                page_info = payload.get("data", {}).get("page_info", {})
+                total_items = page_info.get("total_items", len(tables_list))
+                
+                index = {
+                    "status": "SUCCESS",
                     "tables": {},
-                    "total_tables": 0,
+                    "total_tables": total_items,  # Use actual total, not content_items count!
                     "indexed_at": None,
-                    "raw_schema": schema_text[:500]  # First 500 chars
+                    "page_info": {
+                        "total_pages": page_info.get("total_pages", 1),
+                        "current_page": page_info.get("page", 1)
+                    }
+                }
+                
+                # Build table index from current page
+                for table in tables_list:
+                    table_name = table.get("name", "") or table.get("full_name", "")
+                    if table_name:
+                        index["tables"][table_name] = {
+                            "columns": table.get("columns", []),
+                            "column_count": len(table.get("columns", [])),
+                            "row_count": table.get("row_count", 0)
+                        }
+                
+                logger.info(f"✅ Database indexed: {len(tables_list)} tables on page 1 of {total_items} total")
+                return index
+                
+            except (ValueError, json.JSONDecodeError) as parse_err:
+                # JSON parsing failed - likely format issue
+                error_msg = f"Failed to parse schema JSON: {parse_err}"
+                logger.error(f"❌ {error_msg}")
+                logger.debug(f"   Schema text preview: {schema_text[:200]}")
+                return {
+                    "status": "FAILED",
+                    "error": error_msg,
+                    "tables": {},
+                    "total_tables": 0
                 }
         
-        return {"tables": {}, "total_tables": 0, "indexed_at": None}
+        # No schema content returned
+        return {
+            "status": "FAILED",
+            "error": "No schema content from MCP server",
+            "tables": {},
+            "total_tables": 0
+        }
+        
     except ValueError as e:
         # This is likely a timeout or connection error from call_tool
         error_str = str(e)
         logger.error(f"❌ Error indexing database: {error_str}")
         if "timeout" in error_str.lower():
-            logger.error(f"   MCP server is not responding. Check:")
-            logger.error(f"   1. Windows MCP server is running (start_mcp_server_windows.bat)")
-            logger.error(f"   2. Network connectivity to Windows machine")
-            logger.error(f"   3. MCP_SERVER_URL in .env is correct")
+            logger.error(f"   🔧 MCP server timeout. Check:")
+            logger.error(f"      1. Windows MCP server is running (start_mcp_server_windows.bat)")
+            logger.error(f"      2. Network connectivity to Windows machine")
+            logger.error(f"      3. MCP_SERVER_URL in .env is correct (currently: {MCP_URL})")
         return {
+            "status": "FAILED",
             "error": error_str, 
             "tables": {}, 
-            "total_tables": 0,
-            "status": "FAILED"
+            "total_tables": 0
         }
     except Exception as e:
         logger.error(f"❌ Unexpected error indexing database: {e}")
         return {
+            "status": "FAILED",
             "error": str(e), 
             "tables": {}, 
-            "total_tables": 0,
-            "status": "FAILED"
+            "total_tables": 0
         }
 
 

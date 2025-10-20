@@ -253,24 +253,41 @@ class DatabaseWorkflow:
             state: Current workflow state
             
         Returns:
-            Updated state with database index information
+            Updated state with database index information or FAILED status
         """
         try:
             database_index = await index_database()
             state["database_index"] = database_index
             
-            # Log the indexing results
-            total_tables = database_index.get("total_tables", 0)
-            schemas = database_index.get("schemas", [])
-            logger.info(f"Database indexed: {total_tables} tables across {len(schemas)} schemas: {', '.join(schemas)}")
+            # Check if indexing failed
+            if database_index.get("status") == "FAILED":
+                error_msg = database_index.get("error", "Unknown indexing error")
+                logger.error(f"❌ Database indexing FAILED: {error_msg}")
+                state["error_info"] = {
+                    "type": "database_indexing_error",
+                    "message": error_msg,
+                    "context": "Failed to index database on startup",
+                    "catalog_failed": True
+                }
+                # Still continue workflow but flag the error for user
+                state["catalog_available"] = False
+            else:
+                # Success
+                total_tables = database_index.get("total_tables", 0)
+                schemas = database_index.get("schemas", [])
+                page_info = database_index.get("page_info", {})
+                logger.info(f"✅ Database indexed: {total_tables} tables across {len(schemas)} schemas (page {page_info.get('current_page', 1)}/{page_info.get('total_pages', 1)})")
+                state["catalog_available"] = True
             
         except Exception as e:
-            logger.error(f"Error indexing database: {e}")
+            logger.error(f"❌ Unexpected error indexing database: {e}")
             state["error_info"] = {
                 "type": "database_indexing_error",
                 "message": str(e),
-                "context": "Failed to index database on startup"
+                "context": "Failed to index database on startup",
+                "catalog_failed": True
             }
+            state["catalog_available"] = False
         
         return state
     
@@ -376,12 +393,14 @@ class DatabaseWorkflow:
     def _parse_intent_json_response(self, response_text: str) -> Dict[str, Any]:
         """
         Parse the JSON intent analysis response from the LLM.
+        Applies answer-first defaults: prevents asking for schema/location/category.
         
         Args:
             response_text: Raw JSON response from the LLM
             
         Returns:
             Structured intent analysis with operation, sql, missing_fields, etc.
+            Clarify operations are downgraded to query with defaults when appropriate.
         """
         import json
         import re
@@ -401,7 +420,39 @@ class DatabaseWorkflow:
                 }
                 
                 if result["operation"] == "clarify":
-                    result["missing_fields"] = parsed.get("missing_fields", [])
+                    missing_fields = parsed.get("missing_fields", [])
+                    
+                    # ANSWER-FIRST DEFAULTS: Transform clarify → query with defaults
+                    # if only asking for schema/location/category
+                    schema_related = {
+                        "schema information", "schema", "specific schema",
+                        "location", "specific location", "region",
+                        "category", "product category", "specific category",
+                        "tables to query", "table names"
+                    }
+                    
+                    # Check if ALL missing fields are schema/location/category related
+                    missing_normalized = {f.lower() for f in missing_fields}
+                    
+                    # If only asking for these, apply defaults instead of clarifying
+                    if missing_normalized and missing_normalized.issubset(schema_related):
+                        logger.info(f"🎯 Answer-first: Applying defaults instead of asking for {missing_normalized}")
+                        # Downgrade to query operation with defaults
+                        # (The SQL will be generated with defaults applied)
+                        result["operation"] = "query"
+                        result["defaults_applied"] = {
+                            "location": "ALL_LOCATIONS" if "location" in missing_normalized or "specific location" in missing_normalized else None,
+                            "category": "ALL_CATEGORIES" if "category" in missing_normalized or "product category" in missing_normalized else None,
+                            "schema": "ALL_SCHEMAS" if "schema" in missing_normalized or "specific schema" in missing_normalized else None,
+                        }
+                        # Remove None values
+                        result["defaults_applied"] = {k: v for k, v in result["defaults_applied"].items() if v is not None}
+                        result["sql"] = parsed.get("sql", "")  # Use the LLM's SQL attempt
+                        result["entities"] = []
+                        result["requirements"] = result["reasoning"]
+                    else:
+                        # Keep as clarify - there are legitimate missing fields
+                        result["missing_fields"] = missing_fields
                 else:
                     result["sql"] = parsed.get("sql", "")
                     # Convert to old format for compatibility
@@ -1020,14 +1071,28 @@ class DatabaseWorkflow:
     async def _clarify(self, state: WorkflowState) -> WorkflowState:
         """
         Generate a clarifying question based on missing information.
+        If catalog is unavailable, show friendly message instead of asking for clarification.
         
         Args:
             state: Current workflow state
             
         Returns:
-            Updated state with clarification question
+            Updated state with clarification question or error message
         """
         try:
+            # Check if catalog failed
+            error_info = state.get("error_info", {})
+            if error_info.get("catalog_failed"):
+                catalog_error = error_info.get("message", "catalog unavailable")
+                state["final_response"] = (
+                    "I couldn't load the data catalog right now. "
+                    f"(Reason: {catalog_error[:50]}...) "
+                    "I can still answer high-level questions, but for detailed queries "
+                    "please try again in a moment once the catalog is available."
+                )
+                logger.warning(f"Clarify requested but catalog unavailable: {catalog_error}")
+                return state
+            
             from .prompts import format_clarification_prompt
             
             intent = state.get("intent_analysis", {})
