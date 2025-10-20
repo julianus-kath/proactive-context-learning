@@ -1035,14 +1035,10 @@ async def list_tables_mcp(
     """
     tool = MCPDatabaseTool()
     try:
-        content = await tool.list_tables(page, page_size, schema, pattern)
-        if content and len(content) > 0:
-            import json
-            # Parse JSON response - extract from mixed text+JSON format
-            response_text = content[0].get("text", "{}")
-            # Use the extraction function to handle "Full response (JSON):" marker
-            return _extract_json_from_text(response_text)
-        return {"ok": False, "error": "No response from MCP server"}
+        # list_tables() returns a dict, not a list
+        response = await tool.list_tables(page, page_size, schema, pattern)
+        # Already properly formatted by MCPDatabaseTool.list_tables()
+        return response
     except Exception as e:
         logger.error(f"Error listing tables: {e}")
         return {"ok": False, "error": str(e)}
@@ -1068,8 +1064,7 @@ async def search_tables_mcp(
     try:
         content = await tool.search_tables(keyword, page, page_size)
         if content and len(content) > 0:
-            import json
-            # Parse JSON response - extract from mixed text+JSON format
+            # content is List[Dict] from call_tool
             response_text = content[0].get("text", "{}")
             # Use the extraction function to handle "Full response (JSON):" marker
             return _extract_json_from_text(response_text)
@@ -1097,8 +1092,7 @@ async def describe_table_mcp(
     try:
         content = await tool.describe_table(table_name, include_sample)
         if content and len(content) > 0:
-            import json
-            # Parse JSON response - extract from mixed text+JSON format
+            # content is List[Dict] from call_tool
             response_text = content[0].get("text", "{}")
             # Use the extraction function to handle "Full response (JSON):" marker
             return _extract_json_from_text(response_text)
@@ -1125,8 +1119,7 @@ async def describe_table_batch(table_names: List[str]) -> Dict[str, Dict[str, An
         try:
             content = await tool.describe_table(table_name, include_sample=False)
             if content and len(content) > 0:
-                import json
-                # Parse JSON response - extract from mixed text+JSON format
+                # content is List[Dict] from call_tool
                 response_text = content[0].get("text", "{}")
                 # Use the extraction function to handle "Full response (JSON):" marker
                 results[table_name] = _extract_json_from_text(response_text)
@@ -1153,8 +1146,7 @@ async def list_relations_mcp(table_name: str) -> Dict[str, Any]:
     try:
         content = await tool.list_relations(table_name)
         if content and len(content) > 0:
-            import json
-            # Parse JSON response - extract from mixed text+JSON format
+            # content is List[Dict] from call_tool
             response_text = content[0].get("text", "{}")
             # Use the extraction function to handle "Full response (JSON):" marker
             return _extract_json_from_text(response_text)
