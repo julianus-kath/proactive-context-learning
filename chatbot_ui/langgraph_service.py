@@ -21,6 +21,7 @@ sys.path.append(langgraph_dir)
 
 try:
     from langgraph_integration.graph_definition import create_database_workflow
+    from langgraph_integration.debug_logger import get_debug_logger
 except ImportError as e:
     print(f"Error importing LangGraph integration: {e}")
     print("Make sure you're running from the correct directory and langgraph_integration is available")
@@ -74,17 +75,30 @@ class ErrorResponse(BaseModel):
     error: str
     status: str = "error"
 
+class DebugLogEntry(BaseModel):
+    timestamp: str
+    type: str
+    message: str
+    session_id: str
+
+class DebugLogsResponse(BaseModel):
+    logs: list = []
+    status: str = "success"
+
 # Global workflow instance
 workflow = None
+debug_logger = None
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize the LangGraph workflow on startup."""
-    global workflow
+    global workflow, debug_logger
     try:
         print("🚀 Initializing LangGraph workflow...")
         workflow = create_database_workflow()
+        debug_logger = get_debug_logger()
         print("✅ LangGraph workflow initialized successfully")
+        print("✅ Debug logger initialized")
     except Exception as e:
         print(f"❌ Failed to initialize LangGraph workflow: {e}")
         raise
@@ -227,6 +241,62 @@ async def process_conversation(request: ConversationRequest = Body(...)):
             detail=f"Error processing conversation: {str(e)}"
         )
 
+@app.get("/debug/logs", response_model=DebugLogsResponse)
+async def get_debug_logs():
+    """
+    Get accumulated debug logs for the current session.
+    
+    Returns:
+        DebugLogsResponse with all buffered debug logs
+    """
+    global debug_logger
+    
+    try:
+        if debug_logger is None:
+            debug_logger = get_debug_logger()
+        
+        # Get and clear buffered logs
+        logs = debug_logger.get_buffered_logs()
+        
+        return DebugLogsResponse(
+            logs=logs,
+            status="success"
+        )
+    except Exception as e:
+        print(f"❌ Error getting debug logs: {e}")
+        return DebugLogsResponse(
+            logs=[],
+            status="error"
+        )
+
+@app.get("/debug/logs/stream", response_model=DebugLogsResponse)
+async def stream_debug_logs():
+    """
+    Get debug logs without clearing the buffer (for streaming).
+    
+    Returns:
+        DebugLogsResponse with all buffered debug logs (non-destructive)
+    """
+    global debug_logger
+    
+    try:
+        if debug_logger is None:
+            debug_logger = get_debug_logger()
+        
+        # Get buffered logs without clearing
+        logs = debug_logger.get_buffered_logs_no_clear()
+        
+        return DebugLogsResponse(
+            logs=logs,
+            status="success"
+        )
+    except Exception as e:
+        print(f"❌ Error streaming debug logs: {e}")
+        return DebugLogsResponse(
+            logs=[],
+            status="error"
+        )
+
 @app.get("/")
 async def root():
     """Root endpoint with service information."""
@@ -238,6 +308,8 @@ async def root():
             "health": "/health",
             "process_query": "/process_query (POST)",
             "process_conversation": "/process_conversation (POST)",
+            "debug/logs": "/debug/logs (GET) - Get and clear debug logs",
+            "debug/logs/stream": "/debug/logs/stream (GET) - Stream debug logs (non-destructive)",
             "docs": "/docs"
         }
     }

@@ -1,4 +1,4 @@
-INFO:     Started server process [51038]
+INFO:     Started server process [51695]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:3000 (Press CTRL+C to quit)
@@ -10,8 +10,6 @@ INFO:     Uvicorn running on http://0.0.0.0:3000 (Press CTRL+C to quit)
 
 🌐 Web UI will be available at: http://localhost:3000
 
-INFO:     127.0.0.1:50889 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50913 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50917 - "GET /apple-touch-icon-precomposed.png HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:50918 - "GET /apple-touch-icon.png HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:50919 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51285 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51288 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51288 - "GET / HTTP/1.1" 200 OK

@@ -25,6 +25,13 @@ API_KEY = os.getenv("API_KEY", "supersecretapikey")
 
 logger = logging.getLogger(__name__)
 
+# Import debug logger for comprehensive logging
+try:
+    from .debug_logger import get_debug_logger
+    debug_logger = get_debug_logger()
+except ImportError:
+    debug_logger = None
+
 
 class MCPDatabaseTool:
     """
@@ -84,10 +91,20 @@ class MCPDatabaseTool:
             aiohttp.ClientError: If the HTTP request fails
             ValueError: If the MCP server returns an error
         """
+        # Log tool call initiation
+        if debug_logger:
+            debug_logger.tool_call(tool_name, arguments)
+        
+        start_time = time.time()
+        
         # Initialize if not already done
         if not self._initialized:
             if not await self.initialize():
-                raise ValueError("Failed to initialize MCP session")
+                error_msg = "Failed to initialize MCP session"
+                if debug_logger:
+                    debug_logger.tool_result(tool_name, None, error=error_msg)
+                raise ValueError(error_msg)
+        
         payload = {
             "jsonrpc": "2.0",
             "method": "tools/call",
@@ -119,12 +136,18 @@ class MCPDatabaseTool:
                     try:
                         data = await response.json()
                     except ValueError as json_err:
-                        logger.error(f"Failed to parse JSON response: {json_err}")
+                        error_msg = f"Failed to parse JSON response: {json_err}"
+                        logger.error(error_msg)
                         logger.error(f"Response text: {await response.text()}")
+                        if debug_logger:
+                            debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
                         raise ValueError(f"Invalid JSON from MCP server: {json_err}")
                     
                     if data is None or not isinstance(data, dict):
-                        logger.error(f"MCP call failed: Invalid response data type: {type(data)}")
+                        error_msg = f"Invalid response data type: {type(data)}"
+                        logger.error(f"MCP call failed: {error_msg}")
+                        if debug_logger:
+                            debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
                         raise ValueError("MCP call failed: No response data or invalid type")
                     
                     # Check for JSON-RPC errors (standard envelope)
@@ -137,6 +160,8 @@ class MCPDatabaseTool:
                         else:
                             error_msg = str(error_info)
                             logger.error(f"MCP server error: {error_msg}")
+                        if debug_logger:
+                            debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
                         raise ValueError(f"MCP server error: {error_msg}")
                     
                     # Return the content from the result - handle both formats
@@ -149,7 +174,10 @@ class MCPDatabaseTool:
                             # Alternative format support
                             result = {"content": [{"type": "text", "text": json.dumps(data["data"])}]}
                         else:
-                            raise ValueError("MCP response has empty result and no alternative data format")
+                            error_msg = "MCP response has empty result and no alternative data format"
+                            if debug_logger:
+                                debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
+                            raise ValueError(error_msg)
                     
                     # Ensure content is a list
                     content = result.get("content", [])
@@ -157,17 +185,31 @@ class MCPDatabaseTool:
                         logger.warning(f"Content is not a list, converting: {type(content)}")
                         content = [{"type": "text", "text": str(content)}]
                     
+                    duration_ms = (time.time() - start_time) * 1000
                     logger.info(f"✅ MCP tool call successful, received {len(content)} content items")
+                    
+                    if debug_logger:
+                        debug_logger.tool_result(tool_name, {"content_items": len(content)}, duration_ms=duration_ms)
+                    
                     return content
                     
         except aiohttp.ClientError as e:
+            error_msg = f"HTTP error: {e}"
             logger.error(f"HTTP error calling MCP server: {e}")
+            if debug_logger:
+                debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
             raise
         except ValueError as e:
+            error_msg = str(e)
             logger.error(f"Validation error in MCP call: {e}")
+            if debug_logger:
+                debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
             raise
         except Exception as e:
+            error_msg = str(e)
             logger.error(f"Unexpected error calling MCP server: {e}", exc_info=True)
+            if debug_logger:
+                debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
             raise
     
     async def get_schema(self) -> List[Dict[str, Any]]:
@@ -260,7 +302,36 @@ class MCPDatabaseTool:
             arguments["schema"] = schema
         if pattern:
             arguments["pattern"] = pattern
-        return await self.call_tool("list_tables", arguments)
+        
+        result = await self.call_tool("list_tables", arguments)
+        
+        # Log scout mode operation
+        if debug_logger and result:
+            try:
+                # Parse result to extract table names
+                tables_found = []
+                if result and len(result) > 0:
+                    result_text = result[0].get("text", "")
+                    import json as json_lib
+                    try:
+                        result_data = json_lib.loads(result_text) if isinstance(result_text, str) else result_text
+                        if isinstance(result_data, dict) and "tables" in result_data:
+                            tables_found = [t.get("name", "") for t in result_data.get("tables", [])]
+                        elif isinstance(result_data, list):
+                            tables_found = [t.get("name", "") if isinstance(t, dict) else str(t) for t in result_data]
+                    except:
+                        tables_found = [str(result)]
+                
+                debug_logger.scout_mode_operation(
+                    "list_tables",
+                    f"page={page}, schema={schema}, pattern={pattern}",
+                    tables_found if tables_found else ["(results pending)"],
+                    {"total_tables": len(tables_found)}
+                )
+            except Exception as e:
+                logger.debug(f"Error logging scout mode operation: {e}")
+        
+        return result
     
     async def search_tables(
         self, 
@@ -279,11 +350,41 @@ class MCPDatabaseTool:
         Returns:
             Ranked list of matching tables
         """
-        return await self.call_tool("search_tables", {
+        result = await self.call_tool("search_tables", {
             "keyword": keyword,
             "page": page,
             "page_size": page_size
         })
+        
+        # Log scout mode operation
+        if debug_logger and result:
+            try:
+                # Parse result to extract matched tables and rankings
+                tables_found = []
+                if result and len(result) > 0:
+                    result_text = result[0].get("text", "")
+                    import json as json_lib
+                    try:
+                        result_data = json_lib.loads(result_text) if isinstance(result_text, str) else result_text
+                        if isinstance(result_data, dict) and "results" in result_data:
+                            tables_found = [r.get("table_name", "") for r in result_data.get("results", [])[:5]]
+                        elif isinstance(result_data, dict) and "tables" in result_data:
+                            tables_found = [t.get("name", "") for t in result_data.get("tables", [])[:5]]
+                        elif isinstance(result_data, list):
+                            tables_found = [t.get("table_name", t.get("name", "")) if isinstance(t, dict) else str(t) for t in result_data[:5]]
+                    except:
+                        tables_found = [str(result)]
+                
+                debug_logger.scout_mode_operation(
+                    "search_tables",
+                    f"keyword='{keyword}'",
+                    tables_found if tables_found else ["(no matches)"],
+                    {"matches": len(tables_found)}
+                )
+            except Exception as e:
+                logger.debug(f"Error logging scout mode operation: {e}")
+        
+        return result
     
     async def describe_table(
         self, 
@@ -300,10 +401,35 @@ class MCPDatabaseTool:
         Returns:
             Detailed table information including columns, foreign keys, primary keys
         """
-        return await self.call_tool("describe_table", {
+        result = await self.call_tool("describe_table", {
             "table_name": table_name,
             "include_sample": include_sample
         })
+        
+        # Log schema discovery
+        if debug_logger and result:
+            try:
+                if result and len(result) > 0:
+                    result_text = result[0].get("text", "")
+                    import json as json_lib
+                    try:
+                        result_data = json_lib.loads(result_text) if isinstance(result_text, str) else result_text
+                        if isinstance(result_data, dict):
+                            columns = result_data.get("columns", [])
+                            row_count = result_data.get("row_count")
+                            relationships = result_data.get("relationships", [])
+                            debug_logger.schema_discovered(
+                                table_name,
+                                columns[:5] if len(columns) > 5 else columns,
+                                row_count=row_count,
+                                relationships=relationships
+                            )
+                    except:
+                        logger.debug(f"Could not parse describe_table result for logging")
+            except Exception as e:
+                logger.debug(f"Error logging schema discovery: {e}")
+        
+        return result
     
     async def list_relations(
         self, 

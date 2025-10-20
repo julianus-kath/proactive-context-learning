@@ -61,6 +61,13 @@ from .prompts import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Import debug logger for comprehensive logging
+try:
+    from .debug_logger import get_debug_logger
+    debug_logger = get_debug_logger()
+except ImportError:
+    debug_logger = None
+
 # State definition for the workflow
 class WorkflowState(TypedDict):
     """
@@ -281,6 +288,17 @@ class DatabaseWorkflow:
             # Use the full conversation messages and schema for context-aware intent parsing
             messages = state.get("messages", [])
             schema = state.get("schema", "No schema available")
+            
+            # Get last user message for logging
+            last_user_msg = ""
+            for msg in reversed(messages):
+                if isinstance(msg, dict) and msg.get("role") == "user":
+                    last_user_msg = msg.get("content", "")
+                    break
+                elif hasattr(msg, "type") and msg.type == "user":
+                    last_user_msg = str(msg.content)
+                    break
+            
             prompt = format_intent_parser_prompt(messages, schema)
             
             response = await self.llm.ainvoke([SystemMessage(content=prompt)])
@@ -291,6 +309,20 @@ class DatabaseWorkflow:
             
             state["intent_analysis"] = intent_analysis
             
+            # Log the decision with comprehensive debug information
+            if debug_logger:
+                operation = intent_analysis.get("operation", "unknown")
+                missing_fields = intent_analysis.get("missing_fields", [])
+                entities = intent_analysis.get("entities", [])
+                
+                debug_logger.intent_parsed(
+                    last_user_msg,
+                    operation,
+                    intent_analysis.get("confidence", 1.0),
+                    missing_fields=missing_fields if missing_fields else None,
+                    entities=entities if entities else None
+                )
+            
             # Log the decision
             if intent_analysis["operation"] == "clarify":
                 logger.info(f"Intent: CLARIFY - Missing: {intent_analysis.get('missing_fields', [])}")
@@ -299,6 +331,8 @@ class DatabaseWorkflow:
             
         except Exception as e:
             logger.error(f"Error parsing intent: {e}")
+            if debug_logger:
+                debug_logger.workflow_error("intent_parsing_error", str(e))
             state["error_info"] = {
                 "type": "intent_parsing_error",
                 "message": str(e),
@@ -537,6 +571,12 @@ class DatabaseWorkflow:
             if "sql" in intent and intent["sql"]:
                 state["sql_query"] = intent["sql"]
                 logger.info(f"Using SQL from intent parser: {intent['sql']}")
+                if debug_logger:
+                    debug_logger.sql_generated(
+                        intent["sql"],
+                        "Provided by intent parser",
+                        table_context=intent.get("tables", [])
+                    )
                 return state
             
             # PHASE 5: Use schema_snippet instead of full schema
@@ -557,8 +597,23 @@ class DatabaseWorkflow:
             state["sql_query"] = sql_query
             logger.info(f"SQL generated: {sql_query}")
             
+            # Log SQL generation with comprehensive information
+            if debug_logger:
+                tables_used = state.get("relevant_tables", [])
+                reason = f"Intent: {intent.get('operation', 'unknown')}"
+                if intent.get("entities"):
+                    reason += f", Entities: {', '.join(intent.get('entities', []))}"
+                
+                debug_logger.sql_generated(
+                    sql_query,
+                    reason,
+                    table_context=tables_used if tables_used else None
+                )
+            
         except Exception as e:
             logger.error(f"Error generating SQL: {e}")
+            if debug_logger:
+                debug_logger.workflow_error("sql_generation_error", str(e))
             state["error_info"] = {
                 "type": "sql_generation_error",
                 "message": str(e),
@@ -613,10 +668,13 @@ class DatabaseWorkflow:
             Updated state with query results
         """
         try:
+            import time
             sql_query = state["sql_query"]
+            start_time = time.time()
             
             # PHASE 5: Use query_bounded_mcp instead of execute_sql_query
             results = await query_bounded_mcp(sql_query, max_rows=1000, timeout_ms=30000)
+            duration_ms = (time.time() - start_time) * 1000
             
             # Check if the result indicates an error
             if results.startswith("Error") or results.startswith("QUERY_ERROR:"):
@@ -630,9 +688,20 @@ class DatabaseWorkflow:
                 # Initialize retry count if not set
                 if "retry_count" not in state:
                     state["retry_count"] = 0
+                
+                # Log query execution error
+                if debug_logger:
+                    debug_logger.query_executed(sql_query, 0, duration_ms, error=error_msg)
             else:
                 state["query_results"] = results
                 logger.info("Query executed successfully")
+                
+                # Count rows in results (rough estimate)
+                rows_count = len(results.split('\n')) if results else 0
+                
+                # Log successful query execution
+                if debug_logger:
+                    debug_logger.query_executed(sql_query, rows_count, duration_ms)
                 
                 # PHASE 1: Track used tables for session context
                 if state.get("relevant_tables"):
@@ -646,10 +715,13 @@ class DatabaseWorkflow:
                     logger.debug(f"Session tables updated: {state['session_used_tables']}")
             
         except Exception as e:
-            logger.error(f"Error executing query: {e}")
+            error_msg = str(e)
+            logger.error(f"Error executing query: {error_msg}")
+            if debug_logger:
+                debug_logger.query_executed(state.get("sql_query", "unknown"), 0, 0, error=error_msg)
             state["error_info"] = {
                 "type": "query_execution_error",
-                "message": str(e),
+                "message": error_msg,
                 "context": f"Failed to execute SQL: {state.get('sql_query', 'Unknown query')}"
             }
         
