@@ -119,11 +119,15 @@ class MCPDatabaseTool:
         
         try:
             async with aiohttp.ClientSession() as session:
+                # Use longer timeout for schema operations (they can be slow on first run)
+                # Default 30s, but 120s for get_schema (expensive operation)
+                timeout_seconds = 120 if tool_name == "get_schema" else 30
+                
                 async with session.post(
                     f"{self.mcp_url}/mcp", 
                     json=payload, 
                     headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=30)
+                    timeout=aiohttp.ClientTimeout(total=timeout_seconds)
                 ) as response:
                     # Set proper content-type check
                     content_type = response.headers.get('Content-Type', '')
@@ -193,6 +197,15 @@ class MCPDatabaseTool:
                     
                     return content
                     
+        except asyncio.TimeoutError as e:
+            error_msg = f"MCP server timeout (>{timeout_seconds}s) - server at {self.mcp_url} may be unreachable or overloaded"
+            logger.error(f"⏱️  TIMEOUT: {error_msg}")
+            logger.error(f"   → Check Windows MCP server is running and accessible")
+            logger.error(f"   → Verify MCP_SERVER_URL={self.mcp_url} is correct")
+            logger.error(f"   → Check network connectivity to the Windows machine")
+            if debug_logger:
+                debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
+            raise ValueError(error_msg) from e
         except aiohttp.ClientError as e:
             error_msg = f"HTTP error: {e}"
             logger.error(f"HTTP error calling MCP server: {e}")
@@ -662,9 +675,29 @@ async def index_database() -> Dict[str, Any]:
                 }
         
         return {"tables": {}, "total_tables": 0, "indexed_at": None}
+    except ValueError as e:
+        # This is likely a timeout or connection error from call_tool
+        error_str = str(e)
+        logger.error(f"❌ Error indexing database: {error_str}")
+        if "timeout" in error_str.lower():
+            logger.error(f"   MCP server is not responding. Check:")
+            logger.error(f"   1. Windows MCP server is running (start_mcp_server_windows.bat)")
+            logger.error(f"   2. Network connectivity to Windows machine")
+            logger.error(f"   3. MCP_SERVER_URL in .env is correct")
+        return {
+            "error": error_str, 
+            "tables": {}, 
+            "total_tables": 0,
+            "status": "FAILED"
+        }
     except Exception as e:
-        logger.error(f"Error indexing database: {e}")
-        return {"error": str(e), "tables": {}, "total_tables": 0}
+        logger.error(f"❌ Unexpected error indexing database: {e}")
+        return {
+            "error": str(e), 
+            "tables": {}, 
+            "total_tables": 0,
+            "status": "FAILED"
+        }
 
 
 async def get_all_schemas() -> List[str]:
