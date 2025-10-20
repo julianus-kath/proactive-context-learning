@@ -39,22 +39,22 @@ CRITICAL SQL Syntax Rules (when generating SQL):
 - ALWAYS use fully qualified table names: schema.table_name
 - INTERVAL expressions MUST be quoted: INTERVAL '3 months' NOT INTERVAL 3 months
 - String literals use single quotes: 'New York' NOT "New York"
-- Date comparisons: created_at > CURRENT_DATE - INTERVAL '1 year'
+- Date comparisons (SQL Server): created_at > DATEADD(year, -1, CAST(GETDATE() AS DATE))
 
 Examples (adapt to actual schema):
 User: "How many customers?" → {{"operation": "query", "sql": "SELECT COUNT(*) FROM webshop.customer", "reasoning": "Count query using fully qualified table name"}}
 
-User: "What tables do we have?" → {{"operation": "query", "sql": "SELECT CONCAT(table_schema, '.', table_name) as full_table_name FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast') ORDER BY table_schema, table_name", "reasoning": "Show all tables from all user schemas with schema qualification"}}
+User: "What tables do we have?" → {{"operation": "query", "sql": "SELECT CONCAT(TABLE_SCHEMA, '.', TABLE_NAME) as full_table_name FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_SCHEMA, TABLE_NAME", "reasoning": "Show all tables from all schemas with schema qualification"}}
 
-User: "What schemas?" → {{"operation": "query", "sql": "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast') ORDER BY schema_name", "reasoning": "List all available schemas"}}
+User: "What schemas?" → {{"operation": "query", "sql": "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME NOT IN ('information_schema', 'sys', 'guest', 'INFORMATION_SCHEMA') ORDER BY SCHEMA_NAME", "reasoning": "List all available user schemas"}}
 
-User: "Orders from May" → {{"operation": "query", "sql": "SELECT COUNT(*) FROM webshop.order WHERE EXTRACT(MONTH FROM order_date) = 5", "reasoning": "Date filter query with schema qualification"}}
+User: "Orders from May" → {{"operation": "query", "sql": "SELECT COUNT(*) FROM webshop.[order] WHERE MONTH(order_date) = 5", "reasoning": "Date filter query with schema qualification"}}
 
 Analyze the conversation and respond with JSON:
 """
 
 SQL_GENERATOR_PROMPT = """
-You are a SQL expert that generates safe, efficient SQL queries for a PostgreSQL database with multiple schemas.
+You are a SQL expert that generates safe, efficient SQL queries for a SQL Server (MSSQL) database with multiple schemas.
 
 Database Schema (ALL schemas and tables):
 {schema}
@@ -68,9 +68,9 @@ Original User Request: {user_input}
 
 Generate a SQL query that:
 1. Is safe (SELECT only, no modifications)
-2. Follows PostgreSQL syntax EXACTLY
+2. Follows SQL Server (MSSQL) syntax EXACTLY
 3. Uses FULLY QUALIFIED table names (schema.table_name)
-4. Includes appropriate LIMIT clauses (max 1000 rows)
+4. Includes appropriate TOP clauses for row limits (max 1000 rows)
 5. Uses proper JOIN syntax when needed
 6. Handles potential NULL values appropriately
 
@@ -88,13 +88,15 @@ Important constraints:
 - Include appropriate WHERE clauses for filtering
 - Use aggregate functions (COUNT, SUM, AVG) for analysis queries
 
-CRITICAL PostgreSQL Syntax Rules:
+CRITICAL SQL Server Syntax Rules:
 - ALWAYS use fully qualified table names: schema.table_name
-- INTERVAL expressions MUST be quoted: INTERVAL '3 months' NOT INTERVAL 3 months
-- Date/time intervals: '1 day', '3 months', '1 year', '2 weeks'
+- Use TOP N instead of LIMIT: SELECT TOP 100 * FROM table
+- Date functions: GETDATE() for current date/time, CAST(GETDATE() AS DATE) for date only
+- Date arithmetic: DATEADD(year, -1, CAST(GETDATE() AS DATE)) for "1 year ago"
 - String literals must use single quotes: 'New York' NOT "New York"
 - Column aliases: SELECT COUNT(*) as total_count
 - Proper JOIN syntax: INNER JOIN, LEFT JOIN, etc.
+- NULL handling: ISNULL(column, default_value) or COALESCE(column, default_value)
 
 Generate the SQL query:
 """
