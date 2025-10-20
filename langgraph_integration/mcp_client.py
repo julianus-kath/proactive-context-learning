@@ -1038,9 +1038,10 @@ async def list_tables_mcp(
         content = await tool.list_tables(page, page_size, schema, pattern)
         if content and len(content) > 0:
             import json
-            # Parse JSON response
+            # Parse JSON response - extract from mixed text+JSON format
             response_text = content[0].get("text", "{}")
-            return json.loads(response_text)
+            # Use the extraction function to handle "Full response (JSON):" marker
+            return _extract_json_from_text(response_text)
         return {"ok": False, "error": "No response from MCP server"}
     except Exception as e:
         logger.error(f"Error listing tables: {e}")
@@ -1068,8 +1069,10 @@ async def search_tables_mcp(
         content = await tool.search_tables(keyword, page, page_size)
         if content and len(content) > 0:
             import json
+            # Parse JSON response - extract from mixed text+JSON format
             response_text = content[0].get("text", "{}")
-            return json.loads(response_text)
+            # Use the extraction function to handle "Full response (JSON):" marker
+            return _extract_json_from_text(response_text)
         return {"ok": False, "error": "No response from MCP server"}
     except Exception as e:
         logger.error(f"Error searching tables: {e}")
@@ -1095,8 +1098,10 @@ async def describe_table_mcp(
         content = await tool.describe_table(table_name, include_sample)
         if content and len(content) > 0:
             import json
+            # Parse JSON response - extract from mixed text+JSON format
             response_text = content[0].get("text", "{}")
-            return json.loads(response_text)
+            # Use the extraction function to handle "Full response (JSON):" marker
+            return _extract_json_from_text(response_text)
         return {"ok": False, "error": "No response from MCP server"}
     except Exception as e:
         logger.error(f"Error describing table: {e}")
@@ -1121,8 +1126,10 @@ async def describe_table_batch(table_names: List[str]) -> Dict[str, Dict[str, An
             content = await tool.describe_table(table_name, include_sample=False)
             if content and len(content) > 0:
                 import json
+                # Parse JSON response - extract from mixed text+JSON format
                 response_text = content[0].get("text", "{}")
-                results[table_name] = json.loads(response_text)
+                # Use the extraction function to handle "Full response (JSON):" marker
+                results[table_name] = _extract_json_from_text(response_text)
             else:
                 results[table_name] = {"ok": False, "error": "No response"}
         except Exception as e:
@@ -1147,8 +1154,10 @@ async def list_relations_mcp(table_name: str) -> Dict[str, Any]:
         content = await tool.list_relations(table_name)
         if content and len(content) > 0:
             import json
+            # Parse JSON response - extract from mixed text+JSON format
             response_text = content[0].get("text", "{}")
-            return json.loads(response_text)
+            # Use the extraction function to handle "Full response (JSON):" marker
+            return _extract_json_from_text(response_text)
         return {"ok": False, "error": "No response from MCP server"}
     except Exception as e:
         logger.error(f"Error listing relations: {e}")
