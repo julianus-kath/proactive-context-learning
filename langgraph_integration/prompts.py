@@ -247,8 +247,23 @@ WORKFLOW_PROMPTS = {
 def format_intent_parser_prompt(messages: list, schema: str = "") -> str:
     """Format the intent parser prompt with conversation messages and schema."""
     import json
+    
+    # Validate input
+    if not messages:
+        messages = []
+    
+    # Safely serialize messages (handle both dicts and Message objects)
+    try:
+        messages_json = json.dumps(messages, indent=2, default=str)
+    except (TypeError, ValueError):
+        # If serialization fails, convert to string representations
+        messages_json = json.dumps([
+            msg if isinstance(msg, dict) else str(msg) 
+            for msg in messages if msg is not None
+        ], indent=2, default=str)
+    
     return INTENT_PARSER_PROMPT.format(
-        messages=json.dumps(messages, indent=2),
+        messages=messages_json,
         schema=schema
     )
 
@@ -307,17 +322,54 @@ def format_clarification_prompt(messages: list, missing_fields: list, schema: st
     import json
     last_user_message = ""
     
-    # Find the last user message
+    # Validate and sanitize inputs
+    if not messages:
+        messages = []
+    if not missing_fields:
+        missing_fields = []
+    
+    # Find the last user message - with proper type checking (matches _parse_intent pattern)
     for msg in reversed(messages):
-        if msg.get("role") == "user":
+        # Skip None or invalid messages
+        if msg is None:
+            continue
+        # Handle dict messages
+        if isinstance(msg, dict) and msg.get("role") == "user":
             last_user_message = msg.get("content", "")
             break
+        # Handle LangChain Message objects
+        elif hasattr(msg, "type") and msg.type == "user":
+            last_user_message = str(msg.content) if hasattr(msg, "content") else str(msg)
+            break
+        # Handle other message types that might have a content attribute
+        elif hasattr(msg, "content"):
+            try:
+                if hasattr(msg, "role") and msg.role == "user":
+                    last_user_message = str(msg.content)
+                    break
+            except (AttributeError, TypeError):
+                continue
+    
+    # Safely serialize messages (handle both dicts and Message objects)
+    try:
+        messages_json = json.dumps(messages, indent=2, default=str)
+    except (TypeError, ValueError):
+        # If serialization fails, convert to string representations
+        messages_json = json.dumps([
+            msg if isinstance(msg, dict) else str(msg) 
+            for msg in messages
+        ], indent=2, default=str)
+    
+    # Safely join missing fields
+    missing_fields_str = ", ".join(
+        str(f) for f in missing_fields if f is not None
+    ) if missing_fields else "unknown requirements"
     
     return CLARIFICATION_PROMPT.format(
         schema=schema,
         last_user_message=last_user_message,
-        messages=json.dumps(messages, indent=2),
-        missing_fields=", ".join(missing_fields)
+        messages=messages_json,
+        missing_fields=missing_fields_str
     )
 
 # Example usage

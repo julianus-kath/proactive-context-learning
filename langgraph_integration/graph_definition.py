@@ -324,6 +324,10 @@ class DatabaseWorkflow:
             intent_text = response.content
             intent_analysis = self._parse_intent_json_response(intent_text)
             
+            # Ensure intent_analysis is always a dict, never None
+            if not intent_analysis or not isinstance(intent_analysis, dict):
+                intent_analysis = {"operation": "DATA_QUERY", "requirements": "", "entities": []}
+            
             state["intent_analysis"] = intent_analysis
             
             # Log the decision with comprehensive debug information
@@ -616,10 +620,10 @@ class DatabaseWorkflow:
             Updated state with generated SQL
         """
         try:
-            intent = state["intent_analysis"]
+            intent = state.get("intent_analysis") or {}
             
             # Check if SQL was already provided by the intent parser
-            if "sql" in intent and intent["sql"]:
+            if intent and "sql" in intent and intent["sql"]:
                 state["sql_query"] = intent["sql"]
                 logger.info(f"Using SQL from intent parser: {intent['sql']}")
                 if debug_logger:
@@ -792,7 +796,7 @@ class DatabaseWorkflow:
         """
         try:
             # Get SQL from intent analysis
-            intent = state["intent_analysis"]
+            intent = state.get("intent_analysis") or {}
             sql_query = intent.get("sql", "")
             
             if not sql_query:
@@ -1020,7 +1024,7 @@ class DatabaseWorkflow:
             Updated state with sample data
         """
         try:
-            intent = state["intent_analysis"]
+            intent = state.get("intent_analysis") or {}
             entities = intent.get("entities", [])
             
             # Default to customers table if no specific table mentioned
@@ -1095,7 +1099,7 @@ class DatabaseWorkflow:
             
             from .prompts import format_clarification_prompt
             
-            intent = state.get("intent_analysis", {})
+            intent = state.get("intent_analysis") or {}
             missing_fields = intent.get("missing_fields", [])
             messages = state.get("messages", [])
             schema = state.get("schema", "No schema available")
@@ -1120,7 +1124,7 @@ class DatabaseWorkflow:
         if state.get("error_info"):
             return "error"
         
-        intent = state.get("intent_analysis", {})
+        intent = state.get("intent_analysis") or {}
         operation = intent.get("operation", "DATA_QUERY")
         
         # Handle new conversation-aware operations
