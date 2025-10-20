@@ -1,0 +1,642 @@
+"""
+Comprehensive Debug Logging System
+Provides detailed, readable logging for tool calls, scout mode, and workflow decisions.
+"""
+
+import os
+import json
+import logging
+import sys
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+from pathlib import Path
+from enum import Enum
+from functools import wraps
+import threading
+
+# Thread-safe log collection for frontend streaming
+_logs_buffer = []
+_logs_lock = threading.Lock()
+
+
+class LogLevel(Enum):
+    """Log level categories for better organization."""
+    TOOL_CALL = "🔧"
+    TOOL_RESULT = "✅"
+    SCOUT_MODE = "🔍"
+    INTENT_PARSE = "📝"
+    SCHEMA_DISCOVERY = "📊"
+    SQL_GENERATION = "🔄"
+    QUERY_EXECUTION = "⚡"
+    ERROR = "❌"
+    WARNING = "⚠️"
+    INFO = "ℹ️"
+    DECISION = "🎯"
+    STATE_UPDATE = "💾"
+    TIMING = "⏱️"
+
+
+class DebugLogger:
+    """
+    Comprehensive debug logger for LangGraph workflow.
+    
+    Features:
+    - Structured logging with clear visual separators
+    - Tool call tracking with arguments and results
+    - Scout mode operation logging
+    - Performance timing
+    - JSON-formatted output for parsing
+    - Thread-safe buffer for frontend streaming
+    """
+    
+    def __init__(self, name: str = "langgraph", log_dir: str = None):
+        """
+        Initialize the debug logger.
+        
+        Args:
+            name: Logger name
+            log_dir: Directory for log files (default: ./logs)
+        """
+        self.name = name
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.DEBUG)
+        
+        # Create logs directory if needed
+        if log_dir is None:
+            log_dir = os.path.join(os.path.dirname(__file__), "..", "logs")
+        
+        self.log_dir = Path(log_dir)
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Set up file handler with comprehensive formatting
+        log_file = self.log_dir / f"{name}_debug.log"
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setLevel(logging.DEBUG)
+        
+        # Set up console handler for terminal output
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(logging.INFO)
+        
+        # Formatter
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
+        
+        # Remove existing handlers to avoid duplicates
+        self.logger.handlers.clear()
+        
+        # Add handlers
+        self.logger.addHandler(file_handler)
+        self.logger.addHandler(console_handler)
+        
+        self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.call_stack = []  # Track nested operations
+        
+    def _log_entry(
+        self,
+        level: LogLevel,
+        title: str,
+        data: Dict[str, Any] = None,
+        nested: bool = False
+    ) -> str:
+        """
+        Create a formatted log entry.
+        
+        Args:
+            level: Log level category
+            title: Title of the log entry
+            data: Additional data to log
+            nested: Whether this is a nested operation
+            
+        Returns:
+            Formatted log message
+        """
+        indent = "  " * len(self.call_stack) if nested else ""
+        separator = "─" * 60
+        
+        message_lines = [
+            f"\n{indent}{level.value} {title}",
+            f"{indent}{separator}"
+        ]
+        
+        if data:
+            for key, value in data.items():
+                if isinstance(value, (dict, list)):
+                    value_str = json.dumps(value, indent=2, default=str)
+                    message_lines.append(f"{indent}  {key}:")
+                    for line in value_str.split('\n'):
+                        message_lines.append(f"{indent}    {line}")
+                else:
+                    message_lines.append(f"{indent}  {key}: {value}")
+        
+        message_lines.append(f"{indent}{separator}")
+        return "\n".join(message_lines)
+    
+    def tool_call(self, tool_name: str, arguments: Dict[str, Any], tool_id: str = None):
+        """
+        Log a tool call initiation.
+        
+        Args:
+            tool_name: Name of the tool being called
+            arguments: Tool arguments
+            tool_id: Optional unique identifier for this call
+        """
+        call_id = tool_id or f"{tool_name}_{len(self.call_stack)}"
+        self.call_stack.append(call_id)
+        
+        message = self._log_entry(
+            LogLevel.TOOL_CALL,
+            f"Tool Call: {tool_name}",
+            {
+                "tool_id": call_id,
+                "arguments": arguments,
+                "timestamp": datetime.now().isoformat()
+            },
+            nested=True
+        )
+        
+        self.logger.debug(message)
+        self._add_to_buffer(message, "TOOL_CALL")
+    
+    def tool_result(self, tool_name: str, result: Any, duration_ms: float = None, error: str = None):
+        """
+        Log tool execution result.
+        
+        Args:
+            tool_name: Name of the tool
+            result: Tool result/response
+            duration_ms: Execution time in milliseconds
+            error: Error message if execution failed
+        """
+        if self.call_stack:
+            self.call_stack.pop()
+        
+        status = "✅ SUCCESS" if not error else "❌ FAILED"
+        
+        data = {
+            "tool_name": tool_name,
+            "status": status,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if duration_ms is not None:
+            data["duration_ms"] = round(duration_ms, 2)
+        
+        if error:
+            data["error"] = error
+            message = self._log_entry(
+                LogLevel.ERROR,
+                f"Tool Result: {tool_name}",
+                data,
+                nested=True
+            )
+            self.logger.error(message)
+        else:
+            # Truncate large results for readability
+            if isinstance(result, (dict, list)):
+                result_display = result if len(str(result)) < 500 else f"{str(result)[:500]}... [truncated]"
+            else:
+                result_display = result if len(str(result)) < 500 else f"{str(result)[:500]}... [truncated]"
+            
+            data["result_preview"] = result_display
+            message = self._log_entry(
+                LogLevel.TOOL_RESULT,
+                f"Tool Result: {tool_name}",
+                data,
+                nested=True
+            )
+            self.logger.info(message)
+        
+        self._add_to_buffer(message, "TOOL_RESULT")
+    
+    def scout_mode_operation(self, operation: str, query: str, tables_searched: List[str], results: Dict[str, Any]):
+        """
+        Log scout mode table search operation.
+        
+        Args:
+            operation: Scout mode operation type (e.g., "search_tables", "list_tables")
+            query: Search query or filter
+            tables_searched: List of table names searched
+            results: Ranking/search results
+        """
+        data = {
+            "operation": operation,
+            "query": query,
+            "tables_searched": tables_searched,
+            "result_count": len(results) if isinstance(results, list) else 1,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if isinstance(results, list) and len(results) > 0:
+            data["top_results"] = results[:3]  # Show top 3 results
+        else:
+            data["results"] = results
+        
+        message = self._log_entry(
+            LogLevel.SCOUT_MODE,
+            f"Scout Mode: {operation}",
+            data,
+            nested=False
+        )
+        
+        self.logger.info(message)
+        self._add_to_buffer(message, "SCOUT_MODE")
+    
+    def intent_parsed(
+        self,
+        user_query: str,
+        intent_type: str,
+        confidence: float,
+        missing_fields: List[str] = None,
+        entities: List[str] = None
+    ):
+        """
+        Log intent parsing result.
+        
+        Args:
+            user_query: Original user query
+            intent_type: Detected intent (clarify, query, schema_query, etc.)
+            confidence: Confidence score (0-1)
+            missing_fields: Fields that need clarification
+            entities: Extracted entities
+        """
+        data = {
+            "user_query": user_query[:100],  # Truncate long queries
+            "intent_type": intent_type,
+            "confidence": round(confidence, 3),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if missing_fields:
+            data["missing_fields"] = missing_fields
+        
+        if entities:
+            data["extracted_entities"] = entities
+        
+        message = self._log_entry(
+            LogLevel.INTENT_PARSE,
+            f"Intent Parsed: {intent_type}",
+            data,
+            nested=False
+        )
+        
+        level = self.logger.info if intent_type != "clarify" else self.logger.warning
+        level(message)
+        self._add_to_buffer(message, "INTENT_PARSE")
+    
+    def schema_discovered(
+        self,
+        table_name: str,
+        columns: List[Dict[str, str]],
+        row_count: int = None,
+        relationships: List[Dict[str, str]] = None
+    ):
+        """
+        Log schema discovery for a table.
+        
+        Args:
+            table_name: Table name
+            columns: Column information
+            row_count: Number of rows in table
+            relationships: Foreign key relationships
+        """
+        data = {
+            "table_name": table_name,
+            "column_count": len(columns),
+            "columns": columns[:5] if len(columns) > 5 else columns,  # Show first 5
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if row_count is not None:
+            data["row_count"] = row_count
+        
+        if relationships:
+            data["relationships"] = relationships
+        
+        if len(columns) > 5:
+            data["columns_summary"] = f"... and {len(columns) - 5} more columns"
+        
+        message = self._log_entry(
+            LogLevel.SCHEMA_DISCOVERY,
+            f"Schema Discovered: {table_name}",
+            data,
+            nested=False
+        )
+        
+        self.logger.debug(message)
+        self._add_to_buffer(message, "SCHEMA_DISCOVERY")
+    
+    def sql_generated(self, sql: str, reason: str, table_context: List[str] = None):
+        """
+        Log SQL query generation.
+        
+        Args:
+            sql: Generated SQL query
+            reason: Reason for this query
+            table_context: Tables used in the query
+        """
+        data = {
+            "sql": sql,
+            "reason": reason,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if table_context:
+            data["tables_used"] = table_context
+        
+        message = self._log_entry(
+            LogLevel.SQL_GENERATION,
+            "SQL Generated",
+            data,
+            nested=False
+        )
+        
+        self.logger.info(message)
+        self._add_to_buffer(message, "SQL_GENERATION")
+    
+    def query_executed(
+        self,
+        sql: str,
+        rows_returned: int,
+        duration_ms: float,
+        error: str = None
+    ):
+        """
+        Log query execution.
+        
+        Args:
+            sql: Executed SQL query
+            rows_returned: Number of rows returned
+            duration_ms: Execution time
+            error: Error message if failed
+        """
+        status = "✅ SUCCESS" if not error else "❌ FAILED"
+        
+        data = {
+            "sql": sql[:100],  # Truncate long queries
+            "status": status,
+            "rows_returned": rows_returned,
+            "duration_ms": round(duration_ms, 2),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if error:
+            data["error"] = error
+        
+        message = self._log_entry(
+            LogLevel.QUERY_EXECUTION,
+            "Query Executed",
+            data,
+            nested=False
+        )
+        
+        level = self.logger.info if not error else self.logger.error
+        level(message)
+        self._add_to_buffer(message, "QUERY_EXECUTION")
+    
+    def decision_made(self, decision: str, reason: str, options_considered: List[str] = None):
+        """
+        Log workflow decision.
+        
+        Args:
+            decision: The decision made
+            reason: Reasoning behind the decision
+            options_considered: List of options that were considered
+        """
+        data = {
+            "decision": decision,
+            "reason": reason,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if options_considered:
+            data["options_considered"] = options_considered
+        
+        message = self._log_entry(
+            LogLevel.DECISION,
+            f"Decision: {decision}",
+            data,
+            nested=False
+        )
+        
+        self.logger.info(message)
+        self._add_to_buffer(message, "DECISION")
+    
+    def state_updated(self, state_key: str, old_value: Any = None, new_value: Any = None):
+        """
+        Log state updates.
+        
+        Args:
+            state_key: Key being updated
+            old_value: Previous value
+            new_value: New value
+        """
+        data = {
+            "state_key": state_key,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if old_value is not None:
+            data["old_value"] = str(old_value)[:100]
+        if new_value is not None:
+            data["new_value"] = str(new_value)[:100]
+        
+        message = self._log_entry(
+            LogLevel.STATE_UPDATE,
+            f"State Updated: {state_key}",
+            data,
+            nested=False
+        )
+        
+        self.logger.debug(message)
+        self._add_to_buffer(message, "STATE_UPDATE")
+    
+    def timing_checkpoint(self, checkpoint_name: str, duration_ms: float):
+        """
+        Log timing checkpoint.
+        
+        Args:
+            checkpoint_name: Name of the checkpoint
+            duration_ms: Duration in milliseconds
+        """
+        data = {
+            "checkpoint": checkpoint_name,
+            "duration_ms": round(duration_ms, 2),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        message = self._log_entry(
+            LogLevel.TIMING,
+            f"Timing: {checkpoint_name}",
+            data,
+            nested=False
+        )
+        
+        self.logger.debug(message)
+        self._add_to_buffer(message, "TIMING")
+    
+    def workflow_error(self, error_type: str, message: str, context: Dict[str, Any] = None):
+        """
+        Log workflow errors.
+        
+        Args:
+            error_type: Type of error
+            message: Error message
+            context: Additional context
+        """
+        data = {
+            "error_type": error_type,
+            "message": message,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if context:
+            data["context"] = context
+        
+        log_message = self._log_entry(
+            LogLevel.ERROR,
+            f"Error: {error_type}",
+            data,
+            nested=False
+        )
+        
+        self.logger.error(log_message)
+        self._add_to_buffer(log_message, "ERROR")
+    
+    def warning(self, title: str, details: str, context: Dict[str, Any] = None):
+        """
+        Log warnings.
+        
+        Args:
+            title: Warning title
+            details: Warning details
+            context: Additional context
+        """
+        data = {
+            "details": details,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if context:
+            data["context"] = context
+        
+        message = self._log_entry(
+            LogLevel.WARNING,
+            f"Warning: {title}",
+            data,
+            nested=False
+        )
+        
+        self.logger.warning(message)
+        self._add_to_buffer(message, "WARNING")
+    
+    def info(self, title: str, details: str = None, data: Dict[str, Any] = None):
+        """
+        Log informational messages.
+        
+        Args:
+            title: Info title
+            details: Info details
+            data: Additional data
+        """
+        log_data = {
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if details:
+            log_data["details"] = details
+        
+        if data:
+            log_data.update(data)
+        
+        message = self._log_entry(
+            LogLevel.INFO,
+            title,
+            log_data,
+            nested=False
+        )
+        
+        self.logger.info(message)
+        self._add_to_buffer(message, "INFO")
+    
+    def _add_to_buffer(self, message: str, log_type: str):
+        """Add message to thread-safe buffer for frontend streaming."""
+        with _logs_lock:
+            _logs_buffer.append({
+                "timestamp": datetime.now().isoformat(),
+                "type": log_type,
+                "message": message,
+                "session_id": self.session_id
+            })
+    
+    @staticmethod
+    def get_buffered_logs() -> List[Dict[str, Any]]:
+        """Get and clear buffered logs."""
+        with _logs_lock:
+            logs = _logs_buffer.copy()
+            _logs_buffer.clear()
+            return logs
+    
+    @staticmethod
+    def get_buffered_logs_no_clear() -> List[Dict[str, Any]]:
+        """Get buffered logs without clearing."""
+        with _logs_lock:
+            return _logs_buffer.copy()
+
+
+def log_tool_call(logger: DebugLogger):
+    """Decorator for logging tool calls."""
+    def decorator(func):
+        @wraps(func)
+        async def async_wrapper(tool_name: str, arguments: dict, *args, **kwargs):
+            logger.tool_call(tool_name, arguments)
+            try:
+                import time
+                start = time.time()
+                result = await func(tool_name, arguments, *args, **kwargs)
+                duration_ms = (time.time() - start) * 1000
+                logger.tool_result(tool_name, result, duration_ms=duration_ms)
+                return result
+            except Exception as e:
+                logger.tool_result(tool_name, None, error=str(e))
+                raise
+        
+        @wraps(func)
+        def sync_wrapper(tool_name: str, arguments: dict, *args, **kwargs):
+            logger.tool_call(tool_name, arguments)
+            try:
+                import time
+                start = time.time()
+                result = func(tool_name, arguments, *args, **kwargs)
+                duration_ms = (time.time() - start) * 1000
+                logger.tool_result(tool_name, result, duration_ms=duration_ms)
+                return result
+            except Exception as e:
+                logger.tool_result(tool_name, None, error=str(e))
+                raise
+        
+        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+    
+    return decorator
+
+
+# Global logger instance
+_debug_logger = None
+
+def get_debug_logger(name: str = "langgraph", log_dir: str = None) -> DebugLogger:
+    """Get or create global debug logger instance."""
+    global _debug_logger
+    if _debug_logger is None:
+        _debug_logger = DebugLogger(name, log_dir)
+    return _debug_logger
+
+
+# Convenience imports
+__all__ = [
+    "DebugLogger",
+    "LogLevel",
+    "get_debug_logger",
+    "log_tool_call"
+]
