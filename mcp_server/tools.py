@@ -97,7 +97,7 @@ class MCPTools:
             # Phase 4: Discovery tools
             MCPTool(
                 name="list_tables",
-                description="List database tables with pagination and optional filtering (Phase 4 - catalog-backed, no DB hits)",
+                description="List all database tables with pagination (shows everything, not ranked). Generally NOT RECOMMENDED - use search_tables instead for smarter, ranked results. Only use if you need to browse all tables or filter by schema/pattern.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -128,13 +128,13 @@ class MCPTools:
             ),
             MCPTool(
                 name="search_tables",
-                description="Search tables by keyword across table names, schemas, and column names (Phase 4 - catalog-backed, no DB hits)",
+                description="Search tables with semantic ranking - intelligently finds relevant tables based on meaning, not just keywords (Phase 7.1 Scout Mode). Returns top matches ranked by relevance with descriptions. RECOMMENDED: Use this instead of list_tables to find tables - much faster and smarter!",
                 inputSchema={
                     "type": "object",
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "Search query (case-insensitive)"
+                            "description": "Search query - can be semantic (e.g., 'customers', 'sales transactions', 'inventory'). Returns ranked results based on meaning."
                         },
                         "page": {
                             "type": "integer",
@@ -144,7 +144,7 @@ class MCPTools:
                         },
                         "page_size": {
                             "type": "integer",
-                            "description": "Number of items per page (default: 25, max: 100)",
+                            "description": "Number of items per page (default: 25, max: 100) - starts with most relevant, so 5-10 usually sufficient",
                             "default": 25,
                             "minimum": 1,
                             "maximum": 100

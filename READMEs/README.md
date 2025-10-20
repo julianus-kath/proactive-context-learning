@@ -1125,9 +1125,9 @@ tail -f logs/langgraph.log
 
 Comprehensive documentation of architectural decisions:
 
-- **[ADR-0007](adrs/0007-mcp-database-server-implementation.md)** - MCP Database Server Implementation
-- **[ADR-0010](adrs/0010-dynamic-erp-assistant-complete-system-architecture.md)** - Dynamic ERP Assistant Complete System Architecture
-- **[ADR-0011](adrs/0011-erp-proxy-integration-architecture.md)** - ERP Proxy Integration Architecture
+- **[ADR-0007](../adrs/0007-mcp-database-server-implementation.md)** - MCP Database Server Implementation
+- **[ADR-0010](../adrs/0010-dynamic-erp-assistant-complete-system-architecture.md)** - Dynamic ERP Assistant Complete System Architecture
+- **[ADR-0011](../adrs/0011-erp-proxy-integration-architecture.md)** - ERP Proxy Integration Architecture
 
 Additional ADRs:
 - ADR-0001: Synthetic Data Service Architecture

@@ -19,7 +19,7 @@
   - Performance impact
 
 ### 📖 Detailed Guides
-- **Full user guide**: [`langgraph_integration/DEBUG_LOGGING_GUIDE.md`](langgraph_integration/DEBUG_LOGGING_GUIDE.md)
+- **Full user guide**: [`langgraph_integration/DEBUG_LOGGING_GUIDE.md`](../langgraph_integration/DEBUG_LOGGING_GUIDE.md)
   - Feature overview
   - All logging methods
   - Real-world examples
@@ -33,7 +33,7 @@
   - Verifies system is working
 
 ### 💻 Code Reference
-- **Main logger**: [`langgraph_integration/debug_logger.py`](langgraph_integration/debug_logger.py)
+- **Main logger**: [`langgraph_integration/debug_logger.py`](../langgraph_integration/debug_logger.py)
   - Core logging implementation
   - All logging methods
   - Thread-safe buffer management
@@ -79,11 +79,11 @@ python tests/test_debug_logging.py
 Shows all 15+ log types with real examples.
 
 ### I'm debugging a specific issue
-→ Read: [`langgraph_integration/DEBUG_LOGGING_GUIDE.md`](langgraph_integration/DEBUG_LOGGING_GUIDE.md)  
+→ Read: [`langgraph_integration/DEBUG_LOGGING_GUIDE.md`](../langgraph_integration/DEBUG_LOGGING_GUIDE.md)  
 Go to "Troubleshooting with Logs" section.
 
 ### I want to integrate with my frontend
-→ Read: [`langgraph_integration/DEBUG_LOGGING_GUIDE.md`](langgraph_integration/DEBUG_LOGGING_GUIDE.md)  
+→ Read: [`langgraph_integration/DEBUG_LOGGING_GUIDE.md`](../langgraph_integration/DEBUG_LOGGING_GUIDE.md)  
 Go to "Integration with Frontend" section.
 
 ---
@@ -314,7 +314,7 @@ All files have been verified:
 1. **Start here**: [`QUICK_START_LOGGING.md`](QUICK_START_LOGGING.md) (5 min)
 2. **Then**: Run `python tests/test_debug_logging.py` (5 min)
 3. **Then**: Read [`LOGGING_SYSTEM_SUMMARY.md`](LOGGING_SYSTEM_SUMMARY.md) (10 min)
-4. **Deep dive**: [`langgraph_integration/DEBUG_LOGGING_GUIDE.md`](langgraph_integration/DEBUG_LOGGING_GUIDE.md) (15 min)
+4. **Deep dive**: [`langgraph_integration/DEBUG_LOGGING_GUIDE.md`](../langgraph_integration/DEBUG_LOGGING_GUIDE.md) (15 min)
 5. **Reference**: Come back here for quick lookups
 
 ---
@@ -331,4 +331,4 @@ All files have been verified:
 
 **You now have comprehensive logging for your entire LangGraph workflow! 🚀**
 
-For any questions, start with [`QUICK_START_LOGGING.md`](QUICK_START_LOGGING.md) or the [full guide](langgraph_integration/DEBUG_LOGGING_GUIDE.md).
+For any questions, start with [`QUICK_START_LOGGING.md`](QUICK_START_LOGGING.md) or the [full guide](../langgraph_integration/DEBUG_LOGGING_GUIDE.md).

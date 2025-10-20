@@ -29,7 +29,7 @@ def export_diagrams():
     """Export all Mermaid diagrams from ADR-0011 to PNG files."""
     
     # Project root
-    project_root = Path("/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code")
+    project_root = Path("/")
     adr_file = project_root / "adrs" / "0011-erp-proxy-integration-architecture.md"
     exports_dir = project_root / "exports"
     diagrams_dir = exports_dir / "diagrams" / "proxy_architecture"
@@ -142,7 +142,7 @@ def export_diagrams():
 def create_html_export():
     """Create HTML export of ADR-0011."""
     
-    project_root = Path("/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code")
+    project_root = Path("/")
     adr_file = project_root / "adrs" / "0011-erp-proxy-integration-architecture.md"
     exports_dir = project_root / "exports"
     
@@ -326,7 +326,7 @@ def create_html_export():
 def create_pdf_export():
     """Create PDF export using Chrome headless."""
     
-    project_root = Path("/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code")
+    project_root = Path("/")
     exports_dir = project_root / "exports"
     html_file = exports_dir / "ADR-0011-Proxy-Architecture.html"
     pdf_file = exports_dir / "ADR-0011-Proxy-Architecture.pdf"
@@ -356,7 +356,7 @@ def create_pdf_export():
 def update_readme():
     """Update the exports README to include proxy architecture."""
     
-    project_root = Path("/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code")
+    project_root = Path("/")
     exports_dir = project_root / "exports"
     readme_file = exports_dir / "README.md"
     

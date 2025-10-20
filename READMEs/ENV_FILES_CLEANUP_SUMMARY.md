@@ -71,13 +71,15 @@ You still have actual `.env` files in some subdirectories:
 3. If no, you may need to update your service startup scripts to use the root `.env`
 
 **To check:** Look at how each service loads its configuration:
+
 ```python
 # Good: Loads from root .env
 from dotenv import load_dotenv
+
 load_dotenv()  # Searches parent directories
 
 # Bad: Loads from local .env only
-load_dotenv('.env')  # Only looks in current directory
+load_dotenv('../.env')  # Only looks in current directory
 ```
 
 ---

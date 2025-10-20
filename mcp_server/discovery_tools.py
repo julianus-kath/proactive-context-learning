@@ -369,16 +369,23 @@ class DiscoveryTools:
         page_size: int = 25
     ) -> DiscoveryResponse:
         """
-        Search tables by keyword (table name, schema, or column names).
+        Search tables by keyword with Scout Mode semantic ranking (Phase 7.1).
+        
+        Uses semantic table ranking to understand context, not just keyword matching.
+        For example: "customers" returns customer tables, "sales" returns transaction tables.
         
         Args:
             db_adapter: DatabaseAdapter instance with catalog
-            query: Search query (case-insensitive)
+            query: Search query (case-insensitive, can be semantic)
             page: Page number (1-indexed)
             page_size: Number of items per page (max: 100)
         
         Returns:
-            DiscoveryResponse with ranked search results
+            DiscoveryResponse with semantically ranked search results including:
+            - relevance_score: How relevant the table is (0.0-1.0)
+            - rank_reason: Why this table was selected ("semantic", "name_match", etc)
+            - description: Human-readable description of what the table contains
+            - matched_columns: Which columns matched the query
         """
         start_time = time.time()
         
@@ -411,7 +418,7 @@ class DiscoveryTools:
                     execution_time_ms=(time.time() - start_time) * 1000
                 )
             
-            query = query.strip().lower()
+            query = query.strip()
             page = max(1, page)
             page_size = min(max(1, page_size), 100)
             
@@ -427,65 +434,86 @@ class DiscoveryTools:
             
             catalog = db_adapter.catalog
             
-            # Use catalog's search_tables method
-            matching_tables = catalog.search_tables(query)
-            
-            # Create summaries with relevance scores
+            # Phase 7.1: Try to use Scout Mode for semantic ranking if available
             results = []
-            for table in matching_tables:
-                # table is a dict with: schema, name, full_name, type, estimated_rows
-                # Calculate relevance score
-                score = 0
+            try:
+                from scout_mode import SemanticCatalogBuilder
+                scout = SemanticCatalogBuilder()
+                # Search using Scout Mode's semantic ranking (returns top matches by relevance)
+                search_results = scout.search(query, top_k=100)  # Get top 100, will paginate
                 
-                # Exact table name match (highest priority)
-                query_lower = query.lower()
-                table_name_lower = table['name'].lower()
-                if query_lower == table_name_lower:
-                    score += 100
-                elif query_lower in table_name_lower:
-                    score += 50
+                for match in search_results:
+                    # Scout Mode returns TableSearchResult with similarity score
+                    summary = {
+                        "schema": match.schema,
+                        "name": match.table_name,
+                        "full_name": match.full_name,
+                        "type": "TABLE",
+                        "estimated_rows": 0,  # Not available in Scout results
+                        "column_count": 0,
+                        "has_foreign_keys": False,
+                        "has_primary_keys": False,
+                        "relevance_score": match.similarity,  # 0.0-1.0 from Scout Mode
+                        "rank_reason": match.reason,  # "exact", "fuzzy", "semantic", etc
+                        "description": f"Semantic match via {match.reason} search",
+                        "matched_columns": match.column_matches if match.column_matches else []
+                    }
+                    results.append(summary)
                 
-                # Schema match
-                if query_lower in table['schema'].lower():
-                    score += 20
+                logger.info(f"🔍 Scout Mode: Found {len(results)} tables for query '{query}'")
                 
-                # Try to fetch full table details for column-level matching
-                matched_columns = []
-                try:
-                    full_table = catalog.get_table(table['schema'], table['name'])
-                    if full_table and 'columns' in full_table:
-                        # Column name matches
-                        for col in full_table['columns']:
-                            col_name_lower = col.get('name', '').lower()
-                            if query_lower == col_name_lower:
-                                score += 30
-                            elif query_lower in col_name_lower:
-                                score += 10
-                            
-                            # Column type matches
-                            col_type_lower = col.get('type', '').lower()
-                            if query_lower in col_type_lower:
-                                score += 5
-                            
-                            # Track matched columns
-                            if query_lower in col_name_lower or query_lower in col_type_lower:
-                                matched_columns.append(col_name_lower)
-                except Exception as col_error:
-                    logger.warning(f"Could not fetch column details for {table['schema']}.{table['name']}: {col_error}")
+            except Exception as scout_error:
+                logger.debug(f"Scout Mode search not available, falling back to basic search: {scout_error}")
                 
-                summary = {
-                    "schema": table['schema'],
-                    "name": table['name'],
-                    "full_name": table['full_name'],
-                    "type": table['type'],
-                    "estimated_rows": table['estimated_rows'],
-                    "column_count": table.get('column_count', 0),
-                    "has_foreign_keys": False,  # Not available in search results
-                    "has_primary_keys": False,  # Not available in search results
-                    "relevance_score": score,
-                    "matched_columns": matched_columns[:5]  # Top 5 matched columns
-                }
-                results.append(summary)
+                # Fallback: Basic catalog search (not semantic)
+                matching_tables = catalog.search_tables(query)
+                
+                for table in matching_tables:
+                    # Calculate basic relevance score
+                    score = 0
+                    query_lower = query.lower()
+                    table_name_lower = table['name'].lower()
+                    
+                    if query_lower == table_name_lower:
+                        score = 1.0
+                    elif query_lower in table_name_lower:
+                        score = 0.8
+                    elif table_name_lower.startswith(query_lower):
+                        score = 0.7
+                    else:
+                        score = 0.5
+                    
+                    # Try to fetch full table details for column-level matching
+                    matched_columns = []
+                    description = f"Table {table['name']}"
+                    try:
+                        full_table = catalog.get_table(table['schema'], table['name'])
+                        if full_table and 'columns' in full_table:
+                            for col in full_table['columns']:
+                                col_name_lower = col.get('name', '').lower()
+                                if query_lower in col_name_lower:
+                                    matched_columns.append(col.get('name', ''))
+                                    score = min(1.0, score + 0.1)  # Boost if column matches
+                        if full_table and full_table.get('description'):
+                            description = full_table['description']
+                    except Exception as col_error:
+                        logger.debug(f"Could not fetch column details for {table['schema']}.{table['name']}: {col_error}")
+                    
+                    summary = {
+                        "schema": table['schema'],
+                        "name": table['name'],
+                        "full_name": table['full_name'],
+                        "type": table['type'],
+                        "estimated_rows": table.get('estimated_rows', 0),
+                        "column_count": table.get('column_count', 0),
+                        "has_foreign_keys": False,
+                        "has_primary_keys": False,
+                        "relevance_score": score,
+                        "rank_reason": "basic_search",
+                        "description": description,
+                        "matched_columns": matched_columns[:5]
+                    }
+                    results.append(summary)
             
             # Sort by relevance score (descending)
             results.sort(key=lambda x: x["relevance_score"], reverse=True)

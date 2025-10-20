@@ -11,7 +11,7 @@
    - PostgreSQL database
    - OpenAI API key is set
 
-INFO:     Started server process [54519]
+INFO:     Started server process [61474]
 INFO:     Waiting for application startup.
 INFO:langgraph_integration.graph_definition:Testing OpenAI API key...
 INFO:     Application startup complete.
@@ -19,28 +19,29 @@ INFO:     Uvicorn running on http://0.0.0.0:5001 (Press CTRL+C to quit)
 🚀 Initializing LangGraph workflow...
 ✅ LangGraph workflow initialized successfully
 ✅ Debug logger initialized
-INFO:     127.0.0.1:53079 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53092 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53092 - "OPTIONS /process_conversation HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55835 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55851 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55864 - "OPTIONS /process_conversation HTTP/1.1" 200 OK
+INFO:langgraph_integration.mcp_client:📋 Fetching schema from MCP server...
 DEBUG:langgraph:
   🔧 Tool Call: get_schema
   ────────────────────────────────────────────────────────────
     tool_id: get_schema_0
     arguments:
       {}
-    timestamp: 2025-10-20T08:36:25.894872
+    timestamp: 2025-10-20T11:14:00.382813
   ────────────────────────────────────────────────────────────
 INFO:langgraph_integration.mcp_client:MCP session initialized successfully
 INFO:langgraph_integration.mcp_client:✅ MCP tool call successful, received 1 content items
 📝 Processing conversation with 2 messages...
-📝 Last user message: What were our total sales last month?...
-2025-10-20 08:37:07,405 - langgraph - INFO - 
+📝 Last user message: show me the last 10 invoices we received...
+2025-10-20 11:14:49,389 - langgraph - INFO - 
 ✅ Tool Result: get_schema
 ────────────────────────────────────────────────────────────
   tool_name: get_schema
   status: ✅ SUCCESS
-  timestamp: 2025-10-20T08:37:07.405213
-  duration_ms: 41505.71
+  timestamp: 2025-10-20T11:14:49.389856
+  duration_ms: 49003.44
   result_preview:
     {
       "content_items": 1
@@ -51,23 +52,54 @@ INFO:langgraph:
 ────────────────────────────────────────────────────────────
   tool_name: get_schema
   status: ✅ SUCCESS
-  timestamp: 2025-10-20T08:37:07.405213
-  duration_ms: 41505.71
+  timestamp: 2025-10-20T11:14:49.389856
+  duration_ms: 49003.44
   result_preview:
     {
       "content_items": 1
     }
 ────────────────────────────────────────────────────────────
-ERROR:langgraph_integration.mcp_client:❌ Failed to parse schema JSON: No JSON object found in content: Database Schema:
+ERROR:langgraph_integration.mcp_client:❌ Failed to parse schema JSON: No JSON object found (no opening brace '{') in content: Database Schema:
 
 Table: BCSPjmAdressenKontakt (BASE TABLE)
 Columns:
   - Mandant (smallint) NOT NULL
-ERROR:langgraph_integration.graph_definition:❌ Database indexing FAILED: Failed to parse schema JSON: No JSON object found in content: Database Schema:
+  - Adresse (int) NOT NULL
+  - Kontaktplan (varchar)
+  - Intervall (smallint)
+  - Intervalltyp (var
+ERROR:langgraph_integration.mcp_client:   Schema text (full, up to 500 chars):
+Database Schema:
 
 Table: BCSPjmAdressenKontakt (BASE TABLE)
 Columns:
   - Mandant (smallint) NOT NULL
+  - Adresse (int) NOT NULL
+  - Kontaktplan (varchar)
+  - Intervall (smallint)
+  - Intervalltyp (varchar)
+  - Wochentag (varchar)
+  - Tageszeit (smallint)
+  - Ausfuehrer (varchar)
+  - AnsprechpartnerID (int)
+  - Information (varchar)
+  - Timestamp (timestamp) NOT NULL
+
+Table: BCSPjmAdressenKontaktFolge (BASE TABLE)
+Columns:
+  - Mandant (smallint) NOT NULL
+  - PosID (int) NOT NULL
+  - Adresse (int)
+ERROR:langgraph_integration.mcp_client:   → Problem: No JSON object found (no opening brace)
+ERROR:langgraph_integration.graph_definition:❌ Database indexing FAILED: Failed to parse schema JSON: No JSON object found (no opening brace '{') in content: Database Schema:
+
+Table: BCSPjmAdressenKontakt (BASE TABLE)
+Columns:
+  - Mandant (smallint) NOT NULL
+  - Adresse (int) NOT NULL
+  - Kontaktplan (varchar)
+  - Intervall (smallint)
+  - Intervalltyp (var
 DEBUG:langgraph:
   🔧 Tool Call: list_tables
   ────────────────────────────────────────────────────────────
@@ -77,17 +109,17 @@ DEBUG:langgraph:
         "page": 1,
         "page_size": 50
       }
-    timestamp: 2025-10-20T08:37:07.414907
+    timestamp: 2025-10-20T11:14:49.398708
   ────────────────────────────────────────────────────────────
 INFO:langgraph_integration.mcp_client:MCP session initialized successfully
 INFO:langgraph_integration.mcp_client:✅ MCP tool call successful, received 1 content items
-2025-10-20 08:37:07,485 - langgraph - INFO - 
+2025-10-20 11:14:49,493 - langgraph - INFO - 
 ✅ Tool Result: list_tables
 ────────────────────────────────────────────────────────────
   tool_name: list_tables
   status: ✅ SUCCESS
-  timestamp: 2025-10-20T08:37:07.484582
-  duration_ms: 69.11
+  timestamp: 2025-10-20T11:14:49.492934
+  duration_ms: 93.88
   result_preview:
     {
       "content_items": 1
@@ -98,14 +130,14 @@ INFO:langgraph:
 ────────────────────────────────────────────────────────────
   tool_name: list_tables
   status: ✅ SUCCESS
-  timestamp: 2025-10-20T08:37:07.484582
-  duration_ms: 69.11
+  timestamp: 2025-10-20T11:14:49.492934
+  duration_ms: 93.88
   result_preview:
     {
       "content_items": 1
     }
 ────────────────────────────────────────────────────────────
-2025-10-20 08:37:07,487 - langgraph - INFO - 
+2025-10-20 11:14:49,494 - langgraph - INFO - 
 🔍 Scout Mode: list_tables
 ────────────────────────────────────────────────────────────
   operation: list_tables
@@ -164,7 +196,7 @@ INFO:langgraph:
       "BSCrmObjekteZaehlerverlauf"
     ]
   result_count: 1
-  timestamp: 2025-10-20T08:37:07.486860
+  timestamp: 2025-10-20T11:14:49.494341
   results:
     {
       "total_tables": 50,
@@ -231,7 +263,7 @@ INFO:langgraph:
       "BSCrmObjekteZaehlerverlauf"
     ]
   result_count: 1
-  timestamp: 2025-10-20T08:37:07.486860
+  timestamp: 2025-10-20T11:14:49.494341
   results:
     {
       "total_tables": 50,
@@ -243,25 +275,32 @@ INFO:langgraph_integration.mcp_client:✅ list_tables: page 1/1, showing 50 of 5
 ERROR:langgraph_integration.mcp_client:Error listing tables: 0
 ERROR:langgraph_integration.graph_definition:Error getting table list: 0
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-INFO:langgraph_integration.graph_definition:🎯 Answer-first: Applying defaults instead of asking for {'specific location', 'product category'}
-2025-10-20 08:37:10,094 - langgraph - INFO - 
-📝 Intent Parsed: query
+2025-10-20 11:14:51,551 - langgraph - WARNING - 
+📝 Intent Parsed: clarify
 ────────────────────────────────────────────────────────────
-  user_query: What were our total sales last month?
-  intent_type: query
+  user_query: show me the last 10 invoices we received
+  intent_type: clarify
   confidence: 1.0
-  timestamp: 2025-10-20T08:37:10.094133
+  timestamp: 2025-10-20T11:14:51.551264
+  missing_fields:
+    [
+      "specific table or schema where invoices are stored"
+    ]
 ────────────────────────────────────────────────────────────
-INFO:langgraph:
-📝 Intent Parsed: query
+WARNING:langgraph:
+📝 Intent Parsed: clarify
 ────────────────────────────────────────────────────────────
-  user_query: What were our total sales last month?
-  intent_type: query
+  user_query: show me the last 10 invoices we received
+  intent_type: clarify
   confidence: 1.0
-  timestamp: 2025-10-20T08:37:10.094133
+  timestamp: 2025-10-20T11:14:51.551264
+  missing_fields:
+    [
+      "specific table or schema where invoices are stored"
+    ]
 ────────────────────────────────────────────────────────────
-INFO:langgraph_integration.graph_definition:Intent: QUERY - SQL: ...
+INFO:langgraph_integration.graph_definition:Intent: CLARIFY - Missing: ['specific table or schema where invoices are stored']
 INFO:httpx:HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
 INFO:langgraph_integration.graph_definition:Error handled successfully
-✅ Conversation processed successfully - Operation: query
-INFO:     127.0.0.1:53092 - "POST /process_conversation HTTP/1.1" 200 OK
+✅ Conversation processed successfully - Operation: clarify
+INFO:     127.0.0.1:55864 - "POST /process_conversation HTTP/1.1" 200 OK

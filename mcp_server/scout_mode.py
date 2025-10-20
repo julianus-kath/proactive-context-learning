@@ -395,27 +395,56 @@ class SemanticCatalogBuilder:
                     full_table = db_adapter.catalog.get_table(schema, name)
                     if full_table:
                         # ✅ Now working with full dict that includes columns
-                        table_info["columns"] = full_table.get('columns', [])
+                        columns = full_table.get('columns', [])
+                        
+                        # Ensure columns are in dict format (not dataclass objects)
+                        columns_list = []
+                        for col in columns:
+                            if isinstance(col, dict):
+                                columns_list.append(col)
+                            elif hasattr(col, '__dataclass_fields__'):
+                                from dataclasses import asdict
+                                columns_list.append(asdict(col))
+                            else:
+                                logger.warning(f"Unexpected column format for {full_name}: {type(col)}")
+                                columns_list.append({'name': str(col), 'type': 'unknown'})
+                        
+                        table_info["columns"] = columns_list
                         table_info["primary_keys"] = full_table.get('primary_keys', [])
-                        table_info["foreign_keys"] = full_table.get('foreign_keys', [])
+                        
+                        # Ensure foreign_keys are in dict format
+                        fk_list = []
+                        for fk in full_table.get('foreign_keys', []):
+                            if isinstance(fk, dict):
+                                fk_list.append(fk)
+                            elif hasattr(fk, '__dataclass_fields__'):
+                                from dataclasses import asdict
+                                fk_list.append(asdict(fk))
+                            else:
+                                fk_list.append({'column': str(fk), 'referenced_table': 'unknown'})
+                        
+                        table_info["foreign_keys"] = fk_list
                         
                         # 🆕 Index columns by type for semantic ranking
-                        table_info["fk_count"] = len(full_table.get('foreign_keys', []))
+                        table_info["fk_count"] = len(fk_list)
                         
                         numeric_types = {'int', 'float', 'decimal', 'numeric', 'bigint', 'smallint', 'money', 'real'}
                         date_types = {'date', 'datetime', 'datetime2', 'timestamp', 'time'}
                         text_types = {'varchar', 'text', 'nvarchar', 'char', 'string'}
                         
                         for col in table_info["columns"]:
-                            col_type = col.get('type', '').lower()
-                            col_name = col.get('name', '')
-                            
-                            if any(t in col_type for t in numeric_types):
-                                table_info["numeric_columns"].append(col_name)
-                            if any(t in col_type for t in date_types):
-                                table_info["date_columns"].append(col_name)
-                            if any(t in col_type for t in text_types):
-                                table_info["text_columns"].append(col_name)
+                            try:
+                                col_type = str(col.get('type', '')).lower() if isinstance(col, dict) else str(col).lower()
+                                col_name = str(col.get('name', '')) if isinstance(col, dict) else str(col)
+                                
+                                if any(t in col_type for t in numeric_types):
+                                    table_info["numeric_columns"].append(col_name)
+                                if any(t in col_type for t in date_types):
+                                    table_info["date_columns"].append(col_name)
+                                if any(t in col_type for t in text_types):
+                                    table_info["text_columns"].append(col_name)
+                            except Exception as col_error:
+                                logger.debug(f"Could not process column type for {full_name}: {col_error}")
             except Exception as e:
                 logger.warning(f"Could not fetch full details for {full_name}: {e}")
             
@@ -572,22 +601,68 @@ class SemanticCatalogBuilder:
     def _save_catalog(self, catalog: Dict[str, Any], index: Dict[str, Any]):
         """Save catalog and index to disk."""
         try:
+            # Ensure all objects are JSON serializable
+            catalog = self._make_json_serializable(catalog)
+            index = self._make_json_serializable(index)
+            
             with open(self.catalog_path, 'w') as f:
-                json.dump(catalog, f, indent=2)
+                json.dump(catalog, f, indent=2, default=str)
             
             with open(self.index_path, 'w') as f:
-                json.dump(index, f, indent=2)
+                json.dump(index, f, indent=2, default=str)
             
             logger.info(f"✅ Scout catalog saved to {self.catalog_path}")
         except Exception as e:
             logger.error(f"Failed to save scout catalog: {e}")
     
+    def _make_json_serializable(self, obj: Any) -> Any:
+        """
+        Recursively convert objects to JSON-serializable format.
+        
+        Converts dataclasses, objects with __dict__, and other non-serializable types
+        to dictionaries or strings.
+        """
+        if obj is None:
+            return None
+        
+        if isinstance(obj, (str, int, float, bool)):
+            return obj
+        
+        if isinstance(obj, (list, tuple)):
+            return [self._make_json_serializable(item) for item in obj]
+        
+        if isinstance(obj, dict):
+            return {k: self._make_json_serializable(v) for k, v in obj.items()}
+        
+        # Handle dataclasses
+        if hasattr(obj, '__dataclass_fields__'):
+            from dataclasses import asdict
+            return self._make_json_serializable(asdict(obj))
+        
+        # Handle objects with __dict__
+        if hasattr(obj, '__dict__'):
+            return self._make_json_serializable(obj.__dict__)
+        
+        # Fallback to string representation
+        return str(obj)
+    
     def _load_cached_catalog(self) -> Optional[Dict[str, Any]]:
         """Load cached catalog from disk."""
         try:
             if self.catalog_path.exists():
-                with open(self.catalog_path, 'r') as f:
-                    return json.load(f)
+                try:
+                    with open(self.catalog_path, 'r') as f:
+                        return json.load(f)
+                except json.JSONDecodeError as je:
+                    logger.error(f"Scout catalog JSON is malformed: {je}")
+                    logger.error(f"Catalog path: {self.catalog_path}")
+                    # Try to salvage by deleting the corrupted cache
+                    try:
+                        self.catalog_path.unlink()
+                        logger.info("Deleted corrupted scout catalog cache")
+                    except Exception as delete_error:
+                        logger.error(f"Could not delete corrupted cache: {delete_error}")
+                    return None
         except Exception as e:
             logger.warning(f"Failed to load cached catalog: {e}")
         

@@ -88,7 +88,7 @@ You now have comprehensive logging showing every operation.
 | **What changed?** | [`LOGGING_SYSTEM_SUMMARY.md`](LOGGING_SYSTEM_SUMMARY.md) |
 | **Full details** | [`COMPREHENSIVE_LOGGING_IMPLEMENTATION.md`](COMPREHENSIVE_LOGGING_IMPLEMENTATION.md) |
 | **All documentation** | [`LOGGING_INDEX.md`](LOGGING_INDEX.md) |
-| **Complete guide** | [`langgraph_integration/DEBUG_LOGGING_GUIDE.md`](langgraph_integration/DEBUG_LOGGING_GUIDE.md) |
+| **Complete guide** | [`langgraph_integration/DEBUG_LOGGING_GUIDE.md`](../langgraph_integration/DEBUG_LOGGING_GUIDE.md) |
 | **See it in action** | `python tests/test_debug_logging.py` |
 
 ---
