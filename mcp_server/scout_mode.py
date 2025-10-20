@@ -192,9 +192,9 @@ class SemanticCatalogBuilder:
         return report
     
     def _build_catalog(self, tables: List[Any], db_adapter=None) -> Dict[str, Any]:
-        """Build semantic catalog from table list."""
+        """Build semantic catalog from table list with type metadata for ranking."""
         catalog = {
-            "version": "1.0",
+            "version": "1.1",  # Updated version for semantic metadata
             "built_at": datetime.now().isoformat(),
             "tables": [],
             "search_index": {}
@@ -215,7 +215,12 @@ class SemanticCatalogBuilder:
                 "column_count": table.get('column_count', 0),
                 "columns": [],
                 "primary_keys": [],
-                "foreign_keys": []
+                "foreign_keys": [],
+                # 🆕 Phase 7.1: Semantic metadata for ranking
+                "numeric_columns": [],
+                "date_columns": [],
+                "text_columns": [],
+                "fk_count": 0
             }
             
             # Try to fetch full table details for columns and foreign keys
@@ -227,6 +232,24 @@ class SemanticCatalogBuilder:
                         table_info["columns"] = full_table.get('columns', [])
                         table_info["primary_keys"] = full_table.get('primary_keys', [])
                         table_info["foreign_keys"] = full_table.get('foreign_keys', [])
+                        
+                        # 🆕 Index columns by type for semantic ranking
+                        table_info["fk_count"] = len(full_table.get('foreign_keys', []))
+                        
+                        numeric_types = {'int', 'float', 'decimal', 'numeric', 'bigint', 'smallint', 'money', 'real'}
+                        date_types = {'date', 'datetime', 'datetime2', 'timestamp', 'time'}
+                        text_types = {'varchar', 'text', 'nvarchar', 'char', 'string'}
+                        
+                        for col in table_info["columns"]:
+                            col_type = col.get('type', '').lower()
+                            col_name = col.get('name', '')
+                            
+                            if any(t in col_type for t in numeric_types):
+                                table_info["numeric_columns"].append(col_name)
+                            if any(t in col_type for t in date_types):
+                                table_info["date_columns"].append(col_name)
+                            if any(t in col_type for t in text_types):
+                                table_info["text_columns"].append(col_name)
             except Exception as e:
                 logger.warning(f"Could not fetch full details for {full_name}: {e}")
             

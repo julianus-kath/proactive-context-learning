@@ -1,5 +1,5 @@
 """
-Table Ranker for Semantic Relevance Scoring - Phase 7: Autonomous Discovery.
+Table Ranker for Semantic Relevance Scoring - Phase 7.1: Scout Mode Integration.
 
 This module ranks database tables by relevance to user queries using:
 1. Entity matching (does table/column name match query entities?)
@@ -8,10 +8,17 @@ This module ranks database tables by relevance to user queries using:
 4. Table metadata (row count, foreign key count indicates connectedness)
 5. Column availability (does table have needed column types?)
 
+Phase 7.1 Enhancement:
+- Consumes Scout Mode cached semantic metadata (numeric_columns, date_columns, etc.)
+- No database queries needed - O(n) scan of 943 tables in cache
+- Pre-computed type information enables faster ranking
+- Falls back to heuristics if metadata unavailable
+
 Ranking enables agent to autonomously select tables without clarification.
 """
 
 import logging
+import time
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
 from difflib import SequenceMatcher
@@ -189,11 +196,13 @@ class TableRanker:
         """
         Score how well table matches required operations.
         
+        Phase 7.1: Uses Scout Mode semantic metadata for fast type checking.
+        
         Args:
             table_name: Name of table to score
             operations: Operations needed (e.g., ['sum', 'count'])
-            catalog_adapter: Optional adapter to fetch column types
-            table: Table dict from catalog
+            catalog_adapter: Optional adapter (unused - use Scout Mode metadata instead)
+            table: Table dict from Scout Mode catalog
         
         Returns:
             Compatibility score
@@ -203,32 +212,27 @@ class TableRanker:
         
         score = 0.0
         
+        # 🆕 Phase 7.1: Use pre-computed Scout Mode metadata if available
+        numeric_columns = table.get('numeric_columns', [])
+        date_columns = table.get('date_columns', [])
+        
         # Check for operations that need numeric columns
         if any(op in ['sum', 'avg', 'average', 'max', 'min', 'total'] for op in operations):
-            # Heuristically detect numeric tables by name or try to fetch columns
-            if self._has_numeric_indicator(table_name):
+            if numeric_columns:
+                # Cached metadata: direct detection
+                score += 0.3 * min(len(numeric_columns) / max(table.get('column_count', 1), 1), 1.0)
+            elif self._has_numeric_indicator(table_name):
+                # Fallback: heuristic-based detection
                 score += 0.3
-            elif catalog_adapter:
-                try:
-                    columns = catalog_adapter.get_table(table['schema'], table['name']).get('columns', [])
-                    numeric_cols = sum(1 for c in columns if self._is_numeric_type(c.get('type', '')))
-                    if numeric_cols > 0:
-                        score += 0.3 * (numeric_cols / max(len(columns), 1))
-                except:
-                    pass
         
         # Check for operations that need date columns
         if any(op in ['trend', 'trend_over_time', 'monthly', 'yearly'] for op in operations):
-            if self._has_date_indicator(table_name):
+            if date_columns:
+                # Cached metadata: direct detection
                 score += 0.3
-            elif catalog_adapter:
-                try:
-                    columns = catalog_adapter.get_table(table['schema'], table['name']).get('columns', [])
-                    date_cols = sum(1 for c in columns if self._is_date_type(c.get('type', '')))
-                    if date_cols > 0:
-                        score += 0.3
-                except:
-                    pass
+            elif self._has_date_indicator(table_name):
+                # Fallback: heuristic-based detection
+                score += 0.3
         
         # General compatibility
         if operations:
