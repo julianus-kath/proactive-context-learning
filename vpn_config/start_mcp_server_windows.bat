@@ -37,12 +37,12 @@ rem --- Optional: ensure uvicorn is present in THIS venv ---
   "%PYTHON_CMD%" -m pip install -q "uvicorn[standard]" fastapi
 )
 
-rem --- Start the server from the correct working directory ---
-pushd "%PROJECT_ROOT%\mcp_server"
+rem --- Start the server from the project root (so mcp_server package is in sys.path) ---
+pushd "%PROJECT_ROOT%"
 echo Starting MCP server on 0.0.0.0:8000 ...
 echo (Ctrl+C to stop)
 echo ========================================
-"%PYTHON_CMD%" -m uvicorn server:app --host 0.0.0.0 --port 8000 --reload --log-level debug
+"%PYTHON_CMD%" -m uvicorn mcp_server.server:app --host 0.0.0.0 --port 8000 --reload --log-level debug
 set "EC=%ERRORLEVEL%"
 popd
 
