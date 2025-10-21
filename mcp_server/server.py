@@ -12,12 +12,12 @@ from typing import Dict, Any, Optional, Union
 import uvicorn
 from dotenv import load_dotenv
 
-# MCP Server internal imports (must be at module level for package context)
-from .database_adapter import DatabaseAdapter
-from .scout_mode import run_scout_mode
-from .discovery_tools import DiscoveryTools
-from .observability import get_metrics_summary
-from .tools import MCPTools
+# MCP Server internal imports (using absolute imports for Uvicorn compatibility)
+from mcp_server.database_adapter import DatabaseAdapter
+from mcp_server.scout_mode import run_scout_mode
+from mcp_server.discovery_tools import DiscoveryTools
+from mcp_server.observability import get_metrics_summary
+from mcp_server.tools import MCPTools
 
 # Load environment variables
 load_dotenv()

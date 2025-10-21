@@ -8,11 +8,11 @@ Phase 6: Added structured logging and observability.
 import logging
 import json
 from typing import Dict, Any, List
-from .models import MCPTool, MCPToolResult
-from .bounded_query import execute_bounded_query
-from .config import config
-from .discovery_tools import DiscoveryTools
-from .observability import log_tool_call
+from mcp_server.models import MCPTool, MCPToolResult
+from mcp_server.bounded_query import execute_bounded_query
+from mcp_server.config import config
+from mcp_server.discovery_tools import DiscoveryTools
+from mcp_server.observability import log_tool_call
 
 logger = logging.getLogger(__name__)
 
@@ -960,8 +960,8 @@ class MCPTools:
     async def _answer_first(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
         """Execute query using answer-first pipeline."""
         try:
-            from .answer_first_orchestrator import AnswerFirstOrchestrator
-            from .discovery_tools import DiscoveryTools
+            from mcp_server.answer_first_orchestrator import AnswerFirstOrchestrator
+            from mcp_server.discovery_tools import DiscoveryTools
             
             query = arguments.get("query", "").strip()
             include_debug = arguments.get("include_debug", False)
@@ -1047,7 +1047,7 @@ class MCPTools:
     async def _rank_tables(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
         """Rank tables by relevance."""
         try:
-            from .table_ranker import rank_tables
+            from mcp_server.table_ranker import rank_tables
             
             intent = arguments.get("intent", "SEARCH")
             entities = arguments.get("entities", [])
@@ -1091,7 +1091,7 @@ class MCPTools:
     async def _get_execution_metrics(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
         """Get answer-first execution metrics."""
         try:
-            from .observability import answer_first_obs
+            from mcp_server.observability import answer_first_obs
             
             summary = answer_first_obs.get_execution_summary()
             

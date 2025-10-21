@@ -24,11 +24,11 @@ import logging
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 
-from .intent_parser import parse_intent, IntentType, ParsedIntent
-from .table_ranker import rank_tables, RankedTable
-from .query_blueprints import generate_blueprint
-from .query_formatter import QueryFormatter
-from .observability import (
+from mcp_server.intent_parser import parse_intent, IntentType, ParsedIntent
+from mcp_server.table_ranker import rank_tables, RankedTable
+from mcp_server.query_blueprints import generate_blueprint
+from mcp_server.query_formatter import QueryFormatter
+from mcp_server.observability import (
     AnswerFirstExecutionMetrics,
     IntentParsingMetrics,
     TableRankingMetrics,

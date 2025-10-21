@@ -100,7 +100,7 @@ class FuzzyTableSelector:
         
         # Try to load Scout Mode if available
         try:
-            from .scout_mode import get_scout_instance
+            from mcp_server.scout_mode import get_scout_instance
             self.scout_mode = get_scout_instance()
         except Exception as e:
             logger.warning(f"Scout Mode not available: {e}")
@@ -210,7 +210,7 @@ class FuzzyTableSelector:
             List of matching tables
         """
         try:
-            from .discovery_tools import DiscoveryTools
+            from mcp_server.discovery_tools import DiscoveryTools
             
             # Call search_tables discovery tool
             response = await DiscoveryTools.search_tables(
@@ -254,7 +254,7 @@ class FuzzyTableSelector:
             List of related tables
         """
         try:
-            from .discovery_tools import DiscoveryTools
+            from mcp_server.discovery_tools import DiscoveryTools
             
             relations = await DiscoveryTools.list_relations(
                 db_adapter=self.db_adapter,

@@ -11,7 +11,7 @@ import json
 from datetime import datetime, date
 from decimal import Decimal
 
-from .config import config
+from mcp_server.config import config
 
 logger = logging.getLogger(__name__)
 

@@ -446,8 +446,8 @@ class DiscoveryTools:
             
             try:
                 # Step 1: Parse intent (extract entities and operations)
-                from .intent_parser import IntentParser
-                from .table_ranker import TableRanker
+                from mcp_server.intent_parser import IntentParser
+                from mcp_server.table_ranker import TableRanker
                 
                 parser = IntentParser()
                 parsed_intent = parser.parse(query)
