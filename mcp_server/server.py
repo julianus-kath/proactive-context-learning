@@ -103,13 +103,13 @@ async def shutdown_event():
 @app.get("/health")
 async def health_check():
     """
-    Phase 6: Comprehensive health check endpoint.
+    Phase 7.1 (Scout Mode): Comprehensive health check with catalog metrics.
     
     Returns:
     - ok: Overall health status
     - service: Service name and version
     - db_connected: Database connection status
-    - catalog_stats: Catalog metrics (age, hits, table count)
+    - catalog: Scout catalog metrics (tables_count, catalog_age_s, cache_hits)
     - pool_stats: Connection pool statistics
     - discovery_tools: Discovery tools cache stats
     - observability: Recent tool call metrics
@@ -122,7 +122,7 @@ async def health_check():
         "ok": True,
         "service": "MCP Database Server",
         "version": "1.0.0",
-        "phase": "6 - Observability & Guardrails",
+        "phase": "7.1 - Scout Mode & Semantic Caching",
         "timestamp": time.time()
     }
     
@@ -148,44 +148,56 @@ async def health_check():
         else:
             health_data["dialects"] = ["unknown"]
         
-        # Phase 3: Catalog metrics
+        # Phase 7.1: Scout catalog metrics (from SchemaCatalog or SemanticCatalogBuilder)
+        health_data["catalog"] = {
+            "tables_count": 0,
+            "catalog_age_s": None,
+            "cache_hits": 0,
+            "cache_misses": 0,
+            "hit_ratio": 0.0,
+            "warmup_complete": False
+        }
+        
         if hasattr(db_manager, 'catalog') and db_manager.catalog:
-            catalog_metrics = db_manager.get_cache_stats()
-            health_data["catalog_stats"] = {
-                "age_s": catalog_metrics.get("catalog_age_s"),
-                "cache_hits": catalog_metrics.get("cache_hits", 0),
-                "cache_misses": catalog_metrics.get("cache_misses", 0),
-                "hit_ratio": catalog_metrics.get("hit_ratio", 0.0),
-                "table_count": catalog_metrics.get("table_count", 0),
-                "warmup_complete": catalog_metrics.get("warmup_complete", False)
-            }
+            catalog = db_manager.catalog
             
-            # Phase 4: Discovery tools metrics
-            try:
-                from discovery_tools import DiscoveryTools
+            # Get metrics from SchemaCatalog
+            if hasattr(catalog, '_metrics'):
+                metrics = catalog._metrics
+                health_data["catalog"]["tables_count"] = metrics.table_count
+                health_data["catalog"]["cache_hits"] = metrics.cache_hits
+                health_data["catalog"]["cache_misses"] = metrics.cache_misses
+                health_data["catalog"]["hit_ratio"] = metrics.hit_ratio()
+                health_data["catalog"]["warmup_complete"] = catalog._warmup_complete
+                
+                # Calculate age from last refresh
+                if metrics.last_refresh_time:
+                    health_data["catalog"]["catalog_age_s"] = time.time() - metrics.last_refresh_time
+            
+            # Alternative: Get from db_manager.get_cache_stats()
+            elif hasattr(db_manager, 'get_cache_stats'):
+                catalog_metrics = db_manager.get_cache_stats()
+                health_data["catalog"]["tables_count"] = catalog_metrics.get("table_count", 0)
+                health_data["catalog"]["cache_hits"] = catalog_metrics.get("cache_hits", 0)
+                health_data["catalog"]["cache_misses"] = catalog_metrics.get("cache_misses", 0)
+                health_data["catalog"]["hit_ratio"] = catalog_metrics.get("hit_ratio", 0.0)
+                health_data["catalog"]["catalog_age_s"] = catalog_metrics.get("catalog_age_s")
+                health_data["catalog"]["warmup_complete"] = catalog_metrics.get("warmup_complete", False)
+        
+        # Phase 4: Discovery tools metrics
+        try:
+            from discovery_tools import DiscoveryTools
+            if hasattr(DiscoveryTools, 'get_cache_stats'):
                 discovery_stats = DiscoveryTools.get_cache_stats()
                 health_data["discovery_tools"] = discovery_stats
-            except Exception as e:
-                logger.warning(f"Failed to get discovery tools stats: {e}")
-        # Legacy cache information (backward compatibility)
-        elif hasattr(db_manager, '_schema_cache'):
-            cache = db_manager._schema_cache
-            health_data["catalog_stats"] = {
-                "cached": cache.get("data") is not None,
-                "age_s": int(time.time() - cache["timestamp"]) if cache.get("timestamp") else None,
-                "cache_hits": cache.get("hits", 0)
-            }
-        else:
-            health_data["catalog_stats"] = {
-                "cached": False,
-                "age_s": None,
-                "cache_hits": 0
-            }
+        except Exception as e:
+            logger.warning(f"Failed to get discovery tools stats: {e}")
         
         # Phase 6: Connection pool statistics
         try:
-            pool_stats = db_manager.get_pool_stats()
-            health_data["pool_stats"] = pool_stats
+            if hasattr(db_manager, 'get_pool_stats'):
+                pool_stats = db_manager.get_pool_stats()
+                health_data["pool_stats"] = pool_stats
         except Exception as e:
             logger.warning(f"Failed to get pool stats: {e}")
             health_data["pool_stats"] = {"error": str(e)}
@@ -197,21 +209,22 @@ async def health_check():
             health_data["observability"] = metrics_summary
         except Exception as e:
             logger.warning(f"Failed to get observability metrics: {e}")
-            health_data["observability"] = {"error": str(e)}
         
         # Phase 6: Last database error
         try:
-            last_error = db_manager.get_last_error()
-            if last_error:
-                health_data["last_db_error"] = last_error
+            if hasattr(db_manager, 'get_last_error'):
+                last_error = db_manager.get_last_error()
+                if last_error:
+                    health_data["last_db_error"] = last_error
         except Exception as e:
             logger.warning(f"Failed to get last error: {e}")
         
         # Test a simple query if connected
         if db_connected:
             try:
-                test_result = await db_manager.fetch("SELECT 1 as test", limit=1)
-                health_data["query_test"] = "passed"
+                if hasattr(db_manager, 'fetch'):
+                    test_result = await db_manager.fetch("SELECT 1 as test", limit=1)
+                    health_data["query_test"] = "passed"
             except Exception as e:
                 health_data["query_test"] = "failed"
                 health_data["query_error"] = str(e)
@@ -220,6 +233,7 @@ async def health_check():
     except Exception as e:
         health_data["ok"] = False
         health_data["error"] = str(e)
+        logger.error(f"Health check error: {e}")
     
     return health_data
 

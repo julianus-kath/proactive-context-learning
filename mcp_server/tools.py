@@ -8,11 +8,11 @@ Phase 6: Added structured logging and observability.
 import logging
 import json
 from typing import Dict, Any, List
-from models import MCPTool, MCPToolResult
-from bounded_query import execute_bounded_query
-from config import config
-from discovery_tools import DiscoveryTools
-from observability import log_tool_call
+from .models import MCPTool, MCPToolResult
+from .bounded_query import execute_bounded_query
+from .config import config
+from .discovery_tools import DiscoveryTools
+from .observability import log_tool_call
 
 logger = logging.getLogger(__name__)
 

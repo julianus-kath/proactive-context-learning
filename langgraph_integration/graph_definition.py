@@ -1279,6 +1279,15 @@ def create_database_workflow(model_name: str = "gpt-4o", temperature: float = 0.
     return DatabaseWorkflow(model_name=model_name, temperature=temperature)
 
 
+# Module-level graph instantiation (Phase 4)
+# This is used by phase 4 integration tests and langgraph_service.py
+try:
+    graph = create_database_workflow().workflow
+except Exception as e:
+    logger.warning(f"Failed to instantiate module-level graph: {e}. Graph will be lazily created on first use.")
+    graph = None
+
+
 # Example usage
 async def main():
     """Example usage of the database workflow."""

@@ -369,23 +369,29 @@ class DiscoveryTools:
         page_size: int = 25
     ) -> DiscoveryResponse:
         """
-        Search tables by keyword with Scout Mode semantic ranking (Phase 7.1).
+        Search tables by query using Phase 2 semantic ranking (ADR-0015).
         
-        Uses semantic table ranking to understand context, not just keyword matching.
-        For example: "customers" returns customer tables, "sales" returns transaction tables.
+        Uses multi-signal scoring to rank tables:
+        1. Entity matching (table/column names)
+        2. Type compatibility (numeric for aggregates, date for trends)
+        3. Fuzzy matching (typo tolerance)
+        4. Foreign key connectivity
+        5. Table size
+        
+        Returns top-k tables <100ms from catalog cache with detailed reasoning.
         
         Args:
             db_adapter: DatabaseAdapter instance with catalog
-            query: Search query (case-insensitive, can be semantic)
+            query: Search query (natural language, e.g., "show me customers")
             page: Page number (1-indexed)
             page_size: Number of items per page (max: 100)
         
         Returns:
-            DiscoveryResponse with semantically ranked search results including:
-            - relevance_score: How relevant the table is (0.0-1.0)
-            - rank_reason: Why this table was selected ("semantic", "name_match", etc)
-            - description: Human-readable description of what the table contains
-            - matched_columns: Which columns matched the query
+            DiscoveryResponse with semantically ranked search results:
+            - relevance_score: 0.0-1.0 confidence
+            - reasons: List of scoring signals that contributed to rank
+            - estimated_rows: Cached row count
+            - fk_count: Foreign key count (connectedness indicator)
         """
         start_time = time.time()
         
@@ -434,38 +440,63 @@ class DiscoveryTools:
             
             catalog = db_adapter.catalog
             
-            # Phase 7.1: Try to use Scout Mode for semantic ranking if available
+            # Phase 2: Parse intent → extract entities/operations → rank all tables
+            rank_start = time.time()
             results = []
+            
             try:
-                from scout_mode import SemanticCatalogBuilder
-                scout = SemanticCatalogBuilder()
-                # Search using Scout Mode's semantic ranking (returns top matches by relevance)
-                search_results = scout.search(query, top_k=100)  # Get top 100, will paginate
+                # Step 1: Parse intent (extract entities and operations)
+                from .intent_parser import IntentParser
+                from .table_ranker import TableRanker
                 
-                for match in search_results:
-                    # Scout Mode returns TableSearchResult with similarity score
+                parser = IntentParser()
+                parsed_intent = parser.parse(query)
+                
+                logger.debug(f"Intent parsed: {parsed_intent.intent}, entities={parsed_intent.entities}, ops={parsed_intent.operations}")
+                
+                # Step 2: Load all tables from catalog (O(1) disk read, cached in memory)
+                all_tables = catalog.get_table_list()
+                
+                # Step 3: Rank all tables using multi-signal scoring (Phase 2 - ADR-0015)
+                ranker = TableRanker()
+                ranked_tables = ranker.rank_tables(
+                    tables=all_tables,
+                    entities=parsed_intent.entities,
+                    intent_operations=parsed_intent.operations,
+                    catalog_adapter=catalog
+                )
+                
+                rank_duration = (time.time() - rank_start) * 1000
+                logger.info(f"Ranked {len(all_tables)} tables in {rank_duration:.1f}ms for query '{query}'")
+                
+                # Step 4: Convert to API response format
+                # PHASE 2 FIX: Only include tables with meaningful scores (>0.0)
+                # This prevents LLM confusion from irrelevant results
+                for ranked_table in ranked_tables:
+                    if ranked_table.score <= 0.0:
+                        # Skip tables with zero relevance - they add noise
+                        continue
+                    
                     summary = {
-                        "schema": match.schema,
-                        "name": match.table_name,
-                        "full_name": match.full_name,
+                        "schema": ranked_table.schema,
+                        "name": ranked_table.name,
+                        "full_name": ranked_table.full_name,
                         "type": "TABLE",
-                        "estimated_rows": 0,  # Not available in Scout results
-                        "column_count": 0,
-                        "has_foreign_keys": False,
-                        "has_primary_keys": False,
-                        "relevance_score": match.similarity,  # 0.0-1.0 from Scout Mode
-                        "rank_reason": match.reason,  # "exact", "fuzzy", "semantic", etc
-                        "description": f"Semantic match via {match.reason} search",
-                        "matched_columns": match.column_matches if match.column_matches else []
+                        "estimated_rows": ranked_table.estimated_rows or 0,
+                        "column_count": ranked_table.column_count or 0,
+                        "fk_count": ranked_table.fk_count or 0,
+                        "has_foreign_keys": (ranked_table.fk_count or 0) > 0,
+                        "has_primary_keys": False,  # Would need to fetch from catalog if needed
+                        "relevance_score": ranked_table.score,  # 0.0-1.0 confidence
+                        "reasons": ranked_table.reasons,  # Why this table was ranked high
+                        "matched_columns": []  # Phase 3+ feature
                     }
                     results.append(summary)
                 
-                logger.info(f"🔍 Scout Mode: Found {len(results)} tables for query '{query}'")
+            except Exception as ranking_error:
+                logger.warning(f"Phase 2 ranking failed, falling back to basic search: {ranking_error}")
                 
-            except Exception as scout_error:
-                logger.debug(f"Scout Mode search not available, falling back to basic search: {scout_error}")
-                
-                # Fallback: Basic catalog search (not semantic)
+                # Fallback: Basic catalog search (for edge cases)
                 matching_tables = catalog.search_tables(query)
                 
                 for table in matching_tables:
@@ -473,31 +504,20 @@ class DiscoveryTools:
                     score = 0
                     query_lower = query.lower()
                     table_name_lower = table['name'].lower()
+                    reasons = []
                     
                     if query_lower == table_name_lower:
                         score = 1.0
+                        reasons.append("Exact match")
                     elif query_lower in table_name_lower:
                         score = 0.8
+                        reasons.append("Name contains query")
                     elif table_name_lower.startswith(query_lower):
                         score = 0.7
+                        reasons.append("Name starts with query")
                     else:
                         score = 0.5
-                    
-                    # Try to fetch full table details for column-level matching
-                    matched_columns = []
-                    description = f"Table {table['name']}"
-                    try:
-                        full_table = catalog.get_table(table['schema'], table['name'])
-                        if full_table and 'columns' in full_table:
-                            for col in full_table['columns']:
-                                col_name_lower = col.get('name', '').lower()
-                                if query_lower in col_name_lower:
-                                    matched_columns.append(col.get('name', ''))
-                                    score = min(1.0, score + 0.1)  # Boost if column matches
-                        if full_table and full_table.get('description'):
-                            description = full_table['description']
-                    except Exception as col_error:
-                        logger.debug(f"Could not fetch column details for {table['schema']}.{table['name']}: {col_error}")
+                        reasons.append("Name partially matches query")
                     
                     summary = {
                         "schema": table['schema'],
@@ -506,12 +526,12 @@ class DiscoveryTools:
                         "type": table['type'],
                         "estimated_rows": table.get('estimated_rows', 0),
                         "column_count": table.get('column_count', 0),
+                        "fk_count": table.get('fk_count', 0),
                         "has_foreign_keys": False,
                         "has_primary_keys": False,
                         "relevance_score": score,
-                        "rank_reason": "basic_search",
-                        "description": description,
-                        "matched_columns": matched_columns[:5]
+                        "reasons": reasons,
+                        "matched_columns": []
                     }
                     results.append(summary)
             

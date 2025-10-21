@@ -19,10 +19,10 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 env_path = os.path.join(project_root, '.env')
 load_dotenv(env_path)
 
-from config import config
-from db_postgres import PostgresConnector
-from db_mssql import MSSQLConnector
-from catalog import SchemaCatalog
+from .config import config
+from .db_postgres import PostgresConnector
+from .db_mssql import MSSQLConnector
+from .catalog import SchemaCatalog
 
 logger = logging.getLogger(__name__)
 
