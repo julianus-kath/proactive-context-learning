@@ -264,14 +264,28 @@ if [ ! -f "langgraph_service.py" ]; then
     exit 1
 fi
 
+# Clear old logs
+> "$LOG_DIR/langgraph.log"
+
 nohup python3 langgraph_service.py > "$LOG_DIR/langgraph.log" 2>&1 &
 LANGGRAPH_PID=$!
 echo -e "${GREEN}✅ LangGraph Service started (PID: $LANGGRAPH_PID)${NC}"
+echo -e "${YELLOW}📋 LangGraph Startup Logs:${NC}"
+
+# Stream logs until service is ready or timeout
+timeout 30 tail -f "$LOG_DIR/langgraph.log" 2>/dev/null | while IFS= read -r line; do
+    echo -e "${BLUE}  $line${NC}"
+    # Check if service is ready
+    if [[ $line == *"Uvicorn running on"* ]] || [[ $line == *"Application startup complete"* ]]; then
+        echo -e "${GREEN}✅ LangGraph Service is ready!${NC}"
+        break
+    fi
+done &
 
 # Wait for LangGraph to be ready
 wait_for_service "http://localhost:5001/health" "LangGraph Service" || {
     echo -e "${RED}❌ LangGraph Service failed to start${NC}"
-    echo -e "${YELLOW}Check logs: tail -f $LOG_DIR/langgraph.log${NC}"
+    echo -e "${YELLOW}Check full logs: tail -f $LOG_DIR/langgraph.log${NC}"
     cleanup
 }
 

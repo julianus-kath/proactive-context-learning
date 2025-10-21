@@ -256,6 +256,10 @@ class DatabaseWorkflow:
             Updated state with database index information or FAILED status
         """
         try:
+            logger.info(f"📚 Starting database catalog indexing...")
+            if debug_logger:
+                debug_logger.tool_call("index_database", {"action": "catalog_discovery"})
+            
             database_index = await index_database()
             state["database_index"] = database_index
             
@@ -263,6 +267,8 @@ class DatabaseWorkflow:
             if database_index.get("status") == "FAILED":
                 error_msg = database_index.get("error", "Unknown indexing error")
                 logger.error(f"❌ Database indexing FAILED: {error_msg}")
+                if debug_logger:
+                    debug_logger.tool_result("index_database", None, error=error_msg)
                 state["error_info"] = {
                     "type": "database_indexing_error",
                     "message": error_msg,
@@ -276,11 +282,28 @@ class DatabaseWorkflow:
                 total_tables = database_index.get("total_tables", 0)
                 schemas = database_index.get("schemas", [])
                 page_info = database_index.get("page_info", {})
-                logger.info(f"✅ Database indexed: {total_tables} tables across {len(schemas)} schemas (page {page_info.get('current_page', 1)}/{page_info.get('total_pages', 1)})")
+                
+                logger.info(f"✅ Database catalog indexed successfully")
+                logger.info(f"   Total tables: {total_tables}")
+                logger.info(f"   Schemas found: {len(schemas)} ({', '.join(schemas[:5])}{'...' if len(schemas) > 5 else ''})")
+                logger.info(f"   Pagination: page {page_info.get('current_page', 1)}/{page_info.get('total_pages', 1)}")
+                
+                if debug_logger:
+                    debug_logger.tool_result(
+                        "index_database",
+                        {
+                            "total_tables": total_tables,
+                            "schemas": schemas,
+                            "pagination": page_info
+                        }
+                    )
+                
                 state["catalog_available"] = True
             
         except Exception as e:
-            logger.error(f"❌ Unexpected error indexing database: {e}")
+            logger.error(f"❌ Unexpected error indexing database: {e}", exc_info=True)
+            if debug_logger:
+                debug_logger.tool_result("index_database", None, error=str(e))
             state["error_info"] = {
                 "type": "database_indexing_error",
                 "message": str(e),
@@ -331,11 +354,16 @@ class DatabaseWorkflow:
             state["intent_analysis"] = intent_analysis
             
             # Log the decision with comprehensive debug information
+            operation = intent_analysis.get("operation", "unknown")
+            missing_fields = intent_analysis.get("missing_fields", [])
+            entities = intent_analysis.get("entities", [])
+            
+            logger.info(f"📝 Intent Analysis Complete:")
+            logger.info(f"   Operation: {operation}")
+            logger.info(f"   Confidence: {intent_analysis.get('confidence', 1.0)}")
+            logger.info(f"   Entities: {entities}")
+            
             if debug_logger:
-                operation = intent_analysis.get("operation", "unknown")
-                missing_fields = intent_analysis.get("missing_fields", [])
-                entities = intent_analysis.get("entities", [])
-                
                 debug_logger.intent_parsed(
                     last_user_msg,
                     operation,
@@ -344,11 +372,25 @@ class DatabaseWorkflow:
                     entities=entities if entities else None
                 )
             
-            # Log the decision
-            if intent_analysis["operation"] == "clarify":
-                logger.info(f"Intent: CLARIFY - Missing: {intent_analysis.get('missing_fields', [])}")
+            # Log the decision with routing info
+            if operation == "clarify":
+                logger.warning(f"⚠️  Intent: CLARIFY - Missing fields: {missing_fields}")
+                logger.info(f"   → Will route to clarification node")
+            elif operation == "query":
+                logger.info(f"✅ Intent: QUERY")
+                if intent_analysis.get("sql"):
+                    logger.info(f"   → Direct SQL provided: {intent_analysis.get('sql', 'N/A')[:50]}...")
+                    logger.info(f"   → Will route to execute_direct (skip table selection)")
+                else:
+                    logger.info(f"   → Will route to scout mode (select_tables)")
+                    logger.info(f"   → Then generate SQL using indexed tables")
             else:
-                logger.info(f"Intent: QUERY - SQL: {intent_analysis.get('sql', 'N/A')[:50]}...")
+                logger.info(f"ℹ️  Intent: {operation}")
+            
+            if intent_analysis.get("reasoning"):
+                logger.debug(f"   Reasoning: {intent_analysis.get('reasoning')}")
+            if intent_analysis.get("defaults_applied"):
+                logger.info(f"   Defaults applied: {intent_analysis.get('defaults_applied')}")
             
         except Exception as e:
             logger.error(f"Error parsing intent: {e}")
@@ -528,7 +570,7 @@ class DatabaseWorkflow:
     
     async def _select_tables(self, state: WorkflowState) -> WorkflowState:
         """
-        Select relevant tables using MCP search_tables (Phase 5).
+        Select relevant tables using MCP search_tables (Phase 5 - Scout Mode).
         
         PHASE 5: Uses search_tables to find relevant tables based on keywords
         extracted from user query. Then calls describe_table for ≤3 tables
@@ -542,7 +584,11 @@ class DatabaseWorkflow:
         """
         try:
             user_input = state["user_input"]
-            session_cache = state.get("session_described_tables", {})
+            session_cache = state.get("session_described_tables", {}) or {}
+            
+            logger.info(f"🔍 SCOUT MODE: Analyzing user query: {user_input}")
+            if debug_logger:
+                debug_logger.tool_call("scout_table_search", {"query": user_input})
             
             # Extract keywords from user query (simple heuristic)
             # Remove common words and extract potential table/column names
@@ -554,14 +600,19 @@ class DatabaseWorkflow:
                 # Fallback: use first few words
                 keywords = words[:3]
             
+            logger.info(f"📊 Extracted keywords: {keywords}")
+            
             # Search for relevant tables using MCP search_tables
             search_keyword = " ".join(keywords[:2])  # Use first 2 keywords
-            logger.info(f"Searching tables with keyword: '{search_keyword}'")
+            logger.info(f"🔎 Searching tables with keyword: '{search_keyword}'")
+            if debug_logger:
+                debug_logger.scout_mode_operation("search_tables", search_keyword, [], {"status": "searching"})
             
             search_response = await search_tables_mcp(search_keyword, page=1, page_size=5)
             
             if search_response.get("ok"):
                 results = search_response.get("data", {}).get("results", [])
+                logger.info(f"✅ Scout mode found {len(results)} matching tables")
                 
                 # Extract top 3 table names
                 relevant_tables = []
@@ -569,41 +620,67 @@ class DatabaseWorkflow:
                     table_name = result.get("full_name", "")
                     if table_name:
                         relevant_tables.append(table_name)
+                        logger.info(f"  ✓ Selected table: {table_name}")
                 
                 state["relevant_tables"] = relevant_tables
-                logger.info(f"Found {len(relevant_tables)} relevant tables: {relevant_tables}")
+                logger.info(f"🎯 Selected {len(relevant_tables)} relevant tables for query")
+                
+                if debug_logger:
+                    debug_logger.scout_mode_operation(
+                        "search_results",
+                        search_keyword,
+                        relevant_tables,
+                        results[:3]
+                    )
                 
                 # Describe tables (use cache if available)
                 tables_to_describe = []
+                cached_tables = []
                 for table_name in relevant_tables:
-                    if table_name not in session_cache:
+                    if table_name in session_cache:
+                        cached_tables.append(table_name)
+                    else:
                         tables_to_describe.append(table_name)
+                
+                if cached_tables:
+                    logger.info(f"♻️  Using cached schemas for {len(cached_tables)} tables: {cached_tables}")
                 
                 # Fetch descriptions for new tables
                 if tables_to_describe:
-                    logger.info(f"Describing {len(tables_to_describe)} new tables: {tables_to_describe}")
+                    logger.info(f"📋 Fetching fresh schemas for {len(tables_to_describe)} new tables: {tables_to_describe}")
+                    if debug_logger:
+                        debug_logger.tool_call("describe_table_batch", {"tables": tables_to_describe})
+                    
                     new_descriptions = await describe_table_batch(tables_to_describe)
                     session_cache.update(new_descriptions)
                     state["session_described_tables"] = session_cache
-                else:
-                    logger.info(f"All {len(relevant_tables)} tables already in session cache")
+                    
+                    logger.info(f"✅ Successfully described {len(tables_to_describe)} tables")
+                    if debug_logger:
+                        debug_logger.tool_result("describe_table_batch", f"{len(tables_to_describe)} tables described")
                 
                 # Build schema snippet from cached descriptions
                 table_descriptions = {t: session_cache[t] for t in relevant_tables if t in session_cache}
                 schema_snippet = build_schema_snippet(table_descriptions)
                 state["schema_snippet"] = schema_snippet
                 
-                logger.info(f"Built schema snippet ({len(schema_snippet)} chars) for {len(table_descriptions)} tables")
+                logger.info(f"📝 Built schema snippet ({len(schema_snippet)} chars) for {len(table_descriptions)} tables")
+                logger.info(f"📌 Schema snippet preview:\n{schema_snippet[:300]}...")
+                
             else:
                 error_msg = search_response.get("error", "Unknown error")
-                logger.warning(f"Search failed: {error_msg}, using lightweight schema")
+                logger.warning(f"⚠️  Scout mode search failed: {error_msg}, using lightweight schema")
+                if debug_logger:
+                    debug_logger.workflow_error("scout_search_failed", error_msg)
                 state["schema_snippet"] = state.get("schema", "No schema available")
             
         except Exception as e:
-            logger.error(f"Error selecting tables: {e}")
+            logger.error(f"❌ Error in scout mode table selection: {e}", exc_info=True)
+            if debug_logger:
+                debug_logger.workflow_error("scout_mode_error", str(e))
             # Fallback to lightweight schema overview
             state["schema_snippet"] = state.get("schema", "No schema available")
-            logger.info("Falling back to schema overview")
+            logger.info("⚠️  Falling back to schema overview")
         
         return state
     
@@ -1085,7 +1162,7 @@ class DatabaseWorkflow:
         """
         try:
             # Check if catalog failed
-            error_info = state.get("error_info", {})
+            error_info = state.get("error_info") or {}
             if error_info.get("catalog_failed"):
                 catalog_error = error_info.get("message", "catalog unavailable")
                 state["final_response"] = (
@@ -1095,14 +1172,26 @@ class DatabaseWorkflow:
                     "please try again in a moment once the catalog is available."
                 )
                 logger.warning(f"Clarify requested but catalog unavailable: {catalog_error}")
+                if debug_logger:
+                    debug_logger.decision_made("clarify_with_catalog_error", f"Catalog unavailable: {catalog_error}")
                 return state
             
             from .prompts import format_clarification_prompt
             
             intent = state.get("intent_analysis") or {}
+            if not intent or not isinstance(intent, dict):
+                logger.warning(f"Intent analysis is invalid: {intent}")
+                if debug_logger:
+                    debug_logger.workflow_error("invalid_intent_analysis", f"intent_analysis={intent}")
+                intent = {}
+            
             missing_fields = intent.get("missing_fields", [])
-            messages = state.get("messages", [])
+            messages = state.get("messages", []) or []
             schema = state.get("schema", "No schema available")
+            
+            logger.info(f"🔍 Clarify: missing_fields={missing_fields}, intent_operation={intent.get('operation', 'unknown')}")
+            if debug_logger:
+                debug_logger.decision_made("clarify_question", f"Missing fields: {missing_fields}", missing_fields)
             
             # Generate clarifying question with schema context
             prompt = format_clarification_prompt(messages, missing_fields, schema)
@@ -1111,10 +1200,14 @@ class DatabaseWorkflow:
             clarification = response.content
             state["final_response"] = clarification
             
-            logger.info(f"Generated clarification: {clarification[:100]}...")
+            logger.info(f"✅ Generated clarification: {clarification[:100]}...")
+            if debug_logger:
+                debug_logger.tool_result("format_clarification", clarification)
             
         except Exception as e:
-            logger.error(f"Error generating clarification: {e}")
+            logger.error(f"❌ Error generating clarification: {e}", exc_info=True)
+            if debug_logger:
+                debug_logger.workflow_error("clarification_generation_error", str(e))
             state["final_response"] = "I need more information to help you. Could you please provide more details about what you're looking for?"
         
         return state

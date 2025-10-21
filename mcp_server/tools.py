@@ -80,20 +80,6 @@ class MCPTools:
                     "required": ["sql"]
                 }
             ),
-            MCPTool(
-                name="get_table_info",
-                description="Get detailed information about a specific table (legacy - use describe_table for Phase 4)",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "table_name": {
-                            "type": "string",
-                            "description": "Name of the table to inspect"
-                        }
-                    },
-                    "required": ["table_name"]
-                }
-            ),
             # Phase 4: Discovery tools
             MCPTool(
                 name="list_tables",
@@ -174,7 +160,7 @@ class MCPTools:
             ),
             MCPTool(
                 name="list_relations",
-                description="Get relationships (neighbors) for a specific table with join columns (Phase 4 - catalog-backed, O(1) lookup)",
+                description="Get relationships (neighbors) for a specific table with join columns",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -222,7 +208,7 @@ class MCPTools:
             ),
             MCPTool(
                 name="rank_tables",
-                description="Rank database tables by relevance to query intent (Phase 7 - answer-first support)",
+                description="Rank database tables by relevance to query intent",
                 inputSchema={
                     "type": "object",
                     "properties": {

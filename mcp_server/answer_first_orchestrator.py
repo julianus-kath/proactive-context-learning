@@ -100,6 +100,29 @@ class AnswerFirstOrchestrator:
         self.db_adapter = db_adapter
         self.catalog = catalog
         self.dialect = dialect
+        # Metrics flags for acceptance criteria
+        self._attempts: int = 0
+        self._needed_clarification: bool = False
+
+    def _normalize_exec_error(self, error_code: Optional[str], error_message: str) -> Dict[str, Any]:
+        """Map raw execution errors into normalized hints for targeted clarification."""
+        msg = (error_message or "").lower()
+        hints: list[str] = []
+        code = error_code or "EXECUTION_FAILED"
+
+        if any(k in msg for k in ["column", "does not exist", "invalid column", "unknown column", "invalid identifier"]):
+            code = "UNKNOWN_COLUMN"
+            hints.append("Which column should be used for this measure or filter?")
+        if any(k in msg for k in ["table", "object", "does not exist", "invalid object", "unknown table"]):
+            code = "UNKNOWN_TABLE" if code == "EXECUTION_FAILED" else code
+            hints.append("Can you confirm the correct table name?")
+        if any(k in msg for k in ["convert", "cast", "type", "varchar", "int", "numeric", "date"]):
+            code = "TYPE_MISMATCH" if code == "EXECUTION_FAILED" else code
+            hints.append("Should we cast the column to a compatible type (e.g., date or numeric)?")
+        if not hints:
+            hints.append("Please verify involved table/column names.")
+
+        return {"code": code, "message": error_message, "hints": hints[:3]}
     
     async def execute_answer_first(self, query: str) -> AnswerFirstResult:
         """
@@ -216,7 +239,113 @@ class AnswerFirstOrchestrator:
                     debug_info=debug_info
                 )
             
-            # Step 4: Generate query blueprint
+            # =========================
+            # Reflexion-style loop (Approach 1): plan → sql → validate → (repair?) → validate
+            # =========================
+            try:
+                # Build schema snippet for up to 3 tables using catalog-only describe_table
+                schema_snippet = await self._get_schema_snippet([t.full_name for t in selected_tables[:3]])
+                debug_info["schema_snippet_tables"] = [t.get("full_name") for t in schema_snippet]
+
+                # Plan blueprint JSON from snippet
+                reflex_blueprint = self._plan_blueprint_json(
+                    user_query=query,
+                    parsed_intent=parsed_intent,
+                    selected_tables=selected_tables,
+                    schema_snippet=schema_snippet,
+                    dialect=self.dialect
+                )
+                debug_info["reflex_blueprint"] = reflex_blueprint
+
+                if reflex_blueprint and self.db_adapter:
+                    # Generate SQL from blueprint
+                    sql_1 = self._generate_sql_from_blueprint(reflex_blueprint, schema_snippet)
+                    debug_info["sql_initial"] = sql_1
+
+                    # Validate (preflight limit=1)
+                    from mcp_server.bounded_query import execute_bounded_query
+                    preflight_1 = await execute_bounded_query(
+                        query=sql_1,
+                        db_adapter=self.db_adapter,
+                        dialect=self.dialect,
+                        max_rows=1,
+                        requested_limit=1,
+                        enable_redaction=True
+                    )
+                    attempts = 1
+                    critic_error_code = None
+
+                    if not preflight_1.ok:
+                        # One repair attempt
+                        norm1 = self._normalize_exec_error(preflight_1.error_code, preflight_1.error_message or "")
+                        critic_error_code = norm1.get("code")
+                        debug_info["critic_preflight_1"] = norm1
+                        sql_2 = self._repair_sql_with_error(sql_1, norm1, schema_snippet, reflex_blueprint)
+                        debug_info["sql_repaired"] = sql_2
+                        attempts = 2
+                        preflight_2 = await execute_bounded_query(
+                            query=sql_2,
+                            db_adapter=self.db_adapter,
+                            dialect=self.dialect,
+                            max_rows=1,
+                            requested_limit=1,
+                            enable_redaction=True
+                        )
+                        if not preflight_2.ok:
+                            # Ask one concise clarification based on hints
+                            norm2 = self._normalize_exec_error(preflight_2.error_code, preflight_2.error_message or "")
+                            debug_info["critic_preflight_2"] = norm2
+                            hint = (norm2.get("hints") or ["Please verify involved table/column names."])[0]
+                            self._attempts = attempts
+                            self._needed_clarification = True
+                            return AnswerFirstResult(
+                                success=False,
+                                answer=f"Need a quick clarification: {hint}",
+                                error_message=f"Validation failed after repair: {norm2.get('message')}",
+                                tables_used=[t.full_name for t in selected_tables],
+                                debug_info={**debug_info, "attempts": attempts, "critic_error_code": critic_error_code, "needed_clarification": True}
+                            )
+                        # Preflight 2 OK → execute full SQL
+                        rows = await self.db_adapter.fetch(sql_2)
+                        exec_duration = (time.time() - intent_start) * 1000  # reuse timing window for simplicity
+                        formatter = QueryFormatter(intent=parsed_intent.intent.value)
+                        columns = list(rows[0].keys()) if rows else []
+                        formatted_result = formatter.format_results(rows, columns, exec_duration, query)
+                        total_duration = (time.time() - start_time) * 1000
+                        self._attempts = attempts
+                        self._needed_clarification = False
+                        return AnswerFirstResult(
+                            success=True,
+                            answer=formatted_result.get("summary", "Query executed successfully"),
+                            data=formatted_result.get("data", []),
+                            intent=parsed_intent.intent.value,
+                            tables_used=[t.full_name for t in selected_tables],
+                            execution_time_ms=round(total_duration, 2),
+                            debug_info={**debug_info, "attempts": attempts, "needed_clarification": False, "total_duration_ms": round(total_duration, 2)}
+                        )
+                    else:
+                        # Preflight 1 OK → execute full SQL
+                        rows = await self.db_adapter.fetch(sql_1)
+                        exec_duration = (time.time() - intent_start) * 1000
+                        formatter = QueryFormatter(intent=parsed_intent.intent.value)
+                        columns = list(rows[0].keys()) if rows else []
+                        formatted_result = formatter.format_results(rows, columns, exec_duration, query)
+                        total_duration = (time.time() - start_time) * 1000
+                        self._attempts = attempts
+                        self._needed_clarification = False
+                        return AnswerFirstResult(
+                            success=True,
+                            answer=formatted_result.get("summary", "Query executed successfully"),
+                            data=formatted_result.get("data", []),
+                            intent=parsed_intent.intent.value,
+                            tables_used=[t.full_name for t in selected_tables],
+                            execution_time_ms=round(total_duration, 2),
+                            debug_info={**debug_info, "attempts": attempts, "needed_clarification": False, "total_duration_ms": round(total_duration, 2)}
+                        )
+            except Exception as reflex_err:
+                logger.info(f"Reflexion loop skipped due to: {reflex_err}")
+
+            # Step 4: Generate query blueprint (fallback legacy path)
             logger.info(f"Generating query blueprint for intent: {parsed_intent.intent.value}")
             blueprint_start = time.time()
             
@@ -252,30 +381,68 @@ class AnswerFirstOrchestrator:
                     debug_info=debug_info
                 )
             
-            # Step 5: Execute query
+            # Step 5: Execute query with preflight validation (bounded limit=1)
             logger.info(f"Executing query blueprint: {blueprint.description}")
             exec_start = time.time()
-            
+
             if not self.db_adapter:
                 return AnswerFirstResult(
                     success=False,
                     answer="Database not configured",
                     error_message="Database adapter not provided"
                 )
-            
-            # Execute the blueprint template
+
+            # Preflight validation using bounded query (LIMIT/TOP 1)
+            try:
+                from mcp_server.bounded_query import execute_bounded_query
+            except Exception:
+                execute_bounded_query = None
+
+            if execute_bounded_query is not None:
+                try:
+                    preflight = await execute_bounded_query(
+                        query=blueprint.template,
+                        db_adapter=self.db_adapter,
+                        dialect=self.dialect,
+                        max_rows=1,
+                        requested_limit=1,
+                        enable_redaction=True
+                    )
+                    if not preflight.ok:
+                        # Normalize error for concise clarification
+                        norm = self._normalize_exec_error(
+                            error_code=preflight.error_code,
+                            error_message=preflight.error_message or ""
+                        )
+                        debug_info["preflight_error"] = norm
+                        # Ask a targeted one-line clarification instead of generic fallback
+                        hint = norm.get("hints", ["Please verify involved table/column names."])[0]
+                        return AnswerFirstResult(
+                            success=False,
+                            answer=f"Need a quick clarification: {hint}",
+                            error_message=f"Preflight validation failed: {norm.get('message')}",
+                            tables_used=[t.full_name for t in selected_tables],
+                            debug_info=debug_info
+                        )
+                except Exception as e:
+                    # If preflight infrastructure fails, proceed to normal execution path
+                    logger.warning(f"Preflight validation skipped due to error: {e}")
+
+            # Execute the blueprint template (full)
             try:
                 rows = await self.db_adapter.fetch(blueprint.template)
             except Exception as e:
+                # Normalize runtime error too
+                norm = self._normalize_exec_error(error_code="EXECUTION_FAILED", error_message=str(e))
                 logger.error(f"Query execution failed: {e}")
                 return AnswerFirstResult(
                     success=False,
-                    answer=f"Query execution failed: {str(e)}",
+                    answer=f"Execution error: {norm.get('message')}",
                     error_message=str(e),
                     tables_used=[t.full_name for t in selected_tables],
-                    debug_info=debug_info
+                    debug_info={**debug_info, "execution_error": norm}
                 )
-            
+
             exec_duration = (time.time() - exec_start) * 1000
             
             # Step 6: Format results
@@ -454,3 +621,184 @@ class AnswerFirstOrchestrator:
                 return indicator
         
         return None
+
+    async def _get_schema_snippet(self, table_full_names: List[str]) -> List[Dict[str, Any]]:
+        """Fetch describe_table snippets (catalog-only) for up to 3 tables."""
+        snippet: List[Dict[str, Any]] = []
+        if not table_full_names:
+            return snippet
+        try:
+            from mcp_server.discovery_tools import DiscoveryTools
+            for full in table_full_names[:3]:
+                resp = await DiscoveryTools.describe_table(
+                    db_adapter=self.db_adapter,
+                    table_name=full,
+                    include_sample=False
+                )
+                if getattr(resp, "ok", False) and resp.data:
+                    snippet.append(resp.data)
+        except Exception as e:
+            logger.info(f"Schema snippet build skipped: {e}")
+        return snippet
+
+    def _plan_blueprint_json(self,
+                             user_query: str,
+                             parsed_intent: ParsedIntent,
+                             selected_tables: List[RankedTable],
+                             schema_snippet: List[Dict[str, Any]],
+                             dialect: str) -> Optional[Dict[str, Any]]:
+        """
+        Deterministic planner that emits Blueprint JSON using only snippet columns.
+        Obeys: use only identifiers present; single fact_table; joins from FKs.
+        """
+        if not schema_snippet:
+            return None
+        # Choose fact table: prefer one with measure_suggestions and a date candidate
+        def table_score(t: Dict[str, Any]) -> int:
+            score = 0
+            if t.get("measure_suggestions"): score += 2
+            if t.get("time_col_candidates"): score += 1
+            return score
+        snippet_sorted = sorted(schema_snippet, key=table_score, reverse=True)
+        fact = snippet_sorted[0]
+        fact_full = fact.get("full_name")
+        # Dimensions are the other tables in snippet
+        dims = [t.get("full_name") for t in snippet_sorted[1:]]
+        # Build joins from foreign keys pointing between snippet tables
+        joins: List[Dict[str, str]] = []
+        snippet_fulls = {t.get("full_name"): t for t in schema_snippet}
+        for t in schema_snippet:
+            for fk in t.get("foreign_keys", []) or []:
+                ref_full = fk.get("referenced_full_name")
+                if ref_full in snippet_fulls:
+                    left = f"{t.get('full_name')}.{fk.get('column')}"
+                    right = f"{ref_full}.{fk.get('referenced_column')}"
+                    joins.append({"left": left, "right": right})
+        # Measures
+        measures = []
+        ms = fact.get("measure_suggestions") or []
+        if ms:
+            measures.append({
+                "name": ms[0].get("name", "metric"),
+                "expr": ms[0].get("expr"),
+                "agg": ms[0].get("agg", "SUM")
+            })
+        # Filters: last quarter if date candidate available and intent implies ranking/aggregate
+        filters: List[Dict[str, str]] = []
+        if fact.get("time_col_candidates"):
+            time_col = fact["time_col_candidates"][0]
+            filters.append({"expr": self._last_quarter_expr(dialect, time_col, fact_full)})
+        # Order and limit
+        order_by = []
+        if measures:
+            order_by = [{"expr": measures[0]["name"], "dir": "DESC"}]
+        limit = 5 if "top" in user_query.lower() or parsed_intent.intent.value in ("REPORT", "AGGREGATE") else 10
+        return {
+            "entities": parsed_intent.entities,
+            "fact_table": fact_full,
+            "dimensions": dims,
+            "joins": joins,
+            "measures": measures,
+            "filters": filters,
+            "order_by": order_by,
+            "limit": limit,
+            "dialect": dialect
+        }
+
+    def _last_quarter_expr(self, dialect: str, time_col: str, fact_full: str) -> str:
+        """Return dialect-specific last-quarter filter expression."""
+        col = f"{fact_full}.{time_col}"
+        if dialect == "postgres":
+            return f"{col} >= DATE_TRUNC('quarter', CURRENT_DATE) - INTERVAL '3 months'"
+        # mssql default
+        return (
+            "(" 
+            f"{col} >= DATEADD(quarter,-1,DATEFROMPARTS(YEAR(GETDATE()),((DATEPART(quarter,GETDATE())-1)*3)+1,1))"
+            ")"
+        )
+
+    def _generate_sql_from_blueprint(self, bp: Dict[str, Any], snippet: List[Dict[str, Any]]) -> str:
+        """Translate Blueprint JSON into runnable SQL (dialect-aware)."""
+        dialect = bp.get("dialect", self.dialect)
+        fact = bp["fact_table"]
+        dims = bp.get("dimensions", []) or []
+        joins = bp.get("joins", []) or []
+        measures = bp.get("measures", []) or []
+        filters = bp.get("filters", []) or []
+        order_by = bp.get("order_by", []) or []
+        limit = int(bp.get("limit", 10))
+        # Aliases
+        alias_map: Dict[str, str] = {fact: "f"}
+        for i, d in enumerate(dims):
+            alias_map[d] = f"d{i+1}"
+        # Build SELECT list
+        select_parts: List[str] = []
+        if measures:
+            m = measures[0]
+            select_parts.append(f"{m['agg']}({m['expr']}) AS {m['name']}")
+        else:
+            select_parts.append("COUNT(*) AS count")
+        # FROM and JOINs
+        from_clause = f"FROM {fact} f"
+        join_clauses: List[str] = []
+        for j in joins:
+            ltbl = j['left'].rsplit('.', 1)[0]
+            rtbl = j['right'].rsplit('.', 1)[0]
+            if ltbl in alias_map and rtbl in alias_map:
+                lcol = j['left'].split('.')[-1]
+                rcol = j['right'].split('.')[-1]
+                # Join the non-fact side to the fact when possible
+                if ltbl == fact:
+                    join_clauses.append(f"INNER JOIN {rtbl} {alias_map[rtbl]} ON f.{lcol} = {alias_map[rtbl]}.{rcol}")
+                elif rtbl == fact:
+                    join_clauses.append(f"INNER JOIN {ltbl} {alias_map[ltbl]} ON {alias_map[ltbl]}.{lcol} = f.{rcol}")
+        # WHERE
+        where_parts = [f["expr"] for f in filters if f.get("expr")]
+        where_clause = f"WHERE {' AND '.join(where_parts)}" if where_parts else ""
+        # ORDER/LIMIT
+        order_clause = ""
+        if order_by:
+            order_expr = order_by[0]["expr"]
+            direction = order_by[0].get("dir", "DESC")
+            order_clause = f"ORDER BY {order_expr} {direction}"
+        if dialect == "postgres":
+            limit_clause = f"LIMIT {limit}"
+            sql = f"SELECT {', '.join(select_parts)} {from_clause} {' '.join(join_clauses)} {where_clause} {order_clause} {limit_clause}".strip()
+        else:  # mssql
+            top_prefix = f"TOP {limit} " if measures else f"TOP {limit} "
+            # For MSSQL, TOP is part of SELECT
+            sql = f"SELECT {top_prefix}{', '.join(select_parts)} {from_clause} {' '.join(join_clauses)} {where_clause} {order_clause}".strip()
+        return " ".join(sql.split())
+
+    def _repair_sql_with_error(self,
+                               sql: str,
+                               norm_error: Dict[str, Any],
+                               snippet: List[Dict[str, Any]],
+                               bp: Dict[str, Any]) -> str:
+        """Attempt a single repair based on normalized error."""
+        code = (norm_error.get("code") or "").upper()
+        bp2 = dict(bp)
+        # If unknown column, try switching time column candidate (if filter used)
+        if code == "UNKNOWN_COLUMN":
+            fact_full = bp2.get("fact_table")
+            fact = next((t for t in snippet if t.get("full_name") == fact_full), None)
+            candidates = (fact or {}).get("time_col_candidates") or []
+            if len(candidates) > 1:
+                # rotate to next candidate
+                new_time = candidates[1]
+                # Replace filter expr
+                bp2["filters"] = [{"expr": self._last_quarter_expr(bp2.get("dialect", self.dialect), new_time, fact_full)}]
+                return self._generate_sql_from_blueprint(bp2, snippet)
+        if code == "UNKNOWN_TABLE":
+            # Ensure fully qualified names are present (already are in blueprint); no-op fallback re-generate
+            return self._generate_sql_from_blueprint(bp2, snippet)
+        if code == "TYPE_MISMATCH":
+            # Try simple CAST around measure expr for safety
+            measures = bp2.get("measures") or []
+            if measures:
+                m = dict(measures[0])
+                m["expr"] = f"TRY_CAST({m['expr']} AS FLOAT)"
+                bp2["measures"] = [m]
+                return self._generate_sql_from_blueprint(bp2, snippet)
+        # Default: return original SQL
+        return sql

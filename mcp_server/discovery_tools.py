@@ -694,6 +694,14 @@ class DiscoveryTools:
                 )
             
             # Build response data (catalog.get_table() already returns dict with properly serialized columns and fks)
+            # Also augment foreign keys with referenced_full_name for downstream consumers.
+            fk_list = table.get("foreign_keys", []) or []
+            for fk in fk_list:
+                try:
+                    fk["referenced_full_name"] = f"{fk.get('referenced_schema')}.{fk.get('referenced_table')}"
+                except Exception:
+                    fk["referenced_full_name"] = None
+
             data = {
                 "schema": table["schema"],
                 "name": table["name"],
@@ -702,19 +710,108 @@ class DiscoveryTools:
                 "estimated_rows": table["estimated_rows"],
                 "columns": table.get("columns", []),  # Already properly serialized from catalog
                 "primary_keys": table.get("primary_keys", []),
-                "foreign_keys": table.get("foreign_keys", []),  # Already properly serialized from catalog
+                "foreign_keys": fk_list,  # Already properly serialized from catalog, augmented with referenced_full_name
                 "top_columns": table.get("top_columns", []),  # Already a list of strings
                 "neighbors": table.get("neighbors", [])  # Already a list of strings
             }
+
+            # Enrich with role_hints, time_col_candidates, and measure_suggestions (catalog-derived only)
+            try:
+                fk_map = {}
+                for fk in data.get("foreign_keys", []) or []:
+                    try:
+                        fk_map[fk.get("column")] = f"{fk.get('referenced_schema')}.{fk.get('referenced_table')}"
+                    except Exception:
+                        continue
+
+                def infer_role_hints(col: dict) -> list:
+                    name = str(col.get("name", "")).lower()
+                    dtype = str(col.get("type", "")).lower()
+                    hints: list[str] = []
+
+                    # id / pk
+                    if col.get("is_primary_key") or name == "id" or name.endswith("_id"):
+                        hints.append("id")
+
+                    # fk
+                    if col.get("is_foreign_key") or name.endswith("_id"):
+                        target = fk_map.get(col.get("name"))
+                        if target:
+                            hints.append(f"fk_to:{target}")
+
+                    # date-like
+                    if any(k in name for k in ["date", "time", "timestamp", "created", "updated"]) or \
+                       any(k in dtype for k in ["date", "time", "timestamp"]):
+                        hints.append("date")
+
+                    # amount-like
+                    if any(k in name for k in ["amount", "total", "price", "revenue", "cost", "subtotal", "grand_total", "sales"]):
+                        hints.append("amount")
+
+                    # quantity-like
+                    if any(k in name for k in ["qty", "quantity", "units", "count", "qnty"]):
+                        hints.append("quantity")
+
+                    # status-like
+                    if any(k in name for k in ["status", "state", "flag"]):
+                        hints.append("status")
+
+                    # email
+                    if "email" in name:
+                        hints.append("email")
+
+                    # de-dup while preserving order
+                    return list(dict.fromkeys(hints))
+
+                # Apply role_hints to columns
+                for col in data.get("columns", []) or []:
+                    col["role_hints"] = infer_role_hints(col)
+
+                # Time column candidates (top 5)
+                data["time_col_candidates"] = [
+                    c.get("name") for c in data.get("columns", []) or []
+                    if isinstance(c.get("role_hints"), list) and "date" in c.get("role_hints")
+                ][:5]
+
+                # Measure suggestions
+                def find_cols(keywords: list[str]) -> list[str]:
+                    return [
+                        c.get("name") for c in data.get("columns", []) or []
+                        if any(k in str(c.get("name", "")).lower() for k in keywords)
+                    ]
+
+                price_like = find_cols(["unit_price", "price", "line_amount", "amount"])
+                qty_like = find_cols(["qty", "quantity", "units", "count"])
+                amount_like = find_cols(["amount", "total", "revenue", "cost", "subtotal", "grand_total", "sales"])
+
+                measure_suggestions: list[dict] = []
+                if price_like and qty_like:
+                    measure_suggestions.append({
+                        "name": "revenue",
+                        "expr": f"{price_like[0]}*{qty_like[0]}",
+                        "agg": "SUM"
+                    })
+                # Simple SUMs for standalone amount-like columns
+                for col_name in amount_like:
+                    measure_suggestions.append({
+                        "name": f"sum_{col_name}",
+                        "expr": col_name,
+                        "agg": "SUM"
+                    })
+
+                data["measure_suggestions"] = measure_suggestions[:5]
+            except Exception as enrich_err:
+                # Non-fatal: enrichment best-effort only
+                logger.debug(f"describe_table enrichment skipped due to error: {enrich_err}")
             
             # Include sample data if requested (requires DB query)
             if include_sample:
                 try:
-                    sample_query = f"SELECT * FROM {table.full_name()} LIMIT 5"
+                    sample_query = f"SELECT * FROM {data['full_name']} LIMIT 5"
                     sample_rows = await db_adapter.fetch(sample_query, limit=5)
                     data["sample_data"] = sample_rows
                 except Exception as e:
-                    logger.warning(f"Failed to fetch sample data for {table.full_name()}: {e}")
+                    logger.warning(f"Failed to fetch sample data for {data.get('full_name')}: {e}")
                     data["sample_data"] = None
                     data["sample_error"] = str(e)
             
