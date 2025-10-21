@@ -72,8 +72,8 @@ async def startup_event():
     """Initialize the database connection and run Scout Mode on startup."""
     global db_manager
     try:
-        from database_adapter import DatabaseAdapter
-        from scout_mode import run_scout_mode
+        from .database_adapter import DatabaseAdapter
+        from .scout_mode import run_scout_mode
         
         db_manager = DatabaseAdapter()
         await db_manager.initialize()
@@ -186,7 +186,7 @@ async def health_check():
         
         # Phase 4: Discovery tools metrics
         try:
-            from discovery_tools import DiscoveryTools
+            from .discovery_tools import DiscoveryTools
             if hasattr(DiscoveryTools, 'get_cache_stats'):
                 discovery_stats = DiscoveryTools.get_cache_stats()
                 health_data["discovery_tools"] = discovery_stats
@@ -204,7 +204,7 @@ async def health_check():
         
         # Phase 6: Observability metrics
         try:
-            from observability import get_metrics_summary
+            from .observability import get_metrics_summary
             metrics_summary = get_metrics_summary()
             health_data["observability"] = metrics_summary
         except Exception as e:
@@ -245,7 +245,7 @@ async def mcp_endpoint(
     """MCP JSON-RPC endpoint with proper envelope & error handling."""
     try:
         # Import tools here to avoid circular imports
-        from tools import MCPTools
+        from .tools import MCPTools
         import json as json_module
         
         response_data = None
