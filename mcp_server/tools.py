@@ -240,7 +240,7 @@ class MCPTools:
                         "page_size": {"type":"integer","description":"Items per page (default: 25, max: 100)","default":25,"minimum":1,"maximum":100},
                         "schema": {"type":"string","description":"Filter by schema (optional)"},
                         "pattern": {"type":"string","description":"Case-insensitive name filter (optional)"},
-                        "include_empty": {"type":"boolean","description":"Include views with zero rows (default: false)","default": false}
+                        "include_empty": {"type":"boolean","description":"Include views with zero rows (default: false)","default": False}
                     },
                     "required": []
                 }
@@ -254,7 +254,7 @@ class MCPTools:
                         "query": {"type":"string","description":"Natural language query"},
                         "page": {"type":"integer","description":"Page number (1-indexed, default: 1)","default":1,"minimum":1},
                         "page_size": {"type":"integer","description":"Items per page (default: 10, max: 50)","default":10,"minimum":1,"maximum":50},
-                        "include_empty": {"type":"boolean","description":"Include views with zero rows (default: false)","default": false}
+                        "include_empty": {"type":"boolean","description":"Include views with zero rows (default: false)","default": False}
                     },
                     "required": ["query"]
                 }
@@ -266,7 +266,7 @@ class MCPTools:
                     "type": "object",
                     "properties": {
                         "view_name": {"type":"string","description":"Fully qualified view name (schema.view) or view name"},
-                        "include_sample": {"type":"boolean","description":"Include sample data (requires DB query, default: false)","default": false}
+                        "include_sample": {"type":"boolean","description":"Include sample data (requires DB query, default: false)","default": False}
                     },
                     "required": ["view_name"]
                 }
