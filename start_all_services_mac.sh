@@ -255,14 +255,23 @@ echo ""
 echo -e "${BLUE}🚀 Starting Mac services...${NC}"
 echo ""
 
-# Start LangGraph Service
-echo -e "${YELLOW}🔧 Starting LangGraph Service (Port 5001)...${NC}"
+# Start LangGraph Service with Multi-Agent Orchestrator
+echo -e "${YELLOW}🔧 Starting LangGraph Service (Port 5001) - Multi-Agent Orchestrator...${NC}"
 cd "$PROJECT_ROOT/chatbot_ui"
 
 if [ ! -f "langgraph_service.py" ]; then
     echo -e "${RED}❌ langgraph_service.py not found${NC}"
     exit 1
 fi
+
+# Verify orchestrator exists
+if [ ! -f "$PROJECT_ROOT/langgraph_integration/orchestrator.py" ]; then
+    echo -e "${RED}❌ Multi-Agent Orchestrator not found${NC}"
+    echo -e "${YELLOW}   Expected: langgraph_integration/orchestrator.py${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Multi-Agent Orchestrator found${NC}"
 
 # Clear old logs
 > "$LOG_DIR/langgraph.log"
@@ -276,7 +285,7 @@ echo -e "${YELLOW}📋 LangGraph Startup Logs:${NC}"
 timeout 30 tail -f "$LOG_DIR/langgraph.log" 2>/dev/null | while IFS= read -r line; do
     echo -e "${BLUE}  $line${NC}"
     # Check if service is ready
-    if [[ $line == *"Uvicorn running on"* ]] || [[ $line == *"Application startup complete"* ]]; then
+    if [[ $line == *"Uvicorn running on"* ]] || [[ $line == *"Application startup complete"* ]] || [[ $line == *"orchestrator"* ]]; then
         echo -e "${GREEN}✅ LangGraph Service is ready!${NC}"
         break
     fi
@@ -318,14 +327,26 @@ echo -e "${GREEN}=========================================${NC}"
 echo -e "${GREEN}✅ All Mac services started successfully!${NC}"
 echo -e "${GREEN}=========================================${NC}"
 echo ""
+echo -e "${BLUE}🎯 System Architecture:${NC}"
+echo -e "  Multi-Agent Orchestrator (4 specialized agents)"
+echo -e "  ├─ Discovery Agent (table/view search & ranking)"
+echo -e "  ├─ JoinSQL Agent (join planning & MSSQL generation)"
+echo -e "  ├─ Exec Agent (query execution & auto-repair)"
+echo -e "  └─ Answer Agent (result formatting & explanations)"
+echo ""
 echo -e "${BLUE}Service Status:${NC}"
 echo -e "  🌐 Web UI:           http://localhost:3000"
-echo -e "  🤖 LangGraph:        http://localhost:5001"
+echo -e "  🤖 LangGraph (Orchestrator): http://localhost:5001"
 echo -e "  🗄️  MCP Server:       ${MCP_SERVER_URL} (Windows)"
 echo ""
 echo -e "${BLUE}Logs:${NC}"
 echo -e "  Web UI:      tail -f $LOG_DIR/web_ui.log"
 echo -e "  LangGraph:   tail -f $LOG_DIR/langgraph.log"
+echo ""
+echo -e "${BLUE}Documentation:${NC}"
+echo -e "  📖 Architecture:     docs/MULTI_AGENT_ARCHITECTURE.md"
+echo -e "  🚀 Quick Start:      docs/MULTI_AGENT_QUICK_START.md"
+echo -e "  🎨 Visual Guide:     docs/MULTI_AGENT_VISUAL_GUIDE.md"
 echo ""
 echo -e "${YELLOW}Press Ctrl+C to stop all services${NC}"
 echo ""

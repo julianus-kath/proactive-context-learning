@@ -2,9 +2,18 @@
 setlocal EnableExtensions
 
 echo.
-echo ========================================
-echo   MCP Server Startup (Windows)
-echo ========================================
+echo ================================================
+echo   MCP Server Startup (Windows/VPN)
+echo   Phase 7: Multi-Agent Orchestrator Ready
+echo ================================================
+echo.
+echo System Architecture:
+echo   [macOS LangGraph + Multi-Agent Orchestrator]
+echo   [4 Specialized Agents ^| Discovery ^| Join/SQL ^| Exec ^| Answer]
+echo   ════════════════════════════════════════
+echo   [MCP Server (Windows/VPN) ^| Scout Catalog]
+echo   ════════════════════════════════════════
+echo   [MSSQL ERP Database]
 echo.
 
 rem --- Resolve PROJECT_ROOT robustly (parent of this folder) ---
@@ -39,9 +48,21 @@ rem --- Optional: ensure uvicorn is present in THIS venv ---
 
 rem --- Start the server from the project root (so mcp_server package is in sys.path) ---
 pushd "%PROJECT_ROOT%"
-echo Starting MCP server on 0.0.0.0:8000 ...
-echo (Ctrl+C to stop)
-echo ========================================
+echo.
+echo ================================================
+echo   🚀 Starting MCP Server on 0.0.0.0:8000
+echo ================================================
+echo.
+echo   Features:
+echo     ✅ Scout Catalog (tables + views)
+echo     ✅ Discovery Tools (search, describe, list)
+echo     ✅ Hybrid Ranking (text + role coverage)
+echo     ✅ Safe Query Execution (read-only, timeouts)
+echo     ✅ Multi-Agent Ready (for macOS LangGraph)
+echo.
+echo   (Ctrl+C to stop)
+echo ================================================
+echo.
 "%PYTHON_CMD%" -m uvicorn mcp_server.server:app --host 0.0.0.0 --port 8000 --reload --log-level debug
 set "EC=%ERRORLEVEL%"
 
