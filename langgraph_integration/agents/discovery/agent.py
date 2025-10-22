@@ -1,0 +1,489 @@
+"""
+DiscoveryAgent - Finds and vets relevant tables/views for queries.
+
+This agent orchestrates the discovery phase:
+1. Search tables/views matching user intent
+2. Rank candidates by relevance + role coverage + view preference
+3. Filter to ≤3 most relevant entities
+4. Describe selected entities to build schema snippet
+5. Return selected tables + compact schema
+
+Tool-driven (deterministic), with optional LLM tie-breaker.
+"""
+
+import json
+import logging
+from typing import Any, Dict, List, Optional
+from langchain_openai import ChatOpenAI
+from langgraph.graph import StateGraph, END
+
+from langgraph_integration.contracts.state import BaseState, DiscoveryAgentOutput
+from langgraph_integration.mcp_client import MCPDatabaseTool
+from langgraph_integration.prompts.discovery import TABLE_FOCUS_PROMPT, VIEWS_FIRST_GUIDANCE
+
+logger = logging.getLogger(__name__)
+
+
+class DiscoveryAgent:
+    """
+    Agent for discovering and vetting relevant tables/views.
+    
+    Input contract: {user_input, intent, session_described_tables}
+    Output contract: {relevant_tables, schema_snippet, candidate_views, session_described_tables, error_info}
+    """
+
+    def __init__(self, llm_model: str = "gpt-4o", llm_temp: float = 0.0):
+        """
+        Initialize DiscoveryAgent.
+        
+        Args:
+            llm_model: LLM model name for tie-breaking
+            llm_temp: Temperature for LLM (0.0 = deterministic)
+        """
+        self.mcp = MCPDatabaseTool()
+        self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)
+        self.max_candidates_to_describe = 3  # Never describe more than 3 tables
+        self.view_role_coverage_threshold = 0.70  # Views-first if coverage >= this
+        
+    async def build_subgraph(self) -> StateGraph:
+        """
+        Build the LangGraph subgraph for discovery.
+        
+        Nodes:
+        - search_candidates: Search tables/views by keyword
+        - rank_candidates: Rank by relevance + role coverage + view preference
+        - filter_to_limit: Keep only ≤3 candidates
+        - describe_selected: Get detailed metadata for selected tables
+        - build_schema_snippet: Combine descriptions into compact schema
+        
+        Returns:
+            Compiled LangGraph subgraph
+        """
+        graph = StateGraph(BaseState)
+        
+        # Define nodes
+        graph.add_node("search_candidates", self._search_candidates_node)
+        graph.add_node("rank_candidates", self._rank_candidates_node)
+        graph.add_node("filter_to_limit", self._filter_to_limit_node)
+        graph.add_node("describe_selected", self._describe_selected_node)
+        graph.add_node("build_schema_snippet", self._build_schema_snippet_node)
+        
+        # Define edges
+        graph.add_edge("search_candidates", "rank_candidates")
+        graph.add_edge("rank_candidates", "filter_to_limit")
+        graph.add_edge("filter_to_limit", "describe_selected")
+        graph.add_edge("describe_selected", "build_schema_snippet")
+        graph.add_edge("build_schema_snippet", END)
+        
+        # Set entry point
+        graph.set_entry_point("search_candidates")
+        
+        return graph.compile()
+    
+    async def _search_candidates_node(self, state: BaseState) -> BaseState:
+        """
+        Search for tables/views matching user intent.
+        
+        Builds search keywords from:
+        - user_input (main query)
+        - intent.entities (explicitly mentioned entities)
+        
+        Prefers views first (role_coverage >= 0.70).
+        """
+        logger.info("🔍 DiscoveryAgent: Searching candidates...")
+        
+        user_input = state.get("user_input", "")
+        intent = state.get("intent", {})
+        
+        # Extract search keywords
+        keywords = self._extract_keywords(user_input, intent)
+        
+        if not keywords:
+            error = {
+                "type": "DISCOVERY_ERROR",
+                "message": "Could not extract search keywords from user input",
+                "context": {"user_input": user_input}
+            }
+            logger.error(f"❌ {error['message']}")
+            return {**state, "error_info": error}
+        
+        try:
+            # Search for matching tables/views
+            candidates = []
+            for keyword in keywords:
+                logger.debug(f"  Searching for: '{keyword}'")
+                try:
+                    result = await self.mcp.search_tables(keyword, page=1, page_size=10)
+                    parsed = self._parse_search_result(result)
+                    candidates.extend(parsed)
+                except Exception as e:
+                    logger.warning(f"  Search for '{keyword}' failed: {e}")
+                    continue
+            
+            # Deduplicate by table name
+            seen = set()
+            unique_candidates = []
+            for c in candidates:
+                table_name = c.get("table_name") or c.get("name") or c.get("full_name", "")
+                if table_name not in seen and table_name:
+                    seen.add(table_name)
+                    unique_candidates.append(c)
+            
+            if not unique_candidates:
+                error = {
+                    "type": "NO_CANDIDATES",
+                    "message": f"No tables/views found for keywords: {', '.join(keywords)}",
+                    "context": {"keywords": keywords}
+                }
+                logger.warning(f"⚠️  {error['message']}")
+                return {**state, "error_info": error}
+            
+            logger.info(f"✅ Found {len(unique_candidates)} candidate tables/views")
+            
+            # Store candidates in state for next node
+            state["candidate_views"] = unique_candidates
+            return state
+            
+        except Exception as e:
+            error = {
+                "type": "DISCOVERY_ERROR",
+                "message": f"Search failed: {str(e)}",
+                "context": {"keywords": keywords, "error": str(e)}
+            }
+            logger.error(f"❌ {error['message']}")
+            return {**state, "error_info": error}
+    
+    async def _rank_candidates_node(self, state: BaseState) -> BaseState:
+        """
+        Rank candidates by:
+        1. Text similarity score (if available)
+        2. Role coverage (views-first >= 0.70)
+        3. Has rows (non-empty tables preferred)
+        4. Is view bonus (views get +0.05)
+        
+        Formula: 0.45*text_sim + 0.25*role_coverage + 0.15*subject_match + 0.10*has_rows + 0.05*is_view
+        """
+        logger.info("📊 DiscoveryAgent: Ranking candidates...")
+        
+        candidates = state.get("candidate_views", [])
+        intent = state.get("intent", {})
+        
+        if not candidates:
+            logger.warning("No candidates to rank")
+            return state
+        
+        try:
+            # Score each candidate
+            scored = []
+            for cand in candidates:
+                score = self._score_candidate(cand, intent)
+                scored.append({**cand, "score": score})
+            
+            # Sort by score descending
+            scored.sort(key=lambda x: x["score"], reverse=True)
+            
+            # Log top 3
+            for i, c in enumerate(scored[:3]):
+                logger.debug(f"  #{i+1}: {c.get('table_name', c.get('name', ''))} (score={c['score']:.3f})")
+            
+            state["candidate_views"] = scored
+            return state
+            
+        except Exception as e:
+            error = {
+                "type": "RANKING_ERROR",
+                "message": f"Failed to rank candidates: {str(e)}",
+                "error": str(e)
+            }
+            logger.error(f"❌ {error['message']}")
+            return {**state, "error_info": error}
+    
+    async def _filter_to_limit_node(self, state: BaseState) -> BaseState:
+        """
+        Filter candidates to ≤3 most relevant.
+        
+        Also apply confidence threshold (score >= 0.30).
+        If multiple candidates are tied (score diff < 0.05), optionally use LLM to break tie.
+        """
+        logger.info("🎯 DiscoveryAgent: Filtering to ≤3 candidates...")
+        
+        candidates = state.get("candidate_views", [])
+        MIN_SCORE = 0.30
+        
+        if not candidates:
+            return state
+        
+        try:
+            # Filter by confidence threshold
+            filtered = [c for c in candidates if c.get("score", 0) >= MIN_SCORE]
+            
+            if not filtered:
+                error = {
+                    "type": "LOW_CONFIDENCE",
+                    "message": f"All candidates scored < {MIN_SCORE}. Top candidate: {candidates[0]}",
+                    "context": {"top_candidate": candidates[0] if candidates else None}
+                }
+                logger.warning(f"⚠️  {error['message']}")
+                # Still use the best candidate even if below threshold
+                filtered = candidates[:1]
+            
+            # Limit to ≤3
+            selected = filtered[:self.max_candidates_to_describe]
+            
+            logger.info(f"✅ Selected {len(selected)} candidate(s) for description")
+            for i, c in enumerate(selected):
+                logger.debug(f"  {i+1}: {c.get('table_name', c.get('name', ''))} (score={c.get('score', 0):.3f})")
+            
+            state["candidate_views"] = selected
+            return state
+            
+        except Exception as e:
+            error = {
+                "type": "FILTER_ERROR",
+                "message": f"Failed to filter candidates: {str(e)}",
+                "error": str(e)
+            }
+            logger.error(f"❌ {error['message']}")
+            return {**state, "error_info": error}
+    
+    async def _describe_selected_node(self, state: BaseState) -> BaseState:
+        """
+        Get detailed metadata for each selected candidate.
+        
+        Calls describe_table for each candidate to get:
+        - Columns with role hints
+        - Foreign key relationships
+        - Row count / has_rows
+        - Views-specific: role_coverage, definition preview
+        """
+        logger.info("📖 DiscoveryAgent: Describing selected candidates...")
+        
+        candidates = state.get("candidate_views", [])
+        session_cache = state.get("session_described_tables", {})
+        
+        if not candidates:
+            logger.warning("No candidates to describe")
+            return state
+        
+        try:
+            described = []
+            for cand in candidates:
+                table_name = cand.get("table_name") or cand.get("name") or cand.get("full_name", "")
+                
+                # Check cache first
+                if table_name in session_cache:
+                    logger.debug(f"  {table_name} (cached)")
+                    described.append(session_cache[table_name])
+                    continue
+                
+                logger.debug(f"  Describing {table_name}...")
+                try:
+                    result = await self.mcp.describe_table(table_name, include_sample=False)
+                    parsed = self._parse_describe_result(result, table_name)
+                    described.append(parsed)
+                    session_cache[table_name] = parsed
+                except Exception as e:
+                    logger.warning(f"  Failed to describe {table_name}: {e}")
+                    # Still include the candidate even if describe fails
+                    described.append(cand)
+            
+            logger.info(f"✅ Described {len(described)} table(s)")
+            
+            state["candidate_views"] = described
+            state["session_described_tables"] = session_cache
+            return state
+            
+        except Exception as e:
+            error = {
+                "type": "DESCRIBE_ERROR",
+                "message": f"Failed to describe candidates: {str(e)}",
+                "error": str(e)
+            }
+            logger.error(f"❌ {error['message']}")
+            return {**state, "error_info": error}
+    
+    async def _build_schema_snippet_node(self, state: BaseState) -> BaseState:
+        """
+        Build compact schema snippet from described tables.
+        
+        Format: Simple list of tables with column names and types.
+        Example:
+        
+        dbo.sales_orders: order_id (int), customer_id (int FK), order_date (date), total (decimal)
+        dbo.customers: customer_id (int), name (varchar), email (varchar)
+        """
+        logger.info("🛠️  DiscoveryAgent: Building schema snippet...")
+        
+        candidates = state.get("candidate_views", [])
+        
+        if not candidates:
+            return state
+        
+        try:
+            schema_lines = []
+            relevant_tables = []
+            
+            for cand in candidates:
+                table_name = cand.get("table_name") or cand.get("name") or cand.get("full_name", "")
+                columns = cand.get("columns", [])
+                
+                if not table_name:
+                    continue
+                
+                relevant_tables.append(table_name)
+                
+                # Build column list: name (type) [role hints]
+                col_strs = []
+                for col in columns[:10]:  # Limit to 10 columns in snippet
+                    col_name = col.get("name", "unknown")
+                    col_type = col.get("type", "varchar").lower()
+                    role = col.get("role_hint", "")
+                    
+                    if role:
+                        col_strs.append(f"{col_name} ({col_type}, {role})")
+                    else:
+                        col_strs.append(f"{col_name} ({col_type})")
+                
+                # Add "..." if more than 10 columns
+                if len(columns) > 10:
+                    col_strs.append(f"... and {len(columns) - 10} more columns")
+                
+                schema_line = f"{table_name}: {', '.join(col_strs)}"
+                schema_lines.append(schema_line)
+            
+            schema_snippet = "\n".join(schema_lines)
+            
+            logger.info(f"✅ Built schema snippet with {len(relevant_tables)} table(s)")
+            logger.debug(f"Schema:\n{schema_snippet}")
+            
+            state["relevant_tables"] = relevant_tables
+            state["schema_snippet"] = schema_snippet
+            return state
+            
+        except Exception as e:
+            error = {
+                "type": "SCHEMA_BUILD_ERROR",
+                "message": f"Failed to build schema snippet: {str(e)}",
+                "error": str(e)
+            }
+            logger.error(f"❌ {error['message']}")
+            return {**state, "error_info": error}
+    
+    # Helper methods
+    
+    def _extract_keywords(self, user_input: str, intent: Dict[str, Any]) -> List[str]:
+        """Extract search keywords from user input and intent."""
+        keywords = []
+        
+        # From intent entities
+        entities = intent.get("entities", [])
+        for ent in entities:
+            if isinstance(ent, dict):
+                keywords.append(ent.get("name", ""))
+            else:
+                keywords.append(str(ent))
+        
+        # From user input (main nouns)
+        # Simple heuristic: split and filter common words
+        words = user_input.lower().split()
+        common_words = {"the", "a", "an", "is", "are", "was", "were", "by", "of", "for", "to", "and", "or", "in", "on", "at", "how", "many", "show", "me", "please", "get", "list", "find", "search", "what"}
+        for word in words:
+            if word not in common_words and len(word) > 2:
+                keywords.append(word.strip("?,.!"))
+        
+        # Deduplicate and filter
+        keywords = [k for k in keywords if k and len(k) > 1]
+        keywords = list(dict.fromkeys(keywords))  # Remove duplicates preserving order
+        
+        return keywords[:5]  # Limit to 5 keywords
+    
+    def _parse_search_result(self, result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Parse MCP search_tables result."""
+        if not result or len(result) == 0:
+            return []
+        
+        try:
+            content = result[0].get("text", "")
+            data = json.loads(content) if isinstance(content, str) else content
+            
+            # Handle different response formats
+            if isinstance(data, dict):
+                # Format 1: {results: [...]} or {tables: [...]}
+                tables = data.get("results") or data.get("tables", [])
+            elif isinstance(data, list):
+                tables = data
+            else:
+                return []
+            
+            # Normalize table format
+            normalized = []
+            for t in tables:
+                if isinstance(t, dict):
+                    normalized.append({
+                        "table_name": t.get("table_name") or t.get("name") or t.get("full_name", ""),
+                        "score": float(t.get("score", t.get("relevance", 0))),
+                        "is_view": t.get("is_view", False),
+                        "role_coverage": float(t.get("role_coverage", 0)),
+                        "has_rows": t.get("has_rows", True)
+                    })
+            
+            return normalized
+        except Exception as e:
+            logger.warning(f"Failed to parse search result: {e}")
+            return []
+    
+    def _parse_describe_result(self, result: List[Dict[str, Any]], table_name: str) -> Dict[str, Any]:
+        """Parse MCP describe_table result."""
+        if not result or len(result) == 0:
+            return {"table_name": table_name, "columns": []}
+        
+        try:
+            content = result[0].get("text", "")
+            data = json.loads(content) if isinstance(content, str) else content
+            
+            return {
+                "table_name": table_name,
+                "columns": data.get("columns", []),
+                "row_count": data.get("row_count", 0),
+                "has_rows": data.get("has_rows", True),
+                "is_view": data.get("is_view", False),
+                "role_coverage": float(data.get("role_coverage", 0)),
+                "relationships": data.get("relationships", [])
+            }
+        except Exception as e:
+            logger.warning(f"Failed to parse describe result for {table_name}: {e}")
+            return {"table_name": table_name, "columns": []}
+    
+    def _score_candidate(self, candidate: Dict[str, Any], intent: Dict[str, Any]) -> float:
+        """
+        Score a candidate using hybrid ranking formula.
+        
+        score = 0.45*text_sim + 0.25*role_coverage + 0.15*subject_match + 0.10*has_rows + 0.05*is_view
+        """
+        text_sim = float(candidate.get("score", 0)) / 100.0  # Normalize to [0,1]
+        role_coverage = float(candidate.get("role_coverage", 0))
+        
+        # Views-first bonus
+        is_view = 1.0 if candidate.get("is_view", False) else 0.0
+        
+        # Has rows bonus
+        has_rows = 1.0 if candidate.get("has_rows", True) else 0.0
+        
+        # Subject match (TODO: could be enhanced with semantic similarity)
+        subject_match = 0.5  # Default neutral
+        
+        score = (
+            0.45 * text_sim
+            + 0.25 * role_coverage
+            + 0.15 * subject_match
+            + 0.10 * has_rows
+            + 0.05 * is_view
+        )
+        
+        return min(1.0, score)  # Clamp to [0, 1]
+
+
+# Exported function to create and run the agent
+async def create_discovery_agent(llm_model: str = "gpt-4o") -> DiscoveryAgent:
+    """Factory function to create a DiscoveryAgent instance."""
+    return DiscoveryAgent(llm_model=llm_model)
