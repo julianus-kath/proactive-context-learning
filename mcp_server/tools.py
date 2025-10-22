@@ -231,6 +231,58 @@ class MCPTools:
                 }
             ),
             MCPTool(
+                name="list_views",
+                description="List views with pagination and optional filtering; prefer search_views for ranked matching",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "page": {"type":"integer","description":"Page number (1-indexed, default: 1)","default":1,"minimum":1},
+                        "page_size": {"type":"integer","description":"Items per page (default: 25, max: 100)","default":25,"minimum":1,"maximum":100},
+                        "schema": {"type":"string","description":"Filter by schema (optional)"},
+                        "pattern": {"type":"string","description":"Case-insensitive name filter (optional)"},
+                        "include_empty": {"type":"boolean","description":"Include views with zero rows (default: false)","default": false}
+                    },
+                    "required": []
+                }
+            ),
+            MCPTool(
+                name="search_views",
+                description="Search and rank business views by relevance to the query (views-first discovery)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "query": {"type":"string","description":"Natural language query"},
+                        "page": {"type":"integer","description":"Page number (1-indexed, default: 1)","default":1,"minimum":1},
+                        "page_size": {"type":"integer","description":"Items per page (default: 10, max: 50)","default":10,"minimum":1,"maximum":50},
+                        "include_empty": {"type":"boolean","description":"Include views with zero rows (default: false)","default": false}
+                    },
+                    "required": ["query"]
+                }
+            ),
+            MCPTool(
+                name="describe_view",
+                description="Get detailed information about a specific view (columns, keys, estimated rows)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "view_name": {"type":"string","description":"Fully qualified view name (schema.view) or view name"},
+                        "include_sample": {"type":"boolean","description":"Include sample data (requires DB query, default: false)","default": false}
+                    },
+                    "required": ["view_name"]
+                }
+            ),
+            MCPTool(
+                name="list_view_dependencies",
+                description="List dependencies for a view (upstream tables/views) when available",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "view_name": {"type":"string","description":"Fully qualified view name (schema.view) or view name"}
+                    },
+                    "required": ["view_name"]
+                }
+            ),
+            MCPTool(
                 name="get_execution_metrics",
                 description="Get performance metrics for answer-first query execution (Phase 7 - observability)",
                 inputSchema={
@@ -276,6 +328,14 @@ class MCPTools:
                     result = await MCPTools._describe_table(arguments, db_manager)
                 elif tool_name == "list_relations":
                     result = await MCPTools._list_relations(arguments, db_manager)
+                elif tool_name == "list_views":
+                    result = await MCPTools._list_views(arguments, db_manager)
+                elif tool_name == "search_views":
+                    result = await MCPTools._search_views(arguments, db_manager)
+                elif tool_name == "describe_view":
+                    result = await MCPTools._describe_view(arguments, db_manager)
+                elif tool_name == "list_view_dependencies":
+                    result = await MCPTools._list_view_dependencies(arguments, db_manager)
                 elif tool_name == "answer_first":
                     result = await MCPTools._answer_first(arguments, db_manager)
                 elif tool_name == "parse_intent":
@@ -941,6 +1001,184 @@ class MCPTools:
             )
     
     # Phase 7: Answer-first tools
+    
+    @staticmethod
+    async def _list_views(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """List views with pagination (catalog-only)."""
+        page = arguments.get("page", 1)
+        page_size = arguments.get("page_size", 25)
+        schema = arguments.get("schema")
+        pattern = arguments.get("pattern")
+        include_empty = arguments.get("include_empty", False)
+        
+        try:
+            if not getattr(db_manager, 'catalog', None):
+                return MCPToolResult(content=[{"type":"text","text":"Catalog not initialized"}], isError=True)
+            
+            # Pull all items and filter to views
+            all_items = db_manager.catalog.get_table_list()
+            views = []
+            for t in all_items:
+                if str(t.get('type','')).upper() != 'VIEW':
+                    continue
+                if schema and t['schema'].lower() != schema.lower():
+                    continue
+                if pattern and pattern.lower() not in t['name'].lower():
+                    continue
+                # empty filtering uses estimated_rows
+                est = int(t.get('estimated_rows') or 0)
+                if not include_empty and est <= 0:
+                    continue
+                views.append({
+                    "schema": t['schema'],
+                    "name": t['name'],
+                    "full_name": t['full_name'],
+                    "estimated_rows": est,
+                    "column_count": t.get('column_count', 0)
+                })
+            total = len(views)
+            page = max(1, page)
+            page_size = min(max(1, page_size), 100)
+            start = (page-1)*page_size
+            end = start + page_size
+            page_views = views[start:end]
+            total_pages = (total + page_size - 1) // page_size if total>0 else 1
+            
+            text = {
+                "ok": True,
+                "data": {"views": page_views, "filters": {"schema": schema, "pattern": pattern, "include_empty": include_empty}},
+                "page_info": {"page": page, "page_size": page_size, "total_items": total, "total_pages": total_pages, "has_next": page < total_pages, "has_prev": page>1}
+            }
+            return MCPToolResult(content=[{"type":"text","text": json.dumps(text)}])
+        except Exception as e:
+            logger.error(f"list_views failed: {e}")
+            return MCPToolResult(content=[{"type":"text","text": f"Internal error: {e}"}], isError=True)
+    
+    @staticmethod
+    async def _search_views(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """Search and rank views using views-first ranker (catalog-only)."""
+        from mcp_server.table_ranker import rank_views
+        from mcp_server.config import config as mcp_cfg
+        
+        query = arguments.get("query", "").strip()
+        page = arguments.get("page", 1)
+        page_size = arguments.get("page_size", 10)
+        include_empty = arguments.get("include_empty", mcp_cfg.include_empty_by_default)
+        
+        if not query:
+            return MCPToolResult(content=[{"type":"text","text":"Query is required"}], isError=True)
+        if not getattr(db_manager, 'catalog', None):
+            return MCPToolResult(content=[{"type":"text","text":"Catalog not initialized"}], isError=True)
+        
+        try:
+            # Collect candidate views from catalog where type == VIEW
+            items = db_manager.catalog.get_table_list()
+            raw_views = [t for t in items if str(t.get('type','')).upper()== 'VIEW']
+            # Enrich minimal dicts for ranker (columns/tags/def may be missing; ranker handles gracefully)
+            # For now we pass through basic fields and estimated_rows
+            ranked = rank_views(
+                query,
+                views=[{"schema":v["schema"],"name":v["name"],"full_name":v["full_name"],"estimated_rows":v.get("estimated_rows",0)} for v in raw_views],
+                include_empty=include_empty
+            )
+            total = len(ranked)
+            page = max(1, page)
+            page_size = min(max(1, page_size), 50)
+            start = (page-1)*page_size
+            end = start + page_size
+            page_ranked = ranked[start:end]
+            data = {
+                "results": [
+                    {
+                        "schema": r.schema,
+                        "name": r.name,
+                        "full_name": r.full_name,
+                        "relevance_score": r.score,
+                        "role_coverage": r.role_coverage,
+                        "subject_match": r.subject_match,
+                        "estimated_rows": r.estimated_rows,
+                        "has_rows": r.has_rows,
+                        "reasons": r.reasons,
+                    } for r in page_ranked
+                ]
+            }
+            envelope = {
+                "ok": True,
+                "data": data,
+                "page_info": {"page": page, "page_size": page_size, "total_items": total, "total_pages": (total + page_size - 1)//page_size if total>0 else 1, "has_next": start+page_size < total, "has_prev": page>1}
+            }
+            return MCPToolResult(content=[{"type":"text","text": json.dumps(envelope)}])
+        except Exception as e:
+            logger.error(f"search_views failed: {e}")
+            return MCPToolResult(content=[{"type":"text","text": f"Internal error: {e}"}], isError=True)
+    
+    @staticmethod
+    async def _describe_view(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """Describe a view using catalog (columns, keys, est rows)."""
+        view_name = arguments.get("view_name", "").strip()
+        include_sample = arguments.get("include_sample", False)
+        try:
+            if not view_name:
+                return MCPToolResult(content=[{"type":"text","text":"view_name is required"}], isError=True)
+            if not getattr(db_manager, 'catalog', None):
+                return MCPToolResult(content=[{"type":"text","text":"Catalog not initialized"}], isError=True)
+            
+            # Resolve schema/name
+            if '.' in view_name:
+                schema, name = view_name.split('.', 1)
+            else:
+                # Best-effort find by name among views
+                items = db_manager.catalog.get_table_list()
+                candidates = [t for t in items if str(t.get('type','')).upper()=='VIEW' and t['name'].lower()==view_name.lower()]
+                if not candidates:
+                    return MCPToolResult(content=[{"type":"text","text":"View not found"}], isError=True)
+                schema, name = candidates[0]['schema'], candidates[0]['name']
+            detail = db_manager.catalog.get_table(schema, name)
+            if not detail or str(detail.get('type','')).upper()!='VIEW':
+                return MCPToolResult(content=[{"type":"text","text":"View not found"}], isError=True)
+            
+            payload = {
+                "schema": detail['schema'],
+                "name": detail['name'],
+                "full_name": detail['full_name'],
+                "type": detail['type'],
+                "estimated_rows": detail.get('estimated_rows', 0),
+                "columns": detail.get('columns', []),
+                "primary_keys": detail.get('primary_keys', []),
+                "foreign_keys": detail.get('foreign_keys', []),
+            }
+            # Optional sample is not recommended for views here; keep read-only safety
+            return MCPToolResult(content=[{"type":"text","text": json.dumps({"ok": True, "data": payload})}])
+        except Exception as e:
+            logger.error(f"describe_view failed: {e}")
+            return MCPToolResult(content=[{"type":"text","text": f"Internal error: {e}"}], isError=True)
+    
+    @staticmethod
+    async def _list_view_dependencies(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """List upstream dependencies for a view if available in catalog.
+        Placeholder until dependencies are ingested."""
+        view_name = arguments.get("view_name", "").strip()
+        try:
+            if not view_name:
+                return MCPToolResult(content=[{"type":"text","text":"view_name is required"}], isError=True)
+            if not getattr(db_manager, 'catalog', None):
+                return MCPToolResult(content=[{"type":"text","text":"Catalog not initialized"}], isError=True)
+            # Try to resolve and load
+            if '.' in view_name:
+                schema, name = view_name.split('.', 1)
+            else:
+                items = db_manager.catalog.get_table_list()
+                candidates = [t for t in items if str(t.get('type','')).upper()=='VIEW' and t['name'].lower()==view_name.lower()]
+                if not candidates:
+                    return MCPToolResult(content=[{"type":"text","text":"View not found"}], isError=True)
+                schema, name = candidates[0]['schema'], candidates[0]['name']
+            detail = db_manager.catalog.get_table(schema, name)
+            deps = detail.get('dependencies') if detail else None
+            payload = {"ok": True, "data": {"view": f"{schema}.{name}", "dependencies": deps or []}}
+            return MCPToolResult(content=[{"type":"text","text": json.dumps(payload)}])
+        except Exception as e:
+            logger.error(f"list_view_dependencies failed: {e}")
+            return MCPToolResult(content=[{"type":"text","text": f"Internal error: {e}"}], isError=True)
     
     @staticmethod
     async def _answer_first(arguments: Dict[str, Any], db_manager) -> MCPToolResult:

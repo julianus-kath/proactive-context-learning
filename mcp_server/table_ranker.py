@@ -1,30 +1,37 @@
 """
-Table Ranker for Semantic Relevance Scoring - Phase 7.1: Scout Mode Integration.
+Table & View Ranker for Semantic Relevance Scoring
 
-This module ranks database tables by relevance to user queries using:
-1. Entity matching (does table/column name match query entities?)
-2. Type compatibility (numeric for AGGREGATE, date for TREND, etc.)
-3. Semantic similarity (fuzzy matching on names)
-4. Table metadata (row count, foreign key count indicates connectedness)
-5. Column availability (does table have needed column types?)
+Phase 7.1 baseline (tables) + extended Phase 7.x (views-first capability).
 
-Phase 7.1 Enhancement:
-- Consumes Scout Mode cached semantic metadata (numeric_columns, date_columns, etc.)
-- No database queries needed - O(n) scan of 943 tables in cache
-- Pre-computed type information enables faster ranking
-- Falls back to heuristics if metadata unavailable
+- Tables: keeps existing heuristics (entity/fuzzy/type/metadata) to remain stable.
+- Views: adds unified scoring with normalized signals and lightweight BM25 over
+  name + columns + sanitized definition + subject tags.
 
-Ranking enables agent to autonomously select tables without clarification.
+All ranking uses catalog-only metadata (Scout cache). No live DB calls.
 """
 
+from __future__ import annotations
+
 import logging
-import time
-from typing import List, Dict, Optional, Tuple
+import math
+import re
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from difflib import SequenceMatcher
+from typing import List, Dict, Optional, Tuple, Any, Set
+
+try:
+    # Local config for thresholds/flags
+    from mcp_server.config import config as mcp_config
+except Exception:  # pragma: no cover - allow import without full server boot
+    mcp_config = None
 
 logger = logging.getLogger(__name__)
 
+
+# -----------------------------
+# Existing Table Ranking (kept)
+# -----------------------------
 
 @dataclass
 class RankedTable:
@@ -37,9 +44,8 @@ class RankedTable:
     estimated_rows: Optional[int] = None
     column_count: Optional[int] = None
     fk_count: Optional[int] = None
-    
-    def to_dict(self) -> Dict:
-        """Convert to dictionary for JSON serialization."""
+
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "schema": self.schema,
             "name": self.name,
@@ -48,14 +54,14 @@ class RankedTable:
             "reasons": self.reasons,
             "estimated_rows": self.estimated_rows,
             "column_count": self.column_count,
-            "fk_count": self.fk_count
+            "fk_count": self.fk_count,
         }
 
 
 class TableRanker:
     """
     Ranks database tables by relevance to user queries.
-    
+
     Uses multiple scoring dimensions:
     - Exact name matches (highest weight)
     - Fuzzy/substring matches
@@ -63,7 +69,7 @@ class TableRanker:
     - Type compatibility with query intent
     - Table connectedness (foreign keys, row volume)
     """
-    
+
     # Scoring weights
     EXACT_MATCH_WEIGHT = 1.0
     ENTITY_MATCH_WEIGHT = 0.8
@@ -71,232 +77,479 @@ class TableRanker:
     FUZZY_MATCH_WEIGHT = 0.4
     FK_BONUS = 0.1  # Bonus for tables with foreign keys
     SIZE_FACTOR = 0.05  # Small bonus for larger tables
-    
+
     # Column type indicators
-    NUMERIC_TYPES = {'int', 'float', 'decimal', 'numeric', 'bigint', 'smallint', 'money', 'real'}
-    DATE_TYPES = {'date', 'datetime', 'datetime2', 'timestamp', 'time'}
-    TEXT_TYPES = {'varchar', 'text', 'nvarchar', 'char', 'string'}
-    
-    def rank_tables(self,
-                   tables: List[Dict],
-                   entities: List[str],
-                   intent_operations: List[str],
-                   catalog_adapter=None) -> List[RankedTable]:
-        """
-        Rank tables by relevance to query entities and operations.
-        
-        Args:
-            tables: List of table dicts from Scout Mode catalog
-            entities: Entities from intent parser (e.g., ['customer', 'order'])
-            intent_operations: Operations from intent parser (e.g., ['count', 'sum'])
-            catalog_adapter: Optional adapter to fetch column details
-        
-        Returns:
-            List of RankedTable sorted by score (highest first)
-        """
+    NUMERIC_TYPES = {"int", "float", "decimal", "numeric", "bigint", "smallint", "money", "real"}
+    DATE_TYPES = {"date", "datetime", "datetime2", "timestamp", "time"}
+    TEXT_TYPES = {"varchar", "text", "nvarchar", "char", "string"}
+
+    def rank_tables(
+        self,
+        tables: List[Dict[str, Any]],
+        entities: List[str],
+        intent_operations: List[str],
+        catalog_adapter=None,
+    ) -> List[RankedTable]:
         ranked: List[RankedTable] = []
-        
+
         for table in tables:
             score = 0.0
             reasons: List[str] = []
-            
-            # Extract table info (handle both dict and object formats)
-            schema = table.get('schema') if isinstance(table, dict) else getattr(table, 'schema', '')
-            name = table.get('name') if isinstance(table, dict) else getattr(table, 'name', '')
-            full_name = table.get('full_name') if isinstance(table, dict) else getattr(table, 'full_name', '')
-            estimated_rows = table.get('estimated_rows') if isinstance(table, dict) else getattr(table, 'estimated_rows', None)
-            column_count = table.get('column_count') if isinstance(table, dict) else getattr(table, 'column_count', None)
-            fk_count = table.get('fk_count') if isinstance(table, dict) else getattr(table, 'fk_count', None)
-            
-            # 1. Score based on entity matches in table name
-            for entity in entities:
-                if entity.lower() in name.lower():
-                    if entity.lower() == name.lower():
-                        # Exact match
-                        score += self.EXACT_MATCH_WEIGHT
-                        reasons.append(f"Exact match for entity: {entity}")
-                    elif entity.lower() in name.lower().split('_'):
-                        # Full word match
-                        score += self.ENTITY_MATCH_WEIGHT
-                        reasons.append(f"Entity match in table name: {entity}")
-                    else:
-                        # Substring match
-                        score += self.COLUMN_MATCH_WEIGHT
-                        reasons.append(f"Substring match for entity: {entity}")
-            
-            # 2. Score based on fuzzy matching
-            for entity in entities:
+
+            # Extract table info
+            schema = table.get("schema", "")
+            name = table.get("name", table.get("table", ""))
+            full_name = table.get("full_name") or table.get("fqtn") or (
+                f"{schema}.{name}" if schema and name else name
+            )
+            estimated_rows = table.get("estimated_rows")
+            column_count = table.get("column_count")
+            fk_count = table.get("fk_count")
+
+            # 1. Entity matches
+            for entity in entities or []:
+                if not name:
+                    continue
+                e = entity.lower()
+                n = name.lower()
+                if e == n:
+                    score += self.EXACT_MATCH_WEIGHT
+                    reasons.append(f"Exact match for entity: {entity}")
+                elif e in n.split("_"):
+                    score += self.ENTITY_MATCH_WEIGHT
+                    reasons.append(f"Entity match in table name: {entity}")
+                elif e in n:
+                    score += self.COLUMN_MATCH_WEIGHT
+                    reasons.append(f"Substring match for entity: {entity}")
+
+            # 2. Fuzzy matching
+            for entity in entities or []:
+                if not name:
+                    continue
                 fuzzy_score = self._fuzzy_match(entity, name)
                 if fuzzy_score > 0.6:
                     score += fuzzy_score * self.FUZZY_MATCH_WEIGHT
                     reasons.append(f"Fuzzy match ({fuzzy_score:.2f}): {entity} ~ {name}")
-            
-            # 3. Score based on type compatibility
-            type_score = self._score_type_compatibility(name, intent_operations, catalog_adapter, table)
+
+            # 3. Type compatibility
+            type_score = self._score_type_compatibility(name or "", intent_operations or [], catalog_adapter, table)
             if type_score > 0:
                 score += type_score
-                reasons.append(f"Type compatible for operations: {', '.join(intent_operations)}")
-            
-            # 4. Bonus for connectedness (foreign keys)
-            if fk_count and fk_count > 0:
+                if intent_operations:
+                    reasons.append(
+                        f"Type compatible for operations: {', '.join(intent_operations)}"
+                    )
+
+            # 4. Connectedness
+            if isinstance(fk_count, int) and fk_count > 0:
                 score += self.FK_BONUS * min(fk_count / 5, 1.0)  # Cap at 5 FKs
                 reasons.append(f"Well-connected ({fk_count} foreign keys)")
-            
-            # 5. Small bonus for larger tables (more likely to be central)
-            if estimated_rows and estimated_rows > 1000:
+
+            # 5. Size bonus
+            if isinstance(estimated_rows, int) and estimated_rows > 1000:
                 size_bonus = min(estimated_rows / 100000, 1.0) * self.SIZE_FACTOR
                 score += size_bonus
                 reasons.append(f"Sizeable table ({estimated_rows} rows)")
-            
-            # Only include tables with some relevance
+
             if score > 0 or not entities:
-                ranked.append(RankedTable(
-                    schema=schema,
-                    name=name,
-                    full_name=full_name,
-                    score=min(score, 1.0),  # Cap at 1.0
-                    reasons=reasons,
-                    estimated_rows=estimated_rows,
-                    column_count=column_count,
-                    fk_count=fk_count
-                ))
-        
-        # Sort by score (highest first), then by table name for consistency
+                ranked.append(
+                    RankedTable(
+                        schema=schema,
+                        name=name,
+                        full_name=full_name or name,
+                        score=min(score, 1.0),
+                        reasons=reasons,
+                        estimated_rows=estimated_rows,
+                        column_count=column_count,
+                        fk_count=fk_count,
+                    )
+                )
+
         ranked.sort(key=lambda t: (-t.score, t.name))
-        
         return ranked
-    
+
     def _fuzzy_match(self, entity: str, table_name: str) -> float:
-        """
-        Calculate fuzzy match score between entity and table name.
-        
-        Args:
-            entity: User's entity keyword
-            table_name: Database table name
-        
-        Returns:
-            Score from 0 to 1, where 1 is perfect match
-        """
         entity_lower = entity.lower()
         table_lower = table_name.lower()
-        
-        # Direct substring match
         if entity_lower in table_lower or table_lower in entity_lower:
             return 0.9
-        
-        # Use sequence matcher for fuzzy similarity
         matcher = SequenceMatcher(None, entity_lower, table_lower)
         return matcher.ratio()
-    
-    def _score_type_compatibility(self,
-                                 table_name: str,
-                                 operations: List[str],
-                                 catalog_adapter,
-                                 table: Dict) -> float:
-        """
-        Score how well table matches required operations.
-        
-        Phase 7.1: Uses Scout Mode semantic metadata for fast type checking.
-        
-        Args:
-            table_name: Name of table to score
-            operations: Operations needed (e.g., ['sum', 'count'])
-            catalog_adapter: Optional adapter (unused - use Scout Mode metadata instead)
-            table: Table dict from Scout Mode catalog
-        
-        Returns:
-            Compatibility score
-        """
+
+    def _score_type_compatibility(
+        self, table_name: str, operations: List[str], catalog_adapter, table: Dict[str, Any]
+    ) -> float:
         if not operations:
-            return 0.2  # Small baseline for no specific operations
-        
+            return 0.2  # Small baseline
         score = 0.0
-        
-        # 🆕 Phase 7.1: Use pre-computed Scout Mode metadata if available
-        numeric_columns = table.get('numeric_columns', [])
-        date_columns = table.get('date_columns', [])
-        
-        # Check for operations that need numeric columns
-        if any(op in ['sum', 'avg', 'average', 'max', 'min', 'total'] for op in operations):
+        numeric_columns = table.get("numeric_columns", [])
+        date_columns = table.get("date_columns", [])
+        if any(op in ["sum", "avg", "average", "max", "min", "total"] for op in operations):
             if numeric_columns:
-                # Cached metadata: direct detection
-                score += 0.3 * min(len(numeric_columns) / max(table.get('column_count', 1), 1), 1.0)
+                score += 0.3 * min(
+                    len(numeric_columns) / max(table.get("column_count", 1), 1), 1.0
+                )
             elif self._has_numeric_indicator(table_name):
-                # Fallback: heuristic-based detection
                 score += 0.3
-        
-        # Check for operations that need date columns
-        if any(op in ['trend', 'trend_over_time', 'monthly', 'yearly'] for op in operations):
+        if any(op in ["trend", "trend_over_time", "monthly", "yearly"] for op in operations):
             if date_columns:
-                # Cached metadata: direct detection
                 score += 0.3
             elif self._has_date_indicator(table_name):
-                # Fallback: heuristic-based detection
                 score += 0.3
-        
-        # General compatibility
         if operations:
             score += 0.1
-        
         return min(score, 1.0)
-    
+
     def _has_numeric_indicator(self, table_name: str) -> bool:
-        """Check if table name suggests numeric data."""
-        indicators = ['sales', 'revenue', 'profit', 'cost', 'amount', 'price', 'quantity', 'count']
+        indicators = [
+            "sales",
+            "revenue",
+            "profit",
+            "cost",
+            "amount",
+            "price",
+            "quantity",
+            "count",
+        ]
         return any(indicator in table_name.lower() for indicator in indicators)
-    
+
     def _has_date_indicator(self, table_name: str) -> bool:
-        """Check if table name suggests time-series data."""
-        indicators = ['sales', 'order', 'transaction', 'event', 'log', 'history']
+        indicators = ["sales", "order", "transaction", "event", "log", "history"]
         return any(indicator in table_name.lower() for indicator in indicators)
-    
-    def _is_numeric_type(self, col_type: str) -> bool:
-        """Check if column type is numeric."""
-        col_type_lower = col_type.lower()
-        return any(num_type in col_type_lower for num_type in self.NUMERIC_TYPES)
-    
-    def _is_date_type(self, col_type: str) -> bool:
-        """Check if column type is date/time."""
-        col_type_lower = col_type.lower()
-        return any(date_type in col_type_lower for date_type in self.DATE_TYPES)
-    
-    def select_best_tables(self,
-                          ranked_tables: List[RankedTable],
-                          max_tables: int = 3,
-                          min_score: float = 0.3) -> List[RankedTable]:
-        """
-        Select best tables for query execution.
-        
-        Args:
-            ranked_tables: Pre-ranked tables
-            max_tables: Maximum number of tables to select
-            min_score: Minimum score threshold
-        
-        Returns:
-            List of best tables meeting criteria
-        """
-        # Filter by minimum score
+
+    def select_best_tables(
+        self, ranked_tables: List[RankedTable], max_tables: int = 3, min_score: float = 0.3
+    ) -> List[RankedTable]:
         qualified = [t for t in ranked_tables if t.score >= min_score]
-        
-        # Return top N
         return qualified[:max_tables]
 
 
-def rank_tables(tables: List[Dict],
-               entities: List[str],
-               operations: List[str] = None,
-               catalog_adapter=None) -> List[RankedTable]:
-    """
-    Convenience function to rank tables.
-    
-    Args:
-        tables: List of table dicts
-        entities: Entity keywords from query
-        operations: Operations from query
-        catalog_adapter: Optional catalog adapter
-    
-    Returns:
-        List of ranked tables
-    """
+def rank_tables(
+    tables: List[Dict[str, Any]],
+    entities: List[str],
+    operations: List[str] | None = None,
+    catalog_adapter=None,
+) -> List[RankedTable]:
     ranker = TableRanker()
     return ranker.rank_tables(tables, entities, operations or [], catalog_adapter)
+
+
+# -----------------------------
+# Views Ranking (new)
+# -----------------------------
+
+@dataclass
+class RankedView:
+    schema: str
+    name: str
+    full_name: str
+    score: float
+    reasons: List[str]
+    role_coverage: float
+    has_rows: int
+    estimated_rows: int
+    subject_match: float
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "schema": self.schema,
+            "name": self.name,
+            "full_name": self.full_name,
+            "score": self.score,
+            "reasons": self.reasons,
+            "role_coverage": self.role_coverage,
+            "has_rows": self.has_rows,
+            "estimated_rows": self.estimated_rows,
+            "subject_match": self.subject_match,
+        }
+
+
+_WORD_RE = re.compile(r"[a-z0-9_]+")
+_STOP = {
+    "the",
+    "and",
+    "of",
+    "in",
+    "by",
+    "for",
+    "to",
+    "a",
+    "on",
+    "with",
+    "view",
+    "vw",
+    "dbo",
+}
+
+
+def _tokenize(text: str) -> List[str]:
+    text = (text or "").lower()
+    return [t for t in _WORD_RE.findall(text) if t and t not in _STOP]
+
+
+def _infer_query_subject_tags(query: str) -> Set[str]:
+    q = (query or "").lower()
+    tags = set()
+    mapping = {
+        "sales": ["sale", "sales", "revenue", "amount", "gross", "net"],
+        "invoice": ["invoice", "invoices", "billing", "bill"],
+        "stock": ["stock", "inventory", "warehouse"],
+        "crm": ["crm", "customer", "lead", "opportunity"],
+        "product": ["product", "sku", "item"],
+        "customer": ["customer", "client", "account"],
+        "supplier": ["supplier", "vendor"],
+        "employee": ["employee", "staff"],
+    }
+    for tag, kws in mapping.items():
+        if any(kw in q for kw in kws):
+            tags.add(tag)
+    return tags
+
+
+def _infer_required_roles(query: str) -> List[str]:
+    q = (query or "").lower()
+    roles: List[str] = []
+    # Date/time intent
+    if any(k in q for k in ["last quarter", "last month", "this month", "this quarter", "year", "month", "date", "trend", "over time"]):
+        roles.append("date")
+    # Measure intent
+    if any(k in q for k in ["sum", "total", "top", "revenue", "sales", "amount", "count", "avg", "average"]):
+        roles.append("measure")
+    # Product/customer keys
+    if any(k in q for k in ["product", "sku", "item"]):
+        roles.append("product_key")
+    if any(k in q for k in ["customer", "client", "account"]):
+        roles.append("customer_key")
+    # Deduplicate while preserving order
+    seen = set()
+    return [r for r in roles if not (r in seen or seen.add(r))]
+
+
+def _detect_roles_in_view(view: Dict[str, Any]) -> Set[str]:
+    roles: Set[str] = set()
+    # Columns may come as list of dicts ({name: .., type: ..}) or list of names
+    cols_raw = view.get("columns", [])
+    col_names: List[str] = []
+    for c in cols_raw:
+        if isinstance(c, dict):
+            col_names.append(str(c.get("name", "")))
+        else:
+            col_names.append(str(c))
+    # Use cached hints if present
+    numeric_cols = set(view.get("numeric_columns", []))
+    date_cols = set(view.get("date_columns", []))
+    names = [n.lower() for n in col_names]
+    # Date role
+    if date_cols or any(x for x in names if any(k in x for k in ["date", "dt", "time", "month", "year"])):
+        roles.add("date")
+    # Measure role
+    if numeric_cols or any(x for x in names if any(k in x for k in ["amount", "qty", "quantity", "price", "revenue", "sales", "count"])):
+        roles.add("measure")
+    # Product/customer keys
+    if any(x for x in names if any(k in x for k in ["product_id", "product_key", "sku"])):
+        roles.add("product_key")
+    if any(x for x in names if any(k in x for k in ["customer_id", "customer_key", "account_id"])):
+        roles.add("customer_key")
+    return roles
+
+
+def _prepare_doc_text_for_view(view: Dict[str, Any]) -> str:
+    name = view.get("name", "") or view.get("view", "")
+    schema = view.get("schema", "")
+    subject_tags = view.get("subject_tags", [])
+    # Columns formatting
+    cols_raw = view.get("columns", [])
+    col_names: List[str] = []
+    for c in cols_raw:
+        if isinstance(c, dict):
+            col_names.append(str(c.get("name", "")))
+        else:
+            col_names.append(str(c))
+    definition = view.get("definition_sanitized", "")
+    if definition and len(definition) > 2000:
+        definition = definition[:2000]
+    parts = [schema, name] + col_names + subject_tags + [definition]
+    return " ".join([p for p in parts if p])
+
+
+def _bm25_scores(query: str, docs: List[str]) -> List[float]:
+    # Lightweight BM25 (Okapi) with corpus-local IDF
+    k1, b = 1.5, 0.75
+    q_tokens = _tokenize(query)
+    if not docs:
+        return []
+    tokenized_docs = [_tokenize(d) for d in docs]
+    doc_lens = [len(t) or 1 for t in tokenized_docs]
+    avgdl = sum(doc_lens) / max(len(doc_lens), 1)
+    N = len(tokenized_docs)
+    # Document frequencies
+    df = defaultdict(int)
+    for tset in [set(ts) for ts in tokenized_docs]:
+        for t in tset:
+            df[t] += 1
+    # Compute scores per document
+    scores: List[float] = []
+    for idx, terms in enumerate(tokenized_docs):
+        tf = Counter(terms)
+        dl = doc_lens[idx]
+        s = 0.0
+        for qt in q_tokens:
+            if qt not in df:
+                continue
+            idf = math.log((N - df[qt] + 0.5) / (df[qt] + 0.5) + 1.0)
+            freq = tf.get(qt, 0)
+            if freq == 0:
+                continue
+            denom = freq + k1 * (1 - b + b * (dl / avgdl))
+            s += idf * ((freq * (k1 + 1)) / denom)
+        scores.append(s)
+    # Normalize to [0,1]
+    if not scores:
+        return []
+    max_s = max(scores) or 1.0
+    return [min(s / max_s, 1.0) for s in scores]
+
+
+def rank_views(
+    query: str,
+    views: List[Dict[str, Any]],
+    include_empty: Optional[bool] = None,
+    *,
+    view_priority_bonus: Optional[float] = None,
+    role_coverage_threshold: Optional[float] = None,
+) -> List[RankedView]:
+    """
+    Rank views using normalized signals and optional empty filtering.
+
+    score = 0.45*bm25_text + 0.25*role_coverage + 0.15*subject_match + 0.10*has_rows + 0.05*is_view_bonus
+    """
+    cfg_bonus = (
+        view_priority_bonus
+        if view_priority_bonus is not None
+        else (mcp_config.ranker_view_priority_bonus if mcp_config else 0.15)
+    )
+    cfg_threshold = (
+        role_coverage_threshold
+        if role_coverage_threshold is not None
+        else (mcp_config.view_role_coverage_threshold if mcp_config else 0.7)
+    )
+    include_empty = (
+        include_empty
+        if include_empty is not None
+        else (mcp_config.include_empty_by_default if mcp_config else False)
+    )
+
+    # Prepare BM25 corpus
+    docs = [_prepare_doc_text_for_view(v) for v in views]
+    bm25_list = _bm25_scores(query, docs)
+
+    # Subject tags overlap
+    query_tags = _infer_query_subject_tags(query)
+
+    ranked: List[RankedView] = []
+
+    for idx, v in enumerate(views):
+        schema = v.get("schema", "")
+        name = v.get("name") or v.get("view") or ""
+        full_name = v.get("full_name") or v.get("fqvn") or (f"{schema}.{name}" if schema and name else name)
+        est_rows = int(v.get("est_rows") or v.get("estimated_rows") or 0)
+        has_rows = 1 if (v.get("has_rows") is True or est_rows > 0) else 0
+
+        # Filter empties if requested
+        if not include_empty and has_rows == 0:
+            continue
+
+        # Role coverage
+        required_roles = _infer_required_roles(query)
+        present_roles = _detect_roles_in_view(v)
+        role_coverage = 0.0
+        contributing_roles: List[str] = []
+        if required_roles:
+            covered = [r for r in required_roles if r in present_roles]
+            role_coverage = len(covered) / max(len(required_roles), 1)
+            contributing_roles = covered
+
+        # Subject match
+        v_tags = set([t.lower() for t in v.get("subject_tags", [])])
+        if not v_tags:
+            # Infer from name/columns when tags absent
+            inferred = set()
+            tokens = set(_tokenize((v.get("name") or "") + " " + " ".join([c.get("name", c) if isinstance(c, dict) else str(c) for c in v.get("columns", [])])))
+            mapping = {
+                "sales": {"sales", "revenue", "amount"},
+                "invoice": {"invoice", "billing"},
+                "stock": {"stock", "inventory", "warehouse"},
+                "crm": {"crm", "customer", "lead"},
+                "product": {"product", "sku", "item"},
+                "customer": {"customer", "client", "account"},
+            }
+            for tag, kws in mapping.items():
+                if tokens & kws:
+                    inferred.add(tag)
+            v_tags = inferred
+        # Jaccard overlap normalized
+        inter = len(query_tags & v_tags)
+        union = len(query_tags | v_tags) or 1
+        subject_match = inter / union
+
+        # BM25
+        bm25_text = bm25_list[idx] if idx < len(bm25_list) else 0.0
+
+        # View bonus when role coverage passes threshold
+        is_view_bonus = cfg_bonus if role_coverage >= cfg_threshold and cfg_threshold > 0 else 0.0
+
+        # Final weighted score
+        score = (
+            0.45 * bm25_text
+            + 0.25 * role_coverage
+            + 0.15 * subject_match
+            + 0.10 * has_rows
+            + 0.05 * is_view_bonus
+        )
+
+        reasons: List[str] = []
+        reasons.append(f"bm25_text: {bm25_text:.2f}")
+        if required_roles:
+            if contributing_roles:
+                missing = [r for r in required_roles if r not in contributing_roles]
+                reasons.append(
+                    f"role_coverage: {role_coverage:.2f} (covered: {', '.join(contributing_roles)}; missing: {', '.join(missing) if missing else 'none'})"
+                )
+            else:
+                reasons.append(f"role_coverage: {role_coverage:.2f} (no required roles covered)")
+        reasons.append(f"subject_match: {subject_match:.2f} (q_tags: {', '.join(sorted(query_tags))}; v_tags: {', '.join(sorted(v_tags))})")
+        reasons.append(f"has_rows: {bool(has_rows)}{f' (est_rows={est_rows})' if est_rows else ''}")
+        if is_view_bonus > 0:
+            reasons.append(f"is_view_bonus applied: +{is_view_bonus:.2f}")
+
+        ranked.append(
+            RankedView(
+                schema=schema,
+                name=name,
+                full_name=full_name,
+                score=round(min(max(score, 0.0), 1.0), 4),
+                reasons=reasons,
+                role_coverage=round(role_coverage, 4),
+                has_rows=has_rows,
+                estimated_rows=est_rows,
+                subject_match=round(subject_match, 4),
+            )
+        )
+
+    ranked.sort(key=lambda r: (-r.score, -r.role_coverage, r.name))
+    return ranked
+
+
+def select_best_view(
+    ranked_views: List[RankedView],
+    *,
+    min_score: float = 0.80,
+    min_role_coverage: Optional[float] = None,
+) -> Optional[RankedView]:
+    threshold = min_role_coverage if min_role_coverage is not None else (
+        mcp_config.view_role_coverage_threshold if mcp_config else 0.7
+    )
+    for rv in ranked_views:
+        if rv.score >= min_score and rv.role_coverage >= threshold:
+            return rv
+    return None

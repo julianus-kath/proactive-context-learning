@@ -56,6 +56,13 @@ class MCPServerConfig:
     # Connection pool settings
     min_pool_size: int = int(os.getenv("MIN_POOL_SIZE", "1"))
     max_pool_size: int = int(os.getenv("MAX_POOL_SIZE", "10"))
+
+    # Views + Ranker configuration
+    ranker_view_priority_bonus: float = float(os.getenv("RANKER_VIEW_PRIORITY_BONUS", "0.15"))
+    view_role_coverage_threshold: float = float(os.getenv("VIEW_ROLE_COVERAGE_THRESHOLD", "0.7"))
+    include_empty_by_default: bool = os.getenv("INCLUDE_EMPTY_BY_DEFAULT", "false").lower() == "true"
+    catalog_ttl_seconds: int = int(os.getenv("CATALOG_TTL_SECONDS", "3600"))
+    join_max_hops: int = int(os.getenv("JOIN_MAX_HOPS", "3"))
     
     @property
     def connection_string(self) -> str:
