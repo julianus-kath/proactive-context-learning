@@ -44,6 +44,18 @@ echo (Ctrl+C to stop)
 echo ========================================
 "%PYTHON_CMD%" -m uvicorn mcp_server.server:app --host 0.0.0.0 --port 8000 --reload --log-level debug
 set "EC=%ERRORLEVEL%"
+
+REM --- Optional: Print a quick Scout summary if health endpoint is reachable ---
+for /f "usebackq tokens=2 delims=:, }" %%A in (`"powershell -NoLogo -NoProfile -Command ^
+  try { $resp = Invoke-WebRequest -Uri http://127.0.0.1:8000/health -UseBasicParsing -TimeoutSec 3; ^
+        $json = $resp.Content | ConvertFrom-Json; ^
+        $tables = $json.catalog.tables_count; ^
+        $age = [math]::Round($json.catalog.catalog_age_s, 1); ^
+        \"tables=:$tables, age_s=:$age\" ^
+      } catch { \"tables=:n/a, age_s=:n/a\" }"`) do (
+  echo Scout Catalog: %%A
+)
+
 popd
 
 exit /b %EC%

@@ -107,6 +107,17 @@ class MCPTools:
                         "pattern": {
                             "type": "string",
                             "description": "Filter by table name pattern (optional, case-insensitive)"
+                        },
+                        "include_empty": {
+                            "type": "boolean",
+                            "description": "Include tables with zero rows (default: false)",
+                            "default": False
+                        },
+                        "min_rows": {
+                            "type": "integer",
+                            "description": "Minimum estimated rows required to include a table (default: 1)",
+                            "default": 1,
+                            "minimum": 0
                         }
                     },
                     "required": []
@@ -695,6 +706,9 @@ class MCPTools:
         page_size = arguments.get("page_size", 25)
         schema = arguments.get("schema")
         pattern = arguments.get("pattern")
+        from mcp_server.config import config as mcp_cfg
+        include_empty = arguments.get("include_empty", mcp_cfg.include_empty_by_default)
+        min_rows = arguments.get("min_rows", 1)
         
         try:
             response = await DiscoveryTools.list_tables(
@@ -702,7 +716,9 @@ class MCPTools:
                 page=page,
                 page_size=page_size,
                 schema=schema,
-                pattern=pattern
+                pattern=pattern,
+                include_empty=include_empty,
+                min_rows=min_rows
             )
             
             response_dict = response.to_dict()
@@ -1018,6 +1034,11 @@ class MCPTools:
             # Pull all items and filter to views
             all_items = db_manager.catalog.get_table_list()
             views = []
+
+            # Stats for Scout mode: candidates and empties among views (pre-threshold)
+            total_candidates = 0
+            empty_candidates = 0
+
             for t in all_items:
                 if str(t.get('type','')).upper() != 'VIEW':
                     continue
@@ -1025,8 +1046,11 @@ class MCPTools:
                     continue
                 if pattern and pattern.lower() not in t['name'].lower():
                     continue
-                # empty filtering uses estimated_rows
                 est = int(t.get('estimated_rows') or 0)
+                total_candidates += 1
+                if est == 0:
+                    empty_candidates += 1
+                # empty filtering uses estimated_rows
                 if not include_empty and est <= 0:
                     continue
                 views.append({
@@ -1046,7 +1070,15 @@ class MCPTools:
             
             text = {
                 "ok": True,
-                "data": {"views": page_views, "filters": {"schema": schema, "pattern": pattern, "include_empty": include_empty}},
+                "data": {
+                    "views": page_views,
+                    "filters": {"schema": schema, "pattern": pattern, "include_empty": include_empty},
+                    "stats": {
+                        "total_candidates": total_candidates,
+                        "empty_candidates": empty_candidates,
+                        "empty_ratio": (empty_candidates / total_candidates) if total_candidates > 0 else 0.0
+                    }
+                },
                 "page_info": {"page": page, "page_size": page_size, "total_items": total, "total_pages": total_pages, "has_next": page < total_pages, "has_prev": page>1}
             }
             return MCPToolResult(content=[{"type":"text","text": json.dumps(text)}])

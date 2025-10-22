@@ -226,7 +226,9 @@ class DiscoveryTools:
         page: int = 1,
         page_size: int = 25,
         schema: Optional[str] = None,
-        pattern: Optional[str] = None
+        pattern: Optional[str] = None,
+        include_empty: bool = False,
+        min_rows: int = 1,
     ) -> DiscoveryResponse:
         """
         List tables with pagination and optional filtering.
@@ -237,6 +239,8 @@ class DiscoveryTools:
             page_size: Number of items per page (max: 100)
             schema: Filter by schema name (optional)
             pattern: Filter by table name pattern (optional, case-insensitive)
+            include_empty: Include tables with zero rows when True (default False)
+            min_rows: Minimum estimated rows to include when include_empty=False (default 1)
         
         Returns:
             DiscoveryResponse with paged table summaries
@@ -256,7 +260,7 @@ class DiscoveryTools:
             )
         
         # Check cache
-        cache_key_args = {"page": page, "page_size": page_size, "schema": schema, "pattern": pattern}
+        cache_key_args = {"page": page, "page_size": page_size, "schema": schema, "pattern": pattern, "include_empty": include_empty, "min_rows": min_rows}
         cached_response = DiscoveryTools._response_cache.get("list_tables", cache_key_args)
         if cached_response:
             return cached_response
@@ -283,6 +287,12 @@ class DiscoveryTools:
             
             # Apply filters
             filtered_tables = []
+            threshold = 0 if include_empty else max(int(min_rows or 1), 1)
+
+            # Stats: count candidates and empty tables before thresholding
+            total_candidates = 0
+            empty_candidates = 0
+
             for table in all_tables:
                 # Schema filter (table is a dict, not an object)
                 if schema and table['schema'].lower() != schema.lower():
@@ -292,13 +302,23 @@ class DiscoveryTools:
                 if pattern and pattern.lower() not in table['name'].lower():
                     continue
                 
+                # Count candidate and empties (pre-threshold)
+                est = int(table.get('estimated_rows') or 0)
+                total_candidates += 1
+                if est == 0:
+                    empty_candidates += 1
+
+                # Estimated rows filter (apply threshold)
+                if est < threshold:
+                    continue
+                
                 # Create summary
                 summary = TableSummary(
                     schema=table['schema'],
                     name=table['name'],
                     full_name=table['full_name'],
                     type=table['type'],
-                    estimated_rows=table['estimated_rows'],
+                    estimated_rows=est,
                     column_count=table.get('column_count', 0),
                     has_foreign_keys=table.get('fk_count', 0) > 0,
                     has_primary_keys=False  # Not available in list_tables
@@ -332,7 +352,14 @@ class DiscoveryTools:
                 "tables": [asdict(t) for t in page_tables],
                 "filters": {
                     "schema": schema,
-                    "pattern": pattern
+                    "pattern": pattern,
+                    "include_empty": include_empty,
+                    "min_rows": threshold,
+                },
+                "stats": {
+                    "total_candidates": total_candidates,
+                    "empty_candidates": empty_candidates,
+                    "empty_ratio": (empty_candidates / total_candidates) if total_candidates > 0 else 0.0
                 }
             }
             
