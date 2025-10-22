@@ -294,6 +294,20 @@ class MCPTools:
                 }
             ),
             MCPTool(
+                name="list_empty_tables",
+                description="List empty tables from Scout Catalog (views-first policy: use list_views for views)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "schema": {"type": "string", "description": "Filter by schema (optional)"},
+                        "pattern": {"type": "string", "description": "Case-insensitive name filter (optional)"},
+                        "page": {"type":"integer","default":1,"minimum":1},
+                        "page_size": {"type":"integer","default":25,"minimum":1,"maximum":100}
+                    },
+                    "required": []
+                }
+            ),
+            MCPTool(
                 name="get_execution_metrics",
                 description="Get performance metrics for answer-first query execution (Phase 7 - observability)",
                 inputSchema={
@@ -353,6 +367,8 @@ class MCPTools:
                     result = await MCPTools._parse_intent(arguments, db_manager)
                 elif tool_name == "rank_tables":
                     result = await MCPTools._rank_tables(arguments, db_manager)
+                elif tool_name == "list_empty_tables":
+                    result = await MCPTools._list_empty_tables(arguments, db_manager)
                 elif tool_name == "get_execution_metrics":
                     result = await MCPTools._get_execution_metrics(arguments, db_manager)
                 else:
@@ -367,17 +383,39 @@ class MCPTools:
                         isError=True
                     )
                 
-                # Extract metrics from result if available
+                # Extract metrics from result if available and align success with response.ok
                 if result and hasattr(result, 'content') and result.content:
                     content = result.content[0]
                     if isinstance(content, dict) and content.get('type') == 'text':
                         text = content.get('text', '')
-                        # Try to extract row count from result text
-                        if 'rows' in text.lower():
-                            import re
-                            match = re.search(r'(\d+)\s+rows?', text, re.IGNORECASE)
-                            if match:
-                                metrics.row_count = int(match.group(1))
+                        # Attempt to parse JSON envelope from tool response
+                        try:
+                            payload = json.loads(text)
+                            if isinstance(payload, dict):
+                                # Align success with "ok" when present
+                                if 'ok' in payload:
+                                    metrics.success = bool(payload.get('ok', False))
+                                    if not metrics.success:
+                                        metrics.error_code = payload.get('error_code') or payload.get('code')
+                                        metrics.error_message = payload.get('error_message') or payload.get('error')
+                                # Common execution metrics from bounded query
+                                if 'row_count' in payload and isinstance(payload.get('row_count'), int):
+                                    metrics.row_count = payload['row_count']
+                                if bool(payload.get('truncated')):
+                                    metrics.truncated = True
+                        except Exception:
+                            # Fallback: extract row count heuristically from human text
+                            if 'rows' in text.lower():
+                                import re
+                                match = re.search(r'(\d+)\s+rows?', text, re.IGNORECASE)
+                                if match:
+                                    metrics.row_count = int(match.group(1))
+                
+                # Fallback: align success with isError flag when available
+                try:
+                    metrics.success = not bool(getattr(result, 'isError', False))
+                except Exception:
+                    pass
                 
                 return result
                 
@@ -861,6 +899,66 @@ class MCPTools:
                 }],
                 isError=True
             )
+    
+    @staticmethod
+    async def _list_empty_tables(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """List empty tables from catalog (no live INFORMATION_SCHEMA queries)."""
+        schema = arguments.get("schema")
+        pattern = arguments.get("pattern")
+        page = max(1, arguments.get("page", 1))
+        page_size = min(max(1, arguments.get("page_size", 25)), 100)
+        
+        try:
+            if not getattr(db_manager, 'catalog', None):
+                return MCPToolResult(content=[{"type":"text","text":"Catalog not initialized"}], isError=True)
+            items = db_manager.catalog.get_table_list()
+            empties = []
+            # Pre-threshold stats
+            total_candidates = 0
+            empty_candidates = 0
+            for t in items:
+                # Only tables here; views are handled by list_views/search_views
+                if str(t.get('type','')).upper() != 'TABLE':
+                    continue
+                if schema and t['schema'].lower() != schema.lower():
+                    continue
+                if pattern and pattern.lower() not in t['name'].lower():
+                    continue
+                est = int(t.get('estimated_rows') or 0)
+                total_candidates += 1
+                if est == 0:
+                    empty_candidates += 1
+                # Include only empties
+                if est == 0:
+                    empties.append({
+                        "schema": t['schema'],
+                        "name": t['name'],
+                        "full_name": t['full_name'],
+                        "estimated_rows": est,
+                        "column_count": t.get('column_count', 0)
+                    })
+            total = len(empties)
+            start = (page-1)*page_size
+            end = start + page_size
+            page_items = empties[start:end]
+            total_pages = (total + page_size - 1)//page_size if total>0 else 1
+            payload = {
+                "ok": True,
+                "data": {
+                    "tables": page_items,
+                    "filters": {"schema": schema, "pattern": pattern},
+                    "stats": {
+                        "total_candidates": total_candidates,
+                        "empty_candidates": empty_candidates,
+                        "empty_ratio": (empty_candidates/total_candidates) if total_candidates>0 else 0.0
+                    }
+                },
+                "page_info": {"page": page, "page_size": page_size, "total_items": total, "total_pages": total_pages, "has_next": page<total_pages, "has_prev": page>1}
+            }
+            return MCPToolResult(content=[{"type":"text","text": json.dumps(payload)}], isError=False)
+        except Exception as e:
+            logger.error(f"list_empty_tables failed: {e}")
+            return MCPToolResult(content=[{"type":"text","text": f"Internal error: {e}"}], isError=True)
     
     @staticmethod
     async def _describe_table(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
