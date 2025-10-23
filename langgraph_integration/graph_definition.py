@@ -349,7 +349,16 @@ class DatabaseWorkflow:
             response = await self.llm.ainvoke([SystemMessage(content=prompt)])
             
             # Parse the JSON response to extract intent information
-            intent_text = response.content
+            # SAFETY: Check response is valid before accessing .content
+            if not response or not hasattr(response, 'content'):
+                logger.warning(f"LLM response is invalid: {type(response)}")
+                intent_text = ""
+            else:
+                intent_text = response.content
+                if not intent_text or not isinstance(intent_text, str):
+                    logger.warning(f"LLM response.content is invalid: {type(intent_text)}")
+                    intent_text = ""
+            
             parsed = self._parse_intent_json_response(intent_text)
             
             # CRITICAL: Ensure parsed result is always a dict, never None
@@ -400,13 +409,17 @@ class DatabaseWorkflow:
                 logger.info(f"   Defaults applied: {intent_analysis.get('defaults_applied')}")
             
         except Exception as e:
-            logger.error(f"Error parsing intent: {e}")
+            logger.error(f"❌ Error parsing intent: {e}")
+            logger.debug(f"   Using safe fallback intent_analysis")
+            # CRITICAL: ALWAYS set intent_analysis, even on error
+            # This guarantees downstream code never sees None
+            state["intent_analysis"] = intent_analysis
             if debug_logger:
                 debug_logger.workflow_error("intent_parsing_error", str(e))
             state["error_info"] = {
                 "type": "intent_parsing_error",
                 "message": str(e),
-                "context": "Failed to parse user intent"
+                "context": "Failed to parse user intent - using safe default"
             }
         
         return state
