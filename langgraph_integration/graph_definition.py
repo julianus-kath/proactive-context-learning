@@ -14,6 +14,7 @@ This module defines the LangGraph workflow that:
 import os
 import asyncio
 import logging
+import json
 from typing import Dict, Any, List, Optional, TypedDict, Annotated
 from dataclasses import dataclass
 from dotenv import load_dotenv
@@ -56,6 +57,7 @@ from .prompts import (
     format_sample_data_prompt,
     format_health_check_prompt
 )
+from .prompts.repair import SQL_REPAIR_PROMPT, QUERY_SIMPLIFICATION
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -913,9 +915,15 @@ class DatabaseWorkflow:
     
     async def _retry_query(self, state: WorkflowState) -> WorkflowState:
         """
-        Retry SQL query with automatic error correction (Phase 5).
+        Retry SQL query with automatic error correction using LLM repair (Phase 5+).
         
-        PHASE 5: Uses query_bounded_mcp for retry execution.
+        This enhanced version uses the SQL_REPAIR_PROMPT to fix common MSSQL issues:
+        - LIMIT → TOP syntax correction
+        - Table/column name mismatches  
+        - Date function corrections
+        - FK relationship issues
+        
+        PHASE 5: Uses query_bounded_mcp for retry execution with LLM repair.
         
         Args:
             state: Current workflow state
@@ -935,40 +943,90 @@ class DatabaseWorkflow:
             # Increment retry count
             state["retry_count"] = retry_count + 1
             
-            # Get the original SQL and schema
+            # Get the original SQL, schema, and error info
             sql_query = state.get("sql_query", "")
             schema_snippet = state.get("schema_snippet", state.get("schema", ""))
             error_info = state.get("error_info", {})
             error_msg = error_info.get("message", "")
+            relevant_tables = state.get("relevant_tables", [])
             
-            logger.info(f"Attempting to retry query (attempt {state['retry_count']}): {sql_query}")
+            logger.info(f"🔧 Attempting SQL repair (attempt {state['retry_count']}/{max_retries})...")
+            logger.debug(f"   Original SQL: {sql_query[:80]}...")
+            logger.debug(f"   Error: {error_msg}")
             
-            # PHASE 5: Use query_bounded_mcp for retry
-            # TODO: In future, could use LLM to fix SQL based on error message
-            results = await query_bounded_mcp(sql_query, max_rows=1000, timeout_ms=30000)
+            # Step 1: Use LLM to repair SQL based on the error message
+            try:
+                # Build join plan info if available
+                join_plan = {"tables": relevant_tables} if relevant_tables else {}
+                
+                repair_prompt = SQL_REPAIR_PROMPT.format(
+                    sql_query=sql_query,
+                    error_message=error_msg,
+                    schema_snippet=schema_snippet,
+                    join_plan=json.dumps(join_plan, indent=2) if join_plan else "{}"
+                )
+                
+                logger.debug("   Invoking LLM for SQL repair...")
+                response = await self.llm.ainvoke([SystemMessage(content=repair_prompt)])
+                repaired_sql = response.content.strip()
+                
+                # Extract SQL from response (might have explanations)
+                repaired_sql = self._extract_sql_from_response(repaired_sql)
+                
+                if not repaired_sql:
+                    logger.warning("   LLM repair returned no SQL, retrying original")
+                    repaired_sql = sql_query
+                else:
+                    logger.info(f"   ✅ LLM repaired SQL ({len(repaired_sql)} chars)")
+                    if debug_logger:
+                        debug_logger.sql_generated(
+                            repaired_sql,
+                            f"Repair attempt {state['retry_count']}: fixed {error_msg[:50]}",
+                            table_context=relevant_tables
+                        )
+                
+                state["sql_query"] = repaired_sql
+                
+            except Exception as repair_error:
+                logger.warning(f"   Repair attempt failed ({repair_error}), retrying original SQL")
+                # Fall back to original SQL if repair fails
+                repaired_sql = sql_query
+            
+            # Step 2: Retry with repaired (or original) SQL
+            logger.info(f"   🔄 Retrying query with repaired SQL...")
+            results = await query_bounded_mcp(repaired_sql, max_rows=1000, timeout_ms=30000)
             
             # Check if the retry was successful
             if results.startswith("Error") or results.startswith("QUERY_ERROR:"):
                 error_msg = results.replace("QUERY_ERROR:", "").replace("Error executing query:", "").strip()
+                logger.warning(f"   ⚠️  Retry still failed: {error_msg[:80]}...")
+                
+                # If this is attempt 1, we can try simplification on next retry
+                # If this is attempt 2, we should give up and ask user
                 state["error_info"] = {
                     "type": "query_retry_error",
                     "message": error_msg,
-                    "context": f"Failed to execute SQL after retry: {sql_query}",
-                    "sql_query": sql_query,
-                    "retry_count": state["retry_count"]
+                    "context": f"Failed to execute SQL after repair attempt {state['retry_count']}: {repaired_sql[:100]}",
+                    "sql_query": repaired_sql,
+                    "retry_count": state["retry_count"],
+                    "original_sql": sql_query
                 }
             else:
                 # Success! Clear error info and set results
+                logger.info(f"   ✅ Query retry SUCCESSFUL after {state['retry_count']} repair attempt(s)")
                 state["query_results"] = results
                 state["error_info"] = None
-                logger.info(f"Query retry successful after {state['retry_count']} attempts")
+                if debug_logger:
+                    rows_count = len(results.split('\n')) if results else 0
+                    debug_logger.query_executed(repaired_sql, rows_count, 0)
             
         except Exception as e:
-            logger.error(f"Error in query retry: {e}")
+            logger.error(f"Error in query retry: {e}", exc_info=True)
             state["error_info"] = {
                 "type": "query_retry_error",
                 "message": str(e),
-                "context": f"Failed during query retry process"
+                "context": f"Failed during query retry process",
+                "retry_count": state.get("retry_count", 0)
             }
         
         return state

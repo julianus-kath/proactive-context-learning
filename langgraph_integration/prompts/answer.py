@@ -64,21 +64,39 @@ User: {user_input}
 Available schema: {schema_snippet}
 Conversation history: {messages}
 
-**Your job:** Ask EXACTLY ONE question that uses actual table/column names from the schema.
+**Your job:** Ask EXACTLY ONE question to resolve USER INTENT ambiguity.
+NEVER ask the user to confirm columns that exist in the schema.
+
+**CRITICAL RULE: DO NOT ASK ABOUT COLUMNS**
+- If user asks "when was this created?" → Use any available date column (don't ask which one)
+- If user asks "show top 10" → Use any reasonable ranking (don't ask by what metric)
+- If user asks "status" but multiple status columns exist → Pick one (don't ask which)
+- ONLY clarify when the USER INTENT is truly ambiguous (e.g., "top" is ambiguous: top by revenue? by frequency? by date?)
 
 **Clarification Rules:**
-1. Ask one question only (no multiple questions)
-2. Use real column/table names (reference schema_snippet)
-3. Suggest options if relevant (e.g., "Do you mean column A, B, or C?")
-4. Keep it short and natural
-5. Avoid yes/no questions (ask "which?" instead)
+1. Ask ONE question only (no multiple questions)
+2. Use ACTUAL column/table names from schema_snippet (not hypothetical names)
+3. Focus on USER INTENT ambiguity, NOT schema discovery
+4. Suggest concrete options from the schema if relevant
+5. Keep it short and natural
+6. Avoid yes/no questions (ask "which?" instead)
 
-**Example:**
-Schema has: customers (name, email), orders (order_date, total)
-User: "Show me the top orders"
-Question: "Do you want the top orders by total amount or by date?"
+**Example - WRONG:**
+Schema: employees (name, created_at, entry_date)
+User: "When was John created?"
+❌ "Do you have columns like created_at, date_created, or entry_date? Which do you prefer?"
 
-**Generate ONE clarification question:**
+**Example - RIGHT:**
+Schema: employees (name, created_at, entry_date)
+User: "When was John created?"
+✅ No clarification needed. Use created_at column. Ask SQL generation to pick one date column.
+
+**Example - RIGHT (true ambiguity):**
+Schema: sales (total_revenue, unit_count, order_frequency)
+User: "Show me the top 10"
+✅ "Do you want the top 10 by total revenue, by unit count, or by order frequency?"
+
+**Generate ONE clarification question (or 'NO_CLARIFICATION_NEEDED' if intent is clear):**
 """
 
 ERROR_RESPONSE_PROMPT = """You are explaining a query error to the user in helpful, simple terms.

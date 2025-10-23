@@ -27,6 +27,7 @@ from langgraph_integration.prompts.repair import (
     SQL_REPAIR_PROMPT,
     QUERY_SIMPLIFICATION
 )
+from langgraph_integration.utils.sql_normalizer import prepare_sql_for_execution
 
 logger = logging.getLogger(__name__)
 
@@ -163,6 +164,7 @@ class ExecAndRecoveryAgent:
         Execute query via MCP query_bounded.
         
         Handles safety: row caps, timeouts, redaction.
+        Also normalizes SQL dialect (LIMIT → TOP for MSSQL).
         """
         logger.info("🚀 Executing query...")
 
@@ -177,6 +179,27 @@ class ExecAndRecoveryAgent:
             return {**state, "error_info": error}
 
         try:
+            # Step 1: Normalize SQL dialect and validate
+            # This catches edge cases where LLM generates LIMIT instead of TOP
+            try:
+                normalized_sql, normalization_warnings = prepare_sql_for_execution(sql)
+                if normalization_warnings:
+                    for warning in normalization_warnings:
+                        logger.info(f"⚠️  {warning}")
+                sql = normalized_sql
+                state["sql_query"] = normalized_sql  # Update state with normalized query
+            except ValueError as e:
+                error = {
+                    "type": "SQL_VALIDATION_ERROR",
+                    "message": f"SQL validation failed: {str(e)}",
+                    "error": str(e),
+                    "stage": "validation"
+                }
+                logger.warning(f"⚠️  {error['message']}")
+                state["error_info"] = error
+                state["exec_result"] = None
+                return state
+            
             logger.debug(f"Query: {sql[:100]}...")
 
             # Call MCP query_bounded with safety parameters

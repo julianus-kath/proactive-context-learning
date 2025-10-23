@@ -47,15 +47,29 @@ SQL_GENERATOR_PROMPT_MSSQL = """You are a SQL expert for Microsoft SQL Server (M
 
 Generate a production-ready SELECT query based on the join plan.
 
-**CRITICAL MSSQL RULES:**
-- Use TOP {row_limit} instead of LIMIT
-- Use DATEADD(year, -1, GETDATE()) for date math (NOT DATE_SUB)
-- Always use fully-qualified table names: [dbo].[table_name] or dbo.table_name
-- Use ISNULL or COALESCE for NULL handling
-- Always use square brackets for identifiers if they contain spaces: [Order Date]
-- Never use backticks (MySQL only)
-- Date literals: CAST('2024-01-01' AS DATE) or CONVERT(DATE, '2024-01-01', 120)
-- GETDATE() for current timestamp
+**CRITICAL MSSQL RULES (STRICT COMPLIANCE REQUIRED):**
+
+1. **ROW LIMIT - MUST USE TOP:**
+   ✓ Correct: SELECT TOP {row_limit} * FROM dbo.orders
+   ✗ WRONG: SELECT * FROM dbo.orders LIMIT {row_limit}
+   ✗ WRONG: SELECT * FROM dbo.orders OFFSET 0 ROWS FETCH NEXT {row_limit} ROWS ONLY
+   → If you are tempted to write LIMIT, write TOP instead.
+
+2. **DATE OPERATIONS:**
+   ✓ One year ago: DATEADD(year, -1, GETDATE())
+   ✓ Date cast: CAST('2024-01-01' AS DATE)
+   ✓ Current date: CAST(GETDATE() AS DATE)
+   ✗ WRONG: DATE_SUB (PostgreSQL only)
+   ✗ WRONG: DATE('2024-01-01') (MySQL only)
+
+3. **TABLE/COLUMN NAMES:**
+   ✓ Always fully-qualified: dbo.table_name or [dbo].[table_name]
+   ✓ Spaces in names: [Order Date], [Customer ID]
+   ✗ WRONG: backticks like `table_name` (MySQL only)
+   ✗ WRONG: bare names without schema: table_name
+
+4. **NULL HANDLING:**
+   - Use ISNULL(column, default_value) or COALESCE(col1, col2, default)
 
 **Join Plan:**
 {join_plan}
@@ -65,14 +79,15 @@ Generate a production-ready SELECT query based on the join plan.
 - Include proper NULL handling
 - Use meaningful column aliases
 - Format for readability
+- Start with SELECT TOP {row_limit}
 
-**Output (SQL only, no explanation):**
+**Output (SQL ONLY - no explanation or markdown):**
 SELECT ...
 FROM ...
 WHERE ...
 """
 
-SQL_GENERATOR_WITH_VALIDATION = """You are generating a SELECT query for Microsoft SQL Server.
+SQL_GENERATOR_WITH_VALIDATION = """You are generating a SELECT query for Microsoft SQL Server (MSSQL).
 
 **Schema:**
 {schema_snippet}
@@ -83,14 +98,23 @@ SQL_GENERATOR_WITH_VALIDATION = """You are generating a SELECT query for Microso
 **Requirements:**
 {requirements}
 
-**Constraints:**
-- READ-ONLY: SELECT only
-- ROW LIMIT: TOP {row_limit}
-- TIMEOUT: {query_timeout_seconds} seconds max
-- MSSQL Dialect: TOP, DATEADD, GETDATE(), fully-qualified names
-- Safety: Redact sensitive columns (password, email, ssn)
+**MANDATORY RULES:**
+- READ-ONLY: SELECT only (no INSERT, UPDATE, DELETE, DROP, ALTER)
+- ROW LIMIT: ALWAYS start with SELECT TOP {row_limit} (NEVER use LIMIT or OFFSET...FETCH)
+- TIMEOUT: Query will timeout after {query_timeout_seconds} seconds
+- TABLE NAMES: Always fully-qualified (dbo.table_name)
+- DATE FUNCTIONS: Use DATEADD, GETDATE(), CAST for dates (NOT DATE_SUB, DATE_ADD, NOW())
+- SAFETY: Redact sensitive columns (password, email, ssn, credit_card) by setting to NULL or blank
 
-**Generate valid MSSQL:**
+**DIALECT CHECKLIST (must pass all):**
+✓ Starts with "SELECT TOP {row_limit}"
+✓ All table names have schema prefix: dbo.* 
+✓ No LIMIT clause anywhere
+✓ No backticks (those are MySQL)
+✓ Date functions use DATEADD/GETDATE/CAST (not DATE_SUB/NOW/DATE)
+✓ No DML keywords (INSERT, UPDATE, DELETE, etc.)
+
+**Generate valid MSSQL (must pass checklist above):**
 """
 
 VIEWS_PREFERENCE = """

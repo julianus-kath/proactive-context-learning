@@ -54,6 +54,7 @@ class DiscoveryAgent:
         - rank_candidates: Rank by relevance + role coverage + view preference
         - filter_to_limit: Keep only ≤3 candidates
         - describe_selected: Get detailed metadata for selected tables
+        - explore_date_columns: (Optional) Autonomously discover date columns if needed
         - build_schema_snippet: Combine descriptions into compact schema
         
         Returns:
@@ -66,13 +67,25 @@ class DiscoveryAgent:
         graph.add_node("rank_candidates", self._rank_candidates_node)
         graph.add_node("filter_to_limit", self._filter_to_limit_node)
         graph.add_node("describe_selected", self._describe_selected_node)
+        graph.add_node("explore_date_columns", self._explore_date_columns_node)
         graph.add_node("build_schema_snippet", self._build_schema_snippet_node)
         
         # Define edges
         graph.add_edge("search_candidates", "rank_candidates")
         graph.add_edge("rank_candidates", "filter_to_limit")
         graph.add_edge("filter_to_limit", "describe_selected")
-        graph.add_edge("describe_selected", "build_schema_snippet")
+        
+        # Conditional routing: explore date columns if needed, else build schema
+        def route_to_exploration(state: BaseState) -> str:
+            intent = state.get("intent", {})
+            # Check if this query needs date column exploration
+            needs_date_exploration = intent.get("needs_date_exploration", False)
+            if needs_date_exploration and not state.get("date_columns_explored", False):
+                return "explore_date_columns"
+            return "build_schema_snippet"
+        
+        graph.add_conditional_edges("describe_selected", route_to_exploration)
+        graph.add_edge("explore_date_columns", "build_schema_snippet")
         graph.add_edge("build_schema_snippet", END)
         
         # Set entry point
@@ -302,19 +315,94 @@ class DiscoveryAgent:
             logger.error(f"❌ {error['message']}")
             return {**state, "error_info": error}
     
+    async def _explore_date_columns_node(self, state: BaseState) -> BaseState:
+        """
+        Autonomously explore and document available date columns.
+        
+        Used when a query involves temporal operations (e.g., "when was entry created?")
+        but the specific date column is unknown. Instead of asking the user to clarify,
+        we autonomously discover what date columns exist in the relevant tables.
+        
+        This enables the agent to be self-sufficient rather than deferential.
+        """
+        logger.info("🔍 DiscoveryAgent: Exploring available date columns...")
+        
+        candidates = state.get("candidate_views", [])
+        
+        if not candidates:
+            logger.info("  No candidates to explore for date columns")
+            return state
+        
+        try:
+            date_columns_info = []
+            
+            for cand in candidates:
+                table_name = cand.get("table_name") or cand.get("name") or cand.get("full_name", "")
+                columns = cand.get("columns", [])
+                
+                if not table_name:
+                    continue
+                
+                # Find all date-related columns
+                date_cols = []
+                for col in columns:
+                    col_name = col.get("name", "")
+                    col_type = col.get("type", "").lower()
+                    role_hint = col.get("role_hint", "").lower()
+                    
+                    # Check if column is date/time related
+                    is_date_type = any(dt in col_type for dt in ["date", "time", "datetime", "timestamp"])
+                    is_date_role = "date" in role_hint or "time" in role_hint
+                    
+                    if is_date_type or is_date_role:
+                        date_cols.append({
+                            "name": col_name,
+                            "type": col.get("type", "unknown"),
+                            "role": role_hint or "date/time field"
+                        })
+                
+                if date_cols:
+                    date_columns_info.append({
+                        "table": table_name,
+                        "date_columns": date_cols,
+                        "count": len(date_cols)
+                    })
+            
+            logger.info(f"✅ Explored date columns: found {len(date_columns_info)} table(s) with date fields")
+            for info in date_columns_info:
+                logger.debug(f"  {info['table']}: {len(info['date_columns'])} date column(s)")
+                for dc in info['date_columns'][:3]:
+                    logger.debug(f"    - {dc['name']} ({dc['type']})")
+            
+            # Store in state for SQL generation to use
+            state["date_columns_available"] = date_columns_info
+            state["date_columns_explored"] = True
+            
+            return state
+            
+        except Exception as e:
+            logger.warning(f"⚠️  Date column exploration failed: {str(e)}")
+            # Don't fail the flow, just mark as explored
+            state["date_columns_explored"] = True
+            return state
+    
     async def _build_schema_snippet_node(self, state: BaseState) -> BaseState:
         """
         Build compact schema snippet from described tables.
         
         Format: Simple list of tables with column names and types.
+        Includes date column highlights if they were explored.
+        
         Example:
         
         dbo.sales_orders: order_id (int), customer_id (int FK), order_date (date), total (decimal)
+          └─ Date columns: order_date (date)
         dbo.customers: customer_id (int), name (varchar), email (varchar)
         """
         logger.info("🛠️  DiscoveryAgent: Building schema snippet...")
         
         candidates = state.get("candidate_views", [])
+        date_columns_available = state.get("date_columns_available", [])
         
         if not candidates:
             return state
@@ -322,6 +410,12 @@ class DiscoveryAgent:
         try:
             schema_lines = []
             relevant_tables = []
+            
+            # Build a quick lookup for date columns
+            date_cols_by_table = {}
+            for info in date_columns_available:
+                table = info.get("table", "")
+                date_cols_by_table[table] = info.get("date_columns", [])
             
             for cand in candidates:
                 table_name = cand.get("table_name") or cand.get("name") or cand.get("full_name", "")
@@ -349,6 +443,15 @@ class DiscoveryAgent:
                     col_strs.append(f"... and {len(columns) - 10} more columns")
                 
                 schema_line = f"{table_name}: {', '.join(col_strs)}"
+                
+                # Add date column highlights if explored
+                if table_name in date_cols_by_table and date_cols_by_table[table_name]:
+                    date_cols = date_cols_by_table[table_name]
+                    date_col_names = ", ".join([f"{dc['name']} ({dc['type']})" for dc in date_cols[:3]])
+                    schema_line += f"\n  └─ Date columns: {date_col_names}"
+                    if len(date_cols) > 3:
+                        schema_line += f" (+ {len(date_cols) - 3} more)"
+                
                 schema_lines.append(schema_line)
             
             schema_snippet = "\n".join(schema_lines)

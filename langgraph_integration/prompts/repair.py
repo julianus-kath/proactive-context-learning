@@ -18,17 +18,38 @@ The following query failed. Analyze the error and generate a corrected version.
 **Join Plan (if available):**
 {join_plan}
 
-**Common MSSQL Issues to Check:**
-1. Table/view name typos or missing schema prefix (dbo., webshop., etc.)
-2. Column name mismatch (check alias usage, case sensitivity)
-3. Incorrect date functions (DATEADD instead of DATE_SUB, GETDATE() instead of NOW())
-4. Missing brackets around identifiers with spaces: [Order Date]
-5. INNER vs LEFT JOIN causing NULL filtering
-6. Aggregate function without GROUP BY
-7. HAVING clause used before WHERE
-8. TOP syntax error (TOP N, not LIMIT N)
-9. JOIN condition using wrong column names (check foreign keys)
-10. Missing quotes around string literals
+**CRITICAL MSSQL Syntax Issues to Check (in priority order):**
+1. **LIMIT vs TOP (MOST COMMON ERROR):**
+   ✗ WRONG: SELECT * FROM dbo.orders LIMIT 100
+   ✓ CORRECT: SELECT TOP 100 * FROM dbo.orders
+   If the error mentions "LIMIT", replace it with TOP immediately.
+
+2. **Schema prefix missing:**
+   ✗ WRONG: SELECT * FROM orders
+   ✓ CORRECT: SELECT * FROM dbo.orders
+
+3. **Incorrect date functions:**
+   ✗ WRONG: DATE_SUB(GETDATE(), INTERVAL 1 YEAR) [PostgreSQL]
+   ✓ CORRECT: DATEADD(year, -1, GETDATE()) [MSSQL]
+
+4. **Backticks instead of brackets:**
+   ✗ WRONG: SELECT `order_date` FROM dbo.orders [MySQL style]
+   ✓ CORRECT: SELECT [order_date] FROM dbo.orders [MSSQL style]
+
+5. **Missing brackets for spaced identifiers:**
+   ✗ WRONG: SELECT order date FROM dbo.orders
+   ✓ CORRECT: SELECT [order date] FROM dbo.orders
+
+6. **JOIN condition errors:**
+   - Check foreign key relationships in schema
+   - Verify column names on both sides of the join
+
+7. **Aggregate without GROUP BY:**
+   - If using COUNT, SUM, AVG, MAX, MIN, must have GROUP BY
+
+8. **OFFSET...FETCH syntax (valid but unusual):**
+   - MSSQL supports: OFFSET 0 ROWS FETCH NEXT 100 ROWS ONLY
+   - But prefer TOP syntax: SELECT TOP 100 instead
 
 **Debugging Steps:**
 1. Identify the specific error (syntax, table not found, column not found, etc.)
