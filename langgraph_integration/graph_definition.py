@@ -326,6 +326,9 @@ class DatabaseWorkflow:
         Returns:
             Updated state with intent analysis
         """
+        # Default safe intent analysis - guarantees non-None dict
+        intent_analysis = {"operation": "query", "requirements": "", "entities": []}
+        
         try:
             # Use the full conversation messages and schema for context-aware intent parsing
             messages = state.get("messages", [])
@@ -347,11 +350,13 @@ class DatabaseWorkflow:
             
             # Parse the JSON response to extract intent information
             intent_text = response.content
-            intent_analysis = self._parse_intent_json_response(intent_text)
+            parsed = self._parse_intent_json_response(intent_text)
             
-            # Ensure intent_analysis is always a dict, never None
-            if not intent_analysis or not isinstance(intent_analysis, dict):
-                intent_analysis = {"operation": "DATA_QUERY", "requirements": "", "entities": []}
+            # CRITICAL: Ensure parsed result is always a dict, never None
+            if parsed and isinstance(parsed, dict):
+                intent_analysis = parsed
+            else:
+                logger.warning(f"Parser returned non-dict: {type(parsed)}, using safe default")
             
             state["intent_analysis"] = intent_analysis
             
