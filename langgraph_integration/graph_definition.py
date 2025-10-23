@@ -346,18 +346,39 @@ class DatabaseWorkflow:
             
             prompt = format_intent_parser_prompt(messages, schema)
             
-            response = await self.llm.ainvoke([SystemMessage(content=prompt)])
-            
-            # Parse the JSON response to extract intent information
-            # SAFETY: Check response is valid before accessing .content
-            if not response or not hasattr(response, 'content'):
-                logger.warning(f"LLM response is invalid: {type(response)}")
-                intent_text = ""
-            else:
-                intent_text = response.content
-                if not intent_text or not isinstance(intent_text, str):
-                    logger.warning(f"LLM response.content is invalid: {type(intent_text)}")
+            # SAFETY: Retry mechanism for incomplete LLM responses
+            # If the LLM returns truncated JSON, retry with adjusted parameters
+            max_retries = 2
+            for attempt in range(max_retries):
+                response = await self.llm.ainvoke([SystemMessage(content=prompt)])
+                
+                # Parse the JSON response to extract intent information
+                # SAFETY: Check response is valid before accessing .content
+                if not response or not hasattr(response, 'content'):
+                    logger.warning(f"LLM response is invalid: {type(response)}")
                     intent_text = ""
+                else:
+                    intent_text = response.content
+                    if not intent_text or not isinstance(intent_text, str):
+                        logger.warning(f"LLM response.content is invalid: {type(intent_text)}")
+                        intent_text = ""
+                
+                # Check if response is incomplete
+                if intent_text.strip().startswith('{') and not intent_text.strip().endswith('}'):
+                    logger.warning(f"❌ Attempt {attempt+1}: Incomplete LLM response (truncated JSON)")
+                    if attempt < max_retries - 1:
+                        logger.info(f"   Retrying with reduced prompt size...")
+                        # Reduce schema size for retry
+                        schema_lines = schema.split('\n')[:50]  # Limit to first 50 lines
+                        schema = '\n'.join(schema_lines) + "\n... (truncated for retry)"
+                        continue
+                    else:
+                        logger.error(f"   Max retries exceeded, using safe default")
+                        # Will fall through to exception handler
+                        raise ValueError(f"LLM returned incomplete JSON after {max_retries} attempts")
+                
+                # If we got here, response looks valid - break out of retry loop
+                break
             
             parsed = self._parse_intent_json_response(intent_text)
             
@@ -416,9 +437,20 @@ class DatabaseWorkflow:
             state["intent_analysis"] = intent_analysis
             if debug_logger:
                 debug_logger.workflow_error("intent_parsing_error", str(e))
+            
+            # Map technical errors to user-friendly messages
+            error_message = str(e)
+            if "Incomplete JSON" in error_message or "truncated" in error_message.lower():
+                user_message = "The system had trouble understanding your request due to high load. Please try a simpler question."
+            elif "JSONDecodeError" in error_message or "JSON" in error_message:
+                user_message = "The system had difficulty processing your request. Please try rephrasing it."
+            else:
+                user_message = "I had trouble understanding your request. Could you rephrase it?"
+            
             state["error_info"] = {
                 "type": "intent_parsing_error",
-                "message": str(e),
+                "message": user_message,  # User-friendly message instead of technical error
+                "technical_error": error_message,  # Store technical details for debugging
                 "context": "Failed to parse user intent - using safe default"
             }
         
@@ -460,6 +492,7 @@ class DatabaseWorkflow:
         """
         Parse the JSON intent analysis response from the LLM.
         Applies answer-first defaults: prevents asking for schema/location/category.
+        Handles incomplete/truncated JSON responses gracefully.
         
         Args:
             response_text: Raw JSON response from the LLM
@@ -477,60 +510,69 @@ class DatabaseWorkflow:
                 logger.warning(f"Invalid response_text: {type(response_text)} = {response_text}")
                 return self._parse_intent_response("")
             
+            # CRITICAL: Check if response is incomplete (starts with { but no closing })
+            # This prevents truncated LLM responses from causing cryptic errors
+            if response_text.strip().startswith('{') and not response_text.strip().endswith('}'):
+                logger.error(f"❌ LLM response is INCOMPLETE/TRUNCATED: {response_text[:80]}...")
+                raise ValueError(f"Incomplete JSON response from LLM (truncated at token limit or timeout)")
+            
             # Try to extract JSON from the response
             # Look for JSON block in the response
             json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-            if json_match:
-                json_str = json_match.group()
-                parsed = json.loads(json_str)
+            if not json_match:
+                logger.warning(f"No valid JSON found in response. Text: {response_text[:100]}")
+                return self._parse_intent_response(response_text)
+            
+            json_str = json_match.group()
+            parsed = json.loads(json_str)
+            
+            # Ensure required fields exist
+            result = {
+                "operation": parsed.get("operation", "query"),
+                "reasoning": parsed.get("reasoning", ""),
+            }
+            
+            if result["operation"] == "clarify":
+                missing_fields = parsed.get("missing_fields", [])
                 
-                # Ensure required fields exist
-                result = {
-                    "operation": parsed.get("operation", "query"),
-                    "reasoning": parsed.get("reasoning", ""),
+                # ANSWER-FIRST DEFAULTS: Transform clarify → query with defaults
+                # if only asking for schema/location/category
+                schema_related = {
+                    "schema information", "schema", "specific schema",
+                    "location", "specific location", "region",
+                    "category", "product category", "specific category",
+                    "tables to query", "table names"
                 }
                 
-                if result["operation"] == "clarify":
-                    missing_fields = parsed.get("missing_fields", [])
-                    
-                    # ANSWER-FIRST DEFAULTS: Transform clarify → query with defaults
-                    # if only asking for schema/location/category
-                    schema_related = {
-                        "schema information", "schema", "specific schema",
-                        "location", "specific location", "region",
-                        "category", "product category", "specific category",
-                        "tables to query", "table names"
+                # Check if ALL missing fields are schema/location/category related
+                missing_normalized = {f.lower() for f in missing_fields}
+                
+                # If only asking for these, apply defaults instead of clarifying
+                if missing_normalized and missing_normalized.issubset(schema_related):
+                    logger.info(f"🎯 Answer-first: Applying defaults instead of asking for {missing_normalized}")
+                    # Downgrade to query operation with defaults
+                    # (The SQL will be generated with defaults applied)
+                    result["operation"] = "query"
+                    result["defaults_applied"] = {
+                        "location": "ALL_LOCATIONS" if "location" in missing_normalized or "specific location" in missing_normalized else None,
+                        "category": "ALL_CATEGORIES" if "category" in missing_normalized or "product category" in missing_normalized else None,
+                        "schema": "ALL_SCHEMAS" if "schema" in missing_normalized or "specific schema" in missing_normalized else None,
                     }
-                    
-                    # Check if ALL missing fields are schema/location/category related
-                    missing_normalized = {f.lower() for f in missing_fields}
-                    
-                    # If only asking for these, apply defaults instead of clarifying
-                    if missing_normalized and missing_normalized.issubset(schema_related):
-                        logger.info(f"🎯 Answer-first: Applying defaults instead of asking for {missing_normalized}")
-                        # Downgrade to query operation with defaults
-                        # (The SQL will be generated with defaults applied)
-                        result["operation"] = "query"
-                        result["defaults_applied"] = {
-                            "location": "ALL_LOCATIONS" if "location" in missing_normalized or "specific location" in missing_normalized else None,
-                            "category": "ALL_CATEGORIES" if "category" in missing_normalized or "product category" in missing_normalized else None,
-                            "schema": "ALL_SCHEMAS" if "schema" in missing_normalized or "specific schema" in missing_normalized else None,
-                        }
-                        # Remove None values
-                        result["defaults_applied"] = {k: v for k, v in result["defaults_applied"].items() if v is not None}
-                        result["sql"] = parsed.get("sql", "")  # Use the LLM's SQL attempt
-                        result["entities"] = []
-                        result["requirements"] = result["reasoning"]
-                    else:
-                        # Keep as clarify - there are legitimate missing fields
-                        result["missing_fields"] = missing_fields
-                else:
-                    result["sql"] = parsed.get("sql", "")
-                    # Convert to old format for compatibility
+                    # Remove None values
+                    result["defaults_applied"] = {k: v for k, v in result["defaults_applied"].items() if v is not None}
+                    result["sql"] = parsed.get("sql", "")  # Use the LLM's SQL attempt
                     result["entities"] = []
                     result["requirements"] = result["reasoning"]
-                
-                return result
+                else:
+                    # Keep as clarify - there are legitimate missing fields
+                    result["missing_fields"] = missing_fields
+            else:
+                result["sql"] = parsed.get("sql", "")
+                # Convert to old format for compatibility
+                result["entities"] = []
+                result["requirements"] = result["reasoning"]
+            
+            return result
                 
         except (json.JSONDecodeError, AttributeError, TypeError, ValueError) as e:
             logger.warning(f"Failed to parse JSON response: {e}")
