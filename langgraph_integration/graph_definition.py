@@ -454,6 +454,11 @@ class DatabaseWorkflow:
         import re
         
         try:
+            # Safety: Check for None or empty response
+            if not response_text or not isinstance(response_text, str):
+                logger.warning(f"Invalid response_text: {type(response_text)} = {response_text}")
+                return self._parse_intent_response("")
+            
             # Try to extract JSON from the response
             # Look for JSON block in the response
             json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
@@ -509,11 +514,17 @@ class DatabaseWorkflow:
                 
                 return result
                 
-        except (json.JSONDecodeError, AttributeError) as e:
+        except (json.JSONDecodeError, AttributeError, TypeError, ValueError) as e:
             logger.warning(f"Failed to parse JSON response: {e}")
+            logger.debug(f"Response text was: {response_text[:100] if response_text else 'None'}")
             
         # Fallback to old parsing method
-        return self._parse_intent_response(response_text)
+        try:
+            return self._parse_intent_response(response_text if response_text else "")
+        except Exception as e:
+            logger.error(f"Fallback intent parsing also failed: {e}")
+            # Last resort - return safe default
+            return {"operation": "query", "entities": [], "requirements": ""}
     
     async def _get_schema(self, state: WorkflowState) -> WorkflowState:
         """
