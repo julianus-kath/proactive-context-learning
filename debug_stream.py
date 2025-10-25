@@ -3,6 +3,7 @@
 Real-time Debug Stream Monitor
 Streams LangGraph workflow events in real-time from the LangGraph service
 Shows tool calls, scout mode operations, SQL generation, and query execution
+Enhanced with per-agent tracking and visual separation
 """
 
 import asyncio
@@ -10,7 +11,7 @@ import aiohttp
 import json
 import sys
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 # Color codes
 class Colors:
@@ -20,13 +21,80 @@ class Colors:
     GREEN = '\033[92m'
     YELLOW = '\033[93m'
     RED = '\033[91m'
+    PURPLE = '\033[35m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
     END = '\033[0m'
+    
+    # Background colors for agent headers
+    BG_BLUE = '\033[44m'
+    BG_CYAN = '\033[46m'
+    BG_GREEN = '\033[42m'
+    BG_YELLOW = '\033[43m'
+    BG_PURPLE = '\033[45m'
 
-def format_log(level: str, message: str, data: Dict[str, Any] = None) -> str:
-    """Format a log entry with colors and emojis."""
+# Agent/Node specific coloring
+NODE_COLOR_PALETTE = [
+    Colors.HEADER,
+    Colors.BLUE,
+    Colors.CYAN,
+    Colors.GREEN,
+    Colors.YELLOW,
+    Colors.PURPLE,
+]
+
+NODE_BG_PALETTE = [
+    Colors.BG_BLUE,
+    Colors.BG_CYAN,
+    Colors.BG_GREEN,
+    Colors.BG_YELLOW,
+    Colors.BG_PURPLE,
+]
+
+node_colors: Dict[str, str] = {}
+node_bg_colors: Dict[str, str] = {}
+current_node_context: Optional[str] = None
+node_activity_log: Dict[str, int] = {}  # Track activity count per node
+
+def get_node_color(node: str) -> tuple:
+    """Assigns and retrieves consistent colors (fg, bg) for a given node name."""
+    if node not in node_colors:
+        idx = len(node_colors) % len(NODE_COLOR_PALETTE)
+        node_colors[node] = NODE_COLOR_PALETTE[idx]
+        node_bg_colors[node] = NODE_BG_PALETTE[idx]
+    return node_colors[node], node_bg_colors[node]
+
+
+def format_agent_header(node: str, activity_num: int = None) -> str:
+    """Create a prominent header for agent section."""
+    node_fg, node_bg = get_node_color(node)
+    
+    # Track activity
+    if node not in node_activity_log:
+        node_activity_log[node] = 0
+    node_activity_log[node] += 1
+    
+    activity_num = node_activity_log[node]
+    
+    header_text = f" AGENT: {node} (Activity #{activity_num}) "
+    padding = (80 - len(header_text)) // 2
+    
+    return (
+        f"\n{node_fg}{node_bg}{Colors.BOLD}{'=' * 80}\n"
+        f"{' ' * padding}{header_text}{' ' * padding}\n"
+        f"{'=' * 80}{Colors.END}\n"
+    )
+
+
+def format_log(level: str, message: str, data: Dict[str, Any] = None, node: Optional[str] = None) -> str:
+    """Format a log entry with colors, emojis, and agent/node identifiers."""
+    global current_node_context
+    
     timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+    
+    # Extract node/agent name from data if present
+    if data and "node" in data:
+        node = data.pop("node")
     
     emoji_map = {
         "TOOL_CALL": "🔧",
@@ -61,17 +129,39 @@ def format_log(level: str, message: str, data: Dict[str, Any] = None) -> str:
     }
     
     emoji = emoji_map.get(level, "•")
-    color = color_map.get(level, Colors.CYAN)
+    log_color = color_map.get(level, Colors.CYAN)
     
-    output = f"{color}[{timestamp}] {emoji} {message}{Colors.END}"
+    # Build the log line
+    output = ""
     
+    # Add agent header if this is a new node
+    if node and node != current_node_context:
+        current_node_context = node
+        output += format_agent_header(node)
+    
+    # Node prefix with visual distinction
+    node_prefix = ""
+    if node:
+        node_fg, _ = get_node_color(node)
+        # Fixed-width, bolded, colored prefix for the node name
+        node_prefix = f"{node_fg}{Colors.BOLD}[{node:<16}]{Colors.END} "
+    
+    # Build main log line
+    main_line = f"{node_prefix}{log_color}[{timestamp}] {emoji} {message}{Colors.END}"
+    output += main_line
+    
+    # Append structured data if it exists, with indentation
     if data:
         output += "\n"
+        indent = "                      " if node else "  "  # Align with node prefix
         for key, value in data.items():
             if isinstance(value, (dict, list)):
-                output += f"  {key}: {json.dumps(value, indent=2)}\n"
+                json_str = json.dumps(value, indent=2)
+                output += f"{indent}{Colors.CYAN}{key}:{Colors.END}\n"
+                for line in json_str.split('\n'):
+                    output += f"{indent}  {line}\n"
             else:
-                output += f"  {key}: {value}\n"
+                output += f"{indent}{Colors.CYAN}{key}:{Colors.END} {value}\n"
     
     return output
 
@@ -109,7 +199,9 @@ async def stream_debug_logs(service_url: str = "http://localhost:5001", api_key:
                                     for log in new_logs:
                                         log_type = log.get("type", "INFO")
                                         message = log.get("message", "")
-                                        print(format_log(log_type, message))
+                                        # Pass all other log data to the formatter to make errors more descriptive
+                                        log_data = {k: v for k, v in log.items() if k not in ["type", "message"]}
+                                        print(format_log(log_type, message, data=log_data))
                                     last_log_count = len(logs)
                             elif resp.status == 401:
                                 print(f"{Colors.RED}❌ Authentication failed. Check API_KEY.{Colors.END}")

@@ -73,16 +73,17 @@ class MSSQLConnector:
         logger.info(f"MSSQLConnector initialized for {server}/{database}")
     
     def _get_connection(self) -> pyodbc.Connection:
-        """Get or create a database connection."""
+        """Get or create a database connection with timeout."""
         if self._connection is None or not self._is_connection_alive():
             logger.info(f"Creating new MSSQL connection to {self.server}/{self.database}...")
             logger.debug(f"Connection string: DRIVER={{{self.driver}}};SERVER=tcp:{self.server};DATABASE={self.database};UID={self.username};PWD=***;Encrypt=yes;TrustServerCertificate=yes;Connection Timeout={self.timeout};")
             
             try:
                 # pyodbc.connect() only accepts the connection string
-                # timeout is already set in the connection string
+                # timeout is already set in the connection string (Connection Timeout parameter)
                 # readonly mode is enforced at the query level (SELECT-only)
-                self._connection = pyodbc.connect(self.connection_string)
+                # The pyodbc timeout is set in seconds in the connection string
+                self._connection = pyodbc.connect(self.connection_string, timeout=self.timeout)
                 logger.info("✅ MSSQL connection established")
             except pyodbc.Error as e:
                 logger.error(f"❌ Failed to connect to SQL Server: {e}")
@@ -90,6 +91,10 @@ class MSSQLConnector:
                 logger.error(f"   Database: {self.database}")
                 logger.error(f"   Driver: {self.driver}")
                 logger.error(f"   Timeout: {self.timeout}s")
+                logger.error(f"   Troubleshooting:")
+                logger.error(f"   1. Check VPN connection to {self.server}")
+                logger.error(f"   2. Verify SQL Server is running and accepts remote connections")
+                logger.error(f"   3. Check firewall rules for port 1433 (MSSQL default)")
                 raise
         
         return self._connection

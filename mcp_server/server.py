@@ -3,6 +3,7 @@ MCP Database Server - FastAPI implementation
 """
 
 import os
+import asyncio
 import logging
 from fastapi import FastAPI, HTTPException, Depends, Header, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -80,20 +81,48 @@ async def startup_event():
     global db_manager
     try:
         db_manager = DatabaseAdapter()
-        await db_manager.initialize()
-        logger.info("✅ MCP Database Server initialized successfully")
+        
+        # Try to initialize, but with a timeout to prevent infinite loops
+        logger.info("🔄 Testing database connection (timeout: 10s)...")
+        try:
+            # Test connection first with a short timeout
+            is_healthy = await asyncio.wait_for(
+                db_manager.connector.test_connection(),
+                timeout=10
+            )
+            if not is_healthy:
+                raise RuntimeError("Database connection test failed - check connectivity")
+            
+            logger.info("✅ Database connection verified")
+            
+            # Now initialize catalog (can take longer)
+            await asyncio.wait_for(
+                db_manager.initialize(),
+                timeout=60  # 1 minute timeout for catalog
+            )
+            logger.info("✅ MCP Database Server initialized successfully")
+        
+        except asyncio.TimeoutError:
+            logger.error("❌ Database initialization timed out - check VPN/network connectivity")
+            raise RuntimeError("Database connection timeout - VPN may not be active")
         
         # Phase 7: Run Scout Mode (async, doesn't block startup)
         try:
             cache_dir = os.path.join(os.path.dirname(__file__), 'cache')
-            scout_report = await run_scout_mode(db_manager, cache_dir=cache_dir)
+            scout_report = await asyncio.wait_for(
+                run_scout_mode(db_manager, cache_dir=cache_dir),
+                timeout=30
+            )
             logger.info(f"🔍 Scout Mode Report: {scout_report}")
+        except asyncio.TimeoutError:
+            logger.warning(f"⚠️ Scout Mode startup job timed out (non-blocking)")
         except Exception as scout_error:
             logger.warning(f"⚠️ Scout Mode startup job failed (non-blocking): {scout_error}")
             # Don't raise - Scout Mode is optional and shouldn't block startup
         
     except Exception as e:
         logger.error(f"❌ Failed to initialize MCP Database Server: {e}")
+        logger.error(f"   Check: VPN connection, SQL Server availability at {os.getenv('MSSQL_SERVER', 'unknown')}")
         raise
 
 @app.on_event("shutdown")

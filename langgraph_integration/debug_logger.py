@@ -93,6 +93,7 @@ class DebugLogger:
         
         self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.call_stack = []  # Track nested operations
+        self.current_node = None  # Track current LangGraph node context
         
     def _log_entry(
         self,
@@ -561,15 +562,49 @@ class DebugLogger:
         self.logger.info(message)
         self._add_to_buffer(message, "INFO")
     
+    def log_info(self, message: str, details: Dict[str, Any] = None):
+        """
+        Log informational messages with dict details.
+        Alias for info() that accepts details as a dict.
+        
+        Args:
+            message: Log message
+            details: Details as a dictionary
+        """
+        log_data = {
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if details:
+            log_data.update(details)
+        
+        log_message = self._log_entry(
+            LogLevel.INFO,
+            message,
+            log_data,
+            nested=False
+        )
+        
+        self.logger.info(log_message)
+        self._add_to_buffer(log_message, "INFO")
+    
+    def set_node_context(self, node_name: str):
+        """Set the current LangGraph node context for better logging organization."""
+        self.current_node = node_name
+    
     def _add_to_buffer(self, message: str, log_type: str):
         """Add message to thread-safe buffer for frontend streaming."""
         with _logs_lock:
-            _logs_buffer.append({
+            log_entry = {
                 "timestamp": datetime.now().isoformat(),
                 "type": log_type,
                 "message": message,
                 "session_id": self.session_id
-            })
+            }
+            # Include node context if set
+            if self.current_node:
+                log_entry["node"] = self.current_node
+            _logs_buffer.append(log_entry)
     
     @staticmethod
     def get_buffered_logs() -> List[Dict[str, Any]]:

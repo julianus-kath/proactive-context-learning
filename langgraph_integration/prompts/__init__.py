@@ -50,13 +50,13 @@ CRITICAL SCHEMA AWARENESS:
 - When exploring columns, search across all tables intelligently
 
 OUTPUT JSON FORMAT (STRICT):
-{
+{{
   "operation": "query" (ALWAYS unless genuinely impossible),
   "sql": "SELECT ... FROM ...",  (ALWAYS provide SQL if operation=query)
   "reasoning": "brief explanation",
   "confidence": 0.95,
   "defaults_applied": ["default_timezone: UTC", "date_range: last 30 days"]  (track what you assumed)
-}
+}}
 
 ONLY use operation=clarify if you've exhausted all attempts to find the data in schema.
 

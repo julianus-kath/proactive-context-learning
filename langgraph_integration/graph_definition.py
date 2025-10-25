@@ -257,6 +257,10 @@ class DatabaseWorkflow:
         Returns:
             Updated state with database index information or FAILED status
         """
+        # Set node context for debug logging
+        if debug_logger:
+            debug_logger.set_node_context("index_database")
+        
         try:
             logger.info(f"📚 Starting database catalog indexing...")
             if debug_logger:
@@ -326,6 +330,10 @@ class DatabaseWorkflow:
         Returns:
             Updated state with intent analysis
         """
+        # Set node context for debug logging
+        if debug_logger:
+            debug_logger.set_node_context("parse_intent")
+        
         # Default safe intent analysis - guarantees non-None dict
         intent_analysis = {"operation": "query", "requirements": "", "entities": []}
         
@@ -344,49 +352,73 @@ class DatabaseWorkflow:
                     last_user_msg = str(msg.content)
                     break
             
+            if debug_logger:
+                debug_logger.log_info(
+                    "Intent Parsing Started",
+                    details={
+                        "user_message": last_user_msg[:100] if last_user_msg else "N/A",
+                        "conversation_turns": len(messages)
+                    }
+                )
+            
             prompt = format_intent_parser_prompt(messages, schema)
             
             # SAFETY: Retry mechanism for incomplete LLM responses
             # If the LLM returns truncated JSON, retry with adjusted parameters
             max_retries = 2
+            last_error = None
             for attempt in range(max_retries):
                 response = await self.llm.ainvoke([SystemMessage(content=prompt)])
                 
                 # Parse the JSON response to extract intent information
                 # SAFETY: Check response is valid before accessing .content
-                if not response or not hasattr(response, 'content'):
-                    logger.warning(f"LLM response is invalid: {type(response)}")
-                    intent_text = ""
+                if response and hasattr(response, 'content') and isinstance(response.content, str):
+                    try:
+                        # Strip any leading/trailing whitespace or newlines
+                        cleaned_content = response.content.strip()
+                        
+                        # Find the start of the JSON object
+                        json_start_index = cleaned_content.find('{')
+                        if json_start_index == -1:
+                            raise json.JSONDecodeError("No JSON object found", cleaned_content, 0)
+                        
+                        # Extract the JSON part of the string
+                        json_string = cleaned_content[json_start_index:]
+                        
+                        # Try to find the end of the JSON object
+                        # Look for closing brace
+                        close_brace_index = json_string.rfind('}')
+                        if close_brace_index != -1:
+                            json_string = json_string[:close_brace_index + 1]
+                        
+                        intent_analysis = json.loads(json_string)
+                        
+                        # If parsing is successful, break the loop
+                        break
+                    except json.JSONDecodeError as e:
+                        last_error = e
+                        logger.warning(f"⚠️ Attempt {attempt + 1} failed: JSON parsing error: {e.msg}")
+                        logger.warning(f"   Error position: {e.pos}")
+                        if attempt < max_retries - 1:
+                            logger.info("   Retrying with a new call...")
+                            await asyncio.sleep(1)  # Wait before retrying
+                        else:
+                            logger.error("❌ All retries failed. Could not parse intent.")
+                            raise ValueError(f"Failed to parse intent after {max_retries} retries. JSON error at position {e.pos}")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Attempt {attempt + 1} failed: {type(e).__name__}: {e}")
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(1)
+                        else:
+                            raise ValueError(f"Failed to parse intent: {e}")
                 else:
-                    intent_text = response.content
-                    if not intent_text or not isinstance(intent_text, str):
-                        logger.warning(f"LLM response.content is invalid: {type(intent_text)}")
-                        intent_text = ""
-                
-                # Check if response is incomplete
-                if intent_text.strip().startswith('{') and not intent_text.strip().endswith('}'):
-                    logger.warning(f"❌ Attempt {attempt+1}: Incomplete LLM response (truncated JSON)")
-                    if attempt < max_retries - 1:
-                        logger.info(f"   Retrying with reduced prompt size...")
-                        # Reduce schema size for retry
-                        schema_lines = schema.split('\n')[:50]  # Limit to first 50 lines
-                        schema = '\n'.join(schema_lines) + "\n... (truncated for retry)"
-                        continue
-                    else:
-                        logger.error(f"   Max retries exceeded, using safe default")
-                        # Will fall through to exception handler
-                        raise ValueError(f"LLM returned incomplete JSON after {max_retries} attempts")
-                
-                # If we got here, response looks valid - break out of retry loop
-                break
-            
-            parsed = self._parse_intent_json_response(intent_text)
-            
-            # CRITICAL: Ensure parsed result is always a dict, never None
-            if parsed and isinstance(parsed, dict):
-                intent_analysis = parsed
-            else:
-                logger.warning(f"Parser returned non-dict: {type(parsed)}, using safe default")
+                    logger.warning(f"⚠️ Attempt {attempt + 1}: Invalid or empty response from LLM.")
+                    if attempt == max_retries - 1:
+                        raise ValueError("LLM returned an invalid or empty response.")
+
+
+
+
             
             state["intent_analysis"] = intent_analysis
             
@@ -429,7 +461,7 @@ class DatabaseWorkflow:
             if intent_analysis.get("defaults_applied"):
                 logger.info(f"   Defaults applied: {intent_analysis.get('defaults_applied')}")
             
-        except Exception as e:
+        except (ValueError, json.JSONDecodeError) as e:
             logger.error(f"❌ Error parsing intent: {e}")
             logger.debug(f"   Using safe fallback intent_analysis")
             # CRITICAL: ALWAYS set intent_analysis, even on error
@@ -575,16 +607,9 @@ class DatabaseWorkflow:
             return result
                 
         except (json.JSONDecodeError, AttributeError, TypeError, ValueError) as e:
-            logger.warning(f"Failed to parse JSON response: {e}")
-            logger.debug(f"Response text was: {response_text[:100] if response_text else 'None'}")
-            
-        # Fallback to old parsing method
-        try:
-            return self._parse_intent_response(response_text if response_text else "")
-        except Exception as e:
-            logger.error(f"Fallback intent parsing also failed: {e}")
-            # Last resort - return safe default
-            return {"operation": "query", "entities": [], "requirements": ""}
+            logger.error(f"❌ Failed to parse JSON response: {e}")
+            logger.error(f"   Problematic response: {response_text}")
+            raise e
     
     async def _get_schema(self, state: WorkflowState) -> WorkflowState:
         """
@@ -599,6 +624,11 @@ class DatabaseWorkflow:
         Returns:
             Updated state with lightweight schema overview
         """
+        # Set node context for debug logging
+        if debug_logger:
+            debug_logger.set_node_context("get_schema")
+            debug_logger.log_info("Schema Discovery Started", details={"source": "MCP list_tables"})
+        
         try:
             # Initialize session cache if not present
             if state.get("session_described_tables") is None:
@@ -769,6 +799,10 @@ class DatabaseWorkflow:
         Returns:
             Updated state with generated SQL
         """
+        # Set node context for debug logging
+        if debug_logger:
+            debug_logger.set_node_context("generate_sql")
+        
         try:
             intent = state.get("intent_analysis") or {}
             
@@ -777,6 +811,11 @@ class DatabaseWorkflow:
                 state["sql_query"] = intent["sql"]
                 logger.info(f"Using SQL from intent parser: {intent['sql']}")
                 if debug_logger:
+                    debug_logger.log_info("SQL Generation", details={
+                        "source": "intent_parser",
+                        "sql": intent['sql'][:100],
+                        "table_context": intent.get("tables", [])
+                    })
                     debug_logger.sql_generated(
                         intent["sql"],
                         "Provided by intent parser",
@@ -872,6 +911,15 @@ class DatabaseWorkflow:
         Returns:
             Updated state with query results
         """
+        # Set node context for debug logging
+        if debug_logger:
+            debug_logger.set_node_context("execute_query")
+            debug_logger.log_info("Query Execution Started", details={
+                "sql": state.get("sql_query", "unknown")[:100],
+                "timeout_ms": 30000,
+                "max_rows": 1000
+            })
+        
         try:
             import time
             sql_query = state["sql_query"]
@@ -1112,6 +1160,12 @@ class DatabaseWorkflow:
         Returns:
             Updated state with formatted response
         """
+        # Set node context for debug logging
+        if debug_logger:
+            debug_logger.set_node_context("format_results")
+            result_type = "data_results" if state.get("query_results") else ("schema_explanation" if state.get("schema") else "unknown")
+            debug_logger.log_info("Result Formatting Started", details={"result_type": result_type})
+        
         try:
             user_input = state["user_input"]
             
@@ -1163,6 +1217,15 @@ class DatabaseWorkflow:
         Returns:
             Updated state with error response
         """
+        # Set node context for debug logging
+        if debug_logger:
+            debug_logger.set_node_context("handle_error")
+            error_info = state.get("error_info", {})
+            debug_logger.log_info("Error Handling Started", details={
+                "error_type": error_info.get("type", "unknown"),
+                "error_message": error_info.get("message", "unknown")[:100]
+            })
+        
         try:
             error_info = state.get("error_info", {})
             user_input = state["user_input"]
@@ -1478,7 +1541,7 @@ class DatabaseWorkflow:
             return result
             
         except Exception as e:
-            logger.error(f"Conversation workflow execution error: {e}")
+            logger.error(f"Conversation workflow execution error: {e}", exc_info=True)
             return {
                 "final_response": f"I encountered an error while processing your request: {str(e)}",
                 "operation": "error",
