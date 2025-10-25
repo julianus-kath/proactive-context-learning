@@ -926,7 +926,7 @@ class DatabaseWorkflow:
             start_time = time.time()
             
             # PHASE 5: Use query_bounded_mcp instead of execute_sql_query
-            results = await query_bounded_mcp(sql_query, max_rows=1000, timeout_ms=30000)
+            results, actual_row_count = await query_bounded_mcp(sql_query, max_rows=1000, timeout_ms=30000)
             duration_ms = (time.time() - start_time) * 1000
             
             # Check if the result indicates an error
@@ -949,10 +949,10 @@ class DatabaseWorkflow:
                 state["query_results"] = results
                 logger.info("Query executed successfully")
                 
-                # Count rows in results (rough estimate)
-                rows_count = len(results.split('\n')) if results else 0
+                # Use actual row count from MCP response (not text line count)
+                rows_count = actual_row_count
                 
-                # Log successful query execution
+                # Log successful query execution with correct row count
                 if debug_logger:
                     debug_logger.query_executed(sql_query, rows_count, duration_ms)
                 
@@ -1004,7 +1004,7 @@ class DatabaseWorkflow:
             state["sql_query"] = sql_query
             
             # PHASE 5: Execute via query_bounded_mcp
-            results = await query_bounded_mcp(sql_query, max_rows=1000, timeout_ms=30000)
+            results, direct_row_count = await query_bounded_mcp(sql_query, max_rows=1000, timeout_ms=30000)
             
             # Check if the result indicates an error
             if results.startswith("Error") or results.startswith("QUERY_ERROR:"):
@@ -1020,7 +1020,7 @@ class DatabaseWorkflow:
                     state["retry_count"] = 0
             else:
                 state["query_results"] = results
-                logger.info(f"Direct query executed successfully: {sql_query}")
+                logger.info(f"Direct query executed successfully: {sql_query} ({direct_row_count} rows)")
             
         except Exception as e:
             logger.error(f"Error executing direct query: {e}")
@@ -1113,7 +1113,7 @@ class DatabaseWorkflow:
             
             # Step 2: Retry with repaired (or original) SQL
             logger.info(f"   🔄 Retrying query with repaired SQL...")
-            results = await query_bounded_mcp(repaired_sql, max_rows=1000, timeout_ms=30000)
+            results, retry_row_count = await query_bounded_mcp(repaired_sql, max_rows=1000, timeout_ms=30000)
             
             # Check if the retry was successful
             if results.startswith("Error") or results.startswith("QUERY_ERROR:"):
@@ -1136,8 +1136,8 @@ class DatabaseWorkflow:
                 state["query_results"] = results
                 state["error_info"] = None
                 if debug_logger:
-                    rows_count = len(results.split('\n')) if results else 0
-                    debug_logger.query_executed(repaired_sql, rows_count, 0)
+                    # Use actual row count from MCP response (already extracted in query_bounded_mcp)
+                    debug_logger.query_executed(repaired_sql, retry_row_count, 0)
             
         except Exception as e:
             logger.error(f"Error in query retry: {e}", exc_info=True)

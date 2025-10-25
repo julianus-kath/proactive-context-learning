@@ -134,10 +134,12 @@ class TestMCPClientFunctions:
         # Simple query that should work on any database
         sql = "SELECT 1 as test_value"
         
-        result = await query_bounded_mcp(sql, max_rows=10, timeout_ms=5000)
+        result, row_count = await query_bounded_mcp(sql, max_rows=10, timeout_ms=5000)
         
         assert isinstance(result, str)
         assert not result.startswith("Error")
+        assert isinstance(row_count, int)
+        assert row_count >= 0
     
     @pytest.mark.asyncio
     async def test_list_relations_mcp(self):

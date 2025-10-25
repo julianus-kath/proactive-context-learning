@@ -74,20 +74,28 @@ def _extract_json_from_text(content: str) -> Dict[str, Any]:
     content = content.replace("```json", "").replace("```", "")
     
     # Look for the JSON marker and extract what comes after it
-    marker = "Full response (JSON):"
-    if marker in content:
-        parts = content.split(marker, 1)
-        if len(parts) > 1:
-            content = parts[1].strip()
-        else:
-            raise ValueError(f"Marker found but nothing after it")
+    # Try exact matches first (in priority order)
+    markers_to_try = [
+        "📊 Full response (JSON):",  # With emoji (current format)
+        "Full response (JSON):",      # Without emoji (legacy format)
+        "📊 Full response (json):",   # Emoji + lowercase
+        "Full response (json):",      # Lowercase only
+        "JSON Response:",             # Alternative format
+        "json response:",             # Alternative lowercase
+    ]
     
-    # Also handle variations of the marker
-    for alt_marker in ["Full response (json):", "JSON Response:", "json response:"]:
-        if alt_marker.lower() in content.lower():
-            idx = content.lower().find(alt_marker.lower())
-            content = content[idx + len(alt_marker):].strip()
-            break
+    marker_found = False
+    for marker in markers_to_try:
+        if marker in content:
+            parts = content.split(marker, 1)
+            if len(parts) > 1:
+                content = parts[1].strip()
+                marker_found = True
+                logger.debug(f"[EXTRACT_MARKER] Found marker: '{marker}'")
+                break
+    
+    if not marker_found:
+        logger.debug(f"[EXTRACT_MARKER] No marker found in content, will extract first JSON object")
     
     # Try to find JSON object boundaries
     start = content.find("{")
@@ -112,12 +120,16 @@ def _extract_json_from_text(content: str) -> Dict[str, Any]:
     
     # Try to parse it
     try:
-        logger.debug(f"Attempting to parse JSON string (length: {len(json_str)})")
-        return json.loads(json_str)
+        logger.debug(f"Attempting to parse JSON string (length: {len(json_str)}, start_pos: {start}, end_pos: {end})")
+        logger.debug(f"[EXTRACT_JSON_PREVIEW] First 200 chars: {json_str[:200]}")
+        parsed = json.loads(json_str)
+        logger.debug(f"[EXTRACT_SUCCESS] Successfully parsed JSON with keys: {list(parsed.keys()) if isinstance(parsed, dict) else 'NOT_DICT'}")
+        return parsed
     except json.JSONDecodeError as e:
         # Provide detailed error information
         error_details = f"JSON decode error at line {e.lineno}, column {e.colno}: {e.msg}"
         problematic_section = json_str[max(0, e.pos-50):min(len(json_str), e.pos+50)]
+        logger.error(f"[EXTRACT_JSON_ERROR] {error_details}\n   Context: ...{problematic_section}...")
         raise ValueError(f"{error_details}\n   Context: ...{problematic_section}...")
 
 
@@ -1160,7 +1172,7 @@ async def query_bounded_mcp(
     sql: str, 
     max_rows: Optional[int] = None, 
     timeout_ms: Optional[int] = None
-) -> str:
+) -> tuple:
     """
     Execute a bounded SQL query (Phase 2/4 tool).
     
@@ -1170,17 +1182,59 @@ async def query_bounded_mcp(
         timeout_ms: Query timeout in milliseconds (default: 30000)
         
     Returns:
-        Formatted query results
+        Tuple of (formatted_results: str, row_count: int)
+        - formatted_results: Formatted query results for display
+        - row_count: Actual number of rows returned by the query
     """
     tool = MCPDatabaseTool()
     try:
         content = await tool.query_bounded(sql, max_rows, timeout_ms)
         if content and len(content) > 0:
-            return content[0].get("text", "No results")
-        return "No results"
+            result_text = content[0].get("text", "No results")
+            
+            # Try to extract actual row_count from the MCP JSON response
+            row_count = 1  # Default for COUNT queries and simple results
+            
+            try:
+                # Parse JSON from result to get actual row count
+                result_data = _extract_json_from_text(result_text)
+                logger.debug(f"[EXTRACT_DEBUG] Parsed JSON keys: {list(result_data.keys()) if isinstance(result_data, dict) else 'NOT A DICT'}")
+                logger.debug(f"[EXTRACT_DEBUG] Full parsed JSON: {result_data}")
+                
+                if isinstance(result_data, dict):
+                    # Look for row_count in various possible locations
+                    if "row_count" in result_data:
+                        row_count = result_data.get("row_count", 1)
+                        logger.debug(f"[EXTRACT_DEBUG] ✓ Found row_count at top level: {row_count}")
+                    elif "data" in result_data and isinstance(result_data["data"], dict):
+                        if "row_count" in result_data["data"]:
+                            row_count = result_data["data"].get("row_count", 1)
+                            logger.debug(f"[EXTRACT_DEBUG] ✓ Found row_count in data section: {row_count}")
+                        # For array results, count the items
+                        elif "rows" in result_data["data"] and isinstance(result_data["data"]["rows"], list):
+                            row_count = len(result_data["data"]["rows"])
+                            logger.debug(f"[EXTRACT_DEBUG] ✓ Counted rows in data.rows: {row_count}")
+                    else:
+                        # Fallback: check if we have 'rows' at top level
+                        if "rows" in result_data and isinstance(result_data["rows"], list):
+                            row_count = len(result_data["rows"])
+                            logger.debug(f"[EXTRACT_DEBUG] ✓ Counted rows at top level: {row_count}")
+                        else:
+                            logger.debug(f"[EXTRACT_DEBUG] ✗ No row_count or rows found. Keys available: {list(result_data.keys())}")
+                    
+                    logger.info(f"[ROW_COUNT_EXTRACTED] sql={sql[:80]}, extracted_row_count={row_count}")
+            except Exception as parse_err:
+                logger.error(f"[EXTRACT_ERROR] Could not extract row_count from MCP response: {parse_err}")
+                logger.error(f"[EXTRACT_ERROR] Result text (first 1000 chars): {result_text[:1000]}")
+                logger.error(f"[EXTRACT_ERROR] Result text (total length): {len(result_text)}")
+                # Fall back to 1 (safe default)
+                row_count = 1
+            
+            return (result_text, row_count)
+        return ("No results", 0)
     except Exception as e:
         logger.error(f"Error executing bounded query: {e}")
-        return f"Error executing query: {str(e)}"
+        return (f"Error executing query: {str(e)}", 0)
 
 
 def build_schema_snippet(table_descriptions: Dict[str, Dict[str, Any]]) -> str:
