@@ -192,21 +192,26 @@ class MSSQLConnector:
     
     async def fetch_schema(self) -> List[Dict[str, Any]]:
         """
-        Fetch database schema information.
+        Fetch database schema information using sys.* views (more reliable than INFORMATION_SCHEMA).
         
         Returns:
             List of table dictionaries with name, type, and columns
         """
         try:
-            # Get all tables
+            # Get all tables using sys.tables (more reliable than INFORMATION_SCHEMA)
             tables_query = """
             SELECT 
-                TABLE_SCHEMA,
-                TABLE_NAME,
-                TABLE_TYPE
-            FROM INFORMATION_SCHEMA.TABLES
-            WHERE TABLE_SCHEMA NOT IN ('sys', 'INFORMATION_SCHEMA')
-            ORDER BY TABLE_SCHEMA, TABLE_NAME
+                s.name AS schema_name,
+                t.name AS table_name,
+                CASE 
+                    WHEN t.type = 'U' THEN 'BASE TABLE'
+                    WHEN t.type = 'V' THEN 'VIEW'
+                    ELSE 'OTHER'
+                END AS table_type
+            FROM sys.tables t
+            INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+            WHERE s.name NOT IN ('sys', 'INFORMATION_SCHEMA')
+            ORDER BY s.name, t.name
             """
             
             columns, rows = await self.query(tables_query, limit=10000)
@@ -217,16 +222,20 @@ class MSSQLConnector:
                 table_name = row[1]
                 table_type = row[2]
                 
-                # Get columns for this table
+                # Get columns for this table using sys.columns
                 columns_query = """
                 SELECT 
-                    COLUMN_NAME,
-                    DATA_TYPE,
-                    IS_NULLABLE,
-                    COLUMN_DEFAULT
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
-                ORDER BY ORDINAL_POSITION
+                    c.name AS column_name,
+                    t.name AS data_type,
+                    c.is_nullable,
+                    dc.definition AS column_default
+                FROM sys.columns c
+                INNER JOIN sys.tables tb ON c.object_id = tb.object_id
+                INNER JOIN sys.schemas s ON tb.schema_id = s.schema_id
+                INNER JOIN sys.types t ON c.user_type_id = t.user_type_id
+                LEFT JOIN sys.default_constraints dc ON c.default_object_id = dc.object_id
+                WHERE s.name = ? AND tb.name = ?
+                ORDER BY c.column_id
                 """
                 
                 try:
@@ -241,7 +250,7 @@ class MSSQLConnector:
                         table_columns.append({
                             'name': col_row[0],
                             'type': col_row[1],
-                            'nullable': col_row[2] == 'YES',
+                            'nullable': bool(col_row[2]),
                             'default': col_row[3]
                         })
                     

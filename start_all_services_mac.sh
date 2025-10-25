@@ -255,8 +255,8 @@ echo ""
 echo -e "${BLUE}🚀 Starting Mac services...${NC}"
 echo ""
 
-# Start LangGraph Service with Multi-Agent Orchestrator
-echo -e "${YELLOW}🔧 Starting LangGraph Service (Port 5001) - Multi-Agent Orchestrator...${NC}"
+# Start LangGraph Service with Graph Workflow
+echo -e "${YELLOW}🔧 Starting LangGraph Service (Port 5001) - Graph Workflow Engine...${NC}"
 cd "$PROJECT_ROOT/chatbot_ui"
 
 if [ ! -f "langgraph_service.py" ]; then
@@ -264,14 +264,14 @@ if [ ! -f "langgraph_service.py" ]; then
     exit 1
 fi
 
-# Verify orchestrator exists
-if [ ! -f "$PROJECT_ROOT/langgraph_integration/orchestrator.py" ]; then
-    echo -e "${RED}❌ Multi-Agent Orchestrator not found${NC}"
-    echo -e "${YELLOW}   Expected: langgraph_integration/orchestrator.py${NC}"
+# Verify graph_definition exists (primary orchestration system)
+if [ ! -f "$PROJECT_ROOT/langgraph_integration/graph_definition.py" ]; then
+    echo -e "${RED}❌ Graph Definition not found${NC}"
+    echo -e "${YELLOW}   Expected: langgraph_integration/graph_definition.py${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}✅ Multi-Agent Orchestrator found${NC}"
+echo -e "${GREEN}✅ Graph Definition (Orchestration) found${NC}"
 
 # Clear old logs
 > "$LOG_DIR/langgraph.log"
@@ -328,11 +328,12 @@ echo -e "${GREEN}✅ All Mac services started successfully!${NC}"
 echo -e "${GREEN}=========================================${NC}"
 echo ""
 echo -e "${BLUE}🎯 System Architecture:${NC}"
-echo -e "  Multi-Agent Orchestrator (4 specialized agents)"
-echo -e "  ├─ Discovery Agent (table/view search & ranking)"
-echo -e "  ├─ JoinSQL Agent (join planning & MSSQL generation)"
-echo -e "  ├─ Exec Agent (query execution & auto-repair)"
-echo -e "  └─ Answer Agent (result formatting & explanations)"
+echo -e "  Unified LangGraph Orchestration (PHASE 8 FIX)"
+echo -e "  ├─ Intent Parser (extract keywords, route to search)"
+echo -e "  ├─ Select Tables (Scout Catalog search, views-first)"
+echo -e "  ├─ Generate SQL (MSSQL query generation)"
+echo -e "  ├─ Execute Query (safe execution with row caps)"
+echo -e "  └─ Format Results (answer & explanations)"
 echo ""
 echo -e "${BLUE}Service Status:${NC}"
 echo -e "  🌐 Web UI:           http://localhost:3000"

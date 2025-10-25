@@ -1405,33 +1405,35 @@ class DatabaseWorkflow:
         return state
     
     def _route_after_intent(self, state: WorkflowState) -> str:
-        """Route workflow after intent parsing."""
+        """
+        Route workflow after intent parsing.
+        
+        PHASE 8: Intent parser now ALWAYS returns operation="query" with keywords extracted.
+        This node routes to table selection (select_tables) where MCP Scout discovers actual tables.
+        """
         if state.get("error_info"):
             return "error"
         
         intent = state.get("intent_analysis") or {}
-        operation = intent.get("operation", "DATA_QUERY")
+        operation = intent.get("operation", "query")
         
-        # Handle new conversation-aware operations
-        if operation == "clarify":
+        # PHASE 8: New intent parser ALWAYS returns operation="query"
+        # It extracts keywords (entities, requirements) but does NOT:
+        # - Try to find specific tables (that's scout_mode's job)
+        # - Generate SQL (that's generate_sql's job)
+        # - Return "clarify" (table discovery is deferred to downstream)
+        
+        if operation == "query":
+            # Always route to select_tables for table discovery via Scout
+            return "query"  # Maps to "select_tables" in routing table
+        elif operation == "clarify":
+            # Legacy fallback (should never happen with new intent parser)
+            logger.warning("⚠️  Intent parser returned 'clarify' - this should not happen with new implementation")
             return "clarify"
-        elif operation == "query":
-            # Check if SQL is already provided
-            if "sql" in intent and intent["sql"]:
-                return "execute_direct"  # Skip schema and SQL generation
-            else:
-                return "query"  # Go through normal flow
-        
-        # Handle legacy operations
-        routing_map = {
-            "SCHEMA_QUERY": "schema_query",
-            "DATA_QUERY": "data_query", 
-            "ANALYSIS_QUERY": "analysis_query",
-            "SAMPLE_DATA": "sample_data",
-            "HEALTH_CHECK": "health_check"
-        }
-        
-        return routing_map.get(operation, "data_query")
+        else:
+            # Handle any other operations (legacy support)
+            logger.warning(f"Unknown operation: {operation}, defaulting to 'query'")
+            return "query"
     
     def _route_after_sql_generation(self, state: WorkflowState) -> str:
         """Route workflow after SQL generation."""
