@@ -1450,10 +1450,22 @@ class DatabaseWorkflow:
             retry_count = state.get("retry_count", 0)
             max_retries = 2
             
-            if (error_type in ["query_execution_error", "direct_query_execution_error"] and 
-                retry_count < max_retries):
+            # Retryable error types:
+            # - QUERY_ERROR: syntax errors, database errors → repair agent can fix
+            # - EXECUTION_ERROR: runtime issues → can be fixed by simplification
+            # - query_execution_error, direct_query_execution_error: legacy types
+            retryable_errors = {
+                "QUERY_ERROR",              # Syntax errors, DB errors from MCP
+                "EXECUTION_ERROR",          # Runtime failures
+                "query_execution_error",    # Legacy routing
+                "direct_query_execution_error"  # Legacy routing
+            }
+            
+            if error_type in retryable_errors and retry_count < max_retries:
+                logger.info(f"🔄 Routing {error_type} to retry (attempt {retry_count + 1}/{max_retries})")
                 return "retry"
             else:
+                logger.warning(f"❌ Error {error_type} not retryable or max retries ({max_retries}) exceeded")
                 return "error"
         return "format"
     

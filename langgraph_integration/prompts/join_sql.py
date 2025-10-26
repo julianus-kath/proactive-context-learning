@@ -22,6 +22,17 @@ JOIN_PLANNER_PROMPT = """You are a database architect designing a join plan for 
 4. Keep total hop count ≤ 3 (fact → dim1 → dim2)
 5. Include WHERE filters from the query intent
 
+**CRITICAL: Filter Value Format**
+In where_filters, the "value" field must be:
+- **For numeric values (IDs, quantities, amounts):** plain number WITHOUT quotes
+  ✓ {"column": "quantity", "operator": "=", "value": 100}
+  ✗ {"column": "quantity", "operator": "=", "value": "100"}
+- **For string values (names, regions, statuses):** string WITH quotes in JSON
+  ✓ {"column": "region", "operator": "=", "value": "West"}
+  ✓ {"column": "customer_name", "operator": "LIKE", "value": "John%"}
+- **For dates:** ISO format string WITH quotes
+  ✓ {"column": "order_date", "operator": ">=", "value": "2024-01-01"}
+
 **Output (JSON):**
 {{
   "strategy": "view" | "joins",
@@ -34,6 +45,8 @@ JOIN_PLANNER_PROMPT = """You are a database architect designing a join plan for 
     }}
   ],
   "where_filters": [
+    {{"column": "quantity", "operator": ">=", "value": 100}},
+    {{"column": "region", "operator": "=", "value": "West"}},
     {{"column": "order_date", "operator": ">=", "value": "2024-01-01"}}
   ],
   "select_columns": ["customer_name", "SUM(order_total)"],

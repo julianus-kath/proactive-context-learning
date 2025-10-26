@@ -24,30 +24,36 @@ The following query failed. Analyze the error and generate a corrected version.
    ✓ CORRECT: SELECT TOP 100 * FROM dbo.orders
    If the error mentions "LIMIT", replace it with TOP immediately.
 
-2. **Schema prefix missing:**
+2. **Numeric value quoting errors (if error near numbers like "100"):**
+   ✗ WRONG: SELECT * FROM dbo.orders WHERE quantity = '100'  [numeric in quotes]
+   ✓ CORRECT: SELECT * FROM dbo.orders WHERE quantity = 100  [unquoted numeric]
+   Rule: Numeric columns should NOT have quotes around numeric values.
+   Rule: String columns CAN have quotes, but use '' (escaped) if needed in MSSQL.
+
+3. **Schema prefix missing:**
    ✗ WRONG: SELECT * FROM orders
    ✓ CORRECT: SELECT * FROM dbo.orders
 
-3. **Incorrect date functions:**
+4. **Incorrect date functions:**
    ✗ WRONG: DATE_SUB(GETDATE(), INTERVAL 1 YEAR) [PostgreSQL]
    ✓ CORRECT: DATEADD(year, -1, GETDATE()) [MSSQL]
 
-4. **Backticks instead of brackets:**
+5. **Backticks instead of brackets:**
    ✗ WRONG: SELECT `order_date` FROM dbo.orders [MySQL style]
    ✓ CORRECT: SELECT [order_date] FROM dbo.orders [MSSQL style]
 
-5. **Missing brackets for spaced identifiers:**
+6. **Missing brackets for spaced identifiers:**
    ✗ WRONG: SELECT order date FROM dbo.orders
    ✓ CORRECT: SELECT [order date] FROM dbo.orders
 
-6. **JOIN condition errors:**
+7. **JOIN condition errors:**
    - Check foreign key relationships in schema
    - Verify column names on both sides of the join
 
-7. **Aggregate without GROUP BY:**
+8. **Aggregate without GROUP BY:**
    - If using COUNT, SUM, AVG, MAX, MIN, must have GROUP BY
 
-8. **OFFSET...FETCH syntax (valid but unusual):**
+9. **OFFSET...FETCH syntax (valid but unusual):**
    - MSSQL supports: OFFSET 0 ROWS FETCH NEXT 100 ROWS ONLY
    - But prefer TOP syntax: SELECT TOP 100 instead
 

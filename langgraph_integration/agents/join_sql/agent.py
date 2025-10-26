@@ -295,7 +295,17 @@ class JoinPlanAndSQLAgent:
                             col = f.get("column", "")
                             op = f.get("operator", "=")
                             val = f.get("value", "")
-                            where_conditions.append(f"{col} {op} '{val}'")
+                            # Only quote non-numeric values
+                            # Check if value is numeric (int/float) or looks like a number
+                            val_str = str(val).strip()
+                            try:
+                                # Try to parse as float; if successful, it's numeric
+                                float(val_str)
+                                condition = f"{col} {op} {val_str}"  # No quotes for numeric
+                            except ValueError:
+                                # Not numeric, quote it
+                                condition = f"{col} {op} '{val_str}'"  # Quotes for string
+                            where_conditions.append(condition)
                         else:
                             where_conditions.append(str(f))
 
@@ -325,7 +335,17 @@ class JoinPlanAndSQLAgent:
                             col = f.get("column", "")
                             op = f.get("operator", "=")
                             val = f.get("value", "")
-                            where_conditions.append(f"{col} {op} '{val}'")
+                            # Only quote non-numeric values
+                            # Check if value is numeric (int/float) or looks like a number
+                            val_str = str(val).strip()
+                            try:
+                                # Try to parse as float; if successful, it's numeric
+                                float(val_str)
+                                condition = f"{col} {op} {val_str}"  # No quotes for numeric
+                            except ValueError:
+                                # Not numeric, quote it
+                                condition = f"{col} {op} '{val_str}'"  # Quotes for string
+                            where_conditions.append(condition)
                         else:
                             where_conditions.append(str(f))
 
