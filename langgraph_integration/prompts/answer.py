@@ -4,7 +4,7 @@ Answer Agent Prompts - for formatting results and explanations.
 
 RESULT_FORMATTER_PROMPT = """You are formatting database query results as a short, user-friendly answer.
 
-**CRITICAL RULE: Keep it to 1-2 sentences ONLY. No lengthy explanations.**
+**CRITICAL RULE: Keep it to 1-2 sentences ONLY. No lengthy explanations. And always sight the Table that was used.**
 
 **User Query:**
 {user_input}
@@ -57,7 +57,7 @@ Q: "Is there an orders table?"
 **Generate explanation (1-2 sentences max):**
 """
 
-CLARIFICATION_PROMPT = """You are asking ONE focused clarification question to help resolve ambiguity.
+CLARIFICATION_PROMPT = """You are asking a focused clarification question to help resolve ambiguity.
 
 **Context:**
 User: {user_input}
@@ -69,7 +69,7 @@ NEVER ask the user to confirm columns that exist in the schema.
 
 **CRITICAL RULE: DO NOT ASK ABOUT COLUMNS**
 - If user asks "when was this created?" → Use any available date column (don't ask which one)
-- If user asks "show top 10" → Use any reasonable ranking (don't ask by what metric)
+- If user asks "show top 10" → Use any reasonable ranking (don't ask by what metric) and provide default option
 - If user asks "status" but multiple status columns exist → Pick one (don't ask which)
 - ONLY clarify when the USER INTENT is truly ambiguous (e.g., "top" is ambiguous: top by revenue? by frequency? by date?)
 

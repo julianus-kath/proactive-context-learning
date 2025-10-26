@@ -1,0 +1,9 @@
+{
+  "dependencies": [
+    "."
+  ],
+  "graphs": {
+    "agent": "langgraph_integration.graph_definition:build_graph"
+  },
+  "env": ".env"
+}

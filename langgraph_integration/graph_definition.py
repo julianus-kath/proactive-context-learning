@@ -1587,6 +1587,24 @@ except Exception as e:
     graph = None
 
 
+# LangGraph Studio Entry Point (NEW: Phase 8 - Visualization)
+# This function is called by `langgraph dev` to expose the graph for debugging & visualization
+def build_graph():
+    """
+    Build and return the LangGraph workflow for Studio visualization.
+    
+    This is the entry point for LangGraph CLI:
+    ```
+    langgraph dev langgraph_integration.graph_definition:build_graph
+    ```
+    
+    Returns:
+        Compiled StateGraph workflow ready for execution
+    """
+    workflow = create_database_workflow().workflow
+    return workflow
+
+
 # Example usage
 async def main():
     """Example usage of the database workflow."""

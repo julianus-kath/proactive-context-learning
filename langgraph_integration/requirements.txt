@@ -7,6 +7,9 @@ langchain>=0.0.350
 langchain-openai>=0.0.2
 langchain-core>=0.1.17
 
+# LangGraph CLI for visualization & debugging (Phase 8)
+langgraph-cli>=0.1.0
+
 # HTTP client for MCP server communication
 aiohttp>=3.8.0
 

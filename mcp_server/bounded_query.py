@@ -127,6 +127,9 @@ class BoundedQueryExecutor:
             validation = self.validator.validate_and_cap(query, requested_limit)
             
             if not validation.valid:
+                logger.error(f"❌ QUERY VALIDATION FAILED: {validation.error_code}")
+                logger.error(f"📝 Invalid query: {query}")
+                logger.error(f"💬 Error: {validation.error_message}")
                 return QueryResponse(
                     ok=False,
                     error_code=validation.error_code.value if validation.error_code else "VALIDATION_FAILED",
@@ -135,6 +138,11 @@ class BoundedQueryExecutor:
                 )
             
             # Step 2: Execute query with timeout
+            # Log the final validated query that will be executed
+            logger.info(f"🚀 EXECUTING BOUNDED QUERY")
+            logger.info(f"📝 Final SQL (after validation/caps): {validation.query}")
+            logger.info(f"⚙️  Dialect: {self.dialect}, Max rows: {self.max_rows}, Timeout: {self.query_timeout}s")
+            
             try:
                 rows = await self._execute_with_timeout(
                     db_adapter,
@@ -142,6 +150,8 @@ class BoundedQueryExecutor:
                     params
                 )
             except TimeoutError:
+                logger.error(f"❌ QUERY TIMEOUT: {self.query_timeout}s exceeded")
+                logger.error(f"📝 Query that timed out: {validation.query}")
                 return QueryResponse(
                     ok=False,
                     error_code=ValidationErrorCode.TIMEOUT.value,
@@ -149,7 +159,8 @@ class BoundedQueryExecutor:
                     execution_time_ms=self._elapsed_ms(start_time)
                 )
             except Exception as e:
-                logger.error(f"Query execution failed: {e}")
+                logger.error(f"❌ QUERY EXECUTION FAILED: {e}")
+                logger.error(f"📝 Failed query: {validation.query}")
                 return QueryResponse(
                     ok=False,
                     error_code="EXECUTION_FAILED",
@@ -165,6 +176,12 @@ class BoundedQueryExecutor:
             
             # Step 5: Build response
             execution_time = self._elapsed_ms(start_time)
+            
+            # Log execution results
+            logger.info(f"✅ QUERY EXECUTION COMPLETED")
+            logger.info(f"📊 Results: {len(redacted_rows)} rows, {execution_time}ms, Truncated: {validation.row_cap_applied}")
+            if redacted_columns:
+                logger.info(f"🔒 Redacted columns: {list(redacted_columns)}")
             
             return QueryResponse(
                 ok=True,

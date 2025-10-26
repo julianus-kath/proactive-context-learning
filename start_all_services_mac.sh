@@ -55,6 +55,13 @@ kill_port() {
     fi
 }
 
+# Function to kill process by name pattern
+kill_by_name() {
+    local pattern=$1
+    pkill -f "$pattern" 2>/dev/null || true
+    sleep 1
+}
+
 # Function to wait for service to be ready
 wait_for_service() {
     local url=$1
@@ -84,11 +91,14 @@ cleanup() {
     
     # Kill services on known ports (NOT 8000 - that's on Windows)
     kill_port 3000  # Web UI
+    kill_port 2024  # LangGraph Studio
     kill_port 5001  # LangGraph Service
     
     # Kill any remaining Python processes related to our services
     pkill -f "web_app.py" 2>/dev/null || true
     pkill -f "langgraph_service.py" 2>/dev/null || true
+    pkill -f "langgraph dev" 2>/dev/null || true
+    pkill -f "langgraph.*build_graph" 2>/dev/null || true
     
     echo -e "${GREEN}✅ All Mac services stopped${NC}"
     exit 0
@@ -246,13 +256,72 @@ echo -e "${GREEN}✅ Dependencies installed${NC}"
 echo ""
 echo -e "${BLUE}🧹 Cleaning up existing processes...${NC}"
 kill_port 3000
+kill_port 2024
 kill_port 5001
+kill_by_name "langgraph dev"
 
 # ============================================
 # Start Services
 # ============================================
 echo ""
 echo -e "${BLUE}🚀 Starting Mac services...${NC}"
+echo ""
+
+# ============================================
+# Start LangGraph Studio (Visualization)
+# ============================================
+echo -e "${YELLOW}📊 Starting LangGraph Studio (Port 2024) - Graph Visualization & Debugging...${NC}"
+cd "$PROJECT_ROOT"
+
+# Ensure langgraph-cli is installed
+echo -e "${YELLOW}   Checking langgraph-cli installation...${NC}"
+if ! command -v langgraph &> /dev/null; then
+    echo -e "${YELLOW}   Installing langgraph-cli (this may take a moment)...${NC}"
+    pip3 install langgraph-cli >/dev/null 2>&1
+    if ! command -v langgraph &> /dev/null; then
+        echo -e "${YELLOW}⚠️  Failed to install langgraph-cli, skipping Studio${NC}"
+        STUDIO_URL=""
+    else
+        echo -e "${GREEN}   ✅ langgraph-cli installed${NC}"
+    fi
+else
+    LANGGRAPH_CLI_VERSION=$(langgraph --version 2>&1 | head -1)
+    echo -e "${GREEN}   ✅ langgraph-cli found: ${LANGGRAPH_CLI_VERSION}${NC}"
+fi
+
+# Start LangGraph Studio in the background (if CLI is available)
+if command -v langgraph &> /dev/null; then
+    # Clear old logs
+    > "$LOG_DIR/langgraph_studio.log"
+    
+    # Start langgraph dev server (uses langgraph.json config for build_graph reference)
+    cd "$PROJECT_ROOT"
+    nohup langgraph dev --port 2024 --no-reload > "$LOG_DIR/langgraph_studio.log" 2>&1 &
+    STUDIO_PID=$!
+    echo -e "${GREEN}✅ LangGraph Studio started (PID: $STUDIO_PID)${NC}"
+    
+    # Wait for Studio to be ready
+    studio_attempts=0
+    while [ $studio_attempts -lt 15 ]; do
+        if curl -s "http://localhost:2024" >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ LangGraph Studio is ready!${NC}"
+            STUDIO_URL="http://localhost:2024"
+            break
+        fi
+        echo -n "."
+        sleep 1
+        studio_attempts=$((studio_attempts + 1))
+    done
+    
+    if [ $studio_attempts -ge 15 ]; then
+        echo -e "${YELLOW}⚠️  LangGraph Studio is taking longer to start (this is normal)${NC}"
+        STUDIO_URL="http://localhost:2024"
+    fi
+else
+    echo -e "${YELLOW}⚠️  LangGraph CLI not available, skipping Studio${NC}"
+    STUDIO_URL=""
+fi
+
 echo ""
 
 # Start LangGraph Service with Graph Workflow
@@ -338,16 +407,31 @@ echo ""
 echo -e "${BLUE}Service Status:${NC}"
 echo -e "  🌐 Web UI:           http://localhost:3000"
 echo -e "  🤖 LangGraph (Orchestrator): http://localhost:5001"
+if [ -n "$STUDIO_URL" ]; then
+    echo -e "  📊 LangGraph Studio: ${STUDIO_URL} (Graph Visualization)"
+fi
 echo -e "  🗄️  MCP Server:       ${MCP_SERVER_URL} (Windows)"
 echo ""
 echo -e "${BLUE}Logs:${NC}"
-echo -e "  Web UI:      tail -f $LOG_DIR/web_ui.log"
-echo -e "  LangGraph:   tail -f $LOG_DIR/langgraph.log"
+echo -e "  Web UI:             tail -f $LOG_DIR/web_ui.log"
+echo -e "  LangGraph Service:  tail -f $LOG_DIR/langgraph.log"
+if [ -n "$STUDIO_URL" ]; then
+    echo -e "  LangGraph Studio:   tail -f $LOG_DIR/langgraph_studio.log"
+fi
 echo ""
-echo -e "${BLUE}Documentation:${NC}"
+echo -e "${BLUE}Documentation & Debugging:${NC}"
 echo -e "  📖 Architecture:     docs/MULTI_AGENT_ARCHITECTURE.md"
 echo -e "  🚀 Quick Start:      docs/MULTI_AGENT_QUICK_START.md"
 echo -e "  🎨 Visual Guide:     docs/MULTI_AGENT_VISUAL_GUIDE.md"
+if [ -n "$STUDIO_URL" ]; then
+    echo ""
+    echo -e "${GREEN}🎯 LangGraph Studio Features:${NC}"
+    echo -e "  • Visualize the complete graph structure and node connections"
+    echo -e "  • Step through graph execution node-by-node"
+    echo -e "  • Inspect full state at each step"
+    echo -e "  • Replay and debug failed runs"
+    echo -e "  • Test graph with custom inputs"
+fi
 echo ""
 echo -e "${YELLOW}Press Ctrl+C to stop all services${NC}"
 echo ""

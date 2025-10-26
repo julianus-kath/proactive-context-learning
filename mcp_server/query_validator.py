@@ -358,6 +358,9 @@ class QueryValidator:
         Important: In SQL Server, TOP must come after DISTINCT if DISTINCT is present.
         Valid: SELECT DISTINCT TOP n ... (not SELECT TOP n DISTINCT ...)
         
+        This method validates that the query has proper structure (columns and FROM clause)
+        before injecting TOP to avoid creating malformed SQL.
+        
         Args:
             query: SQL query
             limit: Row limit to enforce
@@ -396,7 +399,16 @@ class QueryValidator:
                     original_limit=existing_limit
                 )
         else:
-            # No TOP - inject one
+            # No TOP - inject one, but first validate query structure
+            # Check if query has enough structure to be valid after TOP injection
+            if not self._is_valid_select_structure(query):
+                logger.warning(f"Skipping TOP injection for incomplete query: {query[:50]}...")
+                return ValidationResult(
+                    valid=False,
+                    error_code=ValidationErrorCode.INVALID_SYNTAX,
+                    error_message="Query structure is incomplete or invalid for TOP injection"
+                )
+            
             # Check if query has SELECT DISTINCT (TOP must come after DISTINCT in SQL Server)
             distinct_match = re.search(r'\bSELECT\s+DISTINCT\b', query, re.IGNORECASE)
             
@@ -427,6 +439,58 @@ class QueryValidator:
                 row_cap_applied=True,
                 original_limit=None
             )
+    
+    def _is_valid_select_structure(self, query: str) -> bool:
+        """
+        Check if a SELECT query has valid structure for TOP injection.
+        
+        A valid query should have:
+        1. At least one column (not just "SELECT")
+        2. Can include asterisk, column names, expressions, or functions
+        
+        Args:
+            query: SQL query to validate
+        
+        Returns:
+            True if query structure is valid for TOP injection
+        """
+        query_stripped = query.strip()
+        
+        # Check if query is just "SELECT" or "SELECT DISTINCT"
+        select_only_pattern = r'^\s*SELECT\s*$'
+        select_distinct_only_pattern = r'^\s*SELECT\s+DISTINCT\s*$'
+        
+        if re.match(select_only_pattern, query_stripped, re.IGNORECASE):
+            return False
+        
+        if re.match(select_distinct_only_pattern, query_stripped, re.IGNORECASE):
+            return False
+        
+        # Check if query has valid content after SELECT [DISTINCT]
+        # Look for common patterns that indicate a valid query structure:
+        
+        # 1. SELECT followed by asterisk (SELECT *)
+        if re.search(r'\bSELECT\s+\*', query, re.IGNORECASE):
+            return True
+            
+        # 2. SELECT DISTINCT followed by asterisk or columns
+        if re.search(r'\bSELECT\s+DISTINCT\s+(\*|\w+)', query, re.IGNORECASE):
+            return True
+        
+        # 3. SELECT followed by word characters (column names, functions)
+        if re.search(r'\bSELECT\s+\w+', query, re.IGNORECASE):
+            return True
+            
+        # 4. SELECT followed by numbers (SELECT 1, SELECT 123, etc.)
+        if re.search(r'\bSELECT\s+\d+', query, re.IGNORECASE):
+            return True
+            
+        # 5. SELECT followed by expressions with parentheses (functions, etc.)
+        if re.search(r'\bSELECT\s+\w+\s*\(', query, re.IGNORECASE):
+            return True
+        
+        # If we can't determine structure, err on the side of caution
+        return False
 
 
 def validate_query(query: str, dialect: str = "postgres", max_rows: int = 1000, 

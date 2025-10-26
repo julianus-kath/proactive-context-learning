@@ -538,6 +538,11 @@ class MCPTools:
             )
         
         try:
+            # Log the incoming SQL query for monitoring
+            logger.info(f"🔍 QUERY_BOUNDED TOOL CALLED")
+            logger.info(f"📝 Original SQL Query: {sql}")
+            logger.info(f"📊 Requested limit: {limit}, Redaction: {enable_redaction}")
+            
             # Execute bounded query
             response = await execute_bounded_query(
                 query=sql,
