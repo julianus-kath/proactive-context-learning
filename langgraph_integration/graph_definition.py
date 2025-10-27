@@ -838,11 +838,31 @@ class DatabaseWorkflow:
                 
                 # Build schema snippet from cached descriptions
                 table_descriptions = {t: session_cache[t] for t in relevant_tables if t in session_cache}
-                schema_snippet = build_schema_snippet(table_descriptions)
+                
+                # CRITICAL VALIDATION: Check if we got valid descriptions
+                valid_descriptions = {t: desc for t, desc in table_descriptions.items() if desc.get("ok", False)}
+                if not valid_descriptions:
+                    logger.error(f"❌ CRITICAL: No valid table descriptions returned!")
+                    logger.error(f"   Requested tables: {relevant_tables}")
+                    logger.error(f"   Session cache keys: {list(session_cache.keys())}")
+                    for t in relevant_tables:
+                        if t in session_cache:
+                            desc = session_cache[t]
+                            logger.error(f"   {t}: ok={desc.get('ok', False)}, error={desc.get('error', 'unknown')}")
+                
+                schema_snippet = build_schema_snippet(valid_descriptions) if valid_descriptions else ""
                 state["schema_snippet"] = schema_snippet
                 
-                logger.info(f"📝 Built schema snippet ({len(schema_snippet)} chars) for {len(table_descriptions)} tables")
-                logger.info(f"📌 Schema snippet preview:\n{schema_snippet[:300]}...")
+                if not schema_snippet:
+                    logger.warning(f"⚠️ Schema snippet is empty! Attempted {len(table_descriptions)} table descriptions")
+                    # Fallback: Use table names directly to guide LLM
+                    fallback_snippet = "\n".join([f"Table: {t}" for t in relevant_tables[:3]])
+                    schema_snippet = fallback_snippet
+                    state["schema_snippet"] = schema_snippet
+                    logger.info(f"📝 Using fallback schema snippet with table names only:\n{schema_snippet}")
+                else:
+                    logger.info(f"📝 Built schema snippet ({len(schema_snippet)} chars) for {len(valid_descriptions)} tables")
+                    logger.info(f"📌 Schema snippet preview:\n{schema_snippet[:300]}...")
                 
             else:
                 error_msg = search_response.get("error", "Unknown error")
@@ -906,6 +926,14 @@ class DatabaseWorkflow:
             column_index = state.get("column_index", {})
             relevant_tables = state.get("relevant_tables", [])
             
+            # CRITICAL VALIDATION: Ensure schema_snippet has real table names
+            if not schema_snippet or schema_snippet == "No schema available":
+                logger.warning(f"⚠️ Schema snippet missing or empty! Relevant tables: {relevant_tables}")
+                if relevant_tables:
+                    # Build minimal schema with table names to guide LLM
+                    schema_snippet = "Available Tables:\n" + "\n".join([f"- {t}" for t in relevant_tables[:3]])
+                    logger.info(f"📝 Built minimal schema from relevant_tables:\n{schema_snippet}")
+            
             if column_index:
                 logger.info(f"✅ Using pre-fetched column index from Discovery Agent: {list(column_index.keys())}")
             elif relevant_tables:
@@ -930,6 +958,19 @@ class DatabaseWorkflow:
             
             response = await self.llm.ainvoke([SystemMessage(content=prompt)])
             sql_query = self._extract_sql_from_response(response.content)
+            
+            logger.info(f"📝 LLM generated SQL: {sql_query}")
+            
+            # CRITICAL VALIDATION: Check for placeholder table names
+            if "[schema]" in sql_query or "schema.customers" in sql_query.lower():
+                logger.error(f"❌ CRITICAL: SQL contains placeholder table name: {sql_query}")
+                if relevant_tables:
+                    logger.warning(f"⚠️ Replacing placeholder with first available table: {relevant_tables[0]}")
+                    # Try to use first relevant table
+                    sql_query = f"SELECT TOP 100 * FROM {relevant_tables[0]}"
+                    logger.info(f"✅ Corrected SQL: {sql_query}")
+                else:
+                    logger.error("❌ No relevant tables available to correct placeholder")
             
             # VALIDATION: Check if SQL uses columns that exist in schema
             schema_snippet = state.get("schema_snippet", "")

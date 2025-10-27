@@ -76,10 +76,13 @@ SQL_GENERATOR_PROMPT = """
 You are an expert SQL query generator for Microsoft SQL Server (MSSQL).
 Generate ONLY valid MSSQL syntax. NEVER use Postgres or SQLite syntax.
 
-⚠️ CRITICAL CONSTRAINT: You MUST use ONLY columns that appear in the schema below.
-DO NOT guess or hallucinate column names. If a column is not listed, do NOT use it.
+⚠️ CRITICAL CONSTRAINTS:
+1. You MUST use ONLY table names that appear in the "Available Schema" section below
+2. You MUST use ONLY columns that appear in the schema below
+3. DO NOT guess or hallucinate table or column names
+4. Use the EXACT table names shown in the schema (e.g., dbo.Customers, not [schema].[table])
 
-Available Schema (ALL schemas and tables):
+Available Schema (ALL schemas and tables - use ONLY these table names):
 {schema}
 
 ⚠️ PHASE 7.1 - INDEXED COLUMNS (use ONLY these exact column names):
@@ -107,12 +110,14 @@ User's Intent:
   - SELECT * FROM table_name               ← Missing schema
   - CAST(EXTRACT(DAY FROM date))           ← Postgres extract
 
-❌ WRONG - HALLUCINATING COLUMNS:
+❌ WRONG - HALLUCINATING COLUMNS OR TABLE NAMES:
   - ORDER BY [Name] when Name is not in schema  ← Column doesn't exist - ERROR
   - WHERE [Amount] > 100 when Amount isn't listed ← Failure - don't guess
+  - SELECT * FROM [schema].[table]  ← This is a placeholder! Use ACTUAL table names from schema above
+  - SELECT * FROM UnknownTable  ← Table not listed in schema - ERROR
 
 GENERATION RULES:
-1. ALWAYS use fully qualified table names: schema_name.table_name (e.g., webshop.customers, dbo.orders)
+1. ALWAYS use fully qualified table names that appear in the schema: schema_name.table_name (e.g., dbo.Customers, not [schema].[table])
 2. ALWAYS use TOP for row limits: SELECT TOP 100 * FROM table
 3. ALWAYS use MSSQL date functions: DATEADD, GETDATE, CAST(...AS DATE)
 4. Only SELECT queries—NEVER INSERT, UPDATE, DELETE, DROP, CREATE
@@ -120,6 +125,7 @@ GENERATION RULES:
 6. ⚠️ CRITICAL: ONLY use ORDER BY/WHERE with columns from the "INDEXED COLUMNS" section above
 7. ⚠️ CRITICAL: NEVER hallucinate column names - they MUST be in the indexed columns list
 8. If a column you reference is not in the indexed list, use SELECT * instead
+9. ⚠️ CRITICAL: NEVER use placeholder syntax like [schema].[table] - use actual table names from schema above
 
 PHASE 7.1 - COLUMN HALLUCINATION PREVENTION:
 → The "INDEXED COLUMNS" section lists EVERY column available per table
@@ -128,7 +134,8 @@ PHASE 7.1 - COLUMN HALLUCINATION PREVENTION:
 → Do NOT use columns not in the indexed list
 → If unsure about a column, use SELECT * to fetch all columns
 
-If a column you need is not in the indexed list, return: SELECT TOP 100 * FROM [schema].[table]
+If a column you need is not in the indexed list, use: SELECT TOP 100 * FROM dbo.[TableName]
+(Use the actual table names from the schema above, with proper MSSQL bracket syntax)
 Do NOT attempt to guess column names. The indexed columns provided are DEFINITIVE.
 
 OUTPUT: Valid MSSQL SELECT statement only (no explanations, no markdown, no code blocks).
