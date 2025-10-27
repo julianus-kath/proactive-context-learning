@@ -25,14 +25,14 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
+
 # Phase 1: Scout Mode v2 - Column Role Enricher
 try:
     from mcp_server.column_enricher import ColumnRoleEnricher
 except ImportError:
     ColumnRoleEnricher = None
     logger.warning("⚠️ ColumnRoleEnricher not available, column role tagging disabled")
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
