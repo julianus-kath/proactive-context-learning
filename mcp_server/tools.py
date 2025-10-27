@@ -543,6 +543,15 @@ class MCPTools:
             logger.info(f"📝 Original SQL Query: {sql}")
             logger.info(f"📊 Requested limit: {limit}, Redaction: {enable_redaction}")
             
+            # Diagnostic check for incomplete queries
+            sql_stripped = sql.strip()
+            if len(sql_stripped) <= 10:
+                logger.warning(f"🚨 POTENTIAL INCOMPLETE QUERY: Very short SQL detected ({len(sql_stripped)} chars)")
+                logger.warning(f"📋 This may indicate an issue in the calling agent workflow")
+            elif sql_stripped.upper() in ['SELECT', 'SELECT DISTINCT']:
+                logger.error(f"🚨 INCOMPLETE QUERY CONFIRMED: SQL is just '{sql_stripped}'")
+                logger.error(f"📋 Agent workflow is sending incomplete queries - investigate SQL generation")
+            
             # Execute bounded query
             response = await execute_bounded_query(
                 query=sql,

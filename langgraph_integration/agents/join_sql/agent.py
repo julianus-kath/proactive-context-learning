@@ -369,13 +369,15 @@ class JoinPlanAndSQLAgent:
 
     async def _validate_sql_node(self, state: BaseState) -> BaseState:
         """
-        Perform basic SQL syntax validation.
+        Perform comprehensive SQL syntax validation with re-planning support.
         
-        Checks:
+        Enhanced validation checks:
         - Starts with SELECT
-        - Has FROM clause
+        - Has FROM clause  
+        - Has column list (not just "SELECT")
         - Valid MSSQL keywords
         - Balanced parentheses/quotes
+        - Minimum SQL completeness
         """
         logger.info("✅ Validating SQL...")
 
@@ -385,6 +387,7 @@ class JoinPlanAndSQLAgent:
             error = {
                 "type": "NO_SQL",
                 "message": "No SQL query to validate",
+                "replan_needed": True
             }
             logger.error(f"❌ {error['message']}")
             return {**state, "error_info": error}
@@ -392,12 +395,26 @@ class JoinPlanAndSQLAgent:
         try:
             # Basic checks
             sql_upper = sql.upper().strip()
+            sql_words = sql_upper.split()
 
+            # 🚨 ENHANCED: Check for incomplete queries
+            if len(sql.strip()) < 10:  # Very short queries are likely incomplete
+                raise ValueError(f"Query too short ({len(sql)} chars) - likely incomplete")
+            
             if not sql_upper.startswith("SELECT"):
                 raise ValueError("Query must start with SELECT")
 
+            # 🚨 ENHANCED: Check for incomplete SELECT statements
+            if sql_upper in ["SELECT", "SELECT DISTINCT"] or len(sql_words) < 4:
+                raise ValueError("Incomplete SELECT statement - missing columns or FROM clause")
+
             if "FROM" not in sql_upper:
                 raise ValueError("Query must have FROM clause")
+
+            # 🚨 ENHANCED: Check for proper column specification (not just SELECT FROM)
+            select_to_from = sql_upper[6:sql_upper.index("FROM")].strip()  # Skip "SELECT "
+            if not select_to_from or select_to_from in ["", "DISTINCT"]:
+                raise ValueError("Missing column specification between SELECT and FROM")
 
             # Check for balanced quotes and parentheses
             if sql.count("'") % 2 != 0:
@@ -411,17 +428,25 @@ class JoinPlanAndSQLAgent:
                 if keyword in sql_upper:
                     raise ValueError(f"Non-SELECT statement detected: {keyword}")
 
+            # 🚨 ENHANCED: Check minimum table reference
+            if not any(word not in MSSQL_FUNCTIONS for word in sql_words[sql_words.index("FROM")+1:sql_words.index("FROM")+3] if sql_words.index("FROM")+1 < len(sql_words)):
+                raise ValueError("Missing or invalid table reference after FROM")
+
             logger.info("✅ SQL validation passed")
             return state
 
         except Exception as e:
+            # 🚨 ENHANCED: Mark validation errors as requiring re-planning
             error = {
                 "type": "SQL_VALIDATION_ERROR",
                 "message": f"SQL validation failed: {str(e)}",
                 "error": str(e),
-                "sql": sql[:200]
+                "sql": sql[:200],
+                "replan_needed": True,  # Signal that re-planning is needed
+                "validation_stage": "syntax_check"
             }
             logger.error(f"❌ {error['message']}")
+            logger.info("🔄 Validation failure detected - will trigger re-planning")
             return {**state, "error_info": error}
 
     # Helper methods

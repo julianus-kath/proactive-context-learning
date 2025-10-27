@@ -25,6 +25,13 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from datetime import datetime
 
+# Phase 1: Scout Mode v2 - Column Role Enricher
+try:
+    from mcp_server.column_enricher import ColumnRoleEnricher
+except ImportError:
+    ColumnRoleEnricher = None
+    logger.warning("⚠️ ColumnRoleEnricher not available, column role tagging disabled")
+
 logger = logging.getLogger(__name__)
 
 
@@ -424,6 +431,17 @@ class SemanticCatalogBuilder:
                                 fk_list.append({'column': str(fk), 'referenced_table': 'unknown'})
                         
                         table_info["foreign_keys"] = fk_list
+                        
+                        # 🆕 Phase 1: Enrich columns with role hints (German/English fuzzy matching)
+                        if ColumnRoleEnricher:
+                            try:
+                                enricher = ColumnRoleEnricher(use_llm=False)  # Pure fuzzy for now
+                                table_info["columns"] = enricher.enrich_columns(
+                                    table_info["columns"],
+                                    fk_list
+                                )
+                            except Exception as e:
+                                logger.debug(f"Column role enrichment failed for {full_name}: {e}")
                         
                         # 🆕 Index columns by type for semantic ranking
                         table_info["fk_count"] = len(fk_list)

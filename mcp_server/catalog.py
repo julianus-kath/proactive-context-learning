@@ -36,6 +36,7 @@ class ColumnInfo:
     default: Optional[str] = None
     is_primary_key: bool = False
     is_foreign_key: bool = False
+    role_hints: Optional[List[str]] = None  # Phase 1: Scout Mode v2 semantic roles
 
 
 @dataclass

@@ -1,5 +1,5 @@
 """
-Phase 4: MCP Discovery Tools - Paged, searchable, and drillable schema discovery.
+MCP Discovery Tools - Paged, searchable, and drillable schema discovery.
 
 This module provides catalog-backed discovery tools that:
 - Return paged summaries instead of full schema dumps

@@ -461,9 +461,15 @@ class QueryValidator:
         select_distinct_only_pattern = r'^\s*SELECT\s+DISTINCT\s*$'
         
         if re.match(select_only_pattern, query_stripped, re.IGNORECASE):
+            logger.error(f"🚨 INCOMPLETE QUERY DETECTED: Query contains only 'SELECT' keyword")
+            logger.error(f"📝 This indicates a problem in the SQL generation process")
+            logger.error(f"🔍 Check agent workflow for incomplete SQL generation")
             return False
         
         if re.match(select_distinct_only_pattern, query_stripped, re.IGNORECASE):
+            logger.error(f"🚨 INCOMPLETE QUERY DETECTED: Query contains only 'SELECT DISTINCT' keywords")
+            logger.error(f"📝 This indicates a problem in the SQL generation process")
+            logger.error(f"🔍 Check agent workflow for incomplete SQL generation")
             return False
         
         # Check if query has valid content after SELECT [DISTINCT]
@@ -489,7 +495,12 @@ class QueryValidator:
         if re.search(r'\bSELECT\s+\w+\s*\(', query, re.IGNORECASE):
             return True
         
-        # If we can't determine structure, err on the side of caution
+        # If we can't determine structure, log what we found for debugging
+        logger.warning(f"🔍 QUERY STRUCTURE UNKNOWN: Cannot determine if query is valid for TOP injection")
+        logger.warning(f"📝 Query: {query[:100]}...")
+        logger.warning(f"🔍 This may indicate an unusual but valid query pattern")
+        
+        # Err on the side of caution
         return False
 
 

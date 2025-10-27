@@ -77,6 +77,9 @@ class WorkflowState(TypedDict):
     
     PHASE 5 ENHANCEMENT: Added schema_snippet and session_described_tables
     for MCP-only orchestration with progressive discovery.
+    
+    RE-PLANNING ENHANCEMENT: Added replan_count and replan_context
+    for SQL validation failure recovery.
     """
     messages: List[Dict[str, Any]]
     user_input: str
@@ -93,6 +96,9 @@ class WorkflowState(TypedDict):
     session_described_tables: Optional[Dict[str, Dict[str, Any]]]  # Cache of described tables
     relevant_tables: Optional[List[str]]  # Tables selected for current query
     is_schema_query: Optional[bool]  # True if user is asking about schema/tables
+    # RE-PLANNING ENHANCEMENT: Track re-planning attempts
+    replan_count: Optional[int]  # Count of re-planning attempts
+    replan_context: Optional[List[Dict[str, Any]]]  # Context from previous failed attempts
 
 
 @dataclass
@@ -679,6 +685,9 @@ class DatabaseWorkflow:
         extracted from user query. Then calls describe_table for ≤3 tables
         to build a compact schema_snippet.
         
+        RE-PLANNING ENHANCEMENT: When re-planning, learns from previous failures
+        to select better tables and avoid repeating the same mistakes.
+        
         Args:
             state: Current workflow state
             
@@ -688,10 +697,18 @@ class DatabaseWorkflow:
         try:
             user_input = state["user_input"]
             session_cache = state.get("session_described_tables", {}) or {}
+            replan_context = state.get("replan_context", [])
+            is_replanning = len(replan_context) > 0
             
-            logger.info(f"🔍 SCOUT MODE: Analyzing user query: {user_input}")
+            if is_replanning:
+                logger.info(f"🔄 RE-PLANNING MODE: Learning from {len(replan_context)} previous failures")
+                for i, context in enumerate(replan_context):
+                    logger.info(f"  Attempt {context.get('attempt', i+1)}: {context.get('failure_reason', 'Unknown')}")
+            else:
+                logger.info(f"🔍 SCOUT MODE: Analyzing user query: {user_input}")
+            
             if debug_logger:
-                debug_logger.tool_call("scout_table_search", {"query": user_input})
+                debug_logger.tool_call("scout_table_search", {"query": user_input, "replanning": is_replanning})
             
             # Extract keywords from user query (simple heuristic)
             # Remove common words and extract potential table/column names
@@ -703,30 +720,80 @@ class DatabaseWorkflow:
                 # Fallback: use first few words
                 keywords = words[:3]
             
-            logger.info(f"📊 Extracted keywords: {keywords}")
+            # 🔄 RE-PLANNING ENHANCEMENT: Modify search strategy based on failures
+            if is_replanning:
+                # Add more diverse keywords when re-planning
+                intent_entities = state.get("intent_analysis", {}).get("entities", [])
+                if intent_entities:
+                    keywords.extend([e.lower() for e in intent_entities if e.lower() not in keywords])
+                    logger.info(f"🔄 Enhanced keywords with intent entities: {intent_entities}")
+                
+                # Increase search scope when re-planning
+                page_size = min(8, 5 + len(replan_context))  # More results when re-planning
+                logger.info(f"🔄 Expanding search scope to {page_size} tables due to re-planning")
+            else:
+                page_size = 5  # Default scope
+            
+            logger.info(f"📊 {'Enhanced' if is_replanning else 'Extracted'} keywords: {keywords}")
             
             # Search for relevant tables using MCP search_tables
-            search_keyword = " ".join(keywords[:2])  # Use first 2 keywords
-            logger.info(f"🔎 Searching tables with keyword: '{search_keyword}'")
+            search_keyword = " ".join(keywords[:3 if is_replanning else 2])  # More keywords when re-planning
+            logger.info(f"🔎 Searching tables with keyword: '{search_keyword}' (scope: {page_size})")
             if debug_logger:
-                debug_logger.scout_mode_operation("search_tables", search_keyword, [], {"status": "searching"})
+                debug_logger.scout_mode_operation("search_tables", search_keyword, [], {"status": "searching", "replanning": is_replanning})
             
-            search_response = await search_tables_mcp(search_keyword, page=1, page_size=5)
+            search_response = await search_tables_mcp(search_keyword, page=1, page_size=page_size)
             
             if search_response.get("ok"):
                 results = search_response.get("data", {}).get("results", [])
                 logger.info(f"✅ Scout mode found {len(results)} matching tables")
                 
-                # Extract top 3 table names
+                # 🔄 ENHANCED TABLE SELECTION: Smart selection with re-planning awareness
                 relevant_tables = []
-                for result in results[:3]:
+                previously_tried = []
+                
+                # Extract tables from previous failed attempts
+                if is_replanning:
+                    for context in replan_context:
+                        failed_sql = context.get("failed_sql", "")
+                        # Simple extraction of table names from failed SQL
+                        if "FROM" in failed_sql.upper():
+                            # Extract table names after FROM (basic parsing)
+                            sql_words = failed_sql.upper().split()
+                            try:
+                                from_index = sql_words.index("FROM")
+                                if from_index + 1 < len(sql_words):
+                                    table_ref = sql_words[from_index + 1].replace(",", "")
+                                    previously_tried.append(table_ref)
+                            except (ValueError, IndexError):
+                                pass
+                    
+                    if previously_tried:
+                        logger.info(f"🚫 Avoiding previously failed tables: {previously_tried}")
+                
+                # Select tables, avoiding previously failed ones when re-planning
+                max_tables = 3 if not is_replanning else min(4, len(results))  # More tables when re-planning
+                selected_count = 0
+                
+                for result in results[:max_tables * 2]:  # Search more deeply when re-planning
+                    if selected_count >= max_tables:
+                        break
+                        
                     table_name = result.get("full_name", "")
-                    if table_name:
-                        relevant_tables.append(table_name)
-                        logger.info(f"  ✓ Selected table: {table_name}")
+                    if not table_name:
+                        continue
+                    
+                    # Skip previously failed tables (when re-planning)
+                    if is_replanning and any(prev_table in table_name for prev_table in previously_tried):
+                        logger.info(f"  ⏭️  Skipping previously failed table: {table_name}")
+                        continue
+                    
+                    relevant_tables.append(table_name)
+                    logger.info(f"  ✓ {'Re-selected' if is_replanning else 'Selected'} table: {table_name}")
+                    selected_count += 1
                 
                 state["relevant_tables"] = relevant_tables
-                logger.info(f"🎯 Selected {len(relevant_tables)} relevant tables for query")
+                logger.info(f"🎯 {'Re-selected' if is_replanning else 'Selected'} {len(relevant_tables)} relevant tables for {'re-planning' if is_replanning else 'query'}")
                 
                 if debug_logger:
                     debug_logger.scout_mode_operation(
@@ -1436,9 +1503,42 @@ class DatabaseWorkflow:
             return "query"
     
     def _route_after_sql_generation(self, state: WorkflowState) -> str:
-        """Route workflow after SQL generation."""
-        if state.get("error_info"):
-            return "error"
+        """
+        Route workflow after SQL generation with re-planning support.
+        
+        Enhanced routing:
+        - Check for validation errors requiring re-planning
+        - Implement retry limits to prevent infinite loops
+        - Route to table selection for re-planning or error handling
+        """
+        error_info = state.get("error_info")
+        
+        if error_info:
+            # Check if this error requires re-planning
+            replan_needed = error_info.get("replan_needed", False)
+            replan_count = state.get("replan_count", 0)
+            max_replans = 2  # Limit re-planning attempts
+            
+            if replan_needed and replan_count < max_replans:
+                # 🔄 Route back to table selection for re-planning
+                logger.info(f"🔄 SQL validation failed - routing to re-planning (attempt {replan_count + 1}/{max_replans})")
+                state["replan_count"] = replan_count + 1
+                state["error_info"] = None  # Clear error to allow re-planning
+                
+                # Add re-planning context for better table selection
+                if "replan_context" not in state:
+                    state["replan_context"] = []
+                state["replan_context"].append({
+                    "failed_sql": error_info.get("sql", ""),
+                    "failure_reason": error_info.get("message", ""),
+                    "attempt": replan_count + 1
+                })
+                
+                return "select_tables"  # Go back to table selection for re-planning
+            else:
+                logger.warning(f"❌ Max re-planning attempts ({max_replans}) reached or not replannable error")
+                return "error"
+        
         return "execute"
     
     def _route_after_execution(self, state: WorkflowState) -> str:
@@ -1495,7 +1595,9 @@ class DatabaseWorkflow:
             query_results=None,
             error_info=None,
             final_response=None,
-            retry_count=0
+            retry_count=0,
+            replan_count=0,
+            replan_context=[]
         )
         
         try:
@@ -1533,7 +1635,9 @@ class DatabaseWorkflow:
             query_results=None,
             error_info=None,
             final_response=None,
-            retry_count=0
+            retry_count=0,
+            replan_count=0,
+            replan_context=[]
         )
         
         try:

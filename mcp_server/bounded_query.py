@@ -130,6 +130,16 @@ class BoundedQueryExecutor:
                 logger.error(f"❌ QUERY VALIDATION FAILED: {validation.error_code}")
                 logger.error(f"📝 Invalid query: {query}")
                 logger.error(f"💬 Error: {validation.error_message}")
+                
+                # Special handling for incomplete queries to help with debugging
+                if validation.error_code == ValidationErrorCode.INVALID_SYNTAX and len(query.strip()) <= 10:
+                    logger.error(f"🔧 DEBUGGING TIP: This looks like an incomplete query from the agent workflow")
+                    logger.error(f"📋 Check the SQL generation logic in your LangGraph agents")
+                    logger.error(f"🔍 Common causes:")
+                    logger.error(f"   • LLM generated partial SQL")
+                    logger.error(f"   • Agent workflow interrupted during SQL construction") 
+                    logger.error(f"   • Test query with incomplete SQL")
+                
                 return QueryResponse(
                     ok=False,
                     error_code=validation.error_code.value if validation.error_code else "VALIDATION_FAILED",
