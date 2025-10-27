@@ -26,6 +26,8 @@ class BaseState(TypedDict, total=False):
     relevant_tables: List[str]  # ["dbo.sales_orders", "dbo.order_items", ...]
     schema_snippet: str  # Compact schema description (≤3 tables/views)
     candidate_views: List[Dict[str, Any]]  # Views matching intent, ranked
+    # 🆕 PHASE 7.2: Indexed column names from Scout Catalog
+    column_index: Dict[str, List[str]]  # {"dbo.table1": ["col1", "col2", ...], ...}
 
     # Join planning & SQL generation
     join_plan: Dict[str, Any]  # {strategy: "view"|"joins", path:[...], fk_hints:[...], ...}
@@ -73,6 +75,7 @@ class DiscoveryAgentOutput(TypedDict, total=False):
     - schema_snippet: compact schema (≤3 entities)
     - candidate_views: ranked views (if any)
     - session_described_tables: updated cache
+    - column_index: 🆕 PHASE 7.2 indexed columns from Scout Catalog (prevents hallucination!)
     - error_info: if discovery fails
     """
 
@@ -80,6 +83,7 @@ class DiscoveryAgentOutput(TypedDict, total=False):
     schema_snippet: str
     candidate_views: List[Dict[str, Any]]
     session_described_tables: Dict[str, Any]
+    column_index: Dict[str, List[str]]  # 🆕 Exact column names for each table
     error_info: Optional[Dict[str, Any]]
 
 
@@ -90,12 +94,14 @@ class JoinPlanAndSQLAgentInput(TypedDict, total=False):
     - relevant_tables: tables to consider
     - schema_snippet: compact schema
     - session_described_tables: table metadata cache
+    - column_index: 🆕 PHASE 7.2 indexed column names (prevents hallucination!)
     """
 
     intent: Dict[str, Any]
     relevant_tables: List[str]
     schema_snippet: str
     session_described_tables: Optional[Dict[str, Any]]
+    column_index: Optional[Dict[str, List[str]]]  # 🆕 Pre-fetched from Discovery
 
 
 class JoinPlanAndSQLAgentOutput(TypedDict, total=False):

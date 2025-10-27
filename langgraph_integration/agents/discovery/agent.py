@@ -18,7 +18,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
 from langgraph_integration.contracts.state import BaseState, DiscoveryAgentOutput
-from langgraph_integration.mcp_client import MCPDatabaseTool
+from langgraph_integration.mcp_client import MCPDatabaseTool, get_column_index_mcp
 from langgraph_integration.prompts.discovery import TABLE_FOCUS_PROMPT, VIEWS_FIRST_GUIDANCE
 
 logger = logging.getLogger(__name__)
@@ -56,6 +56,7 @@ class DiscoveryAgent:
         - describe_selected: Get detailed metadata for selected tables
         - explore_date_columns: (Optional) Autonomously discover date columns if needed
         - build_schema_snippet: Combine descriptions into compact schema
+        - fetch_column_index: CRITICAL: Fetch indexed columns from catalog for each table
         
         Returns:
             Compiled LangGraph subgraph
@@ -69,6 +70,8 @@ class DiscoveryAgent:
         graph.add_node("describe_selected", self._describe_selected_node)
         graph.add_node("explore_date_columns", self._explore_date_columns_node)
         graph.add_node("build_schema_snippet", self._build_schema_snippet_node)
+        # 🆕 PHASE 7.2: Fetch indexed columns from Scout Catalog to prevent hallucination
+        graph.add_node("fetch_column_index", self._fetch_column_index_node)
         
         # Define edges
         graph.add_edge("search_candidates", "rank_candidates")
@@ -86,7 +89,9 @@ class DiscoveryAgent:
         
         graph.add_conditional_edges("describe_selected", route_to_exploration)
         graph.add_edge("explore_date_columns", "build_schema_snippet")
-        graph.add_edge("build_schema_snippet", END)
+        # 🆕 After schema snippet is built, ALWAYS fetch column index
+        graph.add_edge("build_schema_snippet", "fetch_column_index")
+        graph.add_edge("fetch_column_index", END)
         
         # Set entry point
         graph.set_entry_point("search_candidates")
@@ -471,6 +476,59 @@ class DiscoveryAgent:
             }
             logger.error(f"❌ {error['message']}")
             return {**state, "error_info": error}
+    
+    async def _fetch_column_index_node(self, state: BaseState) -> BaseState:
+        """
+        🆕 PHASE 7.2: CRITICAL NODE - Fetch indexed columns from Scout Catalog.
+        
+        This node MUST run after discovery to ensure Planning Agent gets exact columns.
+        
+        Flow:
+        1. Get relevant_tables from state (set by _build_schema_snippet_node)
+        2. Call get_column_index_mcp() to fetch structured column mappings
+        3. Store in state["column_index"] for Planning Agent to use
+        4. Ensures Planning Agent has GUARANTEED access to indexed columns
+        
+        This prevents hallucination at the root: the LLM gets a hard constraint
+        on what columns actually exist, not just hints or suggestions.
+        """
+        logger.info("🔑 DiscoveryAgent: Fetching column index from catalog...")
+        
+        relevant_tables = state.get("relevant_tables", [])
+        
+        if not relevant_tables:
+            logger.warning("⚠️  No relevant tables to fetch columns for")
+            state["column_index"] = {}
+            return state
+        
+        try:
+            logger.info(f"  Fetching columns for: {relevant_tables}")
+            
+            # 🔑 CRITICAL: Call MCP tool to get indexed columns from Scout Catalog
+            column_index = await get_column_index_mcp(relevant_tables)
+            
+            if not column_index:
+                logger.warning("⚠️  Column index fetch returned empty, continuing without it")
+                state["column_index"] = {}
+                return state
+            
+            logger.info(f"✅ Successfully fetched column index:")
+            for table, columns in column_index.items():
+                col_count = len(columns) if isinstance(columns, list) else 0
+                logger.info(f"  {table}: {col_count} column(s)")
+                if col_count <= 5:
+                    logger.debug(f"    Columns: {columns}")
+            
+            # 🔑 Store in state for Planning Agent to use
+            state["column_index"] = column_index
+            return state
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to fetch column index: {str(e)}")
+            logger.warning("⚠️  Continuing without column index (Planning Agent will fall back)")
+            # Don't fail the flow - let Planning Agent handle the fetch if needed
+            state["column_index"] = {}
+            return state
     
     # Helper methods
     

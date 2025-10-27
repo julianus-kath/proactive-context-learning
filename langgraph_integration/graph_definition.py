@@ -82,6 +82,9 @@ class WorkflowState(TypedDict):
     
     RE-PLANNING ENHANCEMENT: Added replan_count and replan_context
     for SQL validation failure recovery.
+    
+    PHASE 7.2 ENHANCEMENT: Added column_index (indexed columns from Scout Catalog)
+    to prevent hallucination at the root.
     """
     messages: List[Dict[str, Any]]
     user_input: str
@@ -101,6 +104,8 @@ class WorkflowState(TypedDict):
     # RE-PLANNING ENHANCEMENT: Track re-planning attempts
     replan_count: Optional[int]  # Count of re-planning attempts
     replan_context: Optional[List[Dict[str, Any]]]  # Context from previous failed attempts
+    # 🆕 PHASE 7.2: Indexed column names from Scout Catalog (prevents hallucination)
+    column_index: Optional[Dict[str, List[str]]]  # {"dbo.table1": ["col1", "col2"], ...}
 
 
 @dataclass
@@ -896,16 +901,23 @@ class DatabaseWorkflow:
             schema_snippet = state.get("schema_snippet", state.get("schema", "No schema available"))
             user_input = state["user_input"]
             
-            # PHASE 7.1: Fetch structured column index to prevent hallucination
-            column_index = {}
+            # 🆕 PHASE 7.2: CRITICAL - Use pre-fetched column index from Discovery Agent
+            # Discovery Agent MUST fetch this; only re-fetch if missing as fallback
+            column_index = state.get("column_index", {})
             relevant_tables = state.get("relevant_tables", [])
-            if relevant_tables:
+            
+            if column_index:
+                logger.info(f"✅ Using pre-fetched column index from Discovery Agent: {list(column_index.keys())}")
+            elif relevant_tables:
+                logger.warning("⚠️ Column index not in state from Discovery; fetching as fallback...")
                 logger.info(f"📋 Fetching column index for {len(relevant_tables)} tables...")
                 column_index = await get_column_index_mcp(relevant_tables)
                 if column_index:
-                    logger.info(f"✅ Got column index: {list(column_index.keys())}")
+                    logger.info(f"✅ Got fallback column index: {list(column_index.keys())}")
                 else:
-                    logger.warning("⚠️ Column index fetch failed, continuing without it")
+                    logger.warning("⚠️ Fallback column index fetch failed, continuing without it")
+            else:
+                logger.info("ℹ️  No tables or column index available")
             
             prompt = format_sql_generator_prompt(
                 schema=schema_snippet,  # Use compact snippet
