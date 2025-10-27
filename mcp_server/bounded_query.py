@@ -27,11 +27,40 @@ import time
 import logging
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, asdict
+from decimal import Decimal
+from datetime import datetime, date
 
 from mcp_server.query_validator import QueryValidator, ValidationResult, ValidationErrorCode
 from mcp_server.column_redactor import ColumnRedactor, RedactionConfig
 
 logger = logging.getLogger(__name__)
+
+
+def convert_row_to_json_serializable(row: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Convert database row to JSON-serializable format.
+    
+    Handles special types like Decimal, datetime, date that can't be directly JSON serialized.
+    
+    Args:
+        row: Dictionary from database query result
+    
+    Returns:
+        Dictionary with JSON-serializable values
+    """
+    result = {}
+    for key, value in row.items():
+        if value is None:
+            result[key] = None
+        elif isinstance(value, Decimal):
+            # Convert Decimal to float for JSON serialization
+            result[key] = float(value)
+        elif isinstance(value, (datetime, date)):
+            # Convert datetime/date to ISO format string
+            result[key] = value.isoformat() if hasattr(value, 'isoformat') else str(value)
+        else:
+            result[key] = value
+    return result
 
 
 @dataclass
@@ -178,13 +207,16 @@ class BoundedQueryExecutor:
                     execution_time_ms=self._elapsed_ms(start_time)
                 )
             
-            # Step 3: Extract columns
-            columns = list(rows[0].keys()) if rows else []
+            # Step 3: Convert rows to JSON-serializable format (handles Decimal, datetime, etc.)
+            json_rows = [convert_row_to_json_serializable(row) for row in rows]
             
-            # Step 4: Redact sensitive columns
-            redacted_rows, redacted_columns = self.redactor.redact_rows(rows, columns)
+            # Step 4: Extract columns
+            columns = list(json_rows[0].keys()) if json_rows else []
             
-            # Step 5: Build response
+            # Step 5: Redact sensitive columns
+            redacted_rows, redacted_columns = self.redactor.redact_rows(json_rows, columns)
+            
+            # Step 6: Build response
             execution_time = self._elapsed_ms(start_time)
             
             # Log execution results

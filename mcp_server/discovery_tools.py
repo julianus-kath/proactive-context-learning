@@ -23,8 +23,25 @@ from dataclasses import dataclass, asdict
 from functools import lru_cache
 import hashlib
 import json
+from decimal import Decimal
+from datetime import datetime, date
 
 logger = logging.getLogger(__name__)
+
+
+def convert_row_to_json_serializable(row: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert database row to JSON-serializable format (handle Decimal, datetime, etc.)."""
+    result = {}
+    for key, value in row.items():
+        if value is None:
+            result[key] = None
+        elif isinstance(value, Decimal):
+            result[key] = float(value)
+        elif isinstance(value, (datetime, date)):
+            result[key] = value.isoformat() if hasattr(value, 'isoformat') else str(value)
+        else:
+            result[key] = value
+    return result
 
 
 @dataclass
@@ -836,7 +853,8 @@ class DiscoveryTools:
                 try:
                     sample_query = f"SELECT * FROM {data['full_name']} LIMIT 5"
                     sample_rows = await db_adapter.fetch(sample_query, limit=5)
-                    data["sample_data"] = sample_rows
+                    # Convert rows to JSON-serializable format (handles Decimal, datetime, etc.)
+                    data["sample_data"] = [convert_row_to_json_serializable(row) for row in sample_rows]
                 except Exception as e:
                     logger.warning(f"Failed to fetch sample data for {data.get('full_name')}: {e}")
                     data["sample_data"] = None
@@ -1050,8 +1068,20 @@ class DiscoveryTools:
             
             # Extract columns for each table (O(1) per table from in-memory catalog)
             for table_name in table_names:
-                # Normalize table name
-                table_info = catalog.get_table(table_name)
+                # Parse table name (handle both "schema.table" and just "table" formats)
+                if '.' in table_name:
+                    schema, name = table_name.split('.', 1)
+                    table_info = catalog.get_table(schema, name)
+                else:
+                    # Try to find table in any schema
+                    all_tables = catalog.get_table_list()
+                    matching = [t for t in all_tables if t["name"].lower() == table_name.lower()]
+                    if matching:
+                        schema = matching[0]["schema"]
+                        name = matching[0]["name"]
+                        table_info = catalog.get_table(schema, name)
+                    else:
+                        table_info = None
                 
                 if table_info:
                     # Extract just the column names in order
