@@ -128,7 +128,7 @@ PHASE 7.1 - COLUMN HALLUCINATION PREVENTION:
 → Do NOT use columns not in the indexed list
 → If unsure about a column, use SELECT * to fetch all columns
 
-If a column you need is not in the indexed list, return: SELECT TOP {limit} * FROM {table}
+If a column you need is not in the indexed list, return: SELECT TOP 100 * FROM [schema].[table]
 Do NOT attempt to guess column names. The indexed columns provided are DEFINITIVE.
 
 OUTPUT: Valid MSSQL SELECT statement only (no explanations, no markdown, no code blocks).

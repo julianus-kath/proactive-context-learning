@@ -492,7 +492,7 @@ class MCPDatabaseTool:
             Ranked list of matching tables
         """
         result = await self.call_tool("search_tables", {
-            "keyword": keyword,
+            "query": keyword,
             "page": page,
             "page_size": page_size
         })
