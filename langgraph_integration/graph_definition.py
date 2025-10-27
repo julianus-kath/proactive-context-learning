@@ -46,7 +46,9 @@ from .mcp_client import (
     describe_table_batch,
     list_relations_mcp,
     query_bounded_mcp,
-    build_schema_snippet
+    build_schema_snippet,
+    # PHASE 7.1: Column index to prevent hallucination
+    get_column_index_mcp
 )
 from .prompts import (
     format_intent_parser_prompt,
@@ -894,8 +896,20 @@ class DatabaseWorkflow:
             schema_snippet = state.get("schema_snippet", state.get("schema", "No schema available"))
             user_input = state["user_input"]
             
+            # PHASE 7.1: Fetch structured column index to prevent hallucination
+            column_index = {}
+            relevant_tables = state.get("relevant_tables", [])
+            if relevant_tables:
+                logger.info(f"📋 Fetching column index for {len(relevant_tables)} tables...")
+                column_index = await get_column_index_mcp(relevant_tables)
+                if column_index:
+                    logger.info(f"✅ Got column index: {list(column_index.keys())}")
+                else:
+                    logger.warning("⚠️ Column index fetch failed, continuing without it")
+            
             prompt = format_sql_generator_prompt(
                 schema=schema_snippet,  # Use compact snippet
+                column_index=column_index,  # PHASE 7.1: Structured column list
                 operation=intent.get("operation", "DATA_QUERY"),
                 entities=intent.get("entities", []),
                 requirements=intent.get("requirements", ""),

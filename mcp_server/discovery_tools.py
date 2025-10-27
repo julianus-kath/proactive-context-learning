@@ -1001,6 +1001,89 @@ class DiscoveryTools:
             )
     
     @staticmethod
+    async def get_column_index(
+        db_adapter,
+        table_names: List[str]
+    ) -> DiscoveryResponse:
+        """
+        Get structured column lists for multiple tables (Phase 7.1).
+        
+        Prevents column hallucination by providing exact, enumerated column names
+        from Scout Catalog. This allows the LLM to reference only real columns.
+        
+        Args:
+            db_adapter: DatabaseAdapter instance with catalog
+            table_names: List of table names to get columns for
+        
+        Returns:
+            DiscoveryResponse with format: {
+                "dbo.Table1": ["Id", "Name", "Amount"],
+                "dbo.Table2": ["OrderId", "Total"],
+                "non_existent_table": null  # To indicate table not found
+            }
+        """
+        start_time = time.time()
+        
+        try:
+            # Validate input
+            if not table_names or not isinstance(table_names, list):
+                return DiscoveryResponse(
+                    ok=False,
+                    data=None,
+                    error="table_names must be a non-empty list",
+                    error_code="VALIDATION_FAILED",
+                    execution_time_ms=(time.time() - start_time) * 1000
+                )
+            
+            # Check catalog
+            if not hasattr(db_adapter, 'catalog') or not db_adapter.catalog:
+                return DiscoveryResponse(
+                    ok=False,
+                    data=None,
+                    error="Catalog not initialized",
+                    error_code="CATALOG_NOT_INITIALIZED",
+                    execution_time_ms=(time.time() - start_time) * 1000
+                )
+            
+            catalog = db_adapter.catalog
+            column_index = {}
+            
+            # Extract columns for each table (O(1) per table from in-memory catalog)
+            for table_name in table_names:
+                # Normalize table name
+                table_info = catalog.get_table(table_name)
+                
+                if table_info:
+                    # Extract just the column names in order
+                    columns = [col['name'] for col in table_info.get('columns', [])]
+                    fqtn = table_info.get('full_name', table_name)
+                    column_index[fqtn] = columns
+                    logger.debug(f"✓ {fqtn}: {len(columns)} columns")
+                else:
+                    # Table not found - indicate with null
+                    column_index[table_name] = None
+                    logger.debug(f"✗ {table_name}: not found in catalog")
+            
+            execution_time_ms = (time.time() - start_time) * 1000
+            
+            return DiscoveryResponse(
+                ok=True,
+                data=column_index,
+                execution_time_ms=execution_time_ms,
+                cached=False
+            )
+        
+        except Exception as e:
+            logger.error(f"get_column_index failed: {e}")
+            return DiscoveryResponse(
+                ok=False,
+                data=None,
+                error=str(e),
+                error_code="INTERNAL_ERROR",
+                execution_time_ms=(time.time() - start_time) * 1000
+            )
+    
+    @staticmethod
     def get_cache_stats() -> Dict[str, Any]:
         """Get statistics for response cache and rate limiter."""
         return {

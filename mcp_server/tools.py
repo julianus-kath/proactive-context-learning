@@ -316,6 +316,21 @@ class MCPTools:
                     "required": []
                 }
             ),
+            MCPTool(
+                name="get_column_index",
+                description="Get structured list of available columns for tables (Phase 7.1 - prevents column hallucination by providing exact column names)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "table_names": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of table names to get columns for (e.g., ['dbo.KHKAdressen', 'dbo.Orders']). Can be just table name or schema.table format."
+                        }
+                    },
+                    "required": ["table_names"]
+                }
+            ),
         ]
     
     @staticmethod
@@ -371,6 +386,8 @@ class MCPTools:
                     result = await MCPTools._list_empty_tables(arguments, db_manager)
                 elif tool_name == "get_execution_metrics":
                     result = await MCPTools._get_execution_metrics(arguments, db_manager)
+                elif tool_name == "get_column_index":
+                    result = await MCPTools._get_column_index(arguments, db_manager)
                 else:
                     metrics.success = False
                     metrics.error_code = "UNKNOWN_TOOL"
@@ -1475,5 +1492,41 @@ class MCPTools:
             logger.error(f"get_execution_metrics failed: {e}")
             return MCPToolResult(
                 content=[{"type": "text", "text": f"Error: {str(e)}"}],
+                isError=True
+            )
+    
+    @staticmethod
+    async def _get_column_index(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """
+        Get structured column lists for multiple tables (Phase 7.1).
+        
+        Prevents column hallucination by providing exact column names from Scout Catalog.
+        Returns a mapping of table names to column lists.
+        """
+        try:
+            table_names = arguments.get("table_names", [])
+            
+            if not table_names:
+                return MCPToolResult(
+                    content=[{"type": "text", "text": json.dumps({"ok": False, "error": "table_names is required"})}],
+                    isError=True
+                )
+            
+            # Delegate to DiscoveryTools which uses the catalog
+            result = await DiscoveryTools.get_column_index(db_manager, table_names)
+            
+            return MCPToolResult(
+                content=[{"type": "text", "text": json.dumps(result.to_dict())}]
+            )
+        
+        except Exception as e:
+            logger.error(f"get_column_index failed: {e}")
+            error_response = {
+                "ok": False,
+                "error": str(e),
+                "error_code": "INTERNAL_ERROR"
+            }
+            return MCPToolResult(
+                content=[{"type": "text", "text": json.dumps(error_response)}],
                 isError=True
             )

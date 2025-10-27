@@ -1290,6 +1290,44 @@ def build_schema_snippet(table_descriptions: Dict[str, Dict[str, Any]]) -> str:
     return "\n".join(snippet_parts) if snippet_parts else "No schema information available"
 
 
+async def get_column_index_mcp(table_names: List[str]) -> Dict[str, List[str]]:
+    """
+    Get structured column index for tables from MCP server.
+    
+    Phase 7.1: Prevents column hallucination by providing exact column names
+    extracted from Scout Catalog.
+    
+    Args:
+        table_names: List of table names to get columns for
+    
+    Returns:
+        Dictionary mapping table names to column lists:
+        {
+            "dbo.Table1": ["Id", "Name", "Amount"],
+            "dbo.Table2": ["OrderId", "Total"]
+        }
+    """
+    logger.info(f"📋 Fetching column index for tables: {table_names}")
+    
+    tool = MCPDatabaseTool()
+    
+    try:
+        result = await tool.call_tool("get_column_index", {"table_names": table_names})
+        
+        if result and result.get("ok"):
+            column_index = result.get("data", {})
+            logger.info(f"✅ Column index fetched: {len(column_index)} tables")
+            return column_index
+        else:
+            error = result.get("error", "Unknown error")
+            logger.error(f"❌ Failed to get column index: {error}")
+            return {}
+    
+    except Exception as e:
+        logger.error(f"❌ Error calling get_column_index: {e}")
+        return {}
+
+
 # Example usage and testing
 async def test_mcp_connection():
     """Test the MCP database tool connection."""

@@ -82,6 +82,9 @@ DO NOT guess or hallucinate column names. If a column is not listed, do NOT use 
 Available Schema (ALL schemas and tables):
 {schema}
 
+⚠️ PHASE 7.1 - INDEXED COLUMNS (use ONLY these exact column names):
+{column_index_json}
+
 User's Intent:
 - Operation Type: {operation}
 - Relevant Entities: {entities}
@@ -114,12 +117,19 @@ GENERATION RULES:
 3. ALWAYS use MSSQL date functions: DATEADD, GETDATE, CAST(...AS DATE)
 4. Only SELECT queries—NEVER INSERT, UPDATE, DELETE, DROP, CREATE
 5. Add reasonable TOP limits (100-1000) for large result sets
-6. ⚠️ CRITICAL: ONLY use ORDER BY with columns that are explicitly listed in the schema above
-7. ⚠️ CRITICAL: Validate every column/table name exists in the schema BEFORE using it
-8. If you're unsure about a column name, use SELECT * instead of ordering by a guessed column
+6. ⚠️ CRITICAL: ONLY use ORDER BY/WHERE with columns from the "INDEXED COLUMNS" section above
+7. ⚠️ CRITICAL: NEVER hallucinate column names - they MUST be in the indexed columns list
+8. If a column you reference is not in the indexed list, use SELECT * instead
 
-If a column you need is not in the schema, return: SELECT TOP {limit} * FROM {table}
-Do NOT attempt to guess column names. The schema provided is definitive.
+PHASE 7.1 - COLUMN HALLUCINATION PREVENTION:
+→ The "INDEXED COLUMNS" section lists EVERY column available per table
+→ These are EXACT column names from Scout Catalog - use them verbatim
+→ Do NOT guess, abbreviate, or alter column names
+→ Do NOT use columns not in the indexed list
+→ If unsure about a column, use SELECT * to fetch all columns
+
+If a column you need is not in the indexed list, return: SELECT TOP {limit} * FROM {table}
+Do NOT attempt to guess column names. The indexed columns provided are DEFINITIVE.
 
 OUTPUT: Valid MSSQL SELECT statement only (no explanations, no markdown, no code blocks).
 """
@@ -290,10 +300,29 @@ def format_intent_parser_prompt(messages: list, schema: str = "") -> str:
         schema=schema
     )
 
-def format_sql_generator_prompt(schema: str, operation: str, entities: list, requirements: str, user_input: str) -> str:
-    """Format the SQL generator prompt with all required information."""
+def format_sql_generator_prompt(
+    schema: str, 
+    operation: str, 
+    entities: list, 
+    requirements: str, 
+    user_input: str,
+    column_index: dict = None
+) -> str:
+    """
+    Format the SQL generator prompt with all required information.
+    
+    Phase 7.1: Added column_index parameter to prevent hallucination
+    by providing structured list of available columns.
+    """
+    # PHASE 7.1: Format column index as JSON if provided
+    if column_index is None:
+        column_index = {}
+    
+    column_index_json = json.dumps(column_index, indent=2) if column_index else "{}"
+    
     return SQL_GENERATOR_PROMPT.format(
         schema=schema,
+        column_index_json=column_index_json,
         operation=operation,
         entities=entities,
         requirements=requirements,
