@@ -905,6 +905,24 @@ class DatabaseWorkflow:
             response = await self.llm.ainvoke([SystemMessage(content=prompt)])
             sql_query = self._extract_sql_from_response(response.content)
             
+            # VALIDATION: Check if SQL uses columns that exist in schema
+            schema_snippet = state.get("schema_snippet", "")
+            column_validation = self._validate_sql_columns(sql_query, schema_snippet)
+            
+            if not column_validation["valid"]:
+                # LLM generated SQL with non-existent columns
+                logger.warning(f"⚠️ SQL validation failed: {column_validation['message']}")
+                logger.warning(f"   Invalid columns: {column_validation['invalid_columns']}")
+                logger.warning(f"   Falling back to simple SELECT *")
+                
+                # Fallback: Extract table and generate simple SELECT without ORDER BY
+                table_match = self._extract_primary_table(sql_query)
+                if table_match:
+                    sql_query = f"SELECT TOP 100 * FROM {table_match}"
+                    logger.info(f"✅ Fallback SQL: {sql_query}")
+                else:
+                    logger.error("❌ Could not extract table from failed SQL")
+            
             state["sql_query"] = sql_query
             logger.info(f"SQL generated: {sql_query}")
             
@@ -965,6 +983,105 @@ class DatabaseWorkflow:
         
         # Fallback: return the whole response if no SQL block found
         return response_text.strip()
+    
+    def _validate_sql_columns(self, sql_query: str, schema_snippet: str) -> Dict[str, Any]:
+        """
+        Validate that all columns used in SQL exist in the schema snippet.
+        
+        Detects common hallucinations like ORDER BY [Name] when Name isn't in schema.
+        
+        Args:
+            sql_query: Generated SQL query to validate
+            schema_snippet: Schema text containing available tables and columns
+            
+        Returns:
+            {"valid": bool, "message": str, "invalid_columns": List[str]}
+        """
+        import re
+        
+        try:
+            # Extract columns from schema snippet FIRST
+            # Look for "- ColumnName: Type" pattern
+            schema_columns = set()
+            for line in schema_snippet.split('\n'):
+                if line.strip().startswith('- ') and ':' in line:
+                    col_part = line.split('- ')[1].split(':')[0].strip()
+                    schema_columns.add(col_part)
+            
+            if not schema_columns:
+                # No schema columns found, skip validation
+                logger.warning("No schema columns found in snippet, skipping validation")
+                return {"valid": True, "message": "No schema columns to validate against", "invalid_columns": []}
+            
+            # Extract bracketed column names from SQL: [ColumnName]
+            # Only these are actual column references (not schema.table patterns)
+            bracketed_columns = set()
+            for match in re.finditer(r'\[([^\]]+)\]', sql_query):
+                col = match.group(1).strip()
+                # Skip if it looks like a schema.table pattern (contains a dot)
+                if '.' not in col:
+                    bracketed_columns.add(col)
+            
+            # Check for invalid columns in brackets
+            invalid_columns = bracketed_columns - schema_columns - {'*', 'TOP', 'AS', 'DESC', 'ASC', 'NULL'}
+            
+            if invalid_columns:
+                return {
+                    "valid": False,
+                    "message": f"SQL uses columns not in schema: {invalid_columns}",
+                    "invalid_columns": list(invalid_columns)
+                }
+            
+            return {
+                "valid": True,
+                "message": "All columns valid",
+                "invalid_columns": []
+            }
+            
+        except Exception as e:
+            logger.warning(f"Column validation skipped due to error: {e}")
+            return {"valid": True, "message": "Validation skipped", "invalid_columns": []}
+    
+    def _extract_primary_table(self, sql_query: str) -> Optional[str]:
+        """
+        Extract primary table name from SQL query.
+        
+        Handles patterns like:
+        - FROM dbo.table
+        - FROM [dbo].[table]
+        - FROM schema.table
+        
+        Args:
+            sql_query: SQL query to parse
+            
+        Returns:
+            Fully qualified table name (schema.table) or None
+        """
+        import re
+        
+        try:
+            # Pattern 1: FROM schema.table or FROM [schema].[table]
+            pattern1 = r'FROM\s+(\[?[a-zA-Z_][a-zA-Z0-9_]*\]?\.)?\[?([a-zA-Z_][a-zA-Z0-9_]*)\]?'
+            match = re.search(pattern1, sql_query, re.IGNORECASE)
+            
+            if match:
+                schema_part = match.group(1) or ""
+                table_part = match.group(2) or ""
+                
+                # Clean up brackets
+                schema_clean = schema_part.replace('[', '').replace(']', '').replace('.', '').strip()
+                table_clean = table_part.strip()
+                
+                if schema_clean and table_clean:
+                    return f"{schema_clean}.{table_clean}"
+                elif table_clean:
+                    return f"dbo.{table_clean}"
+            
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Failed to extract table from SQL: {e}")
+            return None
     
     async def _execute_query(self, state: WorkflowState) -> WorkflowState:
         """

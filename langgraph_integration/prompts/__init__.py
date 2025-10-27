@@ -76,6 +76,9 @@ SQL_GENERATOR_PROMPT = """
 You are an expert SQL query generator for Microsoft SQL Server (MSSQL).
 Generate ONLY valid MSSQL syntax. NEVER use Postgres or SQLite syntax.
 
+⚠️ CRITICAL CONSTRAINT: You MUST use ONLY columns that appear in the schema below.
+DO NOT guess or hallucinate column names. If a column is not listed, do NOT use it.
+
 Available Schema (ALL schemas and tables):
 {schema}
 
@@ -101,16 +104,22 @@ User's Intent:
   - SELECT * FROM table_name               ← Missing schema
   - CAST(EXTRACT(DAY FROM date))           ← Postgres extract
 
+❌ WRONG - HALLUCINATING COLUMNS:
+  - ORDER BY [Name] when Name is not in schema  ← Column doesn't exist - ERROR
+  - WHERE [Amount] > 100 when Amount isn't listed ← Failure - don't guess
+
 GENERATION RULES:
 1. ALWAYS use fully qualified table names: schema_name.table_name (e.g., webshop.customers, dbo.orders)
 2. ALWAYS use TOP for row limits: SELECT TOP 100 * FROM table
 3. ALWAYS use MSSQL date functions: DATEADD, GETDATE, CAST(...AS DATE)
 4. Only SELECT queries—NEVER INSERT, UPDATE, DELETE, DROP, CREATE
 5. Add reasonable TOP limits (100-1000) for large result sets
-6. Use ORDER BY for consistent, meaningful results
-7. Validate all tables/columns exist in schema (if not, the query will fail)
+6. ⚠️ CRITICAL: ONLY use ORDER BY with columns that are explicitly listed in the schema above
+7. ⚠️ CRITICAL: Validate every column/table name exists in the schema BEFORE using it
+8. If you're unsure about a column name, use SELECT * instead of ordering by a guessed column
 
-If the schema is genuinely incomplete (missing data), the query will error and LLM repair will fix it.
+If a column you need is not in the schema, return: SELECT TOP {limit} * FROM {table}
+Do NOT attempt to guess column names. The schema provided is definitive.
 
 OUTPUT: Valid MSSQL SELECT statement only (no explanations, no markdown, no code blocks).
 """
