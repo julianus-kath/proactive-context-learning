@@ -345,7 +345,24 @@ class AnswerFirstOrchestrator:
             except Exception as reflex_err:
                 logger.info(f"Reflexion loop skipped due to: {reflex_err}")
 
+            # CRITICAL CHECK: If schema_snippet is empty, we CANNOT safely generate SQL
+            # because we don't have the actual column names from the database.
+            # Fall back to asking user for clarification instead of guessing columns.
+            if not schema_snippet:
+                logger.error("❌ Cannot proceed: schema_snippet is empty")
+                logger.error("   This means describe_table failed for all selected tables")
+                logger.error("   Cannot safely generate SQL without knowing actual column names")
+                return AnswerFirstResult(
+                    success=False,
+                    answer="I found matching tables but couldn't retrieve their column information. "
+                           "Could you be more specific about which columns or metrics you're looking for?",
+                    error_message="Schema metadata retrieval failed for selected tables",
+                    tables_used=[t.full_name for t in selected_tables],
+                    debug_info={**debug_info, "schema_fetch_failed": True, "selected_table_count": len(selected_tables)}
+                )
+
             # Step 4: Generate query blueprint (fallback legacy path)
+            # NOTE: Only reached if schema_snippet WAS successfully fetched
             logger.info(f"Generating query blueprint for intent: {parsed_intent.intent.value}")
             blueprint_start = time.time()
             
@@ -353,7 +370,8 @@ class AnswerFirstOrchestrator:
             blueprint = self._generate_blueprint_for_intent(
                 parsed_intent,
                 primary_table,
-                selected_tables
+                selected_tables,
+                schema_snippet  # ← PASS schema_snippet to use ACTUAL column names
             )
             blueprint_duration = (time.time() - blueprint_start) * 1000
             
@@ -497,25 +515,40 @@ class AnswerFirstOrchestrator:
     def _generate_blueprint_for_intent(self,
                                       intent: ParsedIntent,
                                       primary_table: RankedTable,
-                                      all_tables: List[RankedTable]) -> Optional[Dict]:
+                                      all_tables: List[RankedTable],
+                                      schema_snippet: List[Dict[str, Any]]) -> Optional[Dict]:
         """
         Generate appropriate query blueprint based on intent.
+        
+        CRITICAL: Uses schema_snippet to find ACTUAL column names from the database,
+        not assumptions. schema_snippet must be provided and populated.
         
         Args:
             intent: ParsedIntent from parsing
             primary_table: Primary table for query
             all_tables: All selected tables
+            schema_snippet: Table descriptions with actual columns and role_hints
         
         Returns:
             QueryBlueprint or None if generation fails
         """
         try:
+            # Find the table info for primary_table
+            primary_table_info = next(
+                (t for t in schema_snippet if t.get("full_name") == primary_table.full_name),
+                None
+            )
+            
+            if not primary_table_info:
+                logger.warning(f"⚠️ Could not find schema for {primary_table.full_name} in snippet")
+                return None
+            
             if intent.intent == IntentType.AGGREGATE:
-                # Look for numeric column
-                numeric_col = self._find_numeric_column(primary_table)
+                # Look for numeric column using ACTUAL columns from schema
+                numeric_col = self._find_numeric_column(primary_table, primary_table_info)
                 if numeric_col:
                     # Look for grouping column if available
-                    group_col = self._find_grouping_column(primary_table, intent.entities)
+                    group_col = self._find_grouping_column(primary_table, intent.entities, primary_table_info)
                     return generate_blueprint(
                         intent="AGGREGATE",
                         dialect=self.dialect,
@@ -527,9 +560,9 @@ class AnswerFirstOrchestrator:
                     )
             
             elif intent.intent == IntentType.TREND:
-                # Look for date and numeric columns
-                date_col = self._find_date_column(primary_table)
-                numeric_col = self._find_numeric_column(primary_table)
+                # Look for date and numeric columns using ACTUAL columns
+                date_col = self._find_date_column(primary_table, primary_table_info)
+                numeric_col = self._find_numeric_column(primary_table, primary_table_info)
                 if date_col and numeric_col:
                     return generate_blueprint(
                         intent="TREND",
@@ -543,7 +576,7 @@ class AnswerFirstOrchestrator:
             
             elif intent.intent == IntentType.REPORT:
                 # Look for numeric column to sort by
-                numeric_col = self._find_numeric_column(primary_table)
+                numeric_col = self._find_numeric_column(primary_table, primary_table_info)
                 if numeric_col:
                     return generate_blueprint(
                         intent="REPORT",
@@ -577,68 +610,166 @@ class AnswerFirstOrchestrator:
                 )
         
         except Exception as e:
-            logger.warning(f"Blueprint generation failed for {intent.intent}: {e}")
+            logger.warning(f"❌ Blueprint generation failed for {intent.intent}: {e}")
             return None
     
-    def _find_numeric_column(self, table: RankedTable) -> Optional[str]:
-        """Find first numeric column in table."""
-        numeric_indicators = ['amount', 'price', 'quantity', 'count', 'total', 'revenue', 'sales']
-        table_name_lower = table.name.lower()
+    def _find_numeric_column(self, table: RankedTable, table_info: Optional[Dict[str, Any]] = None) -> Optional[str]:
+        """
+        Find numeric column for aggregation.
         
-        # Try to infer from table name
-        for indicator in numeric_indicators:
-            if indicator in table_name_lower:
-                return indicator
+        Uses role_hints from schema if available (Phase 1 Scout Mode).
+        Falls back to type inspection, then heuristics.
         
-        # Default fallback
+        Args:
+            table: RankedTable metadata
+            table_info: Table description from describe_table() with columns + role_hints
+        
+        Returns:
+            First found numeric column name, or None
+        """
+        if not table_info:
+            return None
+        
+        columns = table_info.get("columns", [])
+        
+        # Priority 1: Look for columns with "amount" role hint
+        for col in columns:
+            if col.get("role_hints") and "amount" in col.get("role_hints", []):
+                return col.get("name")
+        
+        # Priority 2: Look for numeric types (int, float, decimal, etc.)
+        numeric_types = ['int', 'bigint', 'float', 'double', 'decimal', 'numeric', 'money']
+        for col in columns:
+            col_type_lower = (col.get("type") or "").lower()
+            if any(t in col_type_lower for t in numeric_types):
+                return col.get("name")
+        
+        # Priority 3: Heuristic - look for column names with amount/price/quantity
+        numeric_indicators = ['amount', 'price', 'quantity', 'count', 'total', 'revenue', 'sales', 'betrag', 'menge']
+        for col in columns:
+            col_name_lower = (col.get("name") or "").lower()
+            if any(ind in col_name_lower for ind in numeric_indicators):
+                return col.get("name")
+        
         return None
     
-    def _find_date_column(self, table: RankedTable) -> Optional[str]:
-        """Find first date column in table."""
-        date_indicators = ['date', 'created_at', 'updated_at', 'order_date', 'sale_date']
-        table_name_lower = table.name.lower()
+    def _find_date_column(self, table: RankedTable, table_info: Optional[Dict[str, Any]] = None) -> Optional[str]:
+        """
+        Find date column for time-based queries.
         
-        # Try to infer from table name
-        for indicator in date_indicators:
-            if indicator in table_name_lower:
-                return indicator
+        Uses role_hints from schema if available (Phase 1 Scout Mode).
+        Falls back to type inspection, then heuristics.
         
-        # Default fallback
-        return 'date'
+        Args:
+            table: RankedTable metadata
+            table_info: Table description from describe_table() with columns + role_hints
+        
+        Returns:
+            First found date column name, or None
+        """
+        if not table_info:
+            return None
+        
+        columns = table_info.get("columns", [])
+        
+        # Priority 1: Look for columns with "date" role hint
+        for col in columns:
+            if col.get("role_hints") and "date" in col.get("role_hints", []):
+                return col.get("name")
+        
+        # Priority 2: Look for datetime/date types
+        date_types = ['date', 'datetime', 'timestamp', 'datetime2', 'smalldatetime']
+        for col in columns:
+            col_type_lower = (col.get("type") or "").lower()
+            if any(t in col_type_lower for t in date_types):
+                return col.get("name")
+        
+        # Priority 3: Heuristic - look for column names with date indicators
+        date_indicators = ['datum', 'date', 'created', 'modified', 'updated', 'timestamp', 'lieferdatum', 'bestelldatum']
+        for col in columns:
+            col_name_lower = (col.get("name") or "").lower()
+            if any(ind in col_name_lower for ind in date_indicators):
+                return col.get("name")
+        
+        return None
     
-    def _find_grouping_column(self, table: RankedTable, entities: List[str]) -> Optional[str]:
-        """Find grouping column based on entities."""
-        grouping_indicators = ['category', 'type', 'status', 'region', 'department']
+    def _find_grouping_column(self, table: RankedTable, entities: List[str], table_info: Optional[Dict[str, Any]] = None) -> Optional[str]:
+        """
+        Find grouping column for GROUP BY.
         
-        # Check if any entity matches
+        Uses role_hints from schema if available (Phase 1 Scout Mode).
+        Falls back to heuristics.
+        
+        Args:
+            table: RankedTable metadata
+            entities: User-mentioned entities to match against
+            table_info: Table description from describe_table() with columns + role_hints
+        
+        Returns:
+            Grouping column name, or None
+        """
+        if not table_info:
+            return None
+        
+        columns = table_info.get("columns", [])
+        
+        # Priority 1: Look for columns with "status" or "category" role hints
+        category_roles = ['status', 'category', 'type', 'code']
+        for col in columns:
+            if col.get("role_hints"):
+                for role in col.get("role_hints", []):
+                    if any(cat in role for cat in category_roles):
+                        return col.get("name")
+        
+        # Priority 2: Look for columns matching user entities
         for entity in entities:
-            if entity in grouping_indicators:
-                return entity
+            entity_lower = entity.lower()
+            for col in columns:
+                col_name_lower = (col.get("name") or "").lower()
+                if entity_lower in col_name_lower or col_name_lower in entity_lower:
+                    return col.get("name")
         
-        # Try table name inference
-        for indicator in grouping_indicators:
-            if indicator in table.name.lower():
-                return indicator
+        # Priority 3: Heuristic - look for status/category-like columns
+        grouping_indicators = ['status', 'type', 'category', 'region', 'department', 'zustand', 'typ']
+        for col in columns:
+            col_name_lower = (col.get("name") or "").lower()
+            if any(ind in col_name_lower for ind in grouping_indicators):
+                return col.get("name")
         
         return None
 
     async def _get_schema_snippet(self, table_full_names: List[str]) -> List[Dict[str, Any]]:
-        """Fetch describe_table snippets (catalog-only) for up to 3 tables."""
+        """
+        Fetch describe_table snippets (catalog-only) for up to 3 tables.
+        
+        CRITICAL: This must succeed for correct SQL generation. If it fails,
+        we cannot generate SQL with actual column names from the schema.
+        """
         snippet: List[Dict[str, Any]] = []
         if not table_full_names:
             return snippet
         try:
             from mcp_server.discovery_tools import DiscoveryTools
             for full in table_full_names[:3]:
-                resp = await DiscoveryTools.describe_table(
-                    db_adapter=self.db_adapter,
-                    table_name=full,
-                    include_sample=False
-                )
-                if getattr(resp, "ok", False) and resp.data:
-                    snippet.append(resp.data)
+                try:
+                    resp = await DiscoveryTools.describe_table(
+                        db_adapter=self.db_adapter,
+                        table_name=full,
+                        include_sample=False
+                    )
+                    if getattr(resp, "ok", False) and resp.data:
+                        snippet.append(resp.data)
+                        logger.info(f"✅ Schema fetched for {full}: {len(resp.data.get('columns', []))} columns")
+                    else:
+                        logger.warning(f"⚠️ describe_table returned ok=False for {full}: {getattr(resp, 'error', 'unknown')}")
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to describe {full}: {e}")
         except Exception as e:
-            logger.info(f"Schema snippet build skipped: {e}")
+            logger.error(f"❌ Schema snippet fetch failed completely: {e}")
+        
+        if not snippet:
+            logger.error(f"❌ CRITICAL: No schema snippets retrieved for tables: {table_full_names}")
+        
         return snippet
 
     def _plan_blueprint_json(self,
