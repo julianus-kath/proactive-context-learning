@@ -11,6 +11,8 @@ This agent handles the final output phase:
 
 import json
 import logging
+import asyncio
+import concurrent.futures
 from typing import Any, Dict, Optional
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
@@ -25,6 +27,20 @@ from langgraph_integration.prompts.answer import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _run_async(coro):
+    """Helper to run async functions synchronously for LangGraph node compatibility."""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, coro)
+                return future.result()
+        else:
+            return loop.run_until_complete(coro)
+    except RuntimeError:
+        return asyncio.run(coro)
 
 
 class AnswerAgent:
@@ -64,13 +80,13 @@ class AnswerAgent:
         
         graph = StateGraph(BaseState)
 
-        # Define nodes
-        graph.add_node("route_by_intent", self._route_decision_node)
-        graph.add_node("format_result", self._format_result_node)
-        graph.add_node("explain_schema", self._explain_schema_node)
-        graph.add_node("format_error", self._format_error_node)
-        graph.add_node("format_clarification", self._format_clarification_node)
-        graph.add_node("format_health", self._format_health_node)
+        # Define nodes (wrap async nodes for sync .invoke() compatibility)
+        graph.add_node("route_by_intent", lambda state: _run_async(self._route_decision_node(state)))
+        graph.add_node("format_result", lambda state: _run_async(self._format_result_node(state)))
+        graph.add_node("explain_schema", lambda state: _run_async(self._explain_schema_node(state)))
+        graph.add_node("format_error", lambda state: _run_async(self._format_error_node(state)))
+        graph.add_node("format_clarification", lambda state: _run_async(self._format_clarification_node(state)))
+        graph.add_node("format_health", lambda state: _run_async(self._format_health_node(state)))
 
         # Define conditional routing from router node
         def route_by_intent(state: BaseState) -> Literal[

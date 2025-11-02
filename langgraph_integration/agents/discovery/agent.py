@@ -13,6 +13,8 @@ Tool-driven (deterministic), with optional LLM tie-breaker.
 
 import json
 import logging
+import asyncio
+import concurrent.futures
 from typing import Any, Dict, List, Optional
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
@@ -22,6 +24,20 @@ from langgraph_integration.mcp_client import MCPDatabaseTool, get_column_index_m
 from langgraph_integration.prompts.discovery import TABLE_FOCUS_PROMPT, VIEWS_FIRST_GUIDANCE
 
 logger = logging.getLogger(__name__)
+
+
+def _run_async(coro):
+    """Helper to run async functions synchronously for LangGraph node compatibility."""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, coro)
+                return future.result()
+        else:
+            return loop.run_until_complete(coro)
+    except RuntimeError:
+        return asyncio.run(coro)
 
 
 class DiscoveryAgent:
@@ -65,15 +81,15 @@ class DiscoveryAgent:
         
         graph = StateGraph(BaseState)
         
-        # Define nodes
-        graph.add_node("search_candidates", self._search_candidates_node)
-        graph.add_node("rank_candidates", self._rank_candidates_node)
-        graph.add_node("filter_to_limit", self._filter_to_limit_node)
-        graph.add_node("describe_selected", self._describe_selected_node)
-        graph.add_node("explore_date_columns", self._explore_date_columns_node)
-        graph.add_node("build_schema_snippet", self._build_schema_snippet_node)
+        # Define nodes (wrap async nodes for sync .invoke() compatibility)
+        graph.add_node("search_candidates", lambda state: _run_async(self._search_candidates_node(state)))
+        graph.add_node("rank_candidates", lambda state: _run_async(self._rank_candidates_node(state)))
+        graph.add_node("filter_to_limit", lambda state: _run_async(self._filter_to_limit_node(state)))
+        graph.add_node("describe_selected", lambda state: _run_async(self._describe_selected_node(state)))
+        graph.add_node("explore_date_columns", lambda state: _run_async(self._explore_date_columns_node(state)))
+        graph.add_node("build_schema_snippet", lambda state: _run_async(self._build_schema_snippet_node(state)))
         # 🆕 PHASE 7.2: Fetch indexed columns from Scout Catalog to prevent hallucination
-        graph.add_node("fetch_column_index", self._fetch_column_index_node)
+        graph.add_node("fetch_column_index", lambda state: _run_async(self._fetch_column_index_node(state)))
         
         # Define edges
         graph.add_edge("search_candidates", "rank_candidates")

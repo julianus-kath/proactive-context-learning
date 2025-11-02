@@ -19,6 +19,7 @@ ARCHITECTURE CHANGE (ADR-0019):
 import logging
 import json
 import os
+import asyncio
 from typing import Dict, Any, List, Optional
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
@@ -31,6 +32,29 @@ from langgraph_integration.agents.answer.agent import AnswerAgent
 from langgraph_integration.mcp_client import MCPDatabaseTool
 
 logger = logging.getLogger(__name__)
+
+
+def _run_async(coro):
+    """
+    Helper to run async functions synchronously.
+    
+    LangGraph nodes must be synchronous for .invoke() to work.
+    This wrapper allows async node implementations while maintaining sync interface.
+    """
+    try:
+        # Check if there's already an event loop in this thread
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # If loop is running, create new one (shouldn't happen in this context)
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, coro)
+                return future.result()
+        else:
+            return loop.run_until_complete(coro)
+    except RuntimeError:
+        # No event loop, create new one
+        return asyncio.run(coro)
 
 
 class QueryOrchestrator:
@@ -118,18 +142,19 @@ class QueryOrchestrator:
         logger.info("🏗️  Building orchestrator graph...")
         graph = StateGraph(BaseState)
 
-        # ============= Define all nodes =============
+        # ============= Define all nodes (registered as async for ainvoke) =============
+        # For ainvoke() compatibility, register nodes as their native async methods
         graph.add_node("index_database", self._index_database_node)
         graph.add_node("parse_intent", self._parse_intent_node)
         graph.add_node("route_operation", self._route_operation_node)
 
-        # Agent nodes (main flow)
+        # Agent nodes (main flow) - register async implementations directly
         graph.add_node("discovery", self._discovery_node)
         graph.add_node("join_sql", self._join_sql_node)
         graph.add_node("exec_recovery", self._exec_recovery_node)
         graph.add_node("answer", self._answer_node)
 
-        # Special operation nodes
+        # Special operation nodes - register async implementations directly
         graph.add_node("answer_schema", self._answer_schema_node)
         graph.add_node("answer_health", self._answer_health_node)
         graph.add_node("answer_error", self._answer_error_node)
@@ -268,8 +293,8 @@ class QueryOrchestrator:
             # Build and run discovery subgraph
             discovery_graph = self.discovery_agent.build_subgraph()
 
-            # Invoke with input state
-            result = discovery_graph.invoke(state)
+            # Invoke with input state using async API
+            result = await discovery_graph.ainvoke(state)
 
             # Extract outputs and update state
             state["relevant_tables"] = result.get("relevant_tables", [])
@@ -317,8 +342,8 @@ class QueryOrchestrator:
             # Build and run join_sql subgraph
             join_sql_graph = self.join_sql_agent.build_subgraph()
 
-            # Invoke with input state
-            result = join_sql_graph.invoke(state)
+            # Invoke with input state using async API
+            result = await join_sql_graph.ainvoke(state)
 
             # Extract outputs
             state["join_plan"] = result.get("join_plan", {})
@@ -356,8 +381,8 @@ class QueryOrchestrator:
             # Build and run exec_recovery subgraph
             exec_recovery_graph = self.exec_recovery_agent.build_subgraph()
 
-            # Invoke with input state
-            result = exec_recovery_graph.invoke(state)
+            # Invoke with input state using async API
+            result = await exec_recovery_graph.ainvoke(state)
 
             # Extract outputs
             state["exec_result"] = result.get("exec_result", {})
@@ -399,8 +424,8 @@ class QueryOrchestrator:
             # Build and run answer subgraph
             answer_graph = self.answer_agent.build_subgraph()
 
-            # Invoke with input state
-            result = answer_graph.invoke(state)
+            # Invoke with input state using async API
+            result = await answer_graph.ainvoke(state)
 
             # Extract outputs
             state["final_response"] = result.get("final_response", "No response generated")
@@ -519,8 +544,10 @@ class QueryOrchestrator:
                 retry_count=0
             )
 
-            # Run the graph
-            result = self.graph.invoke(initial_state)
+            # Run the graph using async API since we're in an async context
+            # This allows proper handling of async nodes without blocking
+            # Always use ainvoke for async compatibility
+            result = await self.graph.ainvoke(initial_state)
 
             # Extract final response
             final_response = result.get("final_response", "No response generated")

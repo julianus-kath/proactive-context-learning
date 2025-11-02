@@ -17,6 +17,7 @@ Safety guardrails:
 import json
 import logging
 import asyncio
+import concurrent.futures
 from typing import Any, Dict, List, Optional
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
@@ -30,6 +31,20 @@ from langgraph_integration.prompts.repair import (
 from langgraph_integration.utils.sql_normalizer import prepare_sql_for_execution
 
 logger = logging.getLogger(__name__)
+
+
+def _run_async(coro):
+    """Helper to run async functions synchronously for LangGraph node compatibility."""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, coro)
+                return future.result()
+        else:
+            return loop.run_until_complete(coro)
+    except RuntimeError:
+        return asyncio.run(coro)
 
 
 class ExecAndRecoveryAgent:
@@ -83,15 +98,15 @@ class ExecAndRecoveryAgent:
         """
         graph = StateGraph(BaseState)
 
-        # Define nodes
-        graph.add_node("execute_query", self._execute_query_node)
-        graph.add_node("check_result", self._check_result_node)
-        graph.add_node("repair_sql", self._repair_sql_node)
-        graph.add_node("retry_query", self._retry_query_node)
-        graph.add_node("check_retry_result", self._check_retry_result_node)
-        graph.add_node("simplify_query", self._simplify_query_node)
-        graph.add_node("final_retry", self._final_retry_node)
-        graph.add_node("prepare_error", self._prepare_error_node)
+        # Define nodes (wrap async nodes for sync .invoke() compatibility)
+        graph.add_node("execute_query", lambda state: _run_async(self._execute_query_node(state)))
+        graph.add_node("check_result", lambda state: _run_async(self._check_result_node(state)))
+        graph.add_node("repair_sql", lambda state: _run_async(self._repair_sql_node(state)))
+        graph.add_node("retry_query", lambda state: _run_async(self._retry_query_node(state)))
+        graph.add_node("check_retry_result", lambda state: _run_async(self._check_retry_result_node(state)))
+        graph.add_node("simplify_query", lambda state: _run_async(self._simplify_query_node(state)))
+        graph.add_node("final_retry", lambda state: _run_async(self._final_retry_node(state)))
+        graph.add_node("prepare_error", lambda state: _run_async(self._prepare_error_node(state)))
 
         # Define edges with conditional routing
         from typing import Literal

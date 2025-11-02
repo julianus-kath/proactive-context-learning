@@ -13,6 +13,8 @@ Otherwise, plan joins with ≤3 hops using FK relationships.
 
 import json
 import logging
+import asyncio
+import concurrent.futures
 from typing import Any, Dict, List, Optional
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
@@ -26,6 +28,20 @@ from langgraph_integration.prompts.join_sql import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _run_async(coro):
+    """Helper to run async functions synchronously for LangGraph node compatibility."""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, coro)
+                return future.result()
+        else:
+            return loop.run_until_complete(coro)
+    except RuntimeError:
+        return asyncio.run(coro)
 
 # MSSQL keywords and functions (for validation)
 MSSQL_FUNCTIONS = {
@@ -87,12 +103,12 @@ class JoinPlanAndSQLAgent:
         """
         graph = StateGraph(BaseState)
 
-        # Define nodes
-        graph.add_node("check_view_coverage", self._check_view_coverage_node)
-        graph.add_node("fetch_relations", self._fetch_relations_node)
-        graph.add_node("build_join_plan", self._build_join_plan_node)
-        graph.add_node("generate_sql", self._generate_sql_node)
-        graph.add_node("validate_sql", self._validate_sql_node)
+        # Define nodes (wrap async nodes for sync .invoke() compatibility)
+        graph.add_node("check_view_coverage", lambda state: _run_async(self._check_view_coverage_node(state)))
+        graph.add_node("fetch_relations", lambda state: _run_async(self._fetch_relations_node(state)))
+        graph.add_node("build_join_plan", lambda state: _run_async(self._build_join_plan_node(state)))
+        graph.add_node("generate_sql", lambda state: _run_async(self._generate_sql_node(state)))
+        graph.add_node("validate_sql", lambda state: _run_async(self._validate_sql_node(state)))
 
         # Define edges and conditional routing
         graph.add_edge("check_view_coverage", "fetch_relations")
