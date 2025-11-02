@@ -385,7 +385,8 @@ class SchemaCatalog:
             schema_name = row[0]
             table_name = row[1]
             table_type = row[2]
-            estimated_rows = row[3]
+            # Convert Decimal (from pyodbc/SQL Server) to int
+            estimated_rows = int(row[3]) if row[3] else 0
             
             # Get columns with PK/FK info
             table_columns = await self._fetch_mssql_columns(schema_name, table_name)

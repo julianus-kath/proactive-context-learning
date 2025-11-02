@@ -45,7 +45,7 @@ class AnswerAgent:
         """
         self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)
 
-    async def build_subgraph(self) -> StateGraph:
+    def build_subgraph(self) -> StateGraph:
         """
         Build the LangGraph subgraph for answer formatting.
         
@@ -60,20 +60,53 @@ class AnswerAgent:
         Returns:
             Compiled LangGraph subgraph
         """
+        from typing import Literal
+        
         graph = StateGraph(BaseState)
 
         # Define nodes
-        graph.add_node("route_by_intent", self._route_by_intent_node)
+        graph.add_node("route_by_intent", self._route_decision_node)
         graph.add_node("format_result", self._format_result_node)
         graph.add_node("explain_schema", self._explain_schema_node)
         graph.add_node("format_error", self._format_error_node)
         graph.add_node("format_clarification", self._format_clarification_node)
         graph.add_node("format_health", self._format_health_node)
 
-        # Define edges and conditional routing
-        graph.add_edge("route_by_intent", "format_result")  # Default
+        # Define conditional routing from router node
+        def route_by_intent(state: BaseState) -> Literal[
+            "format_result", "explain_schema", "format_error", 
+            "format_clarification", "format_health"
+        ]:
+            """Route to appropriate formatter based on state."""
+            intent = state.get("intent", {})
+            operation = intent.get("operation", "query")
+            error_info = state.get("error_info")
+
+            # Priority routing
+            if error_info and error_info.get("type"):
+                return "format_error"
+            elif operation == "clarify":
+                return "format_clarification"
+            elif operation == "schema_query":
+                return "explain_schema"
+            elif operation == "health_check":
+                return "format_health"
+            else:
+                return "format_result"
         
-        # Note: Actual routing is done in _route_by_intent_node by returning different state
+        graph.add_conditional_edges(
+            "route_by_intent",
+            route_by_intent,
+            {
+                "format_result": "format_result",
+                "explain_schema": "explain_schema",
+                "format_error": "format_error",
+                "format_clarification": "format_clarification",
+                "format_health": "format_health",
+            }
+        )
+        
+        # All formatters end at END
         graph.add_edge("format_result", END)
         graph.add_edge("explain_schema", END)
         graph.add_edge("format_error", END)
@@ -85,37 +118,16 @@ class AnswerAgent:
 
         return graph.compile()
 
-    async def _route_by_intent_node(self, state: BaseState) -> BaseState:
+    async def _route_decision_node(self, state: BaseState) -> BaseState:
         """
-        Route to appropriate formatter based on intent or state.
+        Router node (passthrough).
         
-        Routes:
-        - If error_info: format_error
-        - If exec_result with rows: format_result
-        - If intent.operation == schema_query: explain_schema
-        - If intent.operation == clarify: format_clarification
-        - If intent.operation == health_check: format_health
+        Actual routing decision is made by the route_by_intent() function in build_subgraph().
+        This node just validates state and passes through; the conditional_edges mechanism
+        calls the routing function and decides which formatter to invoke.
         """
-        logger.info("🎯 AnswerAgent: Routing to formatter...")
-
-        intent = state.get("intent", {})
-        operation = intent.get("operation", "query")
-        error_info = state.get("error_info")
-        exec_result = state.get("exec_result")
-
-        # Determine which formatter to use
-        if error_info and error_info.get("type"):
-            # Route to error formatter
-            return await self._format_error_node(state)
-        elif operation == "clarify":
-            return await self._format_clarification_node(state)
-        elif operation == "schema_query":
-            return await self._explain_schema_node(state)
-        elif operation == "health_check":
-            return await self._format_health_node(state)
-        else:
-            # Default: format result
-            return await self._format_result_node(state)
+        logger.debug("🎯 AnswerAgent: Router node (decision made by conditional edges)")
+        return state
 
     async def _format_result_node(self, state: BaseState) -> BaseState:
         """
@@ -365,3 +377,18 @@ class AnswerAgent:
 async def create_answer_agent(llm_model: str = "gpt-4o") -> AnswerAgent:
     """Factory function to create an AnswerAgent instance."""
     return AnswerAgent(llm_model=llm_model)
+
+
+# Sync wrapper for LangGraph Studio
+def build_answer_graph():
+    """
+    Build and return the answer agent graph for LangGraph Studio.
+    
+    This is a synchronous function that can be called by langgraph dev CLI.
+    All node functions remain async and will be properly awaited by LangGraph at runtime.
+    
+    Returns:
+        Compiled StateGraph for the answer agent
+    """
+    agent = AnswerAgent()
+    return agent.build_subgraph()

@@ -296,7 +296,7 @@ if command -v langgraph &> /dev/null; then
     
     # Start langgraph dev server (uses langgraph.json config for build_graph reference)
     cd "$PROJECT_ROOT"
-    nohup langgraph dev --port 2024 --no-reload > "$LOG_DIR/langgraph_studio.log" 2>&1 &
+    nohup langgraph dev --port 2024 --no-reload --tunnel > "$LOG_DIR/langgraph_studio.log" 2>&1 &
     STUDIO_PID=$!
     echo -e "${GREEN}✅ LangGraph Studio started (PID: $STUDIO_PID)${NC}"
     
@@ -315,7 +315,18 @@ if command -v langgraph &> /dev/null; then
     
     if [ $studio_attempts -ge 15 ]; then
         echo -e "${YELLOW}⚠️  LangGraph Studio is taking longer to start (this is normal)${NC}"
+    fi
+    
+    # Extract tunnel URL from logs
+    sleep 3  # Give it a moment to write the tunnel info to logs
+    TUNNEL_URL=$(grep "Studio UI:" "$LOG_DIR/langgraph_studio.log" 2>/dev/null | sed 's/.*\[\[0-9;]*m//g' | sed 's/\[\[0-9;]*m.*//g' | grep -o 'https://[^ ]*')
+    
+    if [ -n "$TUNNEL_URL" ]; then
+        STUDIO_URL="$TUNNEL_URL"
+        echo -e "${GREEN}✅ LangGraph Studio tunnel URL: ${STUDIO_URL}${NC}"
+    else
         STUDIO_URL="http://localhost:2024"
+        echo -e "${YELLOW}⚠️  Could not extract tunnel URL, using localhost${NC}"
     fi
 else
     echo -e "${YELLOW}⚠️  LangGraph CLI not available, skipping Studio${NC}"

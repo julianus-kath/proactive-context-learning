@@ -71,7 +71,7 @@ class JoinPlanAndSQLAgent:
         self.row_limit = row_limit
         self.query_timeout_seconds = query_timeout_seconds
 
-    async def build_subgraph(self) -> StateGraph:
+    def build_subgraph(self) -> StateGraph:
         """
         Build the LangGraph subgraph for join planning and SQL generation.
         
@@ -493,3 +493,18 @@ async def create_join_sql_agent(
 ) -> JoinPlanAndSQLAgent:
     """Factory function to create a JoinPlanAndSQLAgent instance."""
     return JoinPlanAndSQLAgent(llm_model=llm_model, max_joins=max_joins)
+
+
+# Sync wrapper for LangGraph Studio
+def build_join_sql_graph():
+    """
+    Build and return the join SQL agent graph for LangGraph Studio.
+    
+    This is a synchronous function that can be called by langgraph dev CLI.
+    All node functions remain async and will be properly awaited by LangGraph at runtime.
+    
+    Returns:
+        Compiled StateGraph for the join SQL agent
+    """
+    agent = JoinPlanAndSQLAgent()
+    return agent.build_subgraph()

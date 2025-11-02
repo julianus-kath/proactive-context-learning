@@ -135,18 +135,14 @@ class DatabaseWorkflow:
             model_name: OpenAI model to use
             temperature: Temperature for LLM responses
         """
-        # Ensure environment variables are loaded
-        load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
-        
-        # Verify API key is available
+        # Environment variables already loaded at module level
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             logger.warning("OPENAI_API_KEY not found in environment variables")
         
         try:
             self.llm = ChatOpenAI(model=model_name, temperature=temperature, api_key=api_key)
-            # Test the API key with a simple call
-            logger.info("Testing OpenAI API key...")
+            logger.info("OpenAI client initialized")
         except Exception as e:
             logger.error(f"Failed to initialize OpenAI client: {e}")
             raise ValueError(f"OpenAI API key is invalid or expired: {e}")

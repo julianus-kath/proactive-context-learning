@@ -45,7 +45,7 @@ class DiscoveryAgent:
         self.max_candidates_to_describe = 3  # Never describe more than 3 tables
         self.view_role_coverage_threshold = 0.70  # Views-first if coverage >= this
         
-    async def build_subgraph(self) -> StateGraph:
+    def build_subgraph(self) -> StateGraph:
         """
         Build the LangGraph subgraph for discovery.
         
@@ -61,6 +61,8 @@ class DiscoveryAgent:
         Returns:
             Compiled LangGraph subgraph
         """
+        from typing import Literal
+        
         graph = StateGraph(BaseState)
         
         # Define nodes
@@ -79,7 +81,8 @@ class DiscoveryAgent:
         graph.add_edge("filter_to_limit", "describe_selected")
         
         # Conditional routing: explore date columns if needed, else build schema
-        def route_to_exploration(state: BaseState) -> str:
+        def route_to_exploration(state: BaseState) -> Literal["explore_date_columns", "build_schema_snippet"]:
+            """Route to explore_date_columns or build_schema_snippet based on intent."""
             intent = state.get("intent", {})
             # Check if this query needs date column exploration
             needs_date_exploration = intent.get("needs_date_exploration", False)
@@ -87,7 +90,14 @@ class DiscoveryAgent:
                 return "explore_date_columns"
             return "build_schema_snippet"
         
-        graph.add_conditional_edges("describe_selected", route_to_exploration)
+        graph.add_conditional_edges(
+            "describe_selected",
+            route_to_exploration,
+            {
+                "explore_date_columns": "explore_date_columns",
+                "build_schema_snippet": "build_schema_snippet",
+            }
+        )
         graph.add_edge("explore_date_columns", "build_schema_snippet")
         # 🆕 After schema snippet is built, ALWAYS fetch column index
         graph.add_edge("build_schema_snippet", "fetch_column_index")
@@ -648,3 +658,18 @@ class DiscoveryAgent:
 async def create_discovery_agent(llm_model: str = "gpt-4o") -> DiscoveryAgent:
     """Factory function to create a DiscoveryAgent instance."""
     return DiscoveryAgent(llm_model=llm_model)
+
+
+# Sync wrapper for LangGraph Studio
+def build_discovery_graph():
+    """
+    Build and return the discovery agent graph for LangGraph Studio.
+    
+    This is a synchronous function that can be called by langgraph dev CLI.
+    All node functions remain async and will be properly awaited by LangGraph at runtime.
+    
+    Returns:
+        Compiled StateGraph for the discovery agent
+    """
+    agent = DiscoveryAgent()
+    return agent.build_subgraph()

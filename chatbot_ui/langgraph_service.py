@@ -20,7 +20,8 @@ sys.path.append(parent_dir)
 sys.path.append(langgraph_dir)
 
 try:
-    from langgraph_integration.graph_definition import create_database_workflow
+    # Import the new multi-agent orchestrator (ACTIVE - Phase 8)
+    from langgraph_integration.orchestrator import create_query_orchestrator
     from langgraph_integration.debug_logger import get_debug_logger
 except ImportError as e:
     print(f"Error importing LangGraph integration: {e}")
@@ -85,22 +86,26 @@ class DebugLogsResponse(BaseModel):
     logs: list = []
     status: str = "success"
 
-# Global workflow instance
-workflow = None
+# Global orchestrator instance (Phase 8: Multi-agent system)
+orchestrator = None
 debug_logger = None
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize the LangGraph workflow on startup."""
-    global workflow, debug_logger
+    """Initialize the multi-agent orchestrator on startup."""
+    global orchestrator, debug_logger
     try:
-        print("🚀 Initializing LangGraph workflow...")
-        workflow = create_database_workflow()
+        print("🚀 Initializing multi-agent orchestrator (Phase 8)...")
+        orchestrator = create_query_orchestrator()
         debug_logger = get_debug_logger()
-        print("✅ LangGraph workflow initialized successfully")
+        print("✅ Multi-agent orchestrator initialized successfully")
+        print("  ├─ DiscoveryAgent (Scout semantic search)")
+        print("  ├─ JoinPlanAndSQLAgent (Views-first, MSSQL)")
+        print("  ├─ ExecAndRecoveryAgent (Safe execution, auto-repair)")
+        print("  └─ AnswerAgent (Result formatting)")
         print("✅ Debug logger initialized")
     except Exception as e:
-        print(f"❌ Failed to initialize LangGraph workflow: {e}")
+        print(f"❌ Failed to initialize multi-agent orchestrator: {e}")
         raise
 
 @app.get("/health")
@@ -108,14 +113,15 @@ async def health_check():
     """Health check endpoint."""
     return {
         "status": "healthy",
-        "service": "LangGraph Service",
-        "workflow_ready": workflow is not None
+        "service": "Multi-Agent Orchestrator (Phase 8)",
+        "orchestrator_ready": orchestrator is not None,
+        "agents": ["DiscoveryAgent", "JoinPlanAndSQLAgent", "ExecAndRecoveryAgent", "AnswerAgent"]
     }
 
 @app.post("/process_query", response_model=QueryResponse)
 async def process_query(request: QueryRequest = Body(...)):
     """
-    Process a user query through the LangGraph workflow.
+    Process a user query through the multi-agent orchestrator.
     
     Args:
         request: QueryRequest containing user_input and api_key
@@ -123,7 +129,7 @@ async def process_query(request: QueryRequest = Body(...)):
     Returns:
         QueryResponse with the final_response
     """
-    global workflow
+    global orchestrator
     
     # Validate API key
     expected_api_key = os.getenv("API_KEY", "supersecretapikey")
@@ -134,15 +140,15 @@ async def process_query(request: QueryRequest = Body(...)):
     if not request.user_input or not request.user_input.strip():
         raise HTTPException(status_code=400, detail="user_input cannot be empty")
     
-    # Check if workflow is initialized
-    if workflow is None:
-        raise HTTPException(status_code=503, detail="LangGraph workflow not initialized")
+    # Check if orchestrator is initialized
+    if orchestrator is None:
+        raise HTTPException(status_code=503, detail="Multi-agent orchestrator not initialized")
     
     try:
         print(f"📝 Processing query: {request.user_input[:100]}...")
         
-        # Process the query through LangGraph workflow
-        final_response = await workflow.process_query(request.user_input.strip())
+        # Process the query through multi-agent orchestrator
+        final_response = await orchestrator.process_query(request.user_input.strip())
         
         print(f"✅ Query processed successfully")
         
@@ -161,7 +167,7 @@ async def process_query(request: QueryRequest = Body(...)):
 @app.post("/process_conversation", response_model=ConversationResponse)
 async def process_conversation(request: ConversationRequest = Body(...)):
     """
-    Process a conversation with full context through the LangGraph workflow.
+    Process a conversation with full context through the multi-agent orchestrator.
     
     Args:
         request: ConversationRequest containing messages and api_key
@@ -169,7 +175,7 @@ async def process_conversation(request: ConversationRequest = Body(...)):
     Returns:
         ConversationResponse with the final_response or clarification
     """
-    global workflow
+    global orchestrator
     
     # Validate API key
     expected_api_key = os.getenv("API_KEY", "supersecretapikey")
@@ -180,16 +186,14 @@ async def process_conversation(request: ConversationRequest = Body(...)):
     if not request.messages or len(request.messages) == 0:
         raise HTTPException(status_code=400, detail="messages cannot be empty")
     
-    # Check if workflow is initialized
-    if workflow is None:
-        raise HTTPException(status_code=503, detail="LangGraph workflow not initialized")
+    # Check if orchestrator is initialized
+    if orchestrator is None:
+        raise HTTPException(status_code=503, detail="Multi-agent orchestrator not initialized")
     
     try:
         print(f"📝 Processing conversation with {len(request.messages)} messages...")
         
-        # Process the conversation through LangGraph workflow
-        # For now, we'll extract the last user message and process it
-        # TODO: Update workflow to handle full conversation context
+        # Extract the last user message from conversation
         last_user_message = ""
         for msg in reversed(request.messages):
             if msg.get("role") == "user":
@@ -201,38 +205,24 @@ async def process_conversation(request: ConversationRequest = Body(...)):
         
         print(f"📝 Last user message: {last_user_message[:100]}...")
         
-        # Use the new conversation-aware processing
-        result = await workflow.process_conversation(request.messages)
+        # Process through multi-agent orchestrator
+        final_response = await orchestrator.process_query(last_user_message)
         
-        operation = result.get("operation", "query")
-        final_response = result.get("final_response", "")
-        
-        print(f"✅ Conversation processed successfully - Operation: {operation}")
+        print(f"✅ Conversation processed successfully")
         
         # Prepare updated messages array
         updated_messages = request.messages.copy()
         updated_messages.append({"role": "assistant", "content": final_response})
         
-        # Determine response format based on operation
-        if operation == "clarify":
-            return ConversationResponse(
-                final_response=final_response,
-                operation=operation,
-                clarification=final_response,
-                clarify=True,
-                question=final_response,
-                messages=updated_messages,
-                status=result.get("status", "success")
-            )
-        else:
-            return ConversationResponse(
-                final_response=final_response,
-                operation=operation,
-                clarify=False,
-                response=final_response,
-                messages=updated_messages,
-                status=result.get("status", "success")
-            )
+        # Return response (orchestrator handles all operations internally)
+        return ConversationResponse(
+            final_response=final_response,
+            operation="query",  # Orchestrator handles all operations
+            clarify=False,
+            response=final_response,
+            messages=updated_messages,
+            status="success"
+        )
         
     except Exception as e:
         print(f"❌ Error processing conversation: {e}")

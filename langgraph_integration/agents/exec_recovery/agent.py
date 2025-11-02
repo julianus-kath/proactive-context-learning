@@ -64,7 +64,7 @@ class ExecAndRecoveryAgent:
         self.row_limit = row_limit
         self.query_timeout_seconds = query_timeout_seconds
 
-    async def build_subgraph(self) -> StateGraph:
+    def build_subgraph(self) -> StateGraph:
         """
         Build the LangGraph subgraph for query execution and recovery.
         
@@ -94,6 +94,8 @@ class ExecAndRecoveryAgent:
         graph.add_node("prepare_error", self._prepare_error_node)
 
         # Define edges with conditional routing
+        from typing import Literal
+        
         graph.add_edge("execute_query", "check_result")
 
         # From check_result:
@@ -101,11 +103,11 @@ class ExecAndRecoveryAgent:
         # - If error and retry_count < max_retries -> repair_sql
         # - Otherwise -> prepare_error
 
-        def route_from_check_result(state: BaseState) -> str:
+        def route_from_check_result(state: BaseState) -> Literal["repair_sql", "prepare_error", "__end__"]:
             if state.get("exec_result") and state["exec_result"].get("ok"):
                 # Success!
                 logger.info("✅ Query executed successfully")
-                return END
+                return "__end__"
             elif state.get("retry_count", 0) < self.max_retries:
                 # Retry
                 logger.info(f"↻ Will attempt retry (attempt {state.get('retry_count', 0) + 1}/{self.max_retries})")
@@ -115,7 +117,15 @@ class ExecAndRecoveryAgent:
                 logger.warning(f"❌ Out of retries ({self.max_retries} attempts)")
                 return "prepare_error"
 
-        graph.add_conditional_edges("check_result", route_from_check_result)
+        graph.add_conditional_edges(
+            "check_result",
+            route_from_check_result,
+            {
+                "repair_sql": "repair_sql",
+                "prepare_error": "prepare_error",
+                "__end__": END,
+            }
+        )
 
         # From repair_sql -> retry_query
         graph.add_edge("repair_sql", "retry_query")
@@ -123,11 +133,11 @@ class ExecAndRecoveryAgent:
         # From retry_query -> check_retry_result
         graph.add_edge("retry_query", "check_retry_result")
 
-        def route_from_check_retry(state: BaseState) -> str:
+        def route_from_check_retry(state: BaseState) -> Literal["simplify_query", "prepare_error", "__end__"]:
             if state.get("exec_result") and state["exec_result"].get("ok"):
                 # Success on retry!
                 logger.info("✅ Query succeeded after repair and retry")
-                return END
+                return "__end__"
             elif state.get("retry_count", 0) < self.max_retries:
                 # Try simplification
                 return "simplify_query"
@@ -135,21 +145,36 @@ class ExecAndRecoveryAgent:
                 # Out of retries
                 return "prepare_error"
 
-        graph.add_conditional_edges("check_retry_result", route_from_check_retry)
+        graph.add_conditional_edges(
+            "check_retry_result",
+            route_from_check_retry,
+            {
+                "simplify_query": "simplify_query",
+                "prepare_error": "prepare_error",
+                "__end__": END,
+            }
+        )
 
         # From simplify_query -> final_retry
         graph.add_edge("simplify_query", "final_retry")
 
         # From final_retry -> END or prepare_error
-        def route_from_final_retry(state: BaseState) -> str:
+        def route_from_final_retry(state: BaseState) -> Literal["prepare_error", "__end__"]:
             if state.get("exec_result") and state["exec_result"].get("ok"):
                 logger.info("✅ Query succeeded after simplification")
-                return END
+                return "__end__"
             else:
                 logger.warning("❌ All retry attempts failed")
                 return "prepare_error"
 
-        graph.add_conditional_edges("final_retry", route_from_final_retry)
+        graph.add_conditional_edges(
+            "final_retry",
+            route_from_final_retry,
+            {
+                "prepare_error": "prepare_error",
+                "__end__": END,
+            }
+        )
 
         # From prepare_error -> END
         graph.add_edge("prepare_error", END)
@@ -518,3 +543,18 @@ async def create_exec_recovery_agent(
 ) -> ExecAndRecoveryAgent:
     """Factory function to create an ExecAndRecoveryAgent instance."""
     return ExecAndRecoveryAgent(llm_model=llm_model, max_retries=max_retries)
+
+
+# Sync wrapper for LangGraph Studio
+def build_exec_recovery_graph():
+    """
+    Build and return the execution recovery agent graph for LangGraph Studio.
+    
+    This is a synchronous function that can be called by langgraph dev CLI.
+    All node functions remain async and will be properly awaited by LangGraph at runtime.
+    
+    Returns:
+        Compiled StateGraph for the exec recovery agent
+    """
+    agent = ExecAndRecoveryAgent()
+    return agent.build_subgraph()

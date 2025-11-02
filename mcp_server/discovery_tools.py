@@ -761,14 +761,41 @@ class DiscoveryTools:
 
             # Enrich with role_hints, time_col_candidates, and measure_suggestions (catalog-derived only)
             try:
+                # Validate columns structure before processing
+                columns = data.get("columns", [])
+                if not isinstance(columns, list):
+                    logger.warning(f"⚠️ columns is not a list, it's {type(columns).__name__}: {str(columns)[:100]}")
+                    columns = []
+                    data["columns"] = columns
+                
+                # 🆕 FIX: Ensure all elements in columns are dicts, not other types
+                validated_columns = []
+                for col in columns:
+                    if isinstance(col, dict):
+                        validated_columns.append(col)
+                    else:
+                        logger.warning(f"⚠️ Column element is not a dict, skipping: {type(col).__name__}")
+                if validated_columns != columns:
+                    logger.warning(f"⚠️ Filtered {len(columns) - len(validated_columns)} non-dict column elements")
+                    columns = validated_columns
+                    data["columns"] = columns
+                
                 fk_map = {}
-                for fk in data.get("foreign_keys", []) or []:
-                    try:
-                        fk_map[fk.get("column")] = f"{fk.get('referenced_schema')}.{fk.get('referenced_table')}"
-                    except Exception:
-                        continue
+                foreign_keys = data.get("foreign_keys", [])
+                if isinstance(foreign_keys, list):
+                    for fk in foreign_keys:
+                        try:
+                            if isinstance(fk, dict):  # 🆕 Validate FK is a dict
+                                fk_map[fk.get("column")] = f"{fk.get('referenced_schema')}.{fk.get('referenced_table')}"
+                        except Exception as fk_err:
+                            logger.debug(f"Skipping FK processing: {fk_err}")
+                            continue
 
                 def infer_role_hints(col: dict) -> list:
+                    if not isinstance(col, dict):
+                        logger.warning(f"⚠️ col is not a dict, it's {type(col).__name__}")
+                        return []
+                    
                     name = str(col.get("name", "")).lower()
                     dtype = str(col.get("type", "")).lower()
                     hints: list[str] = []
@@ -807,21 +834,22 @@ class DiscoveryTools:
                     # de-dup while preserving order
                     return list(dict.fromkeys(hints))
 
-                # Apply role_hints to columns
-                for col in data.get("columns", []) or []:
-                    col["role_hints"] = infer_role_hints(col)
+                # Apply role_hints to columns (with strict type checking)
+                for col in columns:
+                    if isinstance(col, dict):
+                        col["role_hints"] = infer_role_hints(col)
 
                 # Time column candidates (top 5)
                 data["time_col_candidates"] = [
-                    c.get("name") for c in data.get("columns", []) or []
-                    if isinstance(c.get("role_hints"), list) and "date" in c.get("role_hints")
+                    c.get("name") for c in columns
+                    if isinstance(c, dict) and isinstance(c.get("role_hints"), list) and "date" in c.get("role_hints")
                 ][:5]
 
                 # Measure suggestions
                 def find_cols(keywords: list[str]) -> list[str]:
                     return [
-                        c.get("name") for c in data.get("columns", []) or []
-                        if any(k in str(c.get("name", "")).lower() for k in keywords)
+                        c.get("name") for c in columns
+                        if isinstance(c, dict) and any(k in str(c.get("name", "")).lower() for k in keywords)
                     ]
 
                 price_like = find_cols(["unit_price", "price", "line_amount", "amount"])
@@ -846,7 +874,9 @@ class DiscoveryTools:
                 data["measure_suggestions"] = measure_suggestions[:5]
             except Exception as enrich_err:
                 # Non-fatal: enrichment best-effort only
-                logger.debug(f"describe_table enrichment skipped due to error: {enrich_err}")
+                logger.warning(f"describe_table enrichment error (non-fatal): {enrich_err}")
+                import traceback
+                logger.debug(f"Traceback: {traceback.format_exc()}")
             
             # Include sample data if requested (requires DB query)
             if include_sample:
@@ -1064,24 +1094,84 @@ class DiscoveryTools:
                 )
             
             catalog = db_adapter.catalog
+            
+            # Validate catalog is an instance, not a class
+            if isinstance(catalog, type):
+                logger.error(f"Catalog is a class type, not an instance: {catalog}")
+                return DiscoveryResponse(
+                    ok=False,
+                    data=None,
+                    error="Catalog is a class, not an instance",
+                    error_code="CATALOG_NOT_INITIALIZED",
+                    execution_time_ms=(time.time() - start_time) * 1000
+                )
+            
+            # Additional validation: ensure catalog has required methods
+            if not hasattr(catalog, 'get_table') or not callable(getattr(catalog, 'get_table')):
+                logger.error(f"Catalog missing get_table method or it's not callable")
+                return DiscoveryResponse(
+                    ok=False,
+                    data=None,
+                    error="Catalog missing required get_table method",
+                    error_code="CATALOG_NOT_INITIALIZED",
+                    execution_time_ms=(time.time() - start_time) * 1000
+                )
+            
+            if not hasattr(catalog, 'get_table_list') or not callable(getattr(catalog, 'get_table_list')):
+                logger.error(f"Catalog missing get_table_list method or it's not callable")
+                return DiscoveryResponse(
+                    ok=False,
+                    data=None,
+                    error="Catalog missing required get_table_list method",
+                    error_code="CATALOG_NOT_INITIALIZED",
+                    execution_time_ms=(time.time() - start_time) * 1000
+                )
+            
             column_index = {}
             
             # Extract columns for each table (O(1) per table from in-memory catalog)
             for table_name in table_names:
-                # Parse table name (handle both "schema.table" and just "table" formats)
-                if '.' in table_name:
-                    schema, name = table_name.split('.', 1)
-                    table_info = catalog.get_table(schema, name)
-                else:
-                    # Try to find table in any schema
-                    all_tables = catalog.get_table_list()
-                    matching = [t for t in all_tables if t["name"].lower() == table_name.lower()]
-                    if matching:
-                        schema = matching[0]["schema"]
-                        name = matching[0]["name"]
+                try:
+                    # Parse table name (handle both "schema.table" and just "table" formats)
+                    if '.' in table_name:
+                        schema, name = table_name.split('.', 1)
+                        if not schema or not name:
+                            logger.debug(f"Invalid table name format: {table_name}")
+                            column_index[table_name] = None
+                            continue
+                        
+                        # Ensure we're calling as an instance method with correct signature
+                        if not isinstance(schema, str) or not isinstance(name, str):
+                            logger.warning(f"Invalid argument types for get_table: schema={type(schema)}, name={type(name)}")
+                            column_index[table_name] = None
+                            continue
+                        
                         table_info = catalog.get_table(schema, name)
                     else:
-                        table_info = None
+                        # Try to find table in any schema
+                        try:
+                            all_tables = catalog.get_table_list()
+                        except Exception as list_err:
+                            logger.warning(f"Error calling catalog.get_table_list(): {list_err}")
+                            column_index[table_name] = None
+                            continue
+                        
+                        matching = [t for t in all_tables if t.get("name", "").lower() == table_name.lower()]
+                        if matching:
+                            schema = matching[0].get("schema", "")
+                            name = matching[0].get("name", "")
+                            if not schema or not name:
+                                logger.warning(f"Matched table has missing schema or name: {matching[0]}")
+                                column_index[table_name] = None
+                                continue
+                            table_info = catalog.get_table(schema, name)
+                        else:
+                            table_info = None
+                except Exception as table_err:
+                    logger.warning(f"Error retrieving table info for '{table_name}': {table_err}")
+                    import traceback
+                    logger.debug(f"Stack trace: {traceback.format_exc()}")
+                    table_info = None
                 
                 if table_info:
                     # Extract just the column names in order
@@ -1104,7 +1194,9 @@ class DiscoveryTools:
             )
         
         except Exception as e:
+            import traceback
             logger.error(f"get_column_index failed: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return DiscoveryResponse(
                 ok=False,
                 data=None,

@@ -8,6 +8,8 @@ Phase 6: Added structured logging and observability.
 import logging
 import json
 from typing import Dict, Any, List
+from decimal import Decimal
+from datetime import datetime, date
 from mcp_server.models import MCPTool, MCPToolResult
 from mcp_server.bounded_query import execute_bounded_query
 from mcp_server.config import config
@@ -17,8 +19,36 @@ from mcp_server.observability import log_tool_call
 logger = logging.getLogger(__name__)
 
 
+class DecimalEncoder(json.JSONEncoder):
+    """Custom JSON encoder to handle Decimal and other non-standard types."""
+    def default(self, o):
+        if isinstance(o, Decimal):
+            return float(o)
+        elif isinstance(o, (datetime, date)):
+            return o.isoformat() if hasattr(o, 'isoformat') else str(o)
+        return super().default(o)
+
+
 class MCPTools:
     """MCP tools for database operations."""
+    
+    @staticmethod
+    def _make_json_safe(obj: Any) -> Any:
+        """
+        Recursively convert non-JSON-serializable types to JSON-safe equivalents.
+        
+        Handles Decimal, datetime, date, and nested structures.
+        """
+        if isinstance(obj, Decimal):
+            return float(obj)
+        elif isinstance(obj, (datetime, date)):
+            return obj.isoformat() if hasattr(obj, 'isoformat') else str(obj)
+        elif isinstance(obj, dict):
+            return {k: MCPTools._make_json_safe(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [MCPTools._make_json_safe(item) for item in obj]
+        else:
+            return obj
     
     @staticmethod
     def get_available_tools() -> List[MCPTool]:
@@ -465,7 +495,7 @@ class MCPTools:
         return MCPToolResult(
             content=[{
                 "type": "text",
-                "text": json.dumps(schema_json)
+                "text": json.dumps(schema_json, cls=DecimalEncoder)
             }]
         )
     
@@ -549,7 +579,7 @@ class MCPTools:
                         "ok": False,
                         "error_code": "EMPTY_QUERY",
                         "error_message": "SQL query is required"
-                    })
+                    }, cls=DecimalEncoder)
                 }],
                 isError=True
             )
@@ -580,8 +610,9 @@ class MCPTools:
                 enable_redaction=enable_redaction
             )
             
-            # Convert response to JSON
+            # Convert response to JSON and ensure it's JSON-safe (handles Decimals, datetime, etc.)
             response_dict = response.to_dict()
+            response_dict = MCPTools._make_json_safe(response_dict)
             
             # Format as human-readable text + JSON
             if response.ok:
@@ -590,23 +621,29 @@ class MCPTools:
                 result_text += f"Execution time: {response.execution_time_ms}ms\n"
                 
                 if response.truncated:
-                    result_text += f"⚠️ Results truncated (limit: {response.metadata.get('applied_limit')})\n"
+                    applied_limit = response.metadata.get('applied_limit') if response.metadata else None
+                    result_text += f"⚠️ Results truncated (limit: {applied_limit})\n"
                 
                 if response.redacted_columns:
                     result_text += f"🔒 Redacted columns: {', '.join(response.redacted_columns)}\n"
                 
-                result_text += f"\nColumns: {', '.join(response.columns)}\n\n"
+                columns_text = ', '.join(response.columns) if response.columns else "(no columns)"
+                result_text += f"\nColumns: {columns_text}\n\n"
                 
                 # Add sample rows (first 5)
                 if response.rows:
                     result_text += "Sample rows:\n"
                     for i, row in enumerate(response.rows[:5]):
-                        result_text += f"  Row {i+1}: {json.dumps(row)}\n"
+                        # Ensure each row is JSON-safe
+                        safe_row = MCPTools._make_json_safe(row) if row else {}
+                        result_text += f"  Row {i+1}: {json.dumps(safe_row, cls=DecimalEncoder)}\n"
                     
                     if len(response.rows) > 5:
                         result_text += f"  ... and {len(response.rows) - 5} more rows\n"
                 
-                result_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                # Ensure response_dict is fully JSON-safe one more time before final dump
+                response_dict = MCPTools._make_json_safe(response_dict)
+                result_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
                 
                 return MCPToolResult(
                     content=[{
@@ -621,7 +658,7 @@ class MCPTools:
                 error_text += f"Error code: {response.error_code}\n"
                 error_text += f"Error message: {response.error_message}\n"
                 error_text += f"Execution time: {response.execution_time_ms}ms\n"
-                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
                 
                 return MCPToolResult(
                     content=[{
@@ -632,7 +669,9 @@ class MCPTools:
                 )
                 
         except Exception as e:
+            import traceback
             logger.error(f"Bounded query execution failed: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return MCPToolResult(
                 content=[{
                     "type": "text",
@@ -640,7 +679,7 @@ class MCPTools:
                         "ok": False,
                         "error_code": "INTERNAL_ERROR",
                         "error_message": f"Internal error: {str(e)}"
-                    })
+                    }, cls=DecimalEncoder)
                 }],
                 isError=True
             )
@@ -791,9 +830,20 @@ class MCPTools:
             )
             
             response_dict = response.to_dict()
+            response_dict = MCPTools._make_json_safe(response_dict)
             
             if response.ok:
-                # Format human-readable text
+                # Format human-readable text - with defensive checks
+                if not isinstance(response_dict, dict) or "data" not in response_dict:
+                    logger.error(f"list_tables: response structure invalid")
+                    return MCPToolResult(
+                        content=[{
+                            "type": "text",
+                            "text": "Internal error: Response structure corrupted"
+                        }],
+                        isError=True
+                    )
+                
                 data = response_dict["data"]
                 page_info = response_dict.get("page_info", {})
                 
@@ -826,7 +876,7 @@ class MCPTools:
                 if response.cached:
                     result_text += " (cached)"
                 
-                result_text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                result_text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
                 
                 return MCPToolResult(
                     content=[{
@@ -839,7 +889,7 @@ class MCPTools:
                 error_text = f"❌ list_tables failed\n\n"
                 error_text += f"Error: {response.error}\n"
                 error_text += f"Error code: {response.error_code}\n"
-                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
                 
                 return MCPToolResult(
                     content=[{
@@ -875,9 +925,20 @@ class MCPTools:
             )
             
             response_dict = response.to_dict()
+            response_dict = MCPTools._make_json_safe(response_dict)
             
             if response.ok:
-                # Format human-readable text
+                # Format human-readable text - with defensive checks
+                if not isinstance(response_dict, dict) or "data" not in response_dict:
+                    logger.error(f"search_tables: response structure invalid")
+                    return MCPToolResult(
+                        content=[{
+                            "type": "text",
+                            "text": "Internal error: Response structure corrupted"
+                        }],
+                        isError=True
+                    )
+                
                 data = response_dict["data"]
                 page_info = response_dict.get("page_info", {})
                 
@@ -898,7 +959,7 @@ class MCPTools:
                 if response.cached:
                     result_text += " (cached)"
                 
-                result_text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                result_text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
                 
                 return MCPToolResult(
                     content=[{
@@ -911,7 +972,7 @@ class MCPTools:
                 error_text = f"❌ search_tables failed\n\n"
                 error_text += f"Error: {response.error}\n"
                 error_text += f"Error code: {response.error_code}\n"
-                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
                 
                 return MCPToolResult(
                     content=[{
@@ -986,7 +1047,7 @@ class MCPTools:
                 },
                 "page_info": {"page": page, "page_size": page_size, "total_items": total, "total_pages": total_pages, "has_next": page<total_pages, "has_prev": page>1}
             }
-            return MCPToolResult(content=[{"type":"text","text": json.dumps(payload)}], isError=False)
+            return MCPToolResult(content=[{"type":"text","text": json.dumps(payload, cls=DecimalEncoder)}], isError=False)
         except Exception as e:
             logger.error(f"list_empty_tables failed: {e}")
             return MCPToolResult(content=[{"type":"text","text": f"Internal error: {e}"}], isError=True)
@@ -1004,16 +1065,76 @@ class MCPTools:
                 include_sample=include_sample
             )
             
-            response_dict = response.to_dict()
+            # Validate response is a DiscoveryResponse object
+            if not isinstance(response, DiscoveryTools.DiscoveryResponse):
+                logger.error(f"describe_table returned unexpected type: {type(response).__name__}")
+                return MCPToolResult(
+                    content=[{
+                        "type": "text",
+                        "text": f"Internal error: Invalid response type from describe_table"
+                    }],
+                    isError=True
+                )
+            
+            # Ensure response is JSON-safe before processing
+            try:
+                response_dict = response.to_dict()
+                if not isinstance(response_dict, dict):
+                    logger.error(f"response.to_dict() returned {type(response_dict).__name__} instead of dict")
+                    response_dict = {"ok": response.ok, "error": "Response structure corrupted"}
+            except Exception as to_dict_err:
+                logger.error(f"Error calling response.to_dict(): {to_dict_err}")
+                response_dict = {"ok": response.ok, "error": f"Failed to serialize response: {str(to_dict_err)}"}
+            
+            response_dict = MCPTools._make_json_safe(response_dict)
             
             if response.ok:
-                # Format human-readable text
+                # Format human-readable text - with defensive checks
+                if not isinstance(response_dict, dict):
+                    logger.error(f"response_dict is not a dict after _make_json_safe: {type(response_dict).__name__}")
+                    return MCPToolResult(
+                        content=[{
+                            "type": "text",
+                            "text": "Internal error: Response structure corrupted (non-dict after processing)"
+                        }],
+                        isError=True
+                    )
+                
+                if "data" not in response_dict:
+                    logger.error(f"response_dict missing 'data' key. Keys: {list(response_dict.keys())}")
+                    return MCPToolResult(
+                        content=[{
+                            "type": "text",
+                            "text": "Internal error: Response structure missing data field"
+                        }],
+                        isError=True
+                    )
+                
                 data = response_dict["data"]
                 
-                result_text = f"📊 Table: {data['full_name']}\n\n"
-                result_text += f"Type: {data['type']}\n"
-                result_text += f"Estimated rows: ~{data['estimated_rows']:,}\n"
-                result_text += f"Columns: {len(data['columns'])}\n\n"
+                if not isinstance(data, dict):
+                    logger.error(f"response_dict['data'] is not a dict: {type(data).__name__}")
+                    return MCPToolResult(
+                        content=[{
+                            "type": "text",
+                            "text": f"Internal error: Data field corrupted (type: {type(data).__name__})"
+                        }],
+                        isError=True
+                    )
+                
+                # Safe field access with defaults
+                full_name = data.get('full_name', 'Unknown')
+                table_type = data.get('type', 'Unknown')
+                est_rows = data.get('estimated_rows', 0)
+                columns = data.get('columns', [])
+                
+                result_text = f"📊 Table: {full_name}\n\n"
+                result_text += f"Type: {table_type}\n"
+                try:
+                    result_text += f"Estimated rows: ~{est_rows:,}\n"
+                except (TypeError, ValueError):
+                    result_text += f"Estimated rows: {est_rows}\n"
+                result_text += f"Columns: {len(columns)}\n\n"
                 
                 # Primary keys
                 if data.get('primary_keys'):
@@ -1028,27 +1149,33 @@ class MCPTools:
                 
                 # Top columns
                 result_text += f"📋 Top Columns:\n"
-                for col in data.get('top_columns', [])[:10]:
-                    col_info = f"  • {col['name']} ({col['type']})"
-                    if not col['nullable']:
-                        col_info += " NOT NULL"
-                    if col['is_primary_key']:
-                        col_info += " [PK]"
-                    if col['is_foreign_key']:
-                        col_info += " [FK]"
-                    result_text += col_info + "\n"
+                all_columns = {col['name']: col for col in data.get('columns', [])}
+                for col_name in data.get('top_columns', [])[:10]:
+                    if col_name in all_columns:
+                        col = all_columns[col_name]
+                        col_info = f"  • {col['name']} ({col['type']})"
+                        if not col.get('nullable', True):
+                            col_info += " NOT NULL"
+                        if col.get('is_primary_key', False):
+                            col_info += " [PK]"
+                        if col.get('is_foreign_key', False):
+                            col_info += " [FK]"
+                        result_text += col_info + "\n"
+                    else:
+                        # Fallback if column not found (shouldn't happen)
+                        result_text += f"  • {col_name}\n"
                 
                 # Sample data
                 if include_sample and data.get('sample_data'):
                     result_text += f"\n📄 Sample Data ({len(data['sample_data'])} rows):\n"
                     for i, row in enumerate(data['sample_data'][:3]):
-                        result_text += f"  Row {i+1}: {json.dumps(row)}\n"
+                        result_text += f"  Row {i+1}: {json.dumps(row, cls=DecimalEncoder)}\n"
                 
                 result_text += f"\n⏱️ Execution time: {response.execution_time_ms:.2f}ms"
                 if response.cached:
                     result_text += " (cached)"
                 
-                result_text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                result_text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
                 
                 return MCPToolResult(
                     content=[{
@@ -1061,7 +1188,7 @@ class MCPTools:
                 error_text = f"❌ describe_table failed\n\n"
                 error_text += f"Error: {response.error}\n"
                 error_text += f"Error code: {response.error_code}\n"
-                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
                 
                 return MCPToolResult(
                     content=[{
@@ -1072,11 +1199,13 @@ class MCPTools:
                 )
                 
         except Exception as e:
+            import traceback
             logger.error(f"describe_table failed: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return MCPToolResult(
                 content=[{
                     "type": "text",
-                    "text": f"Internal error: {str(e)}"
+                    "text": f"Internal error: {str(e)}\n\nDetails: {traceback.format_exc()}"
                 }],
                 isError=True
             )
@@ -1093,15 +1222,39 @@ class MCPTools:
             )
             
             response_dict = response.to_dict()
+            response_dict = MCPTools._make_json_safe(response_dict)
             
             if response.ok:
-                # Format human-readable text
+                # Format human-readable text - with defensive checks
+                if not isinstance(response_dict, dict) or "data" not in response_dict:
+                    logger.error(f"list_relations: response structure invalid. Keys: {list(response_dict.keys()) if isinstance(response_dict, dict) else type(response_dict).__name__}")
+                    return MCPToolResult(
+                        content=[{
+                            "type": "text",
+                            "text": "Internal error: Response structure corrupted"
+                        }],
+                        isError=True
+                    )
+                
                 data = response_dict["data"]
                 
-                result_text = f"🔗 Relationships for {data['table']}\n\n"
-                result_text += f"Total neighbors: {data['neighbor_count']}\n\n"
+                if not isinstance(data, dict):
+                    logger.error(f"list_relations: data field is not a dict: {type(data).__name__}")
+                    return MCPToolResult(
+                        content=[{
+                            "type": "text",
+                            "text": "Internal error: Data field corrupted"
+                        }],
+                        isError=True
+                    )
                 
-                if data['neighbor_count'] > 0:
+                table_name = data.get('table', 'Unknown')
+                neighbor_count = data.get('neighbor_count', 0)
+                
+                result_text = f"🔗 Relationships for {table_name}\n\n"
+                result_text += f"Total neighbors: {neighbor_count}\n\n"
+                
+                if neighbor_count > 0:
                     result_text += "Related tables:\n"
                     for neighbor in data.get('neighbors', []):
                         result_text += f"  • {neighbor}\n"
@@ -1112,7 +1265,7 @@ class MCPTools:
                 if response.cached:
                     result_text += " (cached)"
                 
-                result_text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                result_text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
                 
                 return MCPToolResult(
                     content=[{
@@ -1125,7 +1278,7 @@ class MCPTools:
                 error_text = f"❌ list_relations failed\n\n"
                 error_text += f"Error: {response.error}\n"
                 error_text += f"Error code: {response.error_code}\n"
-                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2)}"
+                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
                 
                 return MCPToolResult(
                     content=[{
@@ -1210,7 +1363,7 @@ class MCPTools:
                 },
                 "page_info": {"page": page, "page_size": page_size, "total_items": total, "total_pages": total_pages, "has_next": page < total_pages, "has_prev": page>1}
             }
-            return MCPToolResult(content=[{"type":"text","text": json.dumps(text)}])
+            return MCPToolResult(content=[{"type":"text","text": json.dumps(text, cls=DecimalEncoder)}])
         except Exception as e:
             logger.error(f"list_views failed: {e}")
             return MCPToolResult(content=[{"type":"text","text": f"Internal error: {e}"}], isError=True)
@@ -1268,7 +1421,7 @@ class MCPTools:
                 "data": data,
                 "page_info": {"page": page, "page_size": page_size, "total_items": total, "total_pages": (total + page_size - 1)//page_size if total>0 else 1, "has_next": start+page_size < total, "has_prev": page>1}
             }
-            return MCPToolResult(content=[{"type":"text","text": json.dumps(envelope)}])
+            return MCPToolResult(content=[{"type":"text","text": json.dumps(envelope, cls=DecimalEncoder)}])
         except Exception as e:
             logger.error(f"search_views failed: {e}")
             return MCPToolResult(content=[{"type":"text","text": f"Internal error: {e}"}], isError=True)
@@ -1309,7 +1462,7 @@ class MCPTools:
                 "foreign_keys": detail.get('foreign_keys', []),
             }
             # Optional sample is not recommended for views here; keep read-only safety
-            return MCPToolResult(content=[{"type":"text","text": json.dumps({"ok": True, "data": payload})}])
+            return MCPToolResult(content=[{"type":"text","text": json.dumps({"ok": True, "data": payload}, cls=DecimalEncoder)}])
         except Exception as e:
             logger.error(f"describe_view failed: {e}")
             return MCPToolResult(content=[{"type":"text","text": f"Internal error: {e}"}], isError=True)
@@ -1336,7 +1489,7 @@ class MCPTools:
             detail = db_manager.catalog.get_table(schema, name)
             deps = detail.get('dependencies') if detail else None
             payload = {"ok": True, "data": {"view": f"{schema}.{name}", "dependencies": deps or []}}
-            return MCPToolResult(content=[{"type":"text","text": json.dumps(payload)}])
+            return MCPToolResult(content=[{"type":"text","text": json.dumps(payload, cls=DecimalEncoder)}])
         except Exception as e:
             logger.error(f"list_view_dependencies failed: {e}")
             return MCPToolResult(content=[{"type":"text","text": f"Internal error: {e}"}], isError=True)
@@ -1380,7 +1533,7 @@ class MCPTools:
             response_text += f"Execution time: {result.execution_time_ms:.2f}ms\n"
             
             if include_debug and result.debug_info:
-                response_text += f"\nDebug Info:\n{json.dumps(result.debug_info, indent=2)}\n"
+                response_text += f"\nDebug Info:\n{json.dumps(result.debug_info, indent=2, cls=DecimalEncoder)}\n"
             
             return MCPToolResult(
                 content=[{"type": "text", "text": response_text}],
@@ -1482,7 +1635,7 @@ class MCPTools:
             
             response_text = f"Answer-first Execution Metrics\n"
             response_text += f"=" * 50 + "\n\n"
-            response_text += json.dumps(summary, indent=2)
+            response_text += json.dumps(summary, indent=2, cls=DecimalEncoder)
             
             return MCPToolResult(
                 content=[{"type": "text", "text": response_text}]
@@ -1508,19 +1661,24 @@ class MCPTools:
             
             if not table_names:
                 return MCPToolResult(
-                    content=[{"type": "text", "text": json.dumps({"ok": False, "error": "table_names is required"})}],
+                    content=[{"type": "text", "text": json.dumps({"ok": False, "error": "table_names is required"}, cls=DecimalEncoder)}],
                     isError=True
                 )
             
             # Delegate to DiscoveryTools which uses the catalog
             result = await DiscoveryTools.get_column_index(db_manager, table_names)
             
+            # Ensure response is JSON-safe before dumping
+            result_dict = MCPTools._make_json_safe(result.to_dict())
+            
             return MCPToolResult(
-                content=[{"type": "text", "text": json.dumps(result.to_dict())}]
+                content=[{"type": "text", "text": json.dumps(result_dict, cls=DecimalEncoder)}]
             )
         
         except Exception as e:
+            import traceback
             logger.error(f"get_column_index failed: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             error_response = {
                 "ok": False,
                 "error": str(e),
