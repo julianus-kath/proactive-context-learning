@@ -361,6 +361,44 @@ class MCPTools:
                     "required": ["table_names"]
                 }
             ),
+            # Phase 9 Tier 1 Enhancements
+            MCPTool(
+                name="get_view_dependencies",
+                description="Get view dependencies and materialization status (Tier 1 - enables smarter view-first decisions). Returns which tables/views a view depends on and whether it's materialized for performance optimization.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "view_name": {
+                            "type": "string",
+                            "description": "Fully qualified view name (schema.view) or just view name"
+                        }
+                    },
+                    "required": ["view_name"]
+                }
+            ),
+            MCPTool(
+                name="get_fk_cardinality",
+                description="Get foreign key cardinality patterns for a table (Tier 1 - improves join planning). Identifies 1:1, 1:N, and N:N relationships with ratio estimates.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "table_name": {
+                            "type": "string",
+                            "description": "Fully qualified table name (schema.table) or just table name"
+                        }
+                    },
+                    "required": ["table_name"]
+                }
+            ),
+            MCPTool(
+                name="get_domain_clusters",
+                description="Get business domain clusters (Tier 1 - improves ranking and ambiguity resolution). Identifies which domain (Sales, Inventory, HR, etc.) each table belongs to.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            ),
         ]
     
     @staticmethod
@@ -418,6 +456,13 @@ class MCPTools:
                     result = await MCPTools._get_execution_metrics(arguments, db_manager)
                 elif tool_name == "get_column_index":
                     result = await MCPTools._get_column_index(arguments, db_manager)
+                # Phase 9 Tier 1 Enhancements
+                elif tool_name == "get_view_dependencies":
+                    result = await MCPTools._get_view_dependencies(arguments, db_manager)
+                elif tool_name == "get_fk_cardinality":
+                    result = await MCPTools._get_fk_cardinality(arguments, db_manager)
+                elif tool_name == "get_domain_clusters":
+                    result = await MCPTools._get_domain_clusters(arguments, db_manager)
                 else:
                     metrics.success = False
                     metrics.error_code = "UNKNOWN_TOOL"
@@ -1678,6 +1723,116 @@ class MCPTools:
         except Exception as e:
             import traceback
             logger.error(f"get_column_index failed: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            error_response = {
+                "ok": False,
+                "error": str(e),
+                "error_code": "INTERNAL_ERROR"
+            }
+            return MCPToolResult(
+                content=[{"type": "text", "text": json.dumps(error_response)}],
+                isError=True
+            )
+    
+    # =====================================================
+    # Phase 9 Tier 1 Enhancement Tools
+    # =====================================================
+    
+    @staticmethod
+    async def _get_view_dependencies(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """
+        Get view dependencies and materialization status (Tier 1 Enhancement).
+        """
+        try:
+            view_name = arguments.get("view_name")
+            
+            if not view_name:
+                return MCPToolResult(
+                    content=[{"type": "text", "text": json.dumps({"ok": False, "error": "view_name is required"}, cls=DecimalEncoder)}],
+                    isError=True
+                )
+            
+            # Delegate to DiscoveryTools
+            result = await DiscoveryTools.get_view_dependencies(db_manager, view_name)
+            
+            # Ensure response is JSON-safe
+            result_dict = MCPTools._make_json_safe(result.to_dict())
+            
+            return MCPToolResult(
+                content=[{"type": "text", "text": json.dumps(result_dict, cls=DecimalEncoder)}]
+            )
+        
+        except Exception as e:
+            import traceback
+            logger.error(f"get_view_dependencies failed: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            error_response = {
+                "ok": False,
+                "error": str(e),
+                "error_code": "INTERNAL_ERROR"
+            }
+            return MCPToolResult(
+                content=[{"type": "text", "text": json.dumps(error_response)}],
+                isError=True
+            )
+    
+    @staticmethod
+    async def _get_fk_cardinality(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """
+        Get foreign key cardinality patterns for a table (Tier 1 Enhancement).
+        """
+        try:
+            table_name = arguments.get("table_name")
+            
+            if not table_name:
+                return MCPToolResult(
+                    content=[{"type": "text", "text": json.dumps({"ok": False, "error": "table_name is required"}, cls=DecimalEncoder)}],
+                    isError=True
+                )
+            
+            # Delegate to DiscoveryTools
+            result = await DiscoveryTools.get_fk_cardinality(db_manager, table_name)
+            
+            # Ensure response is JSON-safe
+            result_dict = MCPTools._make_json_safe(result.to_dict())
+            
+            return MCPToolResult(
+                content=[{"type": "text", "text": json.dumps(result_dict, cls=DecimalEncoder)}]
+            )
+        
+        except Exception as e:
+            import traceback
+            logger.error(f"get_fk_cardinality failed: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            error_response = {
+                "ok": False,
+                "error": str(e),
+                "error_code": "INTERNAL_ERROR"
+            }
+            return MCPToolResult(
+                content=[{"type": "text", "text": json.dumps(error_response)}],
+                isError=True
+            )
+    
+    @staticmethod
+    async def _get_domain_clusters(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        """
+        Get business domain clusters (Tier 1 Enhancement).
+        """
+        try:
+            # Delegate to DiscoveryTools
+            result = await DiscoveryTools.get_domain_clusters(db_manager)
+            
+            # Ensure response is JSON-safe
+            result_dict = MCPTools._make_json_safe(result.to_dict())
+            
+            return MCPToolResult(
+                content=[{"type": "text", "text": json.dumps(result_dict, cls=DecimalEncoder)}]
+            )
+        
+        except Exception as e:
+            import traceback
+            logger.error(f"get_domain_clusters failed: {e}")
             logger.error(f"Traceback: {traceback.format_exc()}")
             error_response = {
                 "ok": False,

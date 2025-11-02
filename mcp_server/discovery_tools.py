@@ -1048,6 +1048,357 @@ class DiscoveryTools:
                 execution_time_ms=(time.time() - start_time) * 1000
             )
     
+    # =====================================================
+    # Tier 1 Enhancement Tools
+    # =====================================================
+    
+    @staticmethod
+    async def get_view_dependencies(
+        db_adapter,
+        view_name: str
+    ) -> DiscoveryResponse:
+        """
+        Get view dependencies and materialization status (Tier 1 Enhancement).
+        
+        Helps agents understand:
+        - Which tables/views this view depends on
+        - Whether the view is materialized (indexed, snapshot, etc.)
+        - Performance implications of using this view
+        
+        Args:
+            db_adapter: DatabaseAdapter instance with catalog
+            view_name: Fully qualified view name (schema.view) or just view name
+        
+        Returns:
+            DiscoveryResponse with view dependencies and materialization info
+        """
+        start_time = time.time()
+        
+        try:
+            if not view_name or not view_name.strip():
+                return DiscoveryResponse(
+                    ok=False,
+                    data=None,
+                    error="View name is required",
+                    error_code="EMPTY_VIEW_NAME",
+                    execution_time_ms=(time.time() - start_time) * 1000
+                )
+            
+            view_name = view_name.strip()
+            
+            # Get catalog
+            if not hasattr(db_adapter, 'catalog') or not db_adapter.catalog:
+                return DiscoveryResponse(
+                    ok=False,
+                    data=None,
+                    error="Catalog not initialized",
+                    error_code="CATALOG_NOT_INITIALIZED",
+                    execution_time_ms=(time.time() - start_time) * 1000
+                )
+            
+            catalog = db_adapter.catalog
+            
+            # Parse view name
+            if '.' in view_name:
+                schema, name = view_name.split('.', 1)
+            else:
+                all_tables = catalog.get_table_list()
+                matching = [t for t in all_tables if t["name"].lower() == view_name.lower() and t["type"] in ('VIEW', 'MATERIALIZED VIEW')]
+                
+                if not matching:
+                    return DiscoveryResponse(
+                        ok=False,
+                        data=None,
+                        error=f"View '{view_name}' not found",
+                        error_code="VIEW_NOT_FOUND",
+                        execution_time_ms=(time.time() - start_time) * 1000
+                    )
+                
+                if len(matching) > 1:
+                    schemas = [t["schema"] for t in matching]
+                    return DiscoveryResponse(
+                        ok=False,
+                        data=None,
+                        error=f"Ambiguous view name '{view_name}'. Found in schemas: {', '.join(schemas)}",
+                        error_code="AMBIGUOUS_VIEW_NAME",
+                        execution_time_ms=(time.time() - start_time) * 1000
+                    )
+                
+                schema = matching[0]["schema"]
+                name = matching[0]["name"]
+            
+            # Get view from catalog
+            view_dict = catalog.get_table(schema, name)
+            
+            if not view_dict:
+                return DiscoveryResponse(
+                    ok=False,
+                    data=None,
+                    error=f"View '{schema}.{name}' not found",
+                    error_code="VIEW_NOT_FOUND",
+                    execution_time_ms=(time.time() - start_time) * 1000
+                )
+            
+            if view_dict.get('type') not in ('VIEW', 'MATERIALIZED VIEW'):
+                return DiscoveryResponse(
+                    ok=False,
+                    data=None,
+                    error=f"'{schema}.{name}' is not a view",
+                    error_code="NOT_A_VIEW",
+                    execution_time_ms=(time.time() - start_time) * 1000
+                )
+            
+            # Extract view dependency info
+            dependencies = view_dict.get('view_dependencies', []) or []
+            is_materialized = view_dict.get('is_materialized_view', False)
+            materialization_strategy = view_dict.get('view_materialization_strategy')
+            
+            data = {
+                "view": f"{schema}.{name}",
+                "type": view_dict.get('type'),
+                "is_materialized": is_materialized,
+                "materialization_strategy": materialization_strategy,
+                "dependencies": [
+                    {
+                        "depends_on": f"{d.get('depends_on_schema', 'dbo')}.{d.get('depends_on_table')}",
+                        "dependency_type": d.get('dependency_type', 'table'),
+                        "type": d.get('type'),
+                    }
+                    for d in dependencies
+                ],
+                "dependency_count": len(dependencies),
+                "estimated_rows": view_dict.get('estimated_rows', 0),
+                "column_count": view_dict.get('column_count', 0),
+            }
+            
+            execution_time_ms = (time.time() - start_time) * 1000
+            
+            return DiscoveryResponse(
+                ok=True,
+                data=data,
+                execution_time_ms=execution_time_ms,
+                cached=False
+            )
+            
+        except Exception as e:
+            logger.error(f"get_view_dependencies failed: {e}")
+            return DiscoveryResponse(
+                ok=False,
+                data=None,
+                error=str(e),
+                error_code="INTERNAL_ERROR",
+                execution_time_ms=(time.time() - start_time) * 1000
+            )
+    
+    @staticmethod
+    async def get_fk_cardinality(
+        db_adapter,
+        table_name: str
+    ) -> DiscoveryResponse:
+        """
+        Get foreign key cardinality patterns for a table (Tier 1 Enhancement).
+        
+        Helps agents understand:
+        - Which FKs are 1:1 (no row multiplication)
+        - Which FKs are 1:N (typical case)
+        - Which FKs are N:N (many-to-many)
+        - Estimated join ratios
+        
+        Args:
+            db_adapter: DatabaseAdapter instance with catalog
+            table_name: Fully qualified table name (schema.table) or just table name
+        
+        Returns:
+            DiscoveryResponse with FK cardinality information
+        """
+        start_time = time.time()
+        
+        try:
+            if not table_name or not table_name.strip():
+                return DiscoveryResponse(
+                    ok=False,
+                    data=None,
+                    error="Table name is required",
+                    error_code="EMPTY_TABLE_NAME",
+                    execution_time_ms=(time.time() - start_time) * 1000
+                )
+            
+            table_name = table_name.strip()
+            
+            # Get catalog
+            if not hasattr(db_adapter, 'catalog') or not db_adapter.catalog:
+                return DiscoveryResponse(
+                    ok=False,
+                    data=None,
+                    error="Catalog not initialized",
+                    error_code="CATALOG_NOT_INITIALIZED",
+                    execution_time_ms=(time.time() - start_time) * 1000
+                )
+            
+            catalog = db_adapter.catalog
+            
+            # Parse table name
+            if '.' in table_name:
+                schema, name = table_name.split('.', 1)
+            else:
+                all_tables = catalog.get_table_list()
+                matching = [t for t in all_tables if t["name"].lower() == table_name.lower()]
+                
+                if not matching:
+                    return DiscoveryResponse(
+                        ok=False,
+                        data=None,
+                        error=f"Table '{table_name}' not found",
+                        error_code="TABLE_NOT_FOUND",
+                        execution_time_ms=(time.time() - start_time) * 1000
+                    )
+                
+                schema = matching[0]["schema"]
+                name = matching[0]["name"]
+            
+            # Get table from catalog
+            table_dict = catalog.get_table(schema, name)
+            
+            if not table_dict:
+                return DiscoveryResponse(
+                    ok=False,
+                    data=None,
+                    error=f"Table '{schema}.{name}' not found",
+                    error_code="TABLE_NOT_FOUND",
+                    execution_time_ms=(time.time() - start_time) * 1000
+                )
+            
+            # Extract FK cardinality info
+            fk_cardinality = table_dict.get('fk_cardinality', []) or []
+            
+            data = {
+                "table": f"{schema}.{name}",
+                "fk_cardinalities": [
+                    {
+                        "column": c.get('column'),
+                        "references": f"{c.get('referenced_schema', 'dbo')}.{c.get('referenced_table')}",
+                        "cardinality_type": c.get('cardinality_type', 'one-to-many'),
+                        "ratio_estimate": c.get('ratio_estimate'),
+                    }
+                    for c in fk_cardinality
+                ],
+                "cardinality_count": len(fk_cardinality),
+                "one_to_one_count": sum(1 for c in fk_cardinality if c.get('cardinality_type') == 'one-to-one'),
+                "one_to_many_count": sum(1 for c in fk_cardinality if c.get('cardinality_type') == 'one-to-many'),
+                "many_to_many_count": sum(1 for c in fk_cardinality if c.get('cardinality_type') == 'many-to-many'),
+            }
+            
+            execution_time_ms = (time.time() - start_time) * 1000
+            
+            return DiscoveryResponse(
+                ok=True,
+                data=data,
+                execution_time_ms=execution_time_ms,
+                cached=False
+            )
+            
+        except Exception as e:
+            logger.error(f"get_fk_cardinality failed: {e}")
+            return DiscoveryResponse(
+                ok=False,
+                data=None,
+                error=str(e),
+                error_code="INTERNAL_ERROR",
+                execution_time_ms=(time.time() - start_time) * 1000
+            )
+    
+    @staticmethod
+    async def get_domain_clusters(
+        db_adapter,
+    ) -> DiscoveryResponse:
+        """
+        Get business domain clusters (Tier 1 Enhancement).
+        
+        Helps agents understand:
+        - Which domain each table belongs to (Sales, Inventory, HR, etc.)
+        - Related domains within a table's domain
+        - Domain confidence scores
+        
+        Returns:
+            DiscoveryResponse with domain cluster information for all tables
+        """
+        start_time = time.time()
+        
+        # Check cache
+        cache_key_args = {}
+        cached_response = DiscoveryTools._response_cache.get("get_domain_clusters", cache_key_args)
+        if cached_response:
+            return cached_response
+        
+        try:
+            # Get catalog
+            if not hasattr(db_adapter, 'catalog') or not db_adapter.catalog:
+                return DiscoveryResponse(
+                    ok=False,
+                    data=None,
+                    error="Catalog not initialized",
+                    error_code="CATALOG_NOT_INITIALIZED",
+                    execution_time_ms=(time.time() - start_time) * 1000
+                )
+            
+            catalog = db_adapter.catalog
+            all_tables = catalog.get_table_list()
+            
+            # Extract domain info from each table
+            domain_clusters = {}
+            
+            for table_dict in all_tables:
+                schema = table_dict.get('schema', 'dbo')
+                name = table_dict.get('name', '')
+                domain_meta = table_dict.get('domain_metadata', {})
+                
+                if domain_meta:
+                    domain = domain_meta.get('domain_cluster', 'General')
+                    
+                    if domain not in domain_clusters:
+                        domain_clusters[domain] = {
+                            "domain": domain,
+                            "tables": [],
+                            "table_count": 0,
+                        }
+                    
+                    domain_clusters[domain]["tables"].append({
+                        "table": f"{schema}.{name}",
+                        "confidence": domain_meta.get('domain_confidence', 0.0),
+                        "subject_tags": domain_meta.get('subject_tags', []),
+                        "related_domains": domain_meta.get('related_domains', []),
+                    })
+                    domain_clusters[domain]["table_count"] += 1
+            
+            data = {
+                "domain_count": len(domain_clusters),
+                "domains": list(domain_clusters.values()),
+            }
+            
+            execution_time_ms = (time.time() - start_time) * 1000
+            
+            response = DiscoveryResponse(
+                ok=True,
+                data=data,
+                execution_time_ms=execution_time_ms,
+                cached=False
+            )
+            
+            # Cache response
+            DiscoveryTools._response_cache.set("get_domain_clusters", cache_key_args, response)
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"get_domain_clusters failed: {e}")
+            return DiscoveryResponse(
+                ok=False,
+                data=None,
+                error=str(e),
+                error_code="INTERNAL_ERROR",
+                execution_time_ms=(time.time() - start_time) * 1000
+            )
+    
     @staticmethod
     async def get_column_index(
         db_adapter,

@@ -49,6 +49,39 @@ class ForeignKeyInfo:
 
 
 @dataclass
+class ForeignKeyCardinality:
+    """Foreign key cardinality metadata (Tier 1 Enhancement)."""
+    column: str
+    referenced_table: str
+    referenced_schema: str
+    cardinality_type: str  # "one-to-one", "one-to-many", "many-to-many"
+    ratio_estimate: Optional[float] = None  # Estimated ratio (e.g., 1.5 means average 1.5 rows per parent)
+
+
+@dataclass
+class ViewDependency:
+    """View dependency metadata (Tier 1 Enhancement)."""
+    view_name: str
+    view_schema: str
+    depends_on_table: str
+    depends_on_schema: str
+    dependency_type: str  # "table", "view"
+    is_materialized: bool = False
+    materialization_strategy: Optional[str] = None  # "indexed", "computed", etc.
+
+
+@dataclass
+class DomainMetadata:
+    """Domain/subject area metadata (Tier 1 Enhancement)."""
+    table_name: str
+    table_schema: str
+    domain_cluster: str  # e.g., "Sales", "Inventory", "Purchasing", "HR"
+    domain_confidence: float  # 0.0 to 1.0
+    subject_tags: List[str]  # e.g., ["financial", "transactions", "customer-facing"]
+    related_domains: Optional[List[str]] = None  # Other domains this table connects to
+
+
+@dataclass
 class TableInfo:
     """Comprehensive table metadata."""
     schema: str
@@ -58,6 +91,12 @@ class TableInfo:
     foreign_keys: List[ForeignKeyInfo]
     estimated_rows: int
     primary_keys: List[str]
+    # Tier 1 Enhancements
+    fk_cardinality: Optional[List[ForeignKeyCardinality]] = None
+    view_dependencies: Optional[List[ViewDependency]] = None
+    domain_metadata: Optional[DomainMetadata] = None
+    is_materialized_view: bool = False  # For views: True if materialized/indexed
+    view_materialization_strategy: Optional[str] = None  # "indexed", "computed", etc.
     
     def full_name(self) -> str:
         """Get fully qualified table name."""
