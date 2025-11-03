@@ -604,7 +604,7 @@ class MCPDatabaseTool:
             timeout_ms: Query timeout in milliseconds (default: 30000)
             
         Returns:
-            Query results with safety guarantees
+            Query results with safety guarantees.
         """
         # Detect simple COUNT aggregate to avoid limit injection changing semantics.
         sql_lc = (sql or "").lower()
