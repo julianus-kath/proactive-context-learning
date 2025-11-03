@@ -484,29 +484,38 @@ class DiscoveryTools:
             
             catalog = db_adapter.catalog
             
-            # Phase 2: Parse intent → extract entities/operations → rank all tables
+            # Phase 2: Rank tables using semantic scoring (LLM already parsed intent upstream)
             rank_start = time.time()
             results = []
             
             try:
-                # Step 1: Parse intent (extract entities and operations)
-                from mcp_server.intent_parser import IntentParser
+                # ARCHITECTURE FIX (Phase 9):
+                # DO NOT parse intent here. Intent parsing is handled by LangGraph IntentParserAgent.
+                # MCP is a pure tool layer that receives already-parsed keywords from LangGraph.
+                # This prevents double intent parsing and the plural entity bug.
+                
                 from mcp_server.table_ranker import TableRanker
                 
-                parser = IntentParser()
-                parsed_intent = parser.parse(query)
+                # MCP search tools receive keywords/entities from caller
+                # For backward compatibility: if not provided, use query as-is (no re-parsing)
+                logger.debug(f"Searching for tables matching query: '{query}'")
                 
-                logger.debug(f"Intent parsed: {parsed_intent.intent}, entities={parsed_intent.entities}, ops={parsed_intent.operations}")
-                
-                # Step 2: Load all tables from catalog (O(1) disk read, cached in memory)
+                # Step 1: Load all tables from catalog (O(1) disk read, cached in memory)
                 all_tables = catalog.get_table_list()
                 
-                # Step 3: Rank all tables using multi-signal scoring (Phase 2 - ADR-0015)
+                # Step 2: Rank all tables using multi-signal scoring
+                # NOTE: We pass query terms as-is, no intent parsing at MCP layer
                 ranker = TableRanker()
+                
+                # Extract keywords from query for basic ranking (no semantic re-parsing)
+                # These should ideally come from LangGraph, but we keep minimal fallback here
+                query_terms = query.lower().split()
+                query_entities = [t.strip(',.!?;:') for t in query_terms if len(t.strip(',.!?;:')) > 2]
+                
                 ranked_tables = ranker.rank_tables(
                     tables=all_tables,
-                    entities=parsed_intent.entities,
-                    intent_operations=parsed_intent.operations,
+                    entities=query_entities,  # Simple tokenization, NO semantic parsing
+                    intent_operations=[],  # No operation inference at MCP layer
                     catalog_adapter=catalog
                 )
                 

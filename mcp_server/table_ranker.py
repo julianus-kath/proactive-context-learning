@@ -151,7 +151,10 @@ class TableRanker:
                 score += size_bonus
                 reasons.append(f"Sizeable table ({estimated_rows} rows)")
 
-            if score > 0 or not entities:
+            # Only include tables with meaningful scores
+            # If entities is provided, require score > 0
+            # If entities is empty/missing, skip (don't pollute results with all tables)
+            if score > 0:
                 ranked.append(
                     RankedTable(
                         schema=schema,

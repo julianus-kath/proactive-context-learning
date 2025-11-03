@@ -167,7 +167,10 @@ Query: "Show me sales last quarter"
 Respond ONLY with the JSON object, no other text. Do NOT include markdown code blocks (no ```json```, just the raw JSON object).
 """
         try:
-            response = self.llm.invoke(prompt)
+            # 🔧 CRITICAL FIX (Phase 9 Hotfix): Use ainvoke() instead of invoke()
+            # invoke() is sync and blocks the event loop in async context
+            # This was causing the intent parser to fail silently, breaking downstream agents
+            response = await self.llm.ainvoke(prompt)
             response_text = response.content.strip()
             
             # 🔧 FIX: Strip markdown code blocks if LLM returns them despite instructions

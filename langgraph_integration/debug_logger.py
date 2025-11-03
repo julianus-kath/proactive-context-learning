@@ -592,6 +592,264 @@ class DebugLogger:
         """Set the current LangGraph node context for better logging organization."""
         self.current_node = node_name
     
+    # ============= Phase 9: Intent Parser Deep Debugging =============
+    
+    def agent_entry(self, agent_name: str, state: Dict[str, Any]):
+        """
+        Log agent entry with complete state snapshot.
+        
+        Args:
+            agent_name: Name of the agent/node being executed
+            state: Current state snapshot
+        """
+        state_keys = list(state.keys())
+        intent = state.get("intent", {})
+        
+        data = {
+            "agent": agent_name,
+            "state_keys_count": len(state_keys),
+            "state_keys": state_keys,
+            "has_intent": bool(intent),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Include intent details if present
+        if intent:
+            data["intent_operation"] = intent.get("operation", "?")
+            data["intent_confidence"] = intent.get("confidence", 0)
+            data["intent_keywords"] = intent.get("keywords_for_discovery", [])
+            data["intent_entities"] = intent.get("primary_entities", [])
+        
+        message = self._log_entry(
+            LogLevel.INFO,
+            f"🚀 AGENT ENTRY: {agent_name}",
+            data,
+            nested=False
+        )
+        
+        self.logger.info(message)
+        # Add custom data to buffer for deep debugging
+        with _logs_lock:
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "type": "AGENT_ENTRY",
+                "message": f"Agent {agent_name} entering with {len(state_keys)} state keys",
+                "node": agent_name,
+                "data": {
+                    "state_keys": state_keys,
+                    "intent": intent,
+                    "state": state  # Full state snapshot
+                },
+                "session_id": self.session_id
+            }
+            _logs_buffer.append(log_entry)
+    
+    def agent_exit(self, agent_name: str, before_state: Dict[str, Any], after_state: Dict[str, Any]):
+        """
+        Log agent exit with state delta.
+        
+        Args:
+            agent_name: Name of the agent that executed
+            before_state: State before execution
+            after_state: State after execution
+        """
+        # Detect changes
+        added_keys = set(after_state.keys()) - set(before_state.keys())
+        removed_keys = set(before_state.keys()) - set(after_state.keys())
+        changed_keys = []
+        
+        for key in set(before_state.keys()) & set(after_state.keys()):
+            if before_state[key] != after_state[key]:
+                changed_keys.append(key)
+        
+        data = {
+            "agent": agent_name,
+            "added_keys": list(added_keys),
+            "removed_keys": list(removed_keys),
+            "modified_keys": changed_keys,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Special tracking for intent changes
+        if "intent" in changed_keys:
+            before_intent = before_state.get("intent", {})
+            after_intent = after_state.get("intent", {})
+            
+            intent_changes = {}
+            for k in set(before_intent.keys()) | set(after_intent.keys()):
+                if before_intent.get(k) != after_intent.get(k):
+                    intent_changes[k] = {
+                        "before": before_intent.get(k),
+                        "after": after_intent.get(k)
+                    }
+            
+            if intent_changes:
+                data["intent_changes"] = intent_changes
+        
+        message = self._log_entry(
+            LogLevel.INFO,
+            f"✅ AGENT EXIT: {agent_name}",
+            data,
+            nested=False
+        )
+        
+        self.logger.info(message)
+        # Add custom data to buffer
+        with _logs_lock:
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "type": "AGENT_EXIT",
+                "message": f"Agent {agent_name} exited, modified {len(changed_keys)} keys",
+                "node": agent_name,
+                "data": {
+                    "added_keys": list(added_keys),
+                    "removed_keys": list(removed_keys),
+                    "modified_keys": changed_keys,
+                    "state": after_state,
+                    "prev_state": before_state
+                },
+                "session_id": self.session_id
+            }
+            _logs_buffer.append(log_entry)
+    
+    def intent_parsed_phase9(self, intent: Dict[str, Any], parsing_method: str = "LLM"):
+        """
+        Log intent parsing (Phase 9 specific).
+        
+        Args:
+            intent: Parsed intent dict
+            parsing_method: How was it parsed (LLM, heuristic, etc.)
+        """
+        data = {
+            "parsing_method": parsing_method,
+            "operation": intent.get("operation", "?"),
+            "confidence": intent.get("confidence", 0),
+            "keywords_count": len(intent.get("keywords_for_discovery", [])),
+            "keywords": intent.get("keywords_for_discovery", []),
+            "entities": intent.get("primary_entities", []),
+            "metrics": intent.get("metrics", []),
+            "has_filters": len(intent.get("filters", [])) > 0,
+            "has_time_window": intent.get("time_window") is not None,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        message = self._log_entry(
+            LogLevel.INTENT_PARSE,
+            f"🧠 INTENT PARSED ({parsing_method})",
+            data,
+            nested=False
+        )
+        
+        self.logger.info(message)
+        # Add to buffer
+        with _logs_lock:
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "type": "INTENT_CHECK",
+                "message": f"Intent parsed with {len(intent.get('keywords_for_discovery', []))} keywords",
+                "data": {
+                    "intent": intent,
+                    "method": parsing_method
+                },
+                "session_id": self.session_id
+            }
+            _logs_buffer.append(log_entry)
+    
+    def mcp_tool_invoked(self, tool_name: str, params: Dict[str, Any], agent: str = None):
+        """
+        Log MCP tool invocation.
+        
+        Args:
+            tool_name: MCP tool name
+            params: Tool parameters
+            agent: Agent that triggered this call
+        """
+        data = {
+            "tool": tool_name,
+            "params": params,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if agent:
+            data["called_by_agent"] = agent
+        
+        message = self._log_entry(
+            LogLevel.TOOL_CALL,
+            f"📡 MCP TOOL: {tool_name}",
+            data,
+            nested=False
+        )
+        
+        self.logger.debug(message)
+        # Add to buffer
+        with _logs_lock:
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "type": "MCP_CALL",
+                "message": f"MCP tool {tool_name} called with params: {str(params)[:100]}",
+                "data": {
+                    "tool": tool_name,
+                    "params": params,
+                    "agent": agent
+                },
+                "session_id": self.session_id
+            }
+            _logs_buffer.append(log_entry)
+    
+    def mcp_tool_result(self, tool_name: str, result: Dict[str, Any], error: str = None):
+        """
+        Log MCP tool result.
+        
+        Args:
+            tool_name: MCP tool name
+            result: Result from the tool
+            error: Error message if failed
+        """
+        status = "✅ OK" if not error else "❌ ERROR"
+        
+        data = {
+            "tool": tool_name,
+            "status": status,
+            "result_keys": list(result.keys()) if isinstance(result, dict) else "N/A",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if error:
+            data["error"] = error
+        
+        # Summarize result
+        if isinstance(result, dict):
+            if "candidates" in result:
+                data["candidates_count"] = len(result.get("candidates", []))
+                if result.get("candidates"):
+                    data["top_candidates"] = [c.get("name", "?") for c in result.get("candidates", [])[:3]]
+            if "rows" in result:
+                data["rows_count"] = len(result.get("rows", []))
+        
+        message = self._log_entry(
+            LogLevel.TOOL_RESULT,
+            f"📊 MCP RESULT: {tool_name}",
+            data,
+            nested=False
+        )
+        
+        level = self.logger.info if not error else self.logger.error
+        level(message)
+        # Add to buffer
+        with _logs_lock:
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "type": "MCP_RESULT",
+                "message": f"MCP tool {tool_name} returned {status}",
+                "data": {
+                    "tool": tool_name,
+                    "result": result,
+                    "error": error
+                },
+                "session_id": self.session_id
+            }
+            _logs_buffer.append(log_entry)
+    
     def _add_to_buffer(self, message: str, log_type: str):
         """Add message to thread-safe buffer for frontend streaming."""
         with _logs_lock:

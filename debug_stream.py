@@ -1,9 +1,19 @@
 #!/usr/bin/env python3
 """
-Real-time Debug Stream Monitor
-Streams LangGraph workflow events in real-time from the LangGraph service
-Shows tool calls, scout mode operations, SQL generation, and query execution
-Enhanced with per-agent tracking and visual separation
+🔬 DEEP WORKFLOW DEBUGGER - Phase 9 Intent Parser Investigation
+
+Real-time debug monitor that PAINFULLY SHOWS:
+✓ Exact agent name and execution stage
+✓ Input state (what agent receives)
+✓ Output state (what agent produces)
+✓ State mutations (what changed?)
+✓ Intent field tracking (is it being passed correctly?)
+✓ MCP tool calls (which discovery tools are actually used?)
+✓ Internal reasoning steps (LLM prompts, decisions, etc.)
+✓ State isolation issues (are agents seeing each other's data?)
+
+This debugger is designed to expose Phase 9 intent parser integration issues
+by showing the complete flow through the multi-agent orchestrator.
 """
 
 import asyncio
@@ -12,9 +22,11 @@ import json
 import sys
 from datetime import datetime
 from typing import Dict, Any, Optional
+import difflib
 
-# Color codes
+# ============= COLOR SCHEME FOR MAXIMUM CLARITY =============
 class Colors:
+    # Core colors
     HEADER = '\033[95m'
     BLUE = '\033[94m'
     CYAN = '\033[96m'
@@ -22,25 +34,33 @@ class Colors:
     YELLOW = '\033[93m'
     RED = '\033[91m'
     PURPLE = '\033[35m'
+    WHITE = '\033[97m'
+    GREY = '\033[90m'
+    
+    # Emphasis
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
-    END = '\033[0m'
+    DIM = '\033[2m'
     
-    # Background colors for agent headers
+    # Background colors
     BG_BLUE = '\033[44m'
     BG_CYAN = '\033[46m'
     BG_GREEN = '\033[42m'
     BG_YELLOW = '\033[43m'
+    BG_RED = '\033[41m'
     BG_PURPLE = '\033[45m'
+    BG_WHITE = '\033[47m'
+    
+    END = '\033[0m'
 
-# Agent/Node specific coloring
+# Agent/Node specific coloring for visual distinction
 NODE_COLOR_PALETTE = [
-    Colors.HEADER,
     Colors.BLUE,
     Colors.CYAN,
     Colors.GREEN,
     Colors.YELLOW,
     Colors.PURPLE,
+    Colors.WHITE,
 ]
 
 NODE_BG_PALETTE = [
@@ -49,25 +69,65 @@ NODE_BG_PALETTE = [
     Colors.BG_GREEN,
     Colors.BG_YELLOW,
     Colors.BG_PURPLE,
+    Colors.BG_WHITE,
 ]
+
+# Phase-specific colors
+PHASE_COLORS = {
+    "index_database": (Colors.BLUE, Colors.BG_BLUE, "📚"),
+    "parse_intent": (Colors.CYAN, Colors.BG_CYAN, "🧠"),
+    "route_operation": (Colors.YELLOW, Colors.BG_YELLOW, "🚦"),
+    "discovery": (Colors.GREEN, Colors.BG_GREEN, "🔍"),
+    "join_sql": (Colors.PURPLE, Colors.BG_PURPLE, "🔗"),
+    "exec_recovery": (Colors.YELLOW, Colors.BG_YELLOW, "⚡"),
+    "answer": (Colors.WHITE, Colors.BG_WHITE, "📝"),
+    "search_candidates": (Colors.GREEN, Colors.BG_GREEN, "🔎"),
+    "describe_selected": (Colors.GREEN, Colors.BG_GREEN, "📊"),
+}
 
 node_colors: Dict[str, str] = {}
 node_bg_colors: Dict[str, str] = {}
+node_emojis: Dict[str, str] = {}
 current_node_context: Optional[str] = None
 node_activity_log: Dict[str, int] = {}  # Track activity count per node
+state_snapshots: Dict[str, Dict[str, Any]] = {}  # Track state before/after each node
+global_flow_log: list = []  # Track complete flow
 
 def get_node_color(node: str) -> tuple:
     """Assigns and retrieves consistent colors (fg, bg) for a given node name."""
     if node not in node_colors:
-        idx = len(node_colors) % len(NODE_COLOR_PALETTE)
-        node_colors[node] = NODE_COLOR_PALETTE[idx]
-        node_bg_colors[node] = NODE_BG_PALETTE[idx]
+        # Check if we have a phase-specific color
+        if node in PHASE_COLORS:
+            fg, bg, emoji = PHASE_COLORS[node]
+            node_colors[node] = fg
+            node_bg_colors[node] = bg
+            node_emojis[node] = emoji
+        else:
+            idx = len(node_colors) % len(NODE_COLOR_PALETTE)
+            node_colors[node] = NODE_COLOR_PALETTE[idx]
+            node_bg_colors[node] = NODE_BG_PALETTE[idx]
+            node_emojis[node] = "⚙️"
     return node_colors[node], node_bg_colors[node]
 
 
-def format_agent_header(node: str, activity_num: int = None) -> str:
-    """Create a prominent header for agent section."""
+def get_node_emoji(node: str) -> str:
+    """Get emoji for node."""
+    if node not in node_emojis:
+        get_node_color(node)  # Initialize
+    return node_emojis.get(node, "⚙️")
+
+
+def format_agent_header(node: str, stage: str = "EXECUTION", state_keys: list = None) -> str:
+    """
+    Create a prominent header for agent section with context.
+    
+    Args:
+        node: Node/agent name
+        stage: What stage (ENTRY, PROCESSING, EXIT, ERROR)
+        state_keys: Keys available in state (for tracking what data is available)
+    """
     node_fg, node_bg = get_node_color(node)
+    emoji = get_node_emoji(node)
     
     # Track activity
     if node not in node_activity_log:
@@ -76,14 +136,137 @@ def format_agent_header(node: str, activity_num: int = None) -> str:
     
     activity_num = node_activity_log[node]
     
-    header_text = f" AGENT: {node} (Activity #{activity_num}) "
-    padding = (80 - len(header_text)) // 2
+    # Stage indicator
+    stage_color = Colors.GREEN if stage == "EXIT" else Colors.YELLOW if stage == "PROCESSING" else Colors.CYAN
     
-    return (
-        f"\n{node_fg}{node_bg}{Colors.BOLD}{'=' * 80}\n"
+    header_text = f" {emoji} {node.upper()} #{activity_num} | {stage} "
+    padding = (100 - len(header_text)) // 2
+    
+    result = (
+        f"\n{node_fg}{node_bg}{Colors.BOLD}{'═' * 100}\n"
         f"{' ' * padding}{header_text}{' ' * padding}\n"
-        f"{'=' * 80}{Colors.END}\n"
+        f"{'═' * 100}{Colors.END}\n"
     )
+    
+    # Add available state keys if provided
+    if state_keys:
+        available = ", ".join(state_keys[:8])
+        if len(state_keys) > 8:
+            available += f", +{len(state_keys)-8} more"
+        result += f"{Colors.GREY}State keys: {available}{Colors.END}\n"
+    
+    return result
+
+
+def format_state_field(label: str, value: Any, max_length: int = 200, indent: int = 2) -> str:
+    """
+    Format a single state field for readable output.
+    
+    Handles different value types specially:
+    - Dicts/Lists: Pretty-printed JSON
+    - Strings: Truncated if too long
+    - Numbers: Direct display
+    - ParsedIntent: Special formatting
+    """
+    indent_str = " " * indent
+    
+    if value is None:
+        return f"{indent_str}{Colors.GREY}{label}: None{Colors.END}\n"
+    
+    if isinstance(value, dict):
+        if "operation" in value and "keywords_for_discovery" in value:
+            # This is likely a ParsedIntent
+            return format_parsed_intent(label, value, indent)
+        else:
+            # Regular dict
+            json_str = json.dumps(value, indent=2)[:500]
+            return f"{indent_str}{Colors.CYAN}{label}:{Colors.END}\n{json.dumps(value, indent=4)[:500]}\n"
+    elif isinstance(value, list):
+        if not value:
+            return f"{indent_str}{Colors.GREY}{label}: []{Colors.END}\n"
+        items = json.dumps(value[:5], indent=2)
+        if len(value) > 5:
+            items += f"\n{indent_str}  ... and {len(value)-5} more items"
+        return f"{indent_str}{Colors.CYAN}{label}:{Colors.END}\n{items}\n"
+    elif isinstance(value, str):
+        if len(value) > max_length:
+            truncated = value[:max_length] + f"... ({len(value)} chars total)"
+        else:
+            truncated = value
+        return f"{indent_str}{Colors.GREEN}{label}:{Colors.END} {truncated}\n"
+    else:
+        return f"{indent_str}{Colors.WHITE}{label}:{Colors.END} {value}\n"
+
+
+def format_parsed_intent(label: str, intent: Dict[str, Any], indent: int = 2) -> str:
+    """Format a ParsedIntent dict with special colors and structure."""
+    indent_str = " " * indent
+    result = f"{indent_str}{Colors.CYAN}{Colors.BOLD}{label}:{Colors.END}\n"
+    result += f"{indent_str}  {Colors.GREEN}operation{Colors.END}: {Colors.WHITE}{intent.get('operation', 'N/A')}{Colors.END}\n"
+    result += f"{indent_str}  {Colors.GREEN}confidence{Colors.END}: {Colors.YELLOW}{intent.get('confidence', 0):.2f}{Colors.END}\n"
+    result += f"{indent_str}  {Colors.GREEN}primary_entities{Colors.END}: {Colors.WHITE}{intent.get('primary_entities', [])}{Colors.END}\n"
+    result += f"{indent_str}  {Colors.GREEN}keywords_for_discovery{Colors.END}: {Colors.BOLD}{Colors.WHITE}{intent.get('keywords_for_discovery', [])}{Colors.END}\n"
+    result += f"{indent_str}  {Colors.GREEN}metrics{Colors.END}: {Colors.WHITE}{intent.get('metrics', [])}{Colors.END}\n"
+    result += f"{indent_str}  {Colors.GREEN}filters{Colors.END}: {Colors.WHITE}{len(intent.get('filters', []))} filter(s){Colors.END}\n"
+    result += f"{indent_str}  {Colors.GREEN}time_window{Colors.END}: {Colors.WHITE}{intent.get('time_window', 'None')}{Colors.END}\n"
+    return result
+
+
+def format_state_delta(node: str, before: Dict[str, Any], after: Dict[str, Any]) -> str:
+    """
+    Format the state changes (delta) made by a node.
+    
+    Shows what changed and how.
+    """
+    if not before:
+        return ""
+    
+    result = f"\n{Colors.BOLD}STATE MUTATIONS (What Changed?):{Colors.END}\n"
+    
+    # Keys that changed
+    added_keys = set(after.keys()) - set(before.keys())
+    removed_keys = set(before.keys()) - set(after.keys())
+    common_keys = set(before.keys()) & set(after.keys())
+    
+    changed_keys = []
+    for key in common_keys:
+        if before[key] != after[key]:
+            changed_keys.append(key)
+    
+    if added_keys:
+        result += f"  {Colors.GREEN}➕ ADDED:{Colors.END} {list(added_keys)}\n"
+    
+    if removed_keys:
+        result += f"  {Colors.RED}➖ REMOVED:{Colors.END} {list(removed_keys)}\n"
+    
+    if changed_keys:
+        result += f"  {Colors.YELLOW}🔄 MODIFIED:{Colors.END} {changed_keys}\n"
+        for key in changed_keys:
+            before_val = before[key]
+            after_val = after[key]
+            
+            # Special handling for intent
+            if key == "intent":
+                if isinstance(before_val, dict) and isinstance(after_val, dict):
+                    intent_changes = {}
+                    for k in set(before_val.keys()) | set(after_val.keys()):
+                        if before_val.get(k) != after_val.get(k):
+                            intent_changes[k] = (before_val.get(k), after_val.get(k))
+                    if intent_changes:
+                        result += f"    Intent field changes:\n"
+                        for k, (old, new) in intent_changes.items():
+                            result += f"      {Colors.CYAN}{k}{Colors.END}: {Colors.RED}{old}{Colors.END} → {Colors.GREEN}{new}{Colors.END}\n"
+            else:
+                # Show brief before/after for other fields
+                if len(str(before_val)) < 100 and len(str(after_val)) < 100:
+                    result += f"    {Colors.CYAN}{key}{Colors.END}: {before_val} → {after_val}\n"
+                else:
+                    result += f"    {Colors.CYAN}{key}{Colors.END}: [changed]\n"
+    
+    if not (added_keys or removed_keys or changed_keys):
+        result += "  {Colors.GREY}No changes{Colors.END}\n"
+    
+    return result
 
 
 def format_log(level: str, message: str, data: Dict[str, Any] = None, node: Optional[str] = None) -> str:

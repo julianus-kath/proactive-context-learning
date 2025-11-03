@@ -170,12 +170,16 @@ class IntentParser:
         """
         entities = []
         
-        # Look for entity keywords
+        # Look for entity keywords (handle plurals)
         words = query_lower.split()
         for i, word in enumerate(words):
             clean_word = word.strip(',.!?;:')
+            # Check exact match
             if clean_word in self.ENTITY_KEYWORDS:
                 entities.append(clean_word)
+            # Check singular form (handle plurals like "customers" → "customer")
+            elif clean_word.endswith('s') and clean_word[:-1] in self.ENTITY_KEYWORDS:
+                entities.append(clean_word[:-1])  # Add singular form
             # Look for compound entities (e.g., "customer name", "order date")
             elif i < len(words) - 1:
                 next_word = words[i + 1].strip(',.!?;:')

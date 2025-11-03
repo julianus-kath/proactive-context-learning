@@ -234,20 +234,21 @@ class QueryOrchestrator:
         
         This ensures discovery will have access to semantic ranking and metadata.
         """
-        logger.info("📚 Indexing database...")
+        logger.info("📚 [INDEX_DATABASE] Indexing database...")
 
         try:
             # Check MCP health
+            logger.info("📚 [INDEX_DATABASE] Checking MCP availability...")
             is_healthy = await self.mcp.health_check()
             if not is_healthy:
                 error = {
                     "type": "MCP_UNAVAILABLE",
                     "message": "MCP server is not responding"
                 }
-                logger.error(f"❌ {error['message']}")
+                logger.error(f"📚 [INDEX_DATABASE] ❌ {error['message']}")
                 return {**state, "error_info": error}
 
-            logger.info("✅ Database indexed, MCP available")
+            logger.info("📚 [INDEX_DATABASE] ✅ Database indexed, MCP available")
             return state
 
         except Exception as e:
@@ -256,7 +257,7 @@ class QueryOrchestrator:
                 "message": f"Failed to index database: {str(e)}",
                 "error": str(e)
             }
-            logger.error(f"❌ {error['message']}")
+            logger.error(f"📚 [INDEX_DATABASE] ❌ {error['message']}")
             return {**state, "error_info": error}
 
     async def _parse_intent_node(self, state: BaseState) -> BaseState:
@@ -271,7 +272,9 @@ class QueryOrchestrator:
         
         Returns: ParsedIntent with operation, entities, metrics, filters, keywords_for_discovery, confidence
         """
-        logger.info("🧠 Parsing intent with IntentParserAgent...")
+        logger.info("🧠 [PARSE_INTENT] ════════════════════════════════════════")
+        logger.info("🧠 [PARSE_INTENT] STARTING INTENT PARSING (Phase 9)")
+        logger.info("🧠 [PARSE_INTENT] ════════════════════════════════════════")
 
         user_input = state.get("user_input", "")
         messages = state.get("messages", [])
@@ -281,19 +284,38 @@ class QueryOrchestrator:
                 "type": "NO_INPUT",
                 "message": "No user input provided"
             }
+            logger.error("🧠 [PARSE_INTENT] ❌ No user input!")
             return {**state, "error_info": error}
 
         try:
+            logger.info(f"🧠 [PARSE_INTENT] Query: \"{user_input}\"")
+            logger.info(f"🧠 [PARSE_INTENT] Calling IntentParserAgent.parse()...")
+            
             # 🆕 Phase 9: Use IntentParserAgent for semantic parsing
             intent = await self.intent_parser.parse(user_input)
             
-            logger.info(
-                f"✅ Intent parsed: operation={intent['operation']}, "
-                f"entities={intent['primary_entities']}, "
-                f"keywords={intent['keywords_for_discovery']}, "
-                f"confidence={intent['confidence']:.2f}"
-            )
+            logger.info(f"🧠 [PARSE_INTENT] ✅ Intent parsing COMPLETE")
+            logger.info(f"🧠 [PARSE_INTENT] ━━━ PARSED INTENT ━━━")
+            logger.info(f"🧠 [PARSE_INTENT]   operation: {intent.get('operation')}")
+            logger.info(f"🧠 [PARSE_INTENT]   primary_entities: {intent.get('primary_entities', [])}")
+            logger.info(f"🧠 [PARSE_INTENT]   metrics: {intent.get('metrics', [])}")
+            logger.info(f"🧠 [PARSE_INTENT]   filters: {intent.get('filters', [])}")
+            logger.info(f"🧠 [PARSE_INTENT]   time_window: {intent.get('time_window')}")
+            logger.info(f"🧠 [PARSE_INTENT]   keywords_for_discovery: {intent.get('keywords_for_discovery', [])} ← CRITICAL!")
+            logger.info(f"🧠 [PARSE_INTENT]   confidence: {intent.get('confidence', 0):.2f}")
+            
+            # CRITICAL CHECK
+            keywords = intent.get("keywords_for_discovery", [])
+            if not keywords:
+                logger.error("🧠 [PARSE_INTENT] ❌ CRITICAL: keywords_for_discovery is EMPTY!")
+                logger.error("🧠 [PARSE_INTENT]    This will cause discovery to use fallback extraction")
+                logger.error("🧠 [PARSE_INTENT]    Result: All 943 tables will be searched")
+            else:
+                logger.info(f"🧠 [PARSE_INTENT] ✅ Keywords OK: {keywords}")
+            
             state["intent"] = intent
+            logger.info(f"🧠 [PARSE_INTENT] ✅ Intent stored in state['intent']")
+            logger.info(f"🧠 [PARSE_INTENT] ✅ Ready for ROUTE_OPERATION node")
             return state
 
         except Exception as e:
@@ -302,11 +324,41 @@ class QueryOrchestrator:
                 "message": f"Failed to parse intent: {str(e)}",
                 "error": str(e)
             }
-            logger.error(f"❌ {error['message']}")
+            logger.error(f"🧠 [PARSE_INTENT] ❌ EXCEPTION: {error['message']}")
+            logger.error(f"🧠 [PARSE_INTENT] Error: {str(e)}")
+            import traceback
+            logger.error(f"🧠 [PARSE_INTENT] Traceback:\n{traceback.format_exc()}")
             return {**state, "error_info": error}
 
     async def _route_operation_node(self, state: BaseState) -> BaseState:
-        """Routing node (actual routing done via conditional_edges)."""
+        """
+        Routing node (actual routing done via conditional_edges).
+        
+        This determines which branch to take based on intent operation.
+        """
+        logger.info("🚦 [ROUTE] ════════════════════════════════════════")
+        logger.info("🚦 [ROUTE] CONDITIONAL ROUTING DECISION")
+        logger.info("🚦 [ROUTE] ════════════════════════════════════════")
+        
+        intent = state.get("intent", {})
+        operation = intent.get("operation", "query")
+        
+        logger.info(f"🚦 [ROUTE] operation field: '{operation}'")
+        
+        if operation == "query":
+            logger.info(f"🚦 [ROUTE] ✅ Routing decision: QUERY PIPELINE")
+            logger.info(f"🚦 [ROUTE]    Path: discovery → join_sql → exec_recovery → answer")
+        elif operation == "schema_query":
+            logger.info(f"🚦 [ROUTE] ✅ Routing decision: SCHEMA QUERY")
+            logger.info(f"🚦 [ROUTE]    Path: discovery_for_schema → answer_schema")
+        elif operation == "health_check":
+            logger.info(f"🚦 [ROUTE] ✅ Routing decision: HEALTH CHECK")
+            logger.info(f"🚦 [ROUTE]    Path: answer_health")
+        else:
+            logger.warning(f"🚦 [ROUTE] ⚠️  Unknown operation: {operation}")
+            logger.info(f"🚦 [ROUTE]    Defaulting to: query pipeline")
+        
+        logger.info(f"🚦 [ROUTE] ✅ Routing complete, conditional_edges will take it from here")
         return state
 
     # ============= Agent nodes (subgraph invocations) =============
@@ -318,32 +370,77 @@ class QueryOrchestrator:
         Finds relevant tables/views using Scout semantic search, ranks by role coverage.
         Output: relevant_tables, schema_snippet, candidate_views, column_index
         """
-        logger.info("🔍 Running DiscoveryAgent...")
+        logger.info("🔍 [DISCOVERY] Starting DiscoveryAgent...")
+        
+        # SURGICAL DEBUG: Show input state
+        logger.info("🔍 [DISCOVERY] ━━━ INPUT STATE ━━━")
+        logger.info(f"🔍 [DISCOVERY] Input keys: {list(state.keys())}")
+        
+        # DEBUG: Check what we're receiving
+        intent = state.get("intent", {})
+        keywords = intent.get("keywords_for_discovery", [])
+        logger.info(f"🔍 [DISCOVERY] Intent check:")
+        logger.info(f"🔍 [DISCOVERY]   - intent present? {bool(intent)}")
+        logger.info(f"🔍 [DISCOVERY]   - intent type: {type(intent)}")
+        logger.info(f"🔍 [DISCOVERY]   - intent keys: {list(intent.keys()) if isinstance(intent, dict) else 'N/A'}")
+        logger.info(f"🔍 [DISCOVERY]   - keywords_for_discovery: {keywords} {'✅ GOOD' if keywords else '❌ EMPTY!'}")
+        logger.info(f"🔍 [DISCOVERY]   - operation: {intent.get('operation', 'N/A')}")
+        logger.info(f"🔍 [DISCOVERY]   - confidence: {intent.get('confidence', 'N/A')}")
+        
+        if not keywords:
+            logger.warning("🔍 [DISCOVERY] ⚠️  CRITICAL: No keywords_for_discovery! Intent parsing may have FAILED.")
+            logger.warning("🔍 [DISCOVERY] This will cause discovery to use fallback extraction and get 943 candidates!")
 
         try:
             # Build and run discovery subgraph
             discovery_graph = self.discovery_agent.build_subgraph()
 
             # Invoke with input state using async API
+            logger.info("🔍 [DISCOVERY] Invoking discovery subgraph with ainvoke()...")
+            logger.info("🔍 [DISCOVERY] (This enters discovery subgraph nodes: search_candidates → rank → filter → describe → build_schema)")
             result = await discovery_graph.ainvoke(state)
+            logger.info("🔍 [DISCOVERY] ✅ Discovery subgraph completed")
 
+            # SURGICAL DEBUG: Show output state
+            logger.info("🔍 [DISCOVERY] ━━━ OUTPUT STATE ━━━")
+            logger.info(f"🔍 [DISCOVERY] Output keys: {list(result.keys())}")
+            
             # Extract outputs and update state
-            state["relevant_tables"] = result.get("relevant_tables", [])
-            state["schema_snippet"] = result.get("schema_snippet", "")
-            state["candidate_views"] = result.get("candidate_views", [])
-            state["column_index"] = result.get("column_index", {})
+            logger.info("🔍 [DISCOVERY] Extracting results from discovery subgraph...")
+            relevant_tables = result.get("relevant_tables", [])
+            candidate_views = result.get("candidate_views", [])
+            schema_snippet = result.get("schema_snippet", "")
+            column_index = result.get("column_index", {})
+            
+            logger.info(f"🔍 [DISCOVERY]   ✓ relevant_tables count: {len(relevant_tables)}")
+            logger.info(f"🔍 [DISCOVERY]   ✓ candidate_views count: {len(candidate_views)}")
+            logger.info(f"🔍 [DISCOVERY]   ✓ schema_snippet length: {len(schema_snippet)} chars")
+            logger.info(f"🔍 [DISCOVERY]   ✓ column_index keys: {len(column_index)}")
+            
+            if relevant_tables:
+                logger.info(f"🔍 [DISCOVERY]   📊 Top 3 tables: {relevant_tables[:3]}")
+            else:
+                logger.warning(f"🔍 [DISCOVERY]   ⚠️  NO relevant_tables returned!")
+            
+            # Update state with outputs
+            state["relevant_tables"] = relevant_tables
+            state["schema_snippet"] = schema_snippet
+            state["candidate_views"] = candidate_views
+            state["column_index"] = column_index
             state["session_described_tables"] = result.get(
                 "session_described_tables",
                 state.get("session_described_tables", {})
             )
 
             if result.get("error_info"):
-                state["error_info"] = result["error_info"]
+                logger.error(f"🔍 [DISCOVERY] ❌ ERROR from discovery subgraph:")
+                error = result["error_info"]
+                logger.error(f"🔍 [DISCOVERY]    type: {error.get('type')}")
+                logger.error(f"🔍 [DISCOVERY]    message: {error.get('message')}")
+                state["error_info"] = error
 
-            logger.info(
-                f"✅ Discovery complete: {len(result.get('relevant_tables', []))} table(s), "
-                f"{len(result.get('candidate_views', []))} view(s)"
-            )
+            logger.info(f"🔍 [DISCOVERY] ✅ DISCOVERY COMPLETE: {len(relevant_tables)} table(s) found")
+            logger.info(f"🔍 [DISCOVERY] ✅ State is ready for JOIN_SQL node")
             return state
 
         except Exception as e:
@@ -352,7 +449,9 @@ class QueryOrchestrator:
                 "message": f"Discovery agent failed: {str(e)}",
                 "error": str(e)
             }
-            logger.error(f"❌ {error['message']}")
+            logger.error(f"🔍 [DISCOVERY] ❌ EXCEPTION: {error['message']}")
+            import traceback
+            logger.error(f"🔍 [DISCOVERY] Traceback:\n{traceback.format_exc()}")
             return {**state, "error_info": error}
 
     async def _join_sql_node(self, state: BaseState) -> BaseState:
@@ -362,11 +461,35 @@ class QueryOrchestrator:
         Plans joins (views-first strategy, FK relationships) and generates MSSQL.
         Output: join_plan, sql_query
         """
-        logger.info("📋 Running JoinPlanAndSQLAgent...")
+        logger.info("🔗 [JOIN_SQL] ════════════════════════════════════════")
+        logger.info("🔗 [JOIN_SQL] CRITICAL: NODE EXECUTION STARTED!")
+        logger.info("🔗 [JOIN_SQL] If this log doesn't appear, the workflow STOPPED after DISCOVERY")
+        logger.info("🔗 [JOIN_SQL] ════════════════════════════════════════")
+        
+        # SURGICAL DEBUG: Show input state
+        logger.info("🔗 [JOIN_SQL] ━━━ INPUT STATE ━━━")
+        logger.info(f"🔗 [JOIN_SQL] Input keys: {list(state.keys())}")
+        
+        # DEBUG: Check what we have from discovery
+        relevant_tables = state.get("relevant_tables", [])
+        schema_snippet = state.get("schema_snippet", "")
+        error_info = state.get("error_info")
+        
+        logger.info(f"🔗 [JOIN_SQL] Received from discovery:")
+        logger.info(f"🔗 [JOIN_SQL]   - relevant_tables: {len(relevant_tables)} tables {'✅ GOOD' if relevant_tables else '❌ EMPTY!'}")
+        logger.info(f"🔗 [JOIN_SQL]   - schema_snippet: {len(schema_snippet)} chars")
+        logger.info(f"🔗 [JOIN_SQL]   - error_info: {error_info}")
+        
+        if not relevant_tables:
+            logger.error("🔗 [JOIN_SQL] ❌ CRITICAL: No relevant_tables from discovery!")
+            logger.error("🔗 [JOIN_SQL] This means discovery FAILED or returned empty results")
 
         # Check for prior errors
-        if state.get("error_info"):
-            logger.warning("  Prior error detected, skipping join planning")
+        if error_info:
+            logger.error("🔗 [JOIN_SQL] ⚠️  Prior error detected from discovery:")
+            logger.error(f"🔗 [JOIN_SQL]    type: {error_info.get('type')}")
+            logger.error(f"🔗 [JOIN_SQL]    message: {error_info.get('message')}")
+            logger.warning("🔗 [JOIN_SQL]    Skipping join planning due to prior error")
             return state
 
         try:
@@ -374,16 +497,40 @@ class QueryOrchestrator:
             join_sql_graph = self.join_sql_agent.build_subgraph()
 
             # Invoke with input state using async API
+            logger.info("🔗 [JOIN_SQL] Invoking join_sql subgraph with ainvoke()...")
+            logger.info("🔗 [JOIN_SQL] (This enters join_sql subgraph nodes: validate_tables → plan_joins → generate_sql)")
             result = await join_sql_graph.ainvoke(state)
+            logger.info("🔗 [JOIN_SQL] ✅ join_sql subgraph completed")
 
+            # SURGICAL DEBUG: Show output state
+            logger.info("🔗 [JOIN_SQL] ━━━ OUTPUT STATE ━━━")
+            logger.info(f"🔗 [JOIN_SQL] Output keys: {list(result.keys())}")
+            
             # Extract outputs
-            state["join_plan"] = result.get("join_plan", {})
-            state["sql_query"] = result.get("sql_query", "")
+            join_plan = result.get("join_plan", {})
+            sql_query = result.get("sql_query", "")
+            
+            logger.info(f"🔗 [JOIN_SQL] Extracting results:")
+            logger.info(f"🔗 [JOIN_SQL]   ✓ join_plan keys: {list(join_plan.keys()) if join_plan else 'empty'}")
+            logger.info(f"🔗 [JOIN_SQL]   ✓ sql_query: {len(sql_query)} chars")
+            
+            state["join_plan"] = join_plan
+            state["sql_query"] = sql_query
 
             if result.get("error_info"):
-                state["error_info"] = result["error_info"]
-
-            logger.info(f"✅ JoinSQL complete: {len(result.get('sql_query', ''))} char SQL")
+                logger.error(f"🔗 [JOIN_SQL] ❌ Error from join_sql subgraph:")
+                error = result["error_info"]
+                logger.error(f"🔗 [JOIN_SQL]    type: {error.get('type')}")
+                logger.error(f"🔗 [JOIN_SQL]    message: {error.get('message')}")
+                state["error_info"] = error
+            else:
+                logger.info(f"🔗 [JOIN_SQL] ✅ JoinSQL complete: {len(sql_query)} char SQL generated")
+                if sql_query:
+                    logger.info(f"🔗 [JOIN_SQL]    Preview: {sql_query[:100]}...")
+                else:
+                    logger.warning(f"🔗 [JOIN_SQL]    ⚠️  SQL query is empty!")
+            
+            logger.info(f"🔗 [JOIN_SQL] ✅ State ready for EXEC_RECOVERY node")
             return state
 
         except Exception as e:
@@ -392,7 +539,9 @@ class QueryOrchestrator:
                 "message": f"JoinSQL agent failed: {str(e)}",
                 "error": str(e)
             }
-            logger.error(f"❌ {error['message']}")
+            logger.error(f"🔗 [JOIN_SQL] ❌ {error['message']}")
+            import traceback
+            logger.error(f"🔗 [JOIN_SQL] Traceback:\n{traceback.format_exc()}")
             return {**state, "error_info": error}
 
     async def _exec_recovery_node(self, state: BaseState) -> BaseState:
@@ -402,35 +551,57 @@ class QueryOrchestrator:
         Executes query safely (row caps, timeouts) and recovers from errors via LLM repair.
         Output: exec_result, error_info, retry_count
         """
-        logger.info("🚀 Running ExecAndRecoveryAgent...")
+        logger.info("⚡ [EXEC_RECOVERY] ════════════════════════════════════════")
+        logger.info("⚡ [EXEC_RECOVERY] CRITICAL: NODE EXECUTION STARTED!")
+        logger.info("⚡ [EXEC_RECOVERY] If this log doesn't appear, workflow stopped before this node")
+        logger.info("⚡ [EXEC_RECOVERY] ════════════════════════════════════════")
+        
+        # SURGICAL DEBUG: Show input state
+        logger.info("⚡ [EXEC_RECOVERY] ━━━ INPUT STATE ━━━")
+        logger.info(f"⚡ [EXEC_RECOVERY] Input keys: {list(state.keys())}")
+        
+        sql_query = state.get("sql_query", "")
+        error_info = state.get("error_info")
+        
+        logger.info(f"⚡ [EXEC_RECOVERY] sql_query: {len(sql_query)} chars")
+        logger.info(f"⚡ [EXEC_RECOVERY] prior error_info: {error_info}")
 
         # Check for prior errors
-        if state.get("error_info"):
-            logger.warning("  Prior error detected, will attempt recovery")
+        if error_info:
+            logger.warning("⚡ [EXEC_RECOVERY] ⚠️  Prior error detected, will attempt recovery")
 
         try:
             # Build and run exec_recovery subgraph
             exec_recovery_graph = self.exec_recovery_agent.build_subgraph()
 
             # Invoke with input state using async API
+            logger.info("⚡ [EXEC_RECOVERY] Invoking exec_recovery subgraph...")
             result = await exec_recovery_graph.ainvoke(state)
+            logger.info("⚡ [EXEC_RECOVERY] ✅ exec_recovery subgraph completed")
+
+            # SURGICAL DEBUG: Show output state
+            logger.info("⚡ [EXEC_RECOVERY] ━━━ OUTPUT STATE ━━━")
+            logger.info(f"⚡ [EXEC_RECOVERY] Output keys: {list(result.keys())}")
 
             # Extract outputs
-            state["exec_result"] = result.get("exec_result", {})
+            exec_result = result.get("exec_result", {})
+            state["exec_result"] = exec_result
             state["sql_query"] = result.get("sql_query", state.get("sql_query", ""))
             state["retry_count"] = result.get("retry_count", 0)
 
             if result.get("error_info"):
+                logger.error(f"⚡ [EXEC_RECOVERY] Error from exec_recovery: {result['error_info']}")
                 state["error_info"] = result["error_info"]
 
-            if state.get("exec_result", {}).get("ok"):
+            if exec_result.get("ok"):
                 logger.info(
-                    f"✅ Execution complete: {state['exec_result'].get('row_count', 0)} rows, "
-                    f"{state['exec_result'].get('execution_time_ms', 0)}ms"
+                    f"⚡ [EXEC_RECOVERY] ✅ EXECUTION SUCCESS: "
+                    f"{exec_result.get('row_count', 0)} rows in {exec_result.get('execution_time_ms', 0)}ms"
                 )
             else:
-                logger.warning("⚠️  Execution failed, error_info set for answer agent")
+                logger.warning(f"⚡ [EXEC_RECOVERY] ❌ Execution failed, error_info set for answer agent")
 
+            logger.info(f"⚡ [EXEC_RECOVERY] ✅ State ready for ANSWER node")
             return state
 
         except Exception as e:
