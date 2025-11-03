@@ -419,28 +419,54 @@ class DiscoveryAgent:
             return state
         
         try:
-            described = []
+            # Phase 4: Parallel processing for independent describe operations
+            describe_tasks = []
+            uncached_candidates = []
+
+            # First pass: collect cached and prepare uncached for parallel processing
             for cand in candidates:
                 table_name = cand.get("table_name") or cand.get("name") or cand.get("full_name", "")
-                
+
                 # Check cache first
                 if table_name in session_cache:
                     logger.debug(f"  {table_name} (cached)")
                     described.append(session_cache[table_name])
                     continue
-                
-                logger.debug(f"  Describing {table_name}...")
-                try:
-                    result = await self.mcp.describe_table(table_name, include_sample=False)
-                    parsed = self._parse_describe_result(result, table_name)
-                    described.append(parsed)
-                    session_cache[table_name] = parsed
-                except Exception as e:
-                    logger.warning(f"  Failed to describe {table_name}: {e}")
-                    # Still include the candidate even if describe fails
-                    described.append(cand)
-            
-            logger.info(f"✅ Described {len(described)} table(s)")
+
+                # Prepare for parallel describe
+                uncached_candidates.append((table_name, cand))
+
+            # Phase 4: Parallel describe operations (up to 3 concurrent to avoid overwhelming MCP)
+            if uncached_candidates:
+                logger.debug(f"  Describing {len(uncached_candidates)} tables in parallel...")
+
+                # Create describe tasks (limit concurrency)
+                semaphore = asyncio.Semaphore(3)  # Max 3 concurrent describes
+
+                async def describe_with_semaphore(table_name, cand):
+                    async with semaphore:
+                        try:
+                            logger.debug(f"  Describing {table_name}...")
+                            result = await self.mcp.describe_table(table_name, include_sample=False)
+                            parsed = self._parse_describe_result(result, table_name)
+                            session_cache[table_name] = parsed
+                            return parsed
+                        except Exception as e:
+                            logger.warning(f"  Failed to describe {table_name}: {e}")
+                            return cand  # Return original candidate on failure
+
+                # Execute parallel describes
+                tasks = [describe_with_semaphore(table_name, cand) for table_name, cand in uncached_candidates]
+                parallel_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                # Collect results
+                for result in parallel_results:
+                    if isinstance(result, Exception):
+                        logger.error(f"Parallel describe task failed: {result}")
+                        continue
+                    described.append(result)
+
+            logger.info(f"✅ Described {len(described)} table(s) ({len(uncached_candidates)} parallel)")
             
             state["candidate_views"] = described
             state["session_described_tables"] = session_cache

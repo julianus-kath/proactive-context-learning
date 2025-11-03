@@ -134,20 +134,24 @@ class MSSQLCatalogBuilder:
 
     async def _build_view_catalog(self) -> Dict[str, Dict[str, Any]]:
         """
-        Build view catalog with definitions and dependencies.
+        Build comprehensive view catalog with definitions, dependencies, and business logic analysis.
 
         Returns:
             Dict of view_name -> view_metadata
         """
-        logger.info("👁️ Building view catalog...")
+        logger.info("👁️ Building comprehensive view catalog...")
 
-        # Query for view metadata
+        # Enhanced query for view metadata with more details
         view_query = """
         SELECT
             v.TABLE_SCHEMA,
             v.TABLE_NAME,
             m.definition as view_definition,
-            p.rows as estimated_rows
+            p.rows as estimated_rows,
+            sv.create_date,
+            sv.modify_date,
+            CASE WHEN sv.is_replicated = 1 THEN 1 ELSE 0 END as is_replicated,
+            CASE WHEN sv.has_opaque_metadata = 1 THEN 1 ELSE 0 END as has_opaque_metadata
         FROM INFORMATION_SCHEMA.VIEWS v
         LEFT JOIN sys.views sv ON v.TABLE_NAME = sv.name
         LEFT JOIN sys.schemas ss ON v.TABLE_SCHEMA = ss.name AND sv.schema_id = ss.schema_id
@@ -164,33 +168,46 @@ class MSSQLCatalogBuilder:
             view_name = row["TABLE_NAME"]
             full_name = f"{schema_name}.{view_name}"
 
-            # Get column details
+            # Get comprehensive column details
             columns = await self._get_table_columns(schema_name, view_name)
 
-            # Get dependencies
-            dependencies = await self._get_view_dependencies(schema_name, view_name)
+            # Get detailed dependencies with types
+            dependencies = await self._get_view_dependencies_detailed(schema_name, view_name)
 
-            # Classify view purpose (basic heuristic)
-            role_coverage = self._classify_view_role(row.get("view_definition", ""), dependencies)
+            # Analyze view definition for business logic
+            definition = row.get("view_definition", "")
+            business_analysis = self._analyze_view_business_logic(definition, columns, dependencies)
+
+            # Classify view purpose with enhanced logic
+            role_coverage = self._classify_view_role_advanced(business_analysis, dependencies, columns)
+
+            # Calculate view complexity metrics
+            complexity = self._calculate_view_complexity(definition, dependencies, columns)
 
             view_metadata = {
                 "schema": schema_name,
                 "name": view_name,
                 "full_name": full_name,
                 "type": "view",
-                "definition": row.get("view_definition", ""),
+                "definition": definition,
                 "estimated_rows": row.get("estimated_rows", 0),
                 "column_count": len(columns),
                 "columns": columns,
                 "dependencies": dependencies,
                 "role_coverage": role_coverage,
+                "business_analysis": business_analysis,
+                "complexity": complexity,
                 "has_rows": row.get("estimated_rows", 0) > 0,
+                "is_replicated": bool(row.get("is_replicated", 0)),
+                "has_opaque_metadata": bool(row.get("has_opaque_metadata", 0)),
+                "create_date": row.get("create_date").isoformat() if row.get("create_date") else None,
+                "modify_date": row.get("modify_date").isoformat() if row.get("modify_date") else None,
                 "last_updated": datetime.utcnow().isoformat()
             }
 
             views[full_name] = view_metadata
 
-        logger.info(f"👁️ Found {len(views)} views")
+        logger.info(f"👁️ Found {len(views)} views with comprehensive metadata")
         return views
 
     async def _build_relationship_catalog(self) -> List[Dict[str, Any]]:
@@ -320,9 +337,46 @@ class MSSQLCatalogBuilder:
         result = await self.db_adapter.execute_query(fk_count_query, (schema, table))
         return result[0]["fk_count"] if result else 0
 
+    async def _get_view_dependencies_detailed(self, schema: str, view: str) -> List[Dict[str, Any]]:
+        """
+        Get detailed dependency information for a view.
+
+        Args:
+            schema: Schema name
+            view: View name
+
+        Returns:
+            List of dependency dictionaries with types and metadata
+        """
+        dep_query = """
+        SELECT
+            referenced_schema_name as schema_name,
+            referenced_entity_name as entity_name,
+            referenced_class_desc as object_type,
+            is_caller_dependent as is_caller_dependent
+        FROM sys.sql_expression_dependencies
+        WHERE referencing_id = OBJECT_ID(? + '.' + ?)
+        ORDER BY referenced_class_desc, referenced_schema_name, referenced_entity_name
+        """
+
+        deps = await self.db_adapter.execute_query(dep_query, (schema, view))
+
+        dependencies = []
+        for row in deps:
+            dep = {
+                "schema": row["schema_name"],
+                "name": row["entity_name"],
+                "full_name": f"{row['schema_name']}.{row['entity_name']}",
+                "type": row["object_type"],
+                "is_caller_dependent": bool(row.get("is_caller_dependent", 0))
+            }
+            dependencies.append(dep)
+
+        return dependencies
+
     async def _get_view_dependencies(self, schema: str, view: str) -> List[str]:
         """
-        Get objects that a view depends on.
+        Get objects that a view depends on (legacy method for compatibility).
 
         Args:
             schema: Schema name
@@ -331,20 +385,176 @@ class MSSQLCatalogBuilder:
         Returns:
             List of dependent object names
         """
-        dep_query = """
-        SELECT DISTINCT
-            referenced_schema + '.' + referenced_entity as dependency
-        FROM sys.sql_expression_dependencies
-        WHERE referencing_id = OBJECT_ID(? + '.' + ?)
-            AND referenced_class = 1  -- object
-        """
+        detailed_deps = await self._get_view_dependencies_detailed(schema, view)
+        return [dep["full_name"] for dep in detailed_deps]
 
-        deps = await self.db_adapter.execute_query(dep_query, (schema, view))
-        return [row["dependency"] for row in deps]
+    def _analyze_view_business_logic(self, definition: str, columns: List[Dict[str, Any]], dependencies: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Analyze view definition for business logic patterns.
+
+        Args:
+            definition: View SQL definition
+            columns: View column metadata
+            dependencies: View dependencies
+
+        Returns:
+            Business analysis dictionary
+        """
+        analysis = {
+            "has_aggregates": False,
+            "has_joins": False,
+            "join_count": 0,
+            "has_group_by": False,
+            "has_order_by": False,
+            "has_where_clause": False,
+            "has_subqueries": False,
+            "estimated_complexity": "simple",
+            "business_indicators": [],
+            "data_transformation_type": "direct"
+        }
+
+        if not definition:
+            return analysis
+
+        definition_upper = definition.upper()
+
+        # Check for SQL constructs
+        analysis["has_aggregates"] = any(func in definition_upper for func in ["SUM(", "COUNT(", "AVG(", "MIN(", "MAX("])
+        analysis["has_group_by"] = "GROUP BY" in definition_upper
+        analysis["has_order_by"] = "ORDER BY" in definition_upper
+        analysis["has_where_clause"] = "WHERE" in definition_upper
+        analysis["has_subqueries"] = "(SELECT" in definition_upper
+
+        # Count joins
+        join_keywords = ["INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "FULL JOIN", "JOIN"]
+        analysis["join_count"] = sum(definition_upper.count(keyword) for keyword in join_keywords)
+        analysis["has_joins"] = analysis["join_count"] > 0
+
+        # Determine data transformation type
+        if analysis["has_aggregates"] and analysis["has_group_by"]:
+            analysis["data_transformation_type"] = "aggregated"
+        elif analysis["has_joins"]:
+            analysis["data_transformation_type"] = "joined"
+        elif analysis["has_where_clause"]:
+            analysis["data_transformation_type"] = "filtered"
+
+        # Business indicators
+        business_keywords = {
+            "sales": ["SALES", "REVENUE", "ORDER", "TRANSACTION", "INVOICE"],
+            "customer": ["CUSTOMER", "CLIENT", "USER", "ACCOUNT"],
+            "product": ["PRODUCT", "ITEM", "ARTICLE", "GOODS"],
+            "financial": ["AMOUNT", "PRICE", "COST", "PROFIT", "MARGIN"],
+            "time": ["DATE", "TIME", "PERIOD", "MONTH", "YEAR"]
+        }
+
+        for category, keywords in business_keywords.items():
+            if any(kw in definition_upper for kw in keywords):
+                analysis["business_indicators"].append(category)
+
+        # Estimate complexity
+        complexity_score = 0
+        complexity_score += analysis["join_count"] * 2
+        complexity_score += 3 if analysis["has_aggregates"] else 0
+        complexity_score += 2 if analysis["has_subqueries"] else 0
+        complexity_score += 1 if analysis["has_group_by"] else 0
+        complexity_score += len(dependencies) * 0.5
+
+        if complexity_score >= 8:
+            analysis["estimated_complexity"] = "high"
+        elif complexity_score >= 4:
+            analysis["estimated_complexity"] = "medium"
+        else:
+            analysis["estimated_complexity"] = "low"
+
+        return analysis
+
+    def _classify_view_role_advanced(self, business_analysis: Dict[str, Any], dependencies: List[Dict[str, Any]], columns: List[Dict[str, Any]]) -> Dict[str, float]:
+        """
+        Advanced view role classification based on comprehensive analysis.
+
+        Args:
+            business_analysis: Business logic analysis
+            dependencies: View dependencies
+            columns: View columns
+
+        Returns:
+            Role coverage scores for different business roles
+        """
+        roles = {
+            "reporting": 0.0,      # Business intelligence and reporting views
+            "operational": 0.0,    # Day-to-day operational data
+            "analytical": 0.0,     # Complex analytical aggregations
+            "integration": 0.0,    # Data integration and consolidation
+            "security": 0.0        # Access control and security views
+        }
+
+        # Reporting role indicators
+        if business_analysis["data_transformation_type"] in ["aggregated", "joined"]:
+            roles["reporting"] += 0.6
+        if "sales" in business_analysis["business_indicators"] or "financial" in business_analysis["business_indicators"]:
+            roles["reporting"] += 0.4
+
+        # Analytical role indicators
+        if business_analysis["has_aggregates"] and business_analysis["estimated_complexity"] in ["medium", "high"]:
+            roles["analytical"] += 0.7
+        if business_analysis["join_count"] >= 3:
+            roles["analytical"] += 0.3
+
+        # Operational role indicators
+        if business_analysis["data_transformation_type"] == "filtered" and business_analysis["estimated_complexity"] == "low":
+            roles["operational"] += 0.5
+        if len(dependencies) <= 2 and business_analysis["join_count"] <= 1:
+            roles["operational"] += 0.3
+
+        # Integration role indicators
+        if business_analysis["join_count"] >= 2 and len(dependencies) >= 3:
+            roles["integration"] += 0.6
+        if business_analysis["data_transformation_type"] == "joined":
+            roles["integration"] += 0.4
+
+        # Security role indicators (lower priority, harder to detect)
+        if "security" in business_analysis.get("business_indicators", []):
+            roles["security"] += 0.4
+
+        return roles
+
+    def _calculate_view_complexity(self, definition: str, dependencies: List[Dict[str, Any]], columns: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Calculate view complexity metrics.
+
+        Args:
+            definition: View SQL definition
+            dependencies: View dependencies
+            columns: View columns
+
+        Returns:
+            Complexity metrics dictionary
+        """
+        complexity = {
+            "dependency_count": len(dependencies),
+            "column_count": len(columns),
+            "definition_length": len(definition) if definition else 0,
+            "table_dependency_count": len([d for d in dependencies if d.get("type") == "OBJECT_OR_COLUMN"]),
+            "view_dependency_count": len([d for d in dependencies if d.get("type") == "VIEW"]),
+            "function_dependency_count": len([d for d in dependencies if d.get("type") == "SCALAR_FUNCTION"]),
+            "estimated_maintenance_cost": "low"
+        }
+
+        # Estimate maintenance cost
+        maintenance_score = complexity["dependency_count"] + complexity["column_count"] // 10
+        if definition:
+            maintenance_score += len(definition) // 1000  # Longer definitions are harder to maintain
+
+        if maintenance_score >= 10:
+            complexity["estimated_maintenance_cost"] = "high"
+        elif maintenance_score >= 5:
+            complexity["estimated_maintenance_cost"] = "medium"
+
+        return complexity
 
     def _classify_view_role(self, definition: str, dependencies: List[str]) -> float:
         """
-        Classify view's business role based on definition and dependencies.
+        Legacy view role classification (for backward compatibility).
 
         Args:
             definition: View SQL definition
@@ -353,24 +563,14 @@ class MSSQLCatalogBuilder:
         Returns:
             Role coverage score (0.0-1.0)
         """
-        if not definition:
-            return 0.0
+        # Convert detailed dependencies to simple list for legacy method
+        if isinstance(dependencies[0], dict):
+            simple_deps = [dep["full_name"] for dep in dependencies]
+        else:
+            simple_deps = dependencies
 
-        definition_lower = definition.lower()
-        score = 0.0
+        business_analysis = self._analyze_view_business_logic(definition, [], [])
+        role_scores = self._classify_view_role_advanced(business_analysis, [], [])
 
-        # Business intelligence indicators
-        bi_keywords = ["sum", "count", "avg", "group by", "join", "sales", "revenue", "customer"]
-        if any(kw in definition_lower for kw in bi_keywords):
-            score += 0.4
-
-        # Multiple table joins indicate complex business logic
-        join_count = definition_lower.count("join")
-        if join_count > 1:
-            score += min(join_count * 0.2, 0.4)
-
-        # Dependencies on multiple tables
-        if len(dependencies) > 2:
-            score += 0.2
-
-        return min(score, 1.0)
+        # Return the highest role score as a single float
+        return max(role_scores.values()) if role_scores else 0.0

@@ -39,6 +39,12 @@ from langgraph_integration.agents.answer.agent import AnswerAgent
 from langgraph_integration.mcp_client import MCPDatabaseTool
 from langgraph_integration.debug_logger import get_debug_logger
 
+# Import for Scout catalog access
+try:
+    from mcp_server.tools import _get_scout_runner
+except ImportError:
+    _get_scout_runner = None
+
 logger = logging.getLogger(__name__)
 debug_logger = get_debug_logger()
 
@@ -120,7 +126,27 @@ class QueryOrchestrator:
         self.answer_agent = AnswerAgent(llm_model=llm_model, llm_temp=llm_temp)
         logger.info("✅ AnswerAgent initialized (Result formatting)")
 
+        # Phase 4: MCP client lifecycle management
+        self.mcp_client = MCPDatabaseTool()
+        logger.info("✅ MCP Client initialized (Connection pooling)")
+
         self.graph = self._build_graph()
+
+    async def __aenter__(self):
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit - cleanup connections."""
+        try:
+            await self.mcp_client.close()
+            logger.info("✅ MCP client connections closed")
+        except Exception as e:
+            logger.warning(f"Error closing MCP client: {e}")
+
+    async def close(self):
+        """Explicit cleanup method."""
+        await self.__aexit__(None, None, None)
 
     def _build_graph(self) -> StateGraph:
         """
@@ -514,8 +540,20 @@ class QueryOrchestrator:
             debug_logger.agent_exit("join_sql", before_state, dict(state))
             return state
 
-        # Select the most appropriate table based on query intent
-        primary_table = self._select_best_table_for_query(relevant_tables, intent)
+        # Phase 3: Select the most appropriate table OR view using views-first approach
+        # Phase 5: Add join planner fallback for complex multi-table queries
+        candidate_views = state.get("candidate_views", [])
+        primary_table = await asyncio.get_event_loop().run_in_executor(
+            None, self._select_best_table_or_view_for_query, relevant_tables, candidate_views, intent
+        )
+
+        # Phase 5: If no suitable view/table found, try join planning
+        if not primary_table:
+            join_plan = await self._try_join_planning(relevant_tables, intent)
+            if join_plan:
+                primary_table = "join_plan"  # Special marker for join-based queries
+                state["join_plan"] = join_plan
+                logger.info(f"🔗 [JOIN_SQL] Using join plan with {len(join_plan.get('tables', []))} tables")
         metrics = intent.get("metrics", [])
         time_window = intent.get("time_window")
 
@@ -530,13 +568,19 @@ class QueryOrchestrator:
                 table_info = table
                 break
 
-        # Generate appropriate SQL based on query intent
-        # COUNT queries are safe on any table and provide meaningful results
-        if "count" in metrics or "total" in metrics or len(metrics) == 0:
-            sql_query = f"SELECT COUNT(*) AS total_count FROM {primary_table}"
+        # Phase 5: Handle join plans vs single table queries
+        if primary_table == "join_plan":
+            # Use join planner to generate SQL
+            join_plan = state.get("join_plan", {})
+            sql_query = await self._generate_sql_from_join_plan(join_plan, intent)
         else:
-            # For other queries, sample the data to understand structure
-            sql_query = f"SELECT TOP 10 * FROM {primary_table}"
+            # Generate appropriate SQL based on query intent for single table
+            # COUNT queries are safe on any table and provide meaningful results
+            if "count" in metrics or "total" in metrics or len(metrics) == 0:
+                sql_query = f"SELECT COUNT(*) AS total_count FROM {primary_table}"
+            else:
+                # For other queries, sample the data to understand structure
+                sql_query = f"SELECT TOP 10 * FROM {primary_table}"
 
         # For now, skip time filtering since we don't know the date column names
         # This would need schema analysis to identify date columns
@@ -550,8 +594,86 @@ class QueryOrchestrator:
         debug_logger.agent_exit("join_sql", before_state, dict(state))
         return state
 
+    def _select_best_table_or_view_for_query(self, tables, views, intent: Dict[str, Any]) -> str:
+        """
+        Select the most appropriate table OR view for the query based on intent.
+
+        Phase 3: Views-first approach - prioritize views that contain pre-joined business data
+        over raw tables that would require complex joins.
+        """
+        # Get query characteristics
+        primary_entities = intent.get("primary_entities", [])
+        keywords = intent.get("keywords_for_discovery", [])
+        metrics = intent.get("metrics", [])
+        operations = intent.get("operation", [])
+
+        logger.info(f"🎯 [TABLE_SELECTION] Views-first selection for query")
+        logger.info(f"🎯 [TABLE_SELECTION]   entities: {primary_entities}")
+        logger.info(f"🎯 [TABLE_SELECTION]   keywords: {keywords}")
+        logger.info(f"🎯 [TABLE_SELECTION]   metrics: {metrics}")
+        logger.info(f"🎯 [TABLE_SELECTION]   available tables: {len(tables) if tables else 0}")
+        logger.info(f"🎯 [TABLE_SELECTION]   available views: {len(views) if views else 0}")
+
+        # Phase 3: VIEWS-FIRST APPROACH
+        # 1. First, evaluate all views by business relevance
+        if views:
+            best_view = self._select_best_view_for_query(views, intent)
+            if best_view:
+                logger.info(f"🎯 [TABLE_SELECTION] ✅ Selected VIEW: {best_view}")
+                return best_view
+
+        # 2. Fallback to tables if no suitable views found
+        logger.info(f"🎯 [TABLE_SELECTION] No suitable views found, evaluating tables...")
+        best_table = self._select_best_table_for_query(tables, intent)
+        if best_table:
+            logger.info(f"🎯 [TABLE_SELECTION] ✅ Selected TABLE: {best_table}")
+            return best_table
+
+        logger.warning(f"🎯 [TABLE_SELECTION] ❌ No suitable table or view found")
+        return ""
+
+    def _select_best_view_for_query(self, views, intent: Dict[str, Any]) -> str:
+        """Select the best view for the query using business relevance ranking."""
+        if not views:
+            return ""
+
+        from mcp_server.table_ranker import ViewsRanker
+
+        primary_entities = intent.get("primary_entities", [])
+        keywords = intent.get("keywords_for_discovery", [])
+        operations = intent.get("operation", [])
+
+        # Convert views list to dict format expected by ViewsRanker
+        views_dict = {}
+        for view in views:
+            if isinstance(view, dict):
+                view_name = view.get("full_name", view.get("name", ""))
+                if view_name:
+                    views_dict[view_name] = view
+
+        if not views_dict:
+            return ""
+
+        # Use ViewsRanker for intelligent view selection
+        ranker = ViewsRanker()
+        ranked_views = ranker.rank_views(
+            views_dict,
+            entities=primary_entities + keywords,  # Combine entities and keywords
+            intent_operations=operations,
+            query_context={"intent": intent}
+        )
+
+        if ranked_views and ranked_views[0].score > 0.3:  # Minimum threshold for view selection
+            best_view = ranked_views[0]
+            logger.info(f"👁️ [VIEW_SELECTION] Selected view '{best_view.full_name}' with score {best_view.score:.2f}")
+            logger.info(f"👁️ [VIEW_SELECTION] Reasons: {', '.join(best_view.reasons[:2])}")
+            return best_view.full_name
+
+        logger.debug(f"👁️ [VIEW_SELECTION] No views met minimum score threshold (0.3)")
+        return ""
+
     def _select_best_table_for_query(self, tables, intent: Dict[str, Any]) -> str:
-        """Select the most appropriate table for the query based on intent."""
+        """Select the most appropriate table for the query based on intent (fallback when no views available)."""
         if not tables:
             return ""
 
@@ -631,6 +753,88 @@ class QueryOrchestrator:
             logger.debug(f"🔗 [TABLE_SELECTION]   {table_name}: {score:.3f}")
 
         return best_table
+
+    async def _try_join_planning(self, relevant_tables: List[Dict[str, Any]], intent: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Phase 5: Try join planning as fallback when no suitable single table/view is found.
+
+        Uses Scout catalog relationships to find multi-table join paths.
+        """
+        try:
+            # Get Scout catalog for relationship data
+            scout_runner = _get_scout_runner(self.db_manager) if hasattr(self, 'db_manager') else None
+            if not scout_runner:
+                logger.debug("🔗 [JOIN_PLANNER] No Scout catalog available for join planning")
+                return None
+
+            catalog = scout_runner.get_catalog()
+            if not catalog:
+                logger.debug("🔗 [JOIN_PLANNER] Scout catalog not loaded")
+                return None
+
+            # Initialize join planner
+            from mcp_server.join_planner import JoinPlanner
+            planner = JoinPlanner(catalog)
+
+            # Extract available table names
+            available_tables = [t.get("full_name", t.get("name", "")) for t in relevant_tables if t.get("full_name") or t.get("name")]
+
+            # Get query entities to find join targets
+            entities = intent.get("primary_entities", []) + intent.get("keywords_for_discovery", [])
+
+            if not available_tables or not entities:
+                logger.debug(f"🔗 [JOIN_PLANNER] Insufficient data: tables={len(available_tables)}, entities={len(entities)}")
+                return None
+
+            # Try to find join path
+            join_plan = planner.find_join_path(available_tables, entities, max_hops=3)
+
+            if join_plan:
+                # Validate join plan complexity
+                complexity = planner.estimate_join_complexity(join_plan)
+                if complexity["performance_rating"] in ["excellent", "good", "fair"]:
+                    logger.info(f"🔗 [JOIN_PLANNER] Found viable join plan: {len(join_plan['tables'])} tables, {complexity['performance_rating']} performance")
+                    return join_plan
+                else:
+                    logger.info(f"🔗 [JOIN_PLANNER] Join plan too complex: {complexity['performance_rating']} performance")
+                    return None
+
+            logger.debug("🔗 [JOIN_PLANNER] No suitable join path found")
+            return None
+
+        except Exception as e:
+            logger.warning(f"🔗 [JOIN_PLANNER] Join planning failed: {e}")
+            return None
+
+    async def _generate_sql_from_join_plan(self, join_plan: Dict[str, Any], intent: Dict[str, Any]) -> str:
+        """
+        Phase 5: Generate SQL from join plan using the join planner.
+        """
+        try:
+            # Get Scout catalog
+            scout_runner = _get_scout_runner(self.db_manager) if hasattr(self, 'db_manager') else None
+            if not scout_runner:
+                return ""
+
+            catalog = scout_runner.get_catalog()
+            if not catalog:
+                return ""
+
+            # Use join planner to generate SQL
+            from mcp_server.join_planner import JoinPlanner
+            planner = JoinPlanner(catalog)
+            sql = planner.generate_sql_from_plan(join_plan, intent)
+
+            if sql:
+                logger.info(f"🔗 [JOIN_SQL] Generated join SQL: {sql[:100]}...")
+                return sql
+            else:
+                logger.warning("🔗 [JOIN_SQL] Join planner failed to generate SQL")
+                return ""
+
+        except Exception as e:
+            logger.error(f"🔗 [JOIN_SQL] Error generating SQL from join plan: {e}")
+            return ""
 
     async def _exec_recovery_node(self, state: BaseState) -> BaseState:
         """
@@ -907,40 +1111,42 @@ class QueryOrchestrator:
     async def process_query(self, user_input: str) -> str:
         """
         High-level interface: process a query and return the final response.
-        
+
         Args:
             user_input: User's natural language query
-            
+
         Returns:
             Final response string (1-2 sentence answer or clarification)
         """
         logger.info(f"📝 Processing query: {user_input[:100]}...")
 
-        try:
-            # Create initial state
-            initial_state = BaseState(
-                user_input=user_input,
-                messages=[],
-                session_described_tables={},
-                retry_count=0
-            )
+        # Phase 4: Use async context management for proper resource cleanup
+        async with self:
+            try:
+                # Create initial state
+                initial_state = BaseState(
+                    user_input=user_input,
+                    messages=[],
+                    session_described_tables={},
+                    retry_count=0
+                )
 
-            # Run the graph using async API since we're in an async context
-            # This allows proper handling of async nodes without blocking
-            # Always use ainvoke for async compatibility
-            result = await self.graph.ainvoke(initial_state)
+                # Run the graph using async API since we're in an async context
+                # This allows proper handling of async nodes without blocking
+                # Always use ainvoke for async compatibility
+                result = await self.graph.ainvoke(initial_state)
 
-            # Extract final response
-            final_response = result.get("final_response", "No response generated")
-            logger.info(f"✅ Query processed successfully")
-            return final_response
+                # Extract final response
+                final_response = result.get("final_response", "No response generated")
+                logger.info(f"✅ Query processed successfully")
+                return final_response
 
-        except Exception as e:
-            import traceback
-            logger.error(f"❌ Error processing query: {e}")
-            logger.error(f"❌ Exception type: {type(e).__name__}")
-            logger.error(f"❌ Traceback:\n{traceback.format_exc()}")
-            return f"Error processing query: {str(e)}"
+            except Exception as e:
+                import traceback
+                logger.error(f"❌ Error processing query: {e}")
+                logger.error(f"❌ Exception type: {type(e).__name__}")
+                logger.error(f"❌ Traceback:\n{traceback.format_exc()}")
+                return f"Error processing query: {str(e)}"
 
 
 # ============= Factory and export functions =============

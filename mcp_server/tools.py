@@ -1508,52 +1508,69 @@ class MCPTools:
     
     @staticmethod
     async def _list_views(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
-        """List views with pagination (catalog-only)."""
+        """List views with pagination (Phase 1: Scout catalog-aware)."""
         page = arguments.get("page", 1)
         page_size = arguments.get("page_size", 25)
         schema = arguments.get("schema")
         pattern = arguments.get("pattern")
         include_empty = arguments.get("include_empty", False)
-        
-        try:
-            if not getattr(db_manager, 'catalog', None):
-                return MCPToolResult(content=[{"type":"text","text":"Catalog not initialized"}], isError=True)
-            
-            # Pull all items and filter to views
-            all_items = db_manager.catalog.get_table_list()
-            views = []
 
-            # Stats for Scout mode: candidates and empties among views (pre-threshold)
+        try:
+            # Phase 1: Try Scout catalog first for instant results
+            scout_runner = _get_scout_runner(db_manager)
+            if scout_runner and scout_runner.is_ready():
+                catalog = scout_runner.get_catalog()
+                if catalog and "views" in catalog:
+                    # Use Scout catalog views
+                    views_dict = catalog["views"]
+                    views = list(views_dict.values())
+                else:
+                    views = []
+            else:
+                # Fallback to legacy catalog
+                if not getattr(db_manager, 'catalog', None):
+                    return MCPToolResult(content=[{"type":"text","text":"Catalog not initialized"}], isError=True)
+
+                # Pull all items and filter to views
+                all_items = db_manager.catalog.get_table_list()
+                views = [t for t in all_items if str(t.get('type','')).upper() == 'VIEW']
+
+            # Apply filters
+            filtered_views = []
             total_candidates = 0
             empty_candidates = 0
 
-            for t in all_items:
-                if str(t.get('type','')).upper() != 'VIEW':
+            for view in views:
+                view_name = view.get('name', '')
+                view_schema = view.get('schema', '')
+
+                if schema and view_schema.lower() != schema.lower():
                     continue
-                if schema and t['schema'].lower() != schema.lower():
+                if pattern and pattern.lower() not in view_name.lower():
                     continue
-                if pattern and pattern.lower() not in t['name'].lower():
-                    continue
-                est = int(t.get('estimated_rows') or 0)
+
+                est = int(view.get('estimated_rows', 0) or 0)
                 total_candidates += 1
                 if est == 0:
                     empty_candidates += 1
                 # empty filtering uses estimated_rows
                 if not include_empty and est <= 0:
                     continue
-                views.append({
-                    "schema": t['schema'],
-                    "name": t['name'],
-                    "full_name": t['full_name'],
+                filtered_views.append({
+                    "schema": view_schema,
+                    "name": view_name,
+                    "full_name": view.get('full_name', f"{view_schema}.{view_name}"),
                     "estimated_rows": est,
-                    "column_count": t.get('column_count', 0)
+                    "column_count": view.get('column_count', 0),
+                    "role_coverage": view.get('role_coverage', {}),
+                    "complexity": view.get('complexity', {})
                 })
-            total = len(views)
+            total = len(filtered_views)
             page = max(1, page)
             page_size = min(max(1, page_size), 100)
             start = (page-1)*page_size
             end = start + page_size
-            page_views = views[start:end]
+            page_views = filtered_views[start:end]
             total_pages = (total + page_size - 1) // page_size if total>0 else 1
             
             text = {
