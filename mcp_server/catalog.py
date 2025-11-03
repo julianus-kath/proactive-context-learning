@@ -166,7 +166,7 @@ class SchemaCatalog:
         connector,
         dialect: str,
         cache_dir: Optional[str] = None,
-        ttl: int = 3600,  # 1 hour default
+        ttl: int = 360000,
         auto_warmup: bool = True
     ):
         """
