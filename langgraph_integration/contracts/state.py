@@ -5,7 +5,47 @@ Each agent has explicit input/output contracts via TypedDict.
 BaseState is the union of all fields; individual agents only consume/produce their declared fields.
 """
 
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, Optional, TypedDict, Literal
+
+
+class ParsedIntent(TypedDict, total=False):
+    """
+    Structured intent output from IntentParserAgent.
+    Replaces loose dict with clear, semantic structure.
+    
+    This is the SINGLE SOURCE OF TRUTH for intent information.
+    Discovery and other agents consume ONLY from this, not from user_input.
+    """
+    
+    # Operation type (determines routing)
+    operation: Literal["query", "schema_query", "health_check"]
+    
+    # Semantic entities (2-3 max, cleaned nouns)
+    # e.g., ["products", "inventory"] NOT ["Which", "have", "below"]
+    primary_entities: List[str]
+    
+    # Metrics/measures the user wants
+    # e.g., ["count", "total_quantity", "average_price"]
+    metrics: List[str]
+    
+    # Structured filters extracted from intent
+    # e.g., [{"field": "inventory", "operator": "<", "value": "100"}]
+    filters: List[Dict[str, Any]]
+    
+    # Time window constraints if present
+    # e.g., {"period": "last_30_days", "start": "2024-11-01", "end": "2024-12-01"}
+    time_window: Optional[Dict[str, Any]]
+    
+    # CLEAN keywords for discovery search (NO noise from "Which", "how", "many")
+    # Built from primary_entities, metrics, and semantic analysis
+    # e.g., ["products", "inventory", "stock"]
+    keywords_for_discovery: List[str]
+    
+    # Original user input (for reference only, never re-parsed)
+    raw_query: str
+    
+    # Confidence score [0.0..1.0] that intent parsing is correct
+    confidence: float
 
 
 class BaseState(TypedDict, total=False):
@@ -20,7 +60,9 @@ class BaseState(TypedDict, total=False):
     user_input: str  # Current user query
 
     # Intent analysis (from parse_intent node)
-    intent: Dict[str, Any]  # {operation, entities, filters, time_window, ...}
+    # 🆕 PHASE 9: Structured intent (ParsedIntent) replacing loose dict
+    # Produced by IntentParserAgent (semantic, LLM-based), consumed by Discovery & others
+    intent: ParsedIntent  # Structured: operation, entities, metrics, filters, clean keywords
 
     # Discovery phase outputs
     relevant_tables: List[str]  # ["dbo.sales_orders", "dbo.order_items", ...]

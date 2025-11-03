@@ -559,37 +559,65 @@ class DiscoveryAgent:
     # Helper methods
     
     def _extract_keywords(self, user_input: str, intent: Dict[str, Any]) -> List[str]:
-        """Extract search keywords from user input and intent."""
-        keywords = []
+        """
+        Extract search keywords from ParsedIntent (Phase 9).
         
-        # From intent entities
-        entities = intent.get("entities", [])
-        for ent in entities:
-            if isinstance(ent, dict):
-                keywords.append(ent.get("name", ""))
-            else:
-                keywords.append(str(ent))
+        🆕 CRITICAL FIX (Phase 9):
+        - BEFORE: Re-extracted from both intent.entities AND user_input → double extraction, spam
+        - AFTER: Uses ONLY intent.keywords_for_discovery (pre-cleaned by IntentParserAgent)
         
-        # From user input (main nouns)
-        # Simple heuristic: split and filter common words
-        words = user_input.lower().split()
-        # 🔧 CRITICAL FIX: Added "have", "do", "does", "did" to common_words to prevent "have" being searched as a table keyword
-        common_words = {
-            "the", "a", "an", "is", "are", "was", "were", "by", "of", "for", "to", "and", "or", "in", "on", "at",
-            "how", "many", "show", "me", "please", "get", "list", "find", "search", "what",
-            "have", "has", "had", "do", "does", "did", "be", "been", "be", "with", "from", "as", "it",
-            "we", "you", "they", "he", "she", "this", "that", "there", "where", "when", "why", "which", "who"
-        }
-        for word in words:
-            if word not in common_words and len(word) > 2:
-                keywords.append(word.strip("?,.!"))
+        This prevents the "per-word discovery spam" problem where:
+        Query "Which products have inventory below 100?" → Used to search: "Which", "products", "inventory", "below"
+        Now: Uses only ["products", "inventory"] from intent parser's semantic analysis
         
-        # Deduplicate and filter
+        Args:
+            user_input: Original query (NOT re-parsed, kept for reference only)
+            intent: ParsedIntent with keywords_for_discovery (clean, semantic)
+            
+        Returns:
+            List of clean keywords for discovery (no function words)
+        """
+        
+        # 🆕 Phase 9: Use ONLY the clean keywords from ParsedIntent
+        # The IntentParserAgent already did semantic analysis and filtering
+        # DO NOT re-extract from user_input (that causes double extraction)
+        
+        keywords = intent.get("keywords_for_discovery", [])
+        
+        if not keywords:
+            # Fallback: if intent parser failed to provide keywords, do minimal fallback
+            logger.warning(f"⚠️  No keywords in intent, using fallback extraction")
+            keywords = self._fallback_keyword_extraction(user_input)
+        
+        # Ensure we have valid keywords
         keywords = [k for k in keywords if k and len(k) > 1]
-        keywords = list(dict.fromkeys(keywords))  # Remove duplicates preserving order
         
-        logger.info(f"📌 Extracted keywords: {keywords}")
+        logger.info(f"📌 Using keywords from ParsedIntent: {keywords}")
         return keywords[:5]  # Limit to 5 keywords
+    
+    def _fallback_keyword_extraction(self, user_input: str) -> List[str]:
+        """
+        Fallback extraction if intent parser didn't provide keywords.
+        
+        This should rarely happen, but provides graceful degradation.
+        """
+        stop_words = {
+            "the", "a", "an", "is", "are", "was", "were", "be", "been",
+            "by", "of", "for", "to", "and", "or", "in", "on", "at",
+            "how", "many", "show", "me", "please", "get", "list", "find", "search", "what",
+            "have", "has", "had", "do", "does", "did", "with", "from", "as", "it",
+            "we", "you", "they", "he", "she", "this", "that", "there",
+            "where", "when", "why", "which", "who"
+        }
+        
+        words = user_input.lower().split()
+        keywords = []
+        for word in words:
+            word = word.strip("?,.!;:")
+            if word not in stop_words and len(word) > 2:
+                keywords.append(word)
+        
+        return list(dict.fromkeys(keywords))[:5]
     
     def _parse_search_result(self, result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Parse MCP search_tables result."""

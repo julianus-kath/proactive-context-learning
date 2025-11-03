@@ -1,7 +1,8 @@
 """
-Multi-Agent Orchestrator - ACTIVE PRODUCTION SYSTEM (Phase 8)
+Multi-Agent Orchestrator - ACTIVE PRODUCTION SYSTEM (Phase 9)
 
-Composes 4 specialized agents to answer any ERP question:
+Composes 5 specialized agents to answer any ERP question:
+0. IntentParserAgent: Semantic intent parsing (🆕 Phase 9: fixes double-keyword-extraction)
 1. DiscoveryAgent: Finds relevant tables/views (Scout mode, semantic ranking, role-based)
 2. JoinPlanAndSQLAgent: Plans joins and generates MSSQL queries (views-first strategy, FK analysis)
 3. ExecAndRecoveryAgent: Executes safely and recovers from errors (row caps, timeouts, repair logic)
@@ -10,9 +11,14 @@ Composes 4 specialized agents to answer any ERP question:
 This orchestrator replaces the monolithic DatabaseWorkflow with a modular, composable design
 that enables better reasoning, testability, and maintenance.
 
+ARCHITECTURE CHANGE (Phase 9):
+- BEFORE: _simple_intent_parser() → naive regex, double extraction by discovery
+- AFTER: IntentParserAgent() → LLM-based semantic parsing, clean structured keywords
+- BENEFIT: Discovery called ONCE with clean keywords, ~3 candidates instead of 943×N
+
 ARCHITECTURE CHANGE (ADR-0019):
 - BEFORE: Single DatabaseWorkflow class (12+ methods, mixed concerns)
-- AFTER: 4 specialized agents composed by orchestrator (separation of concerns)
+- AFTER: 5 specialized agents composed by orchestrator (separation of concerns)
 - BENEFIT: Each agent focuses on its phase; reasoning is optimized per phase
 """
 
@@ -25,6 +31,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
 
 from langgraph_integration.contracts.state import BaseState
+from langgraph_integration.agents.intent_parser.agent import IntentParserAgent
 from langgraph_integration.agents.discovery.agent import DiscoveryAgent
 from langgraph_integration.agents.join_sql.agent import JoinPlanAndSQLAgent
 from langgraph_integration.agents.exec_recovery.agent import ExecAndRecoveryAgent
@@ -81,7 +88,11 @@ class QueryOrchestrator:
         self.mcp = MCPDatabaseTool()
 
         # Initialize specialized agents
-        logger.info("🚀 Initializing multi-agent orchestrator...")
+        logger.info("🚀 Initializing multi-agent orchestrator (Phase 9)...")
+        
+        # 🆕 Phase 9: IntentParserAgent for semantic parsing (fixes double-keyword-extraction)
+        self.intent_parser = IntentParserAgent(llm_model=llm_model, llm_temp=llm_temp)
+        logger.info("✅ IntentParserAgent initialized (Semantic intent parsing, clean keywords)")
         
         self.discovery_agent = DiscoveryAgent(llm_model=llm_model, llm_temp=llm_temp)
         logger.info("✅ DiscoveryAgent initialized (Scout semantic search)")
@@ -250,11 +261,17 @@ class QueryOrchestrator:
 
     async def _parse_intent_node(self, state: BaseState) -> BaseState:
         """
-        Parse user intent to determine operation type and entities.
+        Parse user intent using LLM-based semantic analysis (Phase 9).
         
-        Returns: {operation, entities, filters, time_window, ...}
+        🆕 Phase 9: Replaces naive _simple_intent_parser with IntentParserAgent
+        - Extracts structured ParsedIntent (not loose dict)
+        - Produces clean keywords for discovery (NO noise from function words)
+        - Returns metrics, filters, time_window for better ranking
+        - Fixes double-keyword-extraction problem
+        
+        Returns: ParsedIntent with operation, entities, metrics, filters, keywords_for_discovery, confidence
         """
-        logger.info("🧠 Parsing intent...")
+        logger.info("🧠 Parsing intent with IntentParserAgent...")
 
         user_input = state.get("user_input", "")
         messages = state.get("messages", [])
@@ -267,9 +284,15 @@ class QueryOrchestrator:
             return {**state, "error_info": error}
 
         try:
-            # Simple intent parsing (can be enhanced with LLM)
-            intent = self._simple_intent_parser(user_input)
-            logger.info(f"✅ Intent parsed: operation={intent['operation']}")
+            # 🆕 Phase 9: Use IntentParserAgent for semantic parsing
+            intent = await self.intent_parser.parse(user_input)
+            
+            logger.info(
+                f"✅ Intent parsed: operation={intent['operation']}, "
+                f"entities={intent['primary_entities']}, "
+                f"keywords={intent['keywords_for_discovery']}, "
+                f"confidence={intent['confidence']:.2f}"
+            )
             state["intent"] = intent
             return state
 
@@ -493,43 +516,10 @@ class QueryOrchestrator:
 
     # ============= Helper methods =============
 
-    def _simple_intent_parser(self, user_input: str) -> Dict[str, Any]:
-        """
-        Simple intent parsing (can be enhanced with LLM).
-        
-        Returns: {operation, entities, filters, ...}
-        """
-        user_lower = user_input.lower()
-
-        # Check for schema query
-        schema_keywords = [
-            "what table", "schema", "database structure", "what columns",
-            "what fields", "list table", "how many table"
-        ]
-        if any(kw in user_lower for kw in schema_keywords):
-            return {"operation": "schema_query", "entities": []}
-
-        # Check for health check
-        health_keywords = [
-            "health", "status", "working", "running", "online", "available"
-        ]
-        if any(kw in user_lower for kw in health_keywords):
-            return {"operation": "health_check", "entities": []}
-
-        # Default: query operation
-        # Extract entities (simple heuristic)
-        entities = []
-        words = user_input.split()
-        for word in words:
-            if len(word) > 3 and word not in ["show", "how", "many", "with", "from", "into"]:
-                entities.append(word.strip("?,.!"))
-
-        return {
-            "operation": "query",
-            "entities": entities[:3],
-            "filters": {},
-            "time_window": None
-        }
+    # ❌ DEPRECATED: _simple_intent_parser removed in Phase 9
+    # Replaced with IntentParserAgent.parse() for semantic parsing
+    # Reason: Naive regex caused double-keyword-extraction problem
+    # See: CHANGES_SUMMARY.md "Intent Parsing Architecture Gap"
 
     async def process_query(self, user_input: str) -> str:
         """
