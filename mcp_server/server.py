@@ -19,6 +19,8 @@ from mcp_server.scout_mode import run_scout_mode
 from mcp_server.discovery_tools import DiscoveryTools
 from mcp_server.observability import get_metrics_summary
 from mcp_server.tools import MCPTools
+from mcp_server.scout_runner import ScoutRunner
+from mcp_server.health import set_scout_runner, get_health_status, get_health_summary
 
 # Load environment variables
 load_dotenv()
@@ -47,6 +49,9 @@ API_KEY = os.getenv("MCP_API_KEY", "supersecretapikey")
 
 # Global database manager
 db_manager = None
+
+# Global Scout Runner
+scout_runner = None
 
 def verify_api_key(x_api_key: str = Header(None), authorization: str = Header(None)):
     # Check X-API-Key header first
@@ -106,19 +111,41 @@ async def startup_event():
             logger.error("❌ Database initialization timed out - check VPN/network connectivity")
             raise RuntimeError("Database connection timeout - VPN may not be active")
         
-        # Phase 7: Run Scout Mode (async, doesn't block startup)
+        # Phase 1: Initialize Scout Runner (async catalog management)
+        global scout_runner
         try:
-            cache_dir = os.path.join(os.path.dirname(__file__), 'cache')
-            scout_report = await asyncio.wait_for(
-                run_scout_mode(db_manager, cache_dir=cache_dir),
-                timeout=30
+            logger.info("🏗️ Initializing Scout Runner...")
+            scout_runner = ScoutRunner(
+                db_adapter=db_manager,
+                catalog_dir="data/catalog",
+                ttl_hours=24*7,  # 7 days
+                refresh_interval_hours=24
             )
-            logger.info(f"🔍 Scout Mode Report: {scout_report}")
-        except asyncio.TimeoutError:
-            logger.warning(f"⚠️ Scout Mode startup job timed out (non-blocking)")
+
+            # Set reference for health monitoring
+            set_scout_runner(scout_runner)
+
+            # Start Scout Runner (non-blocking)
+            await scout_runner.start()
+            logger.info("✅ Scout Runner initialized and started")
+
         except Exception as scout_error:
-            logger.warning(f"⚠️ Scout Mode startup job failed (non-blocking): {scout_error}")
+            logger.warning(f"⚠️ Scout Runner initialization failed (non-blocking): {scout_error}")
             # Don't raise - Scout Mode is optional and shouldn't block startup
+
+        # Legacy Phase 7: Run old Scout Mode as fallback (if new Scout fails)
+        if not scout_runner or not scout_runner.is_ready():
+            try:
+                cache_dir = os.path.join(os.path.dirname(__file__), 'cache')
+                scout_report = await asyncio.wait_for(
+                    run_scout_mode(db_manager, cache_dir=cache_dir),
+                    timeout=30
+                )
+                logger.info(f"🔍 Legacy Scout Mode Report: {scout_report}")
+            except asyncio.TimeoutError:
+                logger.warning(f"⚠️ Legacy Scout Mode startup job timed out (non-blocking)")
+            except Exception as scout_error:
+                logger.warning(f"⚠️ Legacy Scout Mode startup job failed (non-blocking): {scout_error}")
         
     except Exception as e:
         logger.error(f"❌ Failed to initialize MCP Database Server: {e}")
@@ -136,137 +163,24 @@ async def shutdown_event():
 @app.get("/health")
 async def health_check():
     """
-    Phase 7.1 (Scout Mode): Comprehensive health check with catalog metrics.
-    
-    Returns:
-    - ok: Overall health status
-    - service: Service name and version
-    - db_connected: Database connection status
-    - catalog: Scout catalog metrics (tables_count, catalog_age_s, cache_hits)
-    - pool_stats: Connection pool statistics
-    - discovery_tools: Discovery tools cache stats
-    - observability: Recent tool call metrics
-    - last_db_error: Last database error (if any)
+    Phase 1: Comprehensive health check with Scout Mode metrics.
+
+    Returns comprehensive health status including:
+    - Database connectivity
+    - Scout catalog status and metrics
+    - Build statistics and performance
     """
-    import time
-    
-    # Basic health status
-    health_data = {
-        "ok": True,
-        "service": "MCP Database Server",
-        "version": "1.0.0",
-        "phase": "7.1 - Scout Mode & Semantic Caching",
-        "timestamp": time.time()
-    }
-    
-    # Database connectivity
-    if db_manager is None:
-        health_data["ok"] = False
-        health_data["db_connected"] = False
-        health_data["error"] = "Database manager not initialized"
-        return health_data
-    
     try:
-        # Check if database is connected
-        db_connected = db_manager.pool is not None
-        health_data["db_connected"] = db_connected
-        
-        # Get database dialect/mode
-        if hasattr(db_manager, 'dialect'):
-            health_data["dialects"] = [db_manager.dialect]
-            health_data["db_mode"] = db_manager.dialect
-        elif hasattr(db_manager, 'client'):
-            health_data["dialects"] = [db_manager.client.mode]
-            health_data["db_mode"] = db_manager.client.mode
-        else:
-            health_data["dialects"] = ["unknown"]
-        
-        # Phase 7.1: Scout catalog metrics (from SchemaCatalog or SemanticCatalogBuilder)
-        health_data["catalog"] = {
-            "tables_count": 0,
-            "catalog_age_s": None,
-            "cache_hits": 0,
-            "cache_misses": 0,
-            "hit_ratio": 0.0,
-            "warmup_complete": False
-        }
-        
-        if hasattr(db_manager, 'catalog') and db_manager.catalog:
-            catalog = db_manager.catalog
-            
-            # Get metrics from SchemaCatalog
-            if hasattr(catalog, '_metrics'):
-                metrics = catalog._metrics
-                health_data["catalog"]["tables_count"] = metrics.table_count
-                health_data["catalog"]["cache_hits"] = metrics.cache_hits
-                health_data["catalog"]["cache_misses"] = metrics.cache_misses
-                health_data["catalog"]["hit_ratio"] = metrics.hit_ratio()
-                health_data["catalog"]["warmup_complete"] = catalog._warmup_complete
-                
-                # Calculate age from last refresh
-                if metrics.last_refresh_time:
-                    health_data["catalog"]["catalog_age_s"] = time.time() - metrics.last_refresh_time
-            
-            # Alternative: Get from db_manager.get_cache_stats()
-            elif hasattr(db_manager, 'get_cache_stats'):
-                catalog_metrics = db_manager.get_cache_stats()
-                health_data["catalog"]["tables_count"] = catalog_metrics.get("table_count", 0)
-                health_data["catalog"]["cache_hits"] = catalog_metrics.get("cache_hits", 0)
-                health_data["catalog"]["cache_misses"] = catalog_metrics.get("cache_misses", 0)
-                health_data["catalog"]["hit_ratio"] = catalog_metrics.get("hit_ratio", 0.0)
-                health_data["catalog"]["catalog_age_s"] = catalog_metrics.get("catalog_age_s")
-                health_data["catalog"]["warmup_complete"] = catalog_metrics.get("warmup_complete", False)
-        
-        # Phase 4: Discovery tools metrics
-        try:
-            if hasattr(DiscoveryTools, 'get_cache_stats'):
-                discovery_stats = DiscoveryTools.get_cache_stats()
-                health_data["discovery_tools"] = discovery_stats
-        except Exception as e:
-            logger.warning(f"Failed to get discovery tools stats: {e}")
-        
-        # Phase 6: Connection pool statistics
-        try:
-            if hasattr(db_manager, 'get_pool_stats'):
-                pool_stats = db_manager.get_pool_stats()
-                health_data["pool_stats"] = pool_stats
-        except Exception as e:
-            logger.warning(f"Failed to get pool stats: {e}")
-            health_data["pool_stats"] = {"error": str(e)}
-        
-        # Phase 6: Observability metrics
-        try:
-            metrics_summary = get_metrics_summary()
-            health_data["observability"] = metrics_summary
-        except Exception as e:
-            logger.warning(f"Failed to get observability metrics: {e}")
-        
-        # Phase 6: Last database error
-        try:
-            if hasattr(db_manager, 'get_last_error'):
-                last_error = db_manager.get_last_error()
-                if last_error:
-                    health_data["last_db_error"] = last_error
-        except Exception as e:
-            logger.warning(f"Failed to get last error: {e}")
-        
-        # Test a simple query if connected
-        if db_connected:
-            try:
-                if hasattr(db_manager, 'fetch'):
-                    test_result = await db_manager.fetch("SELECT 1 as test", limit=1)
-                    health_data["query_test"] = "passed"
-            except Exception as e:
-                health_data["query_test"] = "failed"
-                health_data["query_error"] = str(e)
-                health_data["ok"] = False
-        
+        health_status = get_health_status(db_manager)
+        return health_status
     except Exception as e:
-        health_data["ok"] = False
-        health_data["error"] = str(e)
-        logger.error(f"Health check error: {e}")
-    
-    return health_data
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
 
 @app.post("/mcp")
 async def mcp_endpoint(
@@ -275,84 +189,56 @@ async def mcp_endpoint(
 ):
     """MCP JSON-RPC endpoint with proper envelope & error handling."""
     try:
-        import json as json_module
-        
-        response_data = None
-        
-        if request.method == "tools/list":
-            tools = MCPTools.get_available_tools()
-            response_data = JSONRPCResponse(
-                result={"tools": [tool.dict() for tool in tools]},
-                id=request.id
-            )
-        elif request.method == "tools/call":
-            tool_name = request.params.get("name")
-            arguments = request.params.get("arguments", {})
-            
-            # Execute tool with error boundary
-            try:
-                result = await MCPTools.execute_tool(tool_name, arguments, db_manager)
-                # Ensure result is properly JSON-serializable
-                result_dict = result.dict() if hasattr(result, 'dict') else result
-                
-                # Validate content structure
-                if isinstance(result_dict, dict) and 'content' in result_dict:
-                    # Ensure content is a list of dicts with proper structure
-                    if not isinstance(result_dict['content'], list):
-                        result_dict['content'] = []
-                    
-                    # Ensure each content item is JSON-serializable
-                    valid_content = []
-                    for item in result_dict.get('content', []):
-                        if isinstance(item, dict):
-                            valid_content.append(item)
-                        else:
-                            valid_content.append({"type": "text", "text": str(item)})
-                    result_dict['content'] = valid_content
-                
-                logger.info(f"✅ Tool '{tool_name}' executed successfully")
-                response_data = JSONRPCResponse(result=result_dict, id=request.id)
-                
-            except Exception as tool_error:
-                logger.error(f"❌ Tool execution failed for '{tool_name}': {tool_error}")
-                response_data = JSONRPCResponse(
-                    error={
-                        "code": -32603,
-                        "message": f"Tool execution error: {str(tool_error)}",
-                        "data": {"tool": tool_name, "error_type": type(tool_error).__name__}
-                    },
-                    id=request.id
-                )
+        # Validate request
+        if not request.method or not request.params:
+            raise HTTPException(status_code=400, detail="Invalid MCP request")
+
+        # Extract method and parameters
+        method = request.method
+        params = request.params
+
+        logger.info(f"MCP call: {method}")
+
+        # Route to appropriate tool handler
+        if method == "tools/call":
+            tool_name = params.get("name")
+            tool_args = params.get("arguments", {})
+
+            # Route to tool handlers
+            if tool_name == "search_tables":
+                result = await MCPTools._search_tables(tool_args, db_manager)
+            elif tool_name == "list_tables":
+                result = await MCPTools._list_tables(tool_args, db_manager)
+            elif tool_name == "describe_table":
+                result = await MCPTools._describe_table(tool_args, db_manager)
+            elif tool_name == "query":
+                result = await MCPTools._query(tool_args, db_manager)
+            elif tool_name == "query_bounded":
+                result = await MCPTools._query_bounded(tool_args, db_manager)
+            else:
+                raise HTTPException(status_code=404, detail=f"Unknown tool: {tool_name}")
+
+            return JSONResponse(content={"result": result.content})
+
         else:
-            response_data = JSONRPCResponse(
-                error={"code": -32601, "message": f"Method not found: {request.method}"},
-                id=request.id
-            )
-        
-        # Return with proper JSON content-type header
-        return JSONResponse(
-            content=response_data.dict(exclude_none=True),
-            status_code=200,
-            headers={
-                "Content-Type": "application/json",
-                "X-MCP-Version": "2.0"
-            }
-        )
-        
+            raise HTTPException(status_code=400, detail=f"Unknown method: {method}")
+
     except Exception as e:
         logger.error(f"MCP endpoint error: {e}")
-        error_response = JSONRPCResponse(
-            error={"code": -32603, "message": str(e)},
-            id=getattr(request, 'id', None)
-        )
-        return JSONResponse(
-            content=error_response.dict(exclude_none=True),
-            status_code=500,
-            headers={
-                "Content-Type": "application/json",
-                "X-MCP-Version": "2.0"
-            }
-        )
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import uvicorn
+
+    # Get port from environment or default
+    port = int(os.getenv("MCP_PORT", "8000"))
+
+    logger.info(f"Starting MCP Database Server on port {port}")
+    uvicorn.run(
+        "mcp_server.server:app",
+        host="0.0.0.0",
+        port=port,
+        reload=False,
+        log_level="info"
+    )

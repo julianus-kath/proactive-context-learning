@@ -16,7 +16,153 @@ from mcp_server.config import config
 from mcp_server.discovery_tools import DiscoveryTools
 from mcp_server.observability import log_tool_call
 
+# Scout Mode imports (lazy loaded)
+_scout_runner = None
+
 logger = logging.getLogger(__name__)
+
+
+def _get_scout_runner(db_manager):
+    """
+    Get or initialize Scout Runner for catalog access.
+
+    Args:
+        db_manager: Database manager instance
+
+    Returns:
+        ScoutRunner instance or None if not available
+    """
+    global _scout_runner
+    if _scout_runner is None:
+        try:
+            from mcp_server.scout_runner import ScoutRunner
+            _scout_runner = ScoutRunner(db_adapter=db_manager)
+            logger.info("✅ Scout Runner initialized for catalog access")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Scout Runner: {e}")
+            return None
+    return _scout_runner
+
+
+async def _search_tables_from_catalog(catalog: Dict[str, Any], query: str, page: int, page_size: int) -> MCPToolResult:
+    """
+    Search tables using Scout catalog data.
+
+    Args:
+        catalog: Scout catalog data
+        query: Search query
+        page: Page number
+        page_size: Results per page
+
+    Returns:
+        MCPToolResult with catalog-based search results
+    """
+    import time
+    start_time = time.time()
+
+    try:
+        # Get tables from catalog
+        tables = catalog.get("tables", {})
+
+        # Simple text-based search (can be enhanced with proper ranking later)
+        query_lower = query.lower()
+        matching_tables = []
+
+        for table_name, table_data in tables.items():
+            # Search in table name and column names
+            name_match = query_lower in table_name.lower()
+            column_match = any(
+                query_lower in col.get("name", "").lower()
+                for col in table_data.get("columns", [])
+            )
+
+            if name_match or column_match:
+                # Create result similar to DiscoveryTools format
+                result = {
+                    "schema": table_data.get("schema", ""),
+                    "name": table_data.get("name", ""),
+                    "full_name": table_name,
+                    "type": "TABLE",
+                    "estimated_rows": table_data.get("estimated_rows", 0),
+                    "column_count": table_data.get("column_count", 0),
+                    "fk_count": table_data.get("fk_count", 0),
+                    "relevance_score": 0.8 if name_match else 0.6,  # Simple scoring
+                    "matched_columns": [
+                        col["name"] for col in table_data.get("columns", [])
+                        if query_lower in col.get("name", "").lower()
+                    ][:5]  # Limit to 5 matches
+                }
+                matching_tables.append(result)
+
+        # Sort by relevance score
+        matching_tables.sort(key=lambda x: x["relevance_score"], reverse=True)
+
+        # Paginate results
+        total_items = len(matching_tables)
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        page_results = matching_tables[start_idx:end_idx]
+
+        # Calculate pagination info
+        total_pages = (total_items + page_size - 1) // page_size
+
+        # Format response similar to DiscoveryTools
+        response_dict = {
+            "ok": True,
+            "data": {
+                "results": page_results
+            },
+            "page_info": {
+                "page": page,
+                "page_size": page_size,
+                "total_items": total_items,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            },
+            "execution_time_ms": (time.time() - start_time) * 1000,
+            "cached": True,
+            "source": "scout_catalog"
+        }
+
+        # Format human-readable text
+        page_info = response_dict["page_info"]
+        data = response_dict["data"]
+
+        result_text = f"🔍 Search Results for '{query}' (Page {page_info['page']} of {page_info['total_pages']})\n\n"
+        result_text += f"Total matches: {page_info['total_items']}\n\n"
+
+        for result in data.get("results", []):
+            result_text += f"• {result['full_name']} ({result['type']}) - Score: {result['relevance_score']:.2f}\n"
+            result_text += f"  Columns: {result['column_count']}, Rows: ~{result['estimated_rows']:,}\n"
+            if result.get('matched_columns'):
+                result_text += f"  Matched columns: {', '.join(result['matched_columns'])}\n"
+            result_text += "\n"
+
+        if page_info.get("has_next"):
+            result_text += f"➡️ More results available (use page={page_info['page'] + 1})\n"
+
+        result_text += f"\n⏱️ Execution time: {response_dict['execution_time_ms']:.2f}ms (cached from Scout catalog)"
+
+        result_text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
+
+        return MCPToolResult(
+            content=[{
+                "type": "text",
+                "text": result_text
+            }],
+            isError=False
+        )
+
+    except Exception as e:
+        logger.error(f"Catalog search failed: {e}")
+        return MCPToolResult(
+            content=[{
+                "type": "text",
+                "text": f"Internal error during catalog search: {str(e)}"
+            }],
+            isError=True
+        )
 
 
 class DecimalEncoder(json.JSONEncoder):
@@ -956,12 +1102,27 @@ class MCPTools:
     
     @staticmethod
     async def _search_tables(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
-        """Search tables by keyword (Phase 4)."""
+        """Search tables by keyword (Phase 4) - Scout Mode aware."""
         query = arguments.get("query", "").strip()
         page = arguments.get("page", 1)
         page_size = arguments.get("page_size", 25)
-        
+
         try:
+            # Phase 1: Try Scout catalog first for instant results
+            scout_runner = _get_scout_runner(db_manager)
+            if scout_runner and scout_runner.is_ready():
+                logger.debug("Using Scout catalog for search_tables")
+
+                # Get catalog data
+                catalog = scout_runner.get_catalog()
+                if catalog:
+                    # Perform catalog-based search
+                    return await MCPTools._search_tables_from_catalog(
+                        catalog, query, page, page_size
+                    )
+
+            # Fallback to live database search
+            logger.debug("Scout catalog not available, using live search")
             response = await DiscoveryTools.search_tables(
                 db_adapter=db_manager,
                 query=query,
