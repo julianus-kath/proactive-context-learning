@@ -147,10 +147,13 @@ async def process_query(request: QueryRequest = Body(...)):
     
     try:
         print(f"📝 Processing query: {request.user_input[:100]}...")
-        
+        print(f"📝 Orchestrator object: {type(orchestrator)}")
+
         # Process the query through multi-agent orchestrator
+        print("📝 Calling orchestrator.process_query...")
         final_response = await orchestrator.process_query(request.user_input.strip())
-        
+        print(f"📝 Got response: {final_response[:100]}...")
+
         print(f"✅ Query processed successfully")
         
         return QueryResponse(

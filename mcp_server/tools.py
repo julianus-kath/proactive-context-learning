@@ -44,55 +44,111 @@ def _get_scout_runner(db_manager):
     return _scout_runner
 
 
-async def _search_tables_from_catalog(catalog: Dict[str, Any], query: str, page: int, page_size: int) -> MCPToolResult:
+async def _search_tables_from_catalog(catalog: Dict[str, Any], query: str, page: int, page_size: int, intent_data: Dict[str, Any] = None) -> MCPToolResult:
     """
-    Search tables using Scout catalog data.
+    Search tables using Scout catalog data with semantic ranking.
 
     Args:
         catalog: Scout catalog data
-        query: Search query
+        query: Search query (keywords from intent parser)
         page: Page number
         page_size: Results per page
+        intent_data: Intent parsing results for semantic ranking
 
     Returns:
-        MCPToolResult with catalog-based search results
+        MCPToolResult with semantically ranked search results
     """
     import time
+    from mcp_server.table_ranker import TableRanker
+
     start_time = time.time()
+
+    logger.info(f"🔍 SEMANTIC SEARCH CALLED: query='{query}', intent_data={bool(intent_data)}")
 
     try:
         # Get tables from catalog
         tables = catalog.get("tables", {})
+        views = catalog.get("views", {})
 
-        # Simple text-based search (can be enhanced with proper ranking later)
-        query_lower = query.lower()
+        # Combine tables and views for comprehensive search
+        all_entities = []
+        for name, data in tables.items():
+            all_entities.append({
+                "name": name,
+                "schema": data.get("schema", "dbo"),
+                "type": "table",
+                **data
+            })
+
+        for name, data in views.items():
+            all_entities.append({
+                "name": name,
+                "schema": data.get("schema", "dbo"),
+                "type": "view",
+                **data
+            })
+
+        # Extract entities and operations from intent data
+        entities = []
+        operations = []
+
+        if intent_data:
+            # Primary entities from intent parser
+            entities.extend(intent_data.get("primary_entities", []))
+            entities.extend(intent_data.get("secondary_entities", []))
+
+            # Keywords for discovery
+            entities.extend(intent_data.get("keywords_for_discovery", []))
+
+            # Operations/metrics
+            operations.extend(intent_data.get("metrics", []))
+            operations.extend(intent_data.get("filters", []))
+
+            # If no entities found, fall back to query keywords
+            if not entities:
+                entities = query.split()
+
+        # If still no entities, use the raw query
+        if not entities:
+            entities = [query]
+
+        logger.info(f"🔍 Semantic search - Entities: {entities}, Operations: {operations}")
+
+        # Use TableRanker for semantic ranking
+        ranker = TableRanker()
+        ranked_tables = ranker.rank_tables(all_entities, entities, operations)
+
+        # Convert to result format
         matching_tables = []
+        for ranked in ranked_tables[:page_size]:  # Limit results
+            table_data = tables.get(ranked.full_name, views.get(ranked.full_name, {}))
 
-        for table_name, table_data in tables.items():
-            # Search in table name and column names
-            name_match = query_lower in table_name.lower()
-            column_match = any(
-                query_lower in col.get("name", "").lower()
-                for col in table_data.get("columns", [])
-            )
+            result = {
+                "schema": ranked.schema,
+                "name": ranked.name,
+                "full_name": ranked.full_name,
+                "type": "TABLE" if ranked.full_name in tables else "VIEW",
+                "estimated_rows": ranked.estimated_rows,
+                "column_count": ranked.column_count,
+                "fk_count": ranked.fk_count,
+                "relevance_score": ranked.score,
+                "ranking_reasons": ranked.reasons,
+                "matched_columns": [],  # Will be filled below
+                "description": table_data.get("description", "")
+            }
 
-            if name_match or column_match:
-                # Create result similar to DiscoveryTools format
-                result = {
-                    "schema": table_data.get("schema", ""),
-                    "name": table_data.get("name", ""),
-                    "full_name": table_name,
-                    "type": "TABLE",
-                    "estimated_rows": table_data.get("estimated_rows", 0),
-                    "column_count": table_data.get("column_count", 0),
-                    "fk_count": table_data.get("fk_count", 0),
-                    "relevance_score": 0.8 if name_match else 0.6,  # Simple scoring
-                    "matched_columns": [
-                        col["name"] for col in table_data.get("columns", [])
-                        if query_lower in col.get("name", "").lower()
-                    ][:5]  # Limit to 5 matches
-                }
-                matching_tables.append(result)
+            # Find matched columns based on entity matches
+            columns = table_data.get("columns", [])
+            matched_cols = []
+            for col in columns:
+                col_name = col.get("name", "").lower()
+                for entity in entities:
+                    if entity.lower() in col_name:
+                        matched_cols.append(col["name"])
+                        break
+            result["matched_columns"] = matched_cols[:5]  # Limit to 5
+
+            matching_tables.append(result)
 
         # Sort by relevance score
         matching_tables.sort(key=lambda x: x["relevance_score"], reverse=True)
@@ -1102,23 +1158,24 @@ class MCPTools:
     
     @staticmethod
     async def _search_tables(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
-        """Search tables by keyword (Phase 4) - Scout Mode aware."""
+        """Search tables by keyword (Phase 4) - Scout Mode aware with semantic ranking."""
         query = arguments.get("query", "").strip()
         page = arguments.get("page", 1)
         page_size = arguments.get("page_size", 25)
+        intent_data = arguments.get("intent_data")  # Extract intent data for semantic ranking
 
         try:
             # Phase 1: Try Scout catalog first for instant results
             scout_runner = _get_scout_runner(db_manager)
             if scout_runner and scout_runner.is_ready():
-                logger.debug("Using Scout catalog for search_tables")
+                logger.debug("Using Scout catalog for search_tables with semantic ranking")
 
                 # Get catalog data
                 catalog = scout_runner.get_catalog()
                 if catalog:
-                    # Perform catalog-based search
+                    # Perform catalog-based semantic search
                     return await _search_tables_from_catalog(
-                        catalog, query, page, page_size
+                        catalog, query, page, page_size, intent_data
                     )
 
             # Fallback to live database search

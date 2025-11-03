@@ -328,11 +328,16 @@ class MCPDatabaseTool:
                             debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
                         raise ValueError(error_msg)
 
-                # Ensure content is a list
-                content = result.get("content", [])
-                if not isinstance(content, list):
-                    logger.warning(f"Content is not a list, converting: {type(content)}")
-                    content = [{"type": "text", "text": str(content)}]
+                # Handle case where result is already a list (MCP server returns content directly)
+                if isinstance(result, list):
+                    logger.info("MCP result is already a list, using directly")
+                    content = result
+                else:
+                    # Ensure content is a list
+                    content = result.get("content", [])
+                    if not isinstance(content, list):
+                        logger.warning(f"Content is not a list, converting: {type(content)}")
+                        content = [{"type": "text", "text": str(content)}]
 
                 duration_ms = (time.time() - start_time) * 1000
                 logger.info(f"✅ MCP tool call successful, received {len(content)} content items")
@@ -520,28 +525,36 @@ class MCPDatabaseTool:
             return {"ok": False, "error": error_msg}
     
     async def search_tables(
-        self, 
-        keyword: str, 
-        page: int = 1, 
-        page_size: int = 25
+        self,
+        keyword: str,
+        page: int = 1,
+        page_size: int = 25,
+        intent_data: Dict[str, Any] = None
     ) -> List[Dict[str, Any]]:
         """
-        Search tables by keyword with relevance ranking (Phase 4 discovery tool).
-        
+        Search tables by keyword with semantic ranking using intent data (Phase 4 discovery tool).
+
         Args:
             keyword: Search keyword (searches table names, columns, types)
             page: Page number (1-indexed)
             page_size: Number of results per page (max 100)
-            
+            intent_data: Intent parsing results for semantic ranking
+
         Returns:
-            Ranked list of matching tables
+            Semantically ranked list of matching tables
         """
-        result = await self.call_tool("search_tables", {
+        tool_params = {
             "query": keyword,
             "page": page,
             "page_size": page_size
-        })
-        
+        }
+
+        # Add intent data if provided
+        if intent_data:
+            tool_params["intent_data"] = intent_data
+
+        result = await self.call_tool("search_tables", tool_params)
+
         # Log scout mode operation
         if debug_logger and result:
             try:

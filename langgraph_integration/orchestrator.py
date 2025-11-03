@@ -291,7 +291,10 @@ class QueryOrchestrator:
         try:
             # Check MCP health
             logger.info("📚 [INDEX_DATABASE] Checking MCP availability...")
+            logger.info(f"📚 [INDEX_DATABASE] MCP URL: {getattr(self.mcp, 'mcp_url', 'unknown')}")
             is_healthy = await self.mcp.health_check()
+            logger.info(f"📚 [INDEX_DATABASE] Health check result: {is_healthy}")
+
             if not is_healthy:
                 error = {
                     "type": "MCP_UNAVAILABLE",
@@ -334,6 +337,7 @@ class QueryOrchestrator:
 
         Returns: Updated state with intent, confidence, and clarification flags
         """
+        logger.info("🧠 [PARSE_INTENT] 🚀 NODE CALLED - Starting intent parsing")
         debug_logger.agent_entry("parse_intent", dict(state))
         before_state = dict(state)
 
@@ -356,16 +360,18 @@ class QueryOrchestrator:
 
         try:
             logger.info(f"🧠 [PARSE_INTENT] Query: \"{user_input}\"")
-            logger.info("🧠 [PARSE_INTENT] Invoking IntentParserAgent subgraph...")
+            logger.info("🧠 [PARSE_INTENT] Building IntentParserAgent subgraph...")
 
             # 🆕 Phase 9.1: Build and invoke intent parsing subgraph
             intent_subgraph = self.intent_parser.build_subgraph()
-            result = await intent_subgraph.ainvoke(state)
+            logger.info("🧠 [PARSE_INTENT] ✅ Subgraph built, invoking...")
 
+            result = await intent_subgraph.ainvoke(state)
             logger.info("🧠 [PARSE_INTENT] ✅ Intent parsing subgraph completed")
 
             # Extract results from subgraph
             intent = result.get("intent", {})
+            logger.info(f"🧠 [PARSE_INTENT] Intent extracted: {intent}")
 
             if not intent:
                 logger.error("🧠 [PARSE_INTENT] ❌ CRITICAL: No intent returned from subgraph!")
@@ -1128,35 +1134,179 @@ class QueryOrchestrator:
         Returns:
             Final response string (1-2 sentence answer or clarification)
         """
-        logger.info(f"📝 Processing query: {user_input[:100]}...")
+        logger.info(f"📝 PROCESS_QUERY CALLED: {user_input[:100]}...")
+        logger.info("📝 Starting graph execution...")
 
-        # Phase 4: Use async context management for proper resource cleanup
-        async with self:
+        # TEMPORARY FIX: Use IntentParserAgent directly until graph issues are resolved
+        logger.info("🔧 TEMPORARY: Using IntentParserAgent directly (bypassing graph)")
+
+        try:
+            # Direct call to IntentParserAgent
+            intent_subgraph = self.intent_parser.build_subgraph()
+            intent_result = await intent_subgraph.ainvoke(BaseState(user_input=user_input))
+
+            intent = intent_result.get("intent", {})
+            logger.info(f"🔧 Intent parsed: {intent}")
+
+            # Simple logic: if clarification needed, return clarification
+            if intent.get("needs_clarification", False):
+                clarification_question = intent.get("clarification_question", "Could you please clarify your request?")
+                return f"I need more information: {clarification_question}"
+
+            # Use full discovery pipeline with semantic search
+            logger.info(f"🔧 Using full discovery pipeline with intent: {intent}")
+
+            # Call the discovery node directly
+            discovery_input = BaseState(
+                user_input=user_input,
+                intent=intent,
+                messages=[],
+                session_described_tables={}
+            )
+
             try:
-                # Create initial state
-                initial_state = BaseState(
-                    user_input=user_input,
-                    messages=[],
-                    session_described_tables={},
-                    retry_count=0
+                # WORKAROUND: Perform semantic search locally since MCP server has outdated code
+                logger.info(f"🔧 Using local semantic search with TableRanker")
+
+                # Get catalog data directly from MCP (bypass the search function)
+                catalog_data = await self._get_catalog_from_mcp()
+                if catalog_data:
+                    # Perform semantic search locally
+                    search_result = await self._perform_local_semantic_search(catalog_data, intent)
+
+                    if search_result and len(search_result) > 0:
+                        # Show top results with ranking info
+                        top_tables = search_result[:5]  # Show top 5
+                        table_info = []
+                        for i, table in enumerate(top_tables, 1):
+                            name = table.get('name', 'unknown')
+                            score = table.get('score', 0)
+                            reasons = table.get('reasons', [])
+                            table_info.append(f"{i}. {name} (score: {score:.2f})")
+
+                        response = f"I found these relevant tables for your query:\n" + "\n".join(table_info)
+
+                        # If we have high-confidence matches, suggest next steps
+                        high_confidence = [t for t in top_tables if t.get('score', 0) > 0.7]
+                        if high_confidence:
+                            response += f"\n\nI have {len(high_confidence)} high-confidence matches. I can now generate SQL queries for these tables."
+
+                        return response
+
+                # Fallback to MCP search if local search fails
+                logger.info("🔧 Local search failed, falling back to MCP search")
+                keywords = intent.get("keywords_for_discovery", [])
+                if not keywords:
+                    keywords = [user_input.split()[0]]  # fallback to first word
+
+                search_result = await self.mcp.search_tables(
+                    keyword=keywords[0],
+                    page=1,
+                    page_size=10
                 )
 
-                # Run the graph using async API since we're in an async context
-                # This allows proper handling of async nodes without blocking
-                # Always use ainvoke for async compatibility
-                result = await self.graph.ainvoke(initial_state)
+                if search_result and len(search_result) > 0:
+                    return f"I found {len(search_result)} potential tables using basic search. The semantic search will work better once the MCP server is updated."
 
-                # Extract final response
-                final_response = result.get("final_response", "No response generated")
-                logger.info(f"✅ Query processed successfully")
-                return final_response
+                return f"I couldn't find relevant tables for '{user_input}'. The database might not contain data matching your query terms."
 
             except Exception as e:
+                logger.error(f"🔧 Semantic search failed: {e}")
                 import traceback
-                logger.error(f"❌ Error processing query: {e}")
-                logger.error(f"❌ Exception type: {type(e).__name__}")
-                logger.error(f"❌ Traceback:\n{traceback.format_exc()}")
-                return f"Error processing query: {str(e)}"
+                logger.error(f"🔧 Traceback: {traceback.format_exc()}")
+                return f"I encountered an error while searching for tables: {str(e)}"
+
+            return f"I understood your query about {intent.get('primary_entities', ['something'])[0]}, but I'm still learning how to process it. Please try a more specific question."
+
+        except Exception as e:
+            logger.error(f"🔧 Intent parsing failed: {e}")
+            import traceback
+            logger.error(f"🔧 Traceback:\n{traceback.format_exc()}")
+            return "I'm having trouble understanding your query right now. Please try again."
+
+    async def _get_catalog_from_mcp(self) -> Optional[Dict[str, Any]]:
+        """Get catalog data directly from MCP server."""
+        try:
+            # Try to access the catalog through the MCP client's scout runner
+            logger.info("🔧 Attempting to get catalog data from MCP scout runner")
+
+            # Check if the MCP client has access to scout runner
+            # This is a bit of a hack, but we need to access the catalog somehow
+            if hasattr(self.mcp, '_scout_runner') and self.mcp._scout_runner:
+                catalog = self.mcp._scout_runner.get_catalog()
+                if catalog:
+                    logger.info(f"🔧 Retrieved catalog with {len(catalog.get('tables', {}))} tables")
+                    return catalog
+
+            # Alternative: Try to load catalog from the known file path
+            import os
+            catalog_path = "data/catalog/scout_catalog.json"
+            if os.path.exists(catalog_path):
+                import json
+                with open(catalog_path, 'r', encoding='utf-8') as f:
+                    catalog = json.load(f)
+                logger.info(f"🔧 Loaded catalog from file with {len(catalog.get('tables', {}))} tables")
+                return catalog
+
+            logger.warning("🔧 Could not access catalog data")
+            return None
+
+        except Exception as e:
+            logger.warning(f"🔧 Could not get catalog from MCP: {e}")
+            return None
+
+    async def _perform_local_semantic_search(self, catalog: Dict[str, Any], intent: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Perform semantic search locally using TableRanker."""
+        try:
+            from mcp_server.table_ranker import TableRanker
+
+            # Extract entities and operations from intent
+            entities = []
+            operations = []
+
+            entities.extend(intent.get("primary_entities", []))
+            entities.extend(intent.get("secondary_entities", []))
+            entities.extend(intent.get("keywords_for_discovery", []))
+            operations.extend(intent.get("metrics", []))
+            operations.extend(intent.get("filters", []))
+
+            if not entities:
+                return []
+
+            # Get tables from catalog
+            tables_dict = catalog.get("tables", {})
+            all_tables = []
+            for name, data in tables_dict.items():
+                all_tables.append({
+                    "name": name,
+                    "schema": data.get("schema", "dbo"),
+                    "type": "table",
+                    **data
+                })
+
+            # Perform semantic ranking
+            ranker = TableRanker()
+            ranked_tables = ranker.rank_tables(all_tables, entities, operations)
+
+            # Convert to result format
+            results = []
+            for ranked in ranked_tables:
+                results.append({
+                    "name": ranked.name,
+                    "schema": ranked.schema,
+                    "score": ranked.score,
+                    "reasons": ranked.reasons,
+                    "estimated_rows": ranked.estimated_rows,
+                    "column_count": ranked.column_count,
+                    "fk_count": ranked.fk_count
+                })
+
+            logger.info(f"🔧 Local semantic search found {len(results)} tables")
+            return results
+
+        except Exception as e:
+            logger.error(f"🔧 Local semantic search failed: {e}")
+            return []
 
 
 # ============= Factory and export functions =============
