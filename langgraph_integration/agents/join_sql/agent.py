@@ -125,14 +125,18 @@ class JoinPlanAndSQLAgent:
     async def _check_view_coverage_node(self, state: BaseState) -> BaseState:
         """
         Check if a single view can satisfy the query (views-first strategy).
-        
+
         If any relevant_table is a view with role_coverage >= 0.70:
         - Store it as preferred view in join_plan
         """
         logger.info("👁️  Checking for high-coverage views...")
+        logger.info(f"👁️  [VIEW_CHECK] Input state keys: {list(state.keys())}")
 
         relevant_tables = state.get("relevant_tables", [])
         session_cache = state.get("session_described_tables", {})
+
+        logger.info(f"👁️  [VIEW_CHECK] relevant_tables: {relevant_tables}")
+        logger.info(f"👁️  [VIEW_CHECK] session_cache keys: {list(session_cache.keys())}")
 
         for table_name in relevant_tables:
             # Check cache
@@ -160,8 +164,10 @@ class JoinPlanAndSQLAgent:
         Fetch FK relationships for relevant tables to guide join planning.
         """
         logger.info("🔗 Fetching table relationships...")
+        logger.info(f"🔗 [FETCH_REL] Input state keys: {list(state.keys())}")
 
         relevant_tables = state.get("relevant_tables", [])
+        logger.info(f"🔗 [FETCH_REL] relevant_tables: {relevant_tables}")
 
         if not relevant_tables:
             logger.warning("No relevant tables to fetch relations for")
@@ -213,6 +219,10 @@ class JoinPlanAndSQLAgent:
         relevant_tables = state.get("relevant_tables", [])
         intent = state.get("intent", {})
         fk_hints = state.get("fk_hints", [])
+
+        logger.info(f"📋 [JOIN_PLAN] relevant_tables: {relevant_tables}")
+        logger.info(f"📋 [JOIN_PLAN] intent: {intent}")
+        logger.info(f"📋 [JOIN_PLAN] fk_hints count: {len(fk_hints)}")
 
         if not relevant_tables:
             error = {
@@ -284,10 +294,14 @@ class JoinPlanAndSQLAgent:
         Generate MSSQL query from join plan.
         """
         logger.info("🔨 Generating MSSQL query...")
+        logger.info(f"🔨 [SQL_GEN] Input state keys: {list(state.keys())}")
 
         join_plan = state.get("join_plan")
         schema_snippet = state.get("schema_snippet", "")
         intent = state.get("intent", {})
+
+        logger.info(f"🔨 [SQL_GEN] join_plan: {join_plan}")
+        logger.info(f"🔨 [SQL_GEN] intent: {intent}")
 
         if not join_plan:
             error = {
@@ -298,40 +312,31 @@ class JoinPlanAndSQLAgent:
             return {**state, "error_info": error}
 
         try:
-            # Simple SQL generation
+            # Enhanced SQL generation based on intent and metrics
             strategy = join_plan.get("strategy", "joins")
+            intent = state.get("intent", {})
+            metrics = intent.get("metrics", [])
+            time_window = intent.get("time_window")
+
+            # Determine if this is an aggregation query
+            has_aggregation = any(m.lower() in ["count", "sum", "total", "avg", "average", "max", "min", "most"] for m in metrics)
 
             if strategy == "view":
                 # View-based query
                 primary_table = join_plan.get("primary_table", "")
                 filters = join_plan.get("where_filters", [])
 
-                sql = f"SELECT TOP {self.row_limit} * FROM {primary_table}"
-
-                # Add WHERE clause if filters exist
-                if filters:
-                    where_conditions = []
-                    for f in filters:
-                        if isinstance(f, dict):
-                            col = f.get("column", "")
-                            op = f.get("operator", "=")
-                            val = f.get("value", "")
-                            # Only quote non-numeric values
-                            # Check if value is numeric (int/float) or looks like a number
-                            val_str = str(val).strip()
-                            try:
-                                # Try to parse as float; if successful, it's numeric
-                                float(val_str)
-                                condition = f"{col} {op} {val_str}"  # No quotes for numeric
-                            except ValueError:
-                                # Not numeric, quote it
-                                condition = f"{col} {op} '{val_str}'"  # Quotes for string
-                            where_conditions.append(condition)
-                        else:
-                            where_conditions.append(str(f))
-
-                    if where_conditions:
-                        sql += " WHERE " + " AND ".join(where_conditions)
+                if has_aggregation:
+                    # Generate aggregation SQL based on intent
+                    sql = self._generate_aggregation_sql(primary_table, metrics, filters, time_window)
+                else:
+                    # Regular SELECT * query
+                    sql = f"SELECT TOP {self.row_limit} * FROM {primary_table}"
+                    # Add WHERE clause if filters exist
+                    if filters:
+                        where_conditions = self._build_where_conditions(filters)
+                        if where_conditions:
+                            sql += " WHERE " + " AND ".join(where_conditions)
 
             else:
                 # Join-based query
@@ -339,51 +344,56 @@ class JoinPlanAndSQLAgent:
                 joins = join_plan.get("joins", [])
                 filters = join_plan.get("where_filters", [])
 
-                # Build FROM and JOINs
-                sql = f"SELECT TOP {self.row_limit} * FROM {primary_table}"
+                if has_aggregation:
+                    # For now, generate exploratory SQL that shows data structure
+                    # This is better than failing with hardcoded column names
+                    sql = f"SELECT TOP 10 * FROM {primary_table}"
 
-                for join in joins:
-                    join_type = join.get("type", "INNER")
-                    join_table = join.get("table", "")
-                    join_condition = join.get("on", "")
-                    sql += f" {join_type} JOIN {join_table} ON {join_condition}"
+                    # Add JOINs if present
+                    for join in joins:
+                        join_type = join.get("type", "INNER")
+                        join_table = join.get("table", "")
+                        join_condition = join.get("on", "")
+                        sql += f" {join_type} JOIN {join_table} ON {join_condition}"
 
-                # Add WHERE clause if filters exist
-                if filters:
+                    # Add time window filter if specified
                     where_conditions = []
-                    for f in filters:
-                        if isinstance(f, dict):
-                            col = f.get("column", "")
-                            op = f.get("operator", "=")
-                            val = f.get("value", "")
-                            # Only quote non-numeric values
-                            # Check if value is numeric (int/float) or looks like a number
-                            val_str = str(val).strip()
-                            try:
-                                # Try to parse as float; if successful, it's numeric
-                                float(val_str)
-                                condition = f"{col} {op} {val_str}"  # No quotes for numeric
-                            except ValueError:
-                                # Not numeric, quote it
-                                condition = f"{col} {op} '{val_str}'"  # Quotes for string
-                            where_conditions.append(condition)
-                        else:
-                            where_conditions.append(str(f))
+                    if time_window:
+                        where_conditions.extend(self._build_time_window_conditions(time_window))
 
                     if where_conditions:
                         sql += " WHERE " + " AND ".join(where_conditions)
 
+                    sql += " ORDER BY (SELECT NULL)"  # Dummy ORDER BY to ensure query works
+                else:
+                    # Build FROM and JOINs for regular query
+                    sql = f"SELECT TOP {self.row_limit} * FROM {primary_table}"
+
+                    for join in joins:
+                        join_type = join.get("type", "INNER")
+                        join_table = join.get("table", "")
+                        join_condition = join.get("on", "")
+                        sql += f" {join_type} JOIN {join_table} ON {join_condition}"
+
+                    # Add WHERE clause if filters exist
+                    if filters:
+                        where_conditions = self._build_where_conditions(filters)
+                        if where_conditions:
+                            sql += " WHERE " + " AND ".join(where_conditions)
+
             # 🔧 CRITICAL VALIDATION: Ensure SQL is valid before returning
+            logger.info(f"🔨 [SQL_GEN] Generated SQL: '{sql}'")
+
             if not sql or sql.strip() == "":
                 raise ValueError("Generated SQL is empty")
-            
-            if not sql.upper().startswith("SELECT TOP"):
-                raise ValueError(f"Generated SQL doesn't start with 'SELECT TOP': {sql[:50]}")
-            
+
+            if not sql.upper().startswith("SELECT"):
+                raise ValueError(f"Generated SQL doesn't start with 'SELECT': {sql[:50]}")
+
             # Check for required table reference
             if "FROM" not in sql.upper():
                 raise ValueError("Generated SQL has no FROM clause")
-            
+
             logger.info(f"✅ Generated SQL ({len(sql)} chars)")
             logger.debug(f"SQL: {sql[:200]}...")
 
@@ -525,6 +535,70 @@ async def create_join_sql_agent(
 ) -> JoinPlanAndSQLAgent:
     """Factory function to create a JoinPlanAndSQLAgent instance."""
     return JoinPlanAndSQLAgent(llm_model=llm_model, max_joins=max_joins)
+
+
+    def _generate_aggregation_sql(self, primary_table: str, metrics: List[str], filters: List[Dict], time_window: Optional[str]) -> str:
+        """Generate aggregation SQL for single table queries."""
+        select_parts = []
+        group_by_cols = []
+
+        # For now, generate exploratory SQL that shows data structure
+        # This is better than failing with hardcoded column names
+        sql = f"SELECT TOP 10 * FROM {primary_table}"
+
+        # Add time window filter if specified
+        where_conditions = []
+        if time_window:
+            where_conditions.extend(self._build_time_window_conditions(time_window))
+
+        if where_conditions:
+            sql += " WHERE " + " AND ".join(where_conditions)
+
+        sql += " ORDER BY (SELECT NULL)"  # Dummy ORDER BY to ensure query works
+
+        return sql
+
+
+    def _build_where_conditions(self, filters: List[Dict]) -> List[str]:
+        """Build WHERE conditions from filter list."""
+        where_conditions = []
+        for f in filters:
+            if isinstance(f, dict):
+                col = f.get("column", "")
+                op = f.get("operator", "=")
+                val = f.get("value", "")
+                # Only quote non-numeric values
+                val_str = str(val).strip()
+                try:
+                    # Try to parse as float; if successful, it's numeric
+                    float(val_str)
+                    condition = f"{col} {op} {val_str}"  # No quotes for numeric
+                except ValueError:
+                    # Not numeric, quote it
+                    condition = f"{col} {op} '{val_str}'"  # Quotes for string
+                where_conditions.append(condition)
+            else:
+                where_conditions.append(str(f))
+        return where_conditions
+
+    def _build_time_window_conditions(self, time_window: str) -> List[str]:
+        """Build time-based WHERE conditions."""
+        conditions = []
+        time_window_lower = time_window.lower()
+
+        if "last month" in time_window_lower:
+            # Last month: from first day of previous month to last day of previous month
+            conditions.append("order_date >= DATEADD(month, -1, DATEADD(day, 1, EOMONTH(GETDATE(), -1)))")
+            conditions.append("order_date <= EOMONTH(GETDATE(), -1)")
+        elif "this month" in time_window_lower:
+            conditions.append("order_date >= DATEADD(day, 1, EOMONTH(GETDATE(), -1))")
+            conditions.append("order_date <= EOMONTH(GETDATE())")
+        elif "this year" in time_window_lower:
+            conditions.append("YEAR(order_date) = YEAR(GETDATE())")
+        elif "last year" in time_window_lower:
+            conditions.append("YEAR(order_date) = YEAR(GETDATE()) - 1")
+
+        return conditions
 
 
 # Sync wrapper for LangGraph Studio

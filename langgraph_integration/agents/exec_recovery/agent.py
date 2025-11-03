@@ -18,6 +18,7 @@ import json
 import logging
 import asyncio
 import concurrent.futures
+import re
 from typing import Any, Dict, List, Optional
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
@@ -78,6 +79,19 @@ class ExecAndRecoveryAgent:
         self.max_retries = max_retries
         self.row_limit = row_limit
         self.query_timeout_seconds = query_timeout_seconds
+
+    async def __call__(self, state: BaseState) -> BaseState:
+        """
+        Execute the exec recovery workflow.
+
+        Builds the graph and invokes it with the given state.
+        """
+        graph = self.build_subgraph()
+        compiled_graph = graph.compile()
+
+        # Invoke the graph with the state
+        result = await compiled_graph.ainvoke(state)
+        return result
 
     def build_subgraph(self) -> StateGraph:
         """
@@ -523,34 +537,116 @@ class ExecAndRecoveryAgent:
     # Helper methods
 
     def _parse_query_result(self, result: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Parse MCP query_bounded result."""
-        if not result or len(result) == 0:
-            return {"ok": False, "error": "Empty result from MCP server"}
-
+        """Parse MCP query result (handles both bounded JSON and unbounded text formats)."""
         try:
-            content = result[0].get("text", "")
-            data = json.loads(content) if isinstance(content, str) else content
+            logger.debug(f"Parsing query result: {result[:2] if result else 'None'}")
+            # Handle case where MCP returns malformed response
+            if not result or len(result) == 0:
+                return {"ok": False, "error": "Empty result from MCP server"}
 
-            # Extract fields
-            ok = data.get("ok", False)
-            rows = data.get("rows", [])
-            row_count = data.get("row_count", len(rows))
-            execution_time_ms = data.get("execution_time_ms", 0)
-            truncated = data.get("truncated", False)
-            warnings = data.get("warnings", [])
-            error = data.get("error")
+            first_result = result[0]
+            if isinstance(first_result, str):
+                # MCP returned a string error message
+                return {"ok": False, "error": first_result}
 
-            return {
-                "ok": ok,
-                "rows": rows,
-                "row_count": row_count,
-                "execution_time_ms": execution_time_ms,
-                "truncated": truncated,
-                "warnings": warnings,
-                "error": error
-            }
+            if not isinstance(first_result, dict):
+                return {"ok": False, "error": f"Unexpected result type: {type(first_result)}"}
+
+            content = first_result.get("text", "")
+
+            # Try to parse as JSON first (for query_bounded responses)
+            try:
+                data = json.loads(content) if isinstance(content, str) else content
+
+                # This is a JSON response from query_bounded
+                ok = data.get("ok", False)
+                rows = data.get("rows", [])
+                row_count = data.get("row_count", len(rows))
+                execution_time_ms = data.get("execution_time_ms", 0)
+                truncated = data.get("truncated", False)
+                warnings = data.get("warnings", [])
+                error = data.get("error")
+
+                return {
+                    "ok": ok,
+                    "rows": rows,
+                    "row_count": row_count,
+                    "execution_time_ms": execution_time_ms,
+                    "truncated": truncated,
+                    "warnings": warnings,
+                    "error": error
+                }
+            except json.JSONDecodeError:
+                # Not JSON - this is a text table response from query (unbounded)
+                logger.info("Received text table response from unbounded query, parsing manually...")
+
+                if not content or "Query execution failed" in content:
+                    return {"ok": False, "error": content or "Query execution failed"}
+
+                # Parse the text table format
+                lines = content.strip().split('\n')
+                if len(lines) < 3:
+                    return {"ok": False, "error": "Invalid table format"}
+
+                # Extract row count from header
+                header_match = re.search(r'Query Results \((\d+) rows\)', lines[0])
+                if not header_match:
+                    return {"ok": False, "error": "Could not parse row count"}
+
+                row_count = int(header_match.group(1))
+
+                if row_count == 0:
+                    return {
+                        "ok": True,
+                        "rows": [],
+                        "row_count": 0,
+                        "execution_time_ms": 0,
+                        "truncated": False,
+                        "warnings": [],
+                        "error": None
+                    }
+
+                # Find data rows (skip header and separator)
+                data_start = 2  # Skip "Query Results (X rows):" and blank line
+                if data_start >= len(lines):
+                    return {"ok": False, "error": "No data rows found"}
+
+                # Extract column headers
+                header_line = lines[data_start]
+                columns = [col.strip() for col in header_line.split('|')]
+
+                # Extract data rows
+                rows = []
+                for line in lines[data_start + 2:]:  # Skip headers and separator
+                    if line.strip():
+                        values = [val.strip() for val in line.split('|')]
+                        if len(values) == len(columns):
+                            row_dict = {}
+                            for col, val in zip(columns, values):
+                                # Try to convert to number
+                                try:
+                                    # Check if it's an integer
+                                    if '.' not in val:
+                                        row_dict[col] = int(val)
+                                    else:
+                                        row_dict[col] = float(val)
+                                except ValueError:
+                                    row_dict[col] = val
+                            rows.append(row_dict)
+
+                return {
+                    "ok": True,
+                    "rows": rows,
+                    "row_count": len(rows),
+                    "execution_time_ms": 0,  # Not provided in text format
+                    "truncated": False,
+                    "warnings": [],
+                    "error": None
+                }
+
         except Exception as e:
             logger.warning(f"Failed to parse query result: {e}")
+            logger.warning(f"Raw content: {content[:200]}...")
             return {"ok": False, "error": str(e)}
 
     def _extract_sql(self, text: str) -> str:

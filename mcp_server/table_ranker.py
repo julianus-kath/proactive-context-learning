@@ -29,6 +29,113 @@ except Exception:  # pragma: no cover - allow import without full server boot
 logger = logging.getLogger(__name__)
 
 
+# Generic table classification based on Scout catalog metadata
+# No hardcoded terms - classification is data-driven
+
+
+def classify_table_by_metadata(table: Dict[str, Any], catalog_adapter=None) -> Dict[str, Any]:
+    """
+    Classify table purpose based on Scout catalog metadata.
+    Returns classification scores for different table types.
+    """
+    classification = {
+        "customer_table": 0.0,
+        "product_table": 0.0,
+        "transaction_table": 0.0,
+        "financial_table": 0.0,
+        "relationship_table": 0.0
+    }
+
+    table_name = table.get("name", "").lower()
+    estimated_rows = table.get("estimated_rows", 0)
+    fk_count = table.get("fk_count", 0)
+
+    # Get column metadata from catalog if available
+    if catalog_adapter and hasattr(catalog_adapter, 'get_table_columns'):
+        try:
+            columns = catalog_adapter.get_table_columns(table.get("schema"), table.get("name"))
+        except:
+            columns = []
+    else:
+        columns = []
+
+    # Classify based on column types and names
+    id_columns = 0
+    name_columns = 0
+    date_columns = 0
+    numeric_columns = 0
+    fk_columns = 0
+
+    for col in columns:
+        col_name = col.get("name", "").lower()
+        col_type = col.get("data_type", "").lower()
+
+        # Count different column types
+        if "id" in col_name or "key" in col_name:
+            id_columns += 1
+        if any(term in col_name for term in ["name", "title", "description"]):
+            name_columns += 1
+        if any(term in col_type for term in ["date", "time", "datetime"]):
+            date_columns += 1
+        if any(term in col_type for term in ["int", "float", "decimal", "numeric", "money"]):
+            numeric_columns += 1
+        if col.get("is_foreign_key"):
+            fk_columns += 1
+
+    # Classification logic based on metadata patterns
+    total_columns = len(columns) if columns else table.get("column_count", 0)
+
+    # Customer table indicators
+    if name_columns >= 1 and fk_count <= 3 and estimated_rows > 10:
+        classification["customer_table"] = min(0.8, (name_columns / max(total_columns, 1)) * 2)
+
+    # Product table indicators
+    if name_columns >= 1 and numeric_columns >= 1 and fk_count <= 2:
+        classification["product_table"] = min(0.8, (name_columns + numeric_columns) / max(total_columns, 1))
+
+    # Transaction table indicators
+    if date_columns >= 1 and numeric_columns >= 2 and fk_count >= 2:
+        classification["transaction_table"] = min(0.9, (date_columns + numeric_columns + fk_count) / max(total_columns, 3))
+
+    # Financial table indicators
+    if numeric_columns >= 3 and date_columns >= 1:
+        classification["financial_table"] = min(0.8, (numeric_columns + date_columns) / max(total_columns, 2))
+
+    # Relationship table indicators (junction tables)
+    if fk_count >= 3 and id_columns >= 2 and estimated_rows < 1000:
+        classification["relationship_table"] = min(0.7, fk_count / max(total_columns, 1))
+
+    return classification
+
+
+def tokenize_table_name(table_name: str) -> List[str]:
+    """Generic tokenization of table names using common separators."""
+    if not table_name:
+        return []
+
+    # Convert to lowercase and split on common separators
+    tokens = []
+    name = table_name.lower()
+
+    # Split on underscores, camelCase, and numbers
+    import re
+    # Split on underscores
+    parts = name.split('_')
+    for part in parts:
+        # Split camelCase
+        camel_parts = re.findall(r'[a-z]+|[A-Z][a-z]+', part)
+        if camel_parts:
+            tokens.extend([p.lower() for p in camel_parts if len(p) > 1])
+        else:
+            tokens.append(part)
+
+    # Remove duplicates and short tokens
+    tokens = list(set(tokens))
+    tokens = [t for t in tokens if len(t) > 1]
+
+    return tokens
+
+
 # -----------------------------
 # Existing Table Ranking (kept)
 # -----------------------------
@@ -106,32 +213,80 @@ class TableRanker:
             column_count = table.get("column_count")
             fk_count = table.get("fk_count")
 
-            # 1. Entity matches
+            # 1. Entity matches using generic tokenization
             for entity in entities or []:
                 if not name:
                     continue
-                e = entity.lower()
-                n = name.lower()
-                if e == n:
+
+                entity_lower = entity.lower()
+                table_tokens = tokenize_table_name(name)
+
+                # Exact match against table name
+                if entity_lower == name.lower():
                     score += self.EXACT_MATCH_WEIGHT
-                    reasons.append(f"Exact match for entity: {entity}")
-                elif e in n.split("_"):
-                    score += self.ENTITY_MATCH_WEIGHT
-                    reasons.append(f"Entity match in table name: {entity}")
-                elif e in n:
-                    score += self.COLUMN_MATCH_WEIGHT
-                    reasons.append(f"Substring match for entity: {entity}")
+                    reasons.append(f"Exact table name match: '{entity}'")
+                    continue
 
-            # 2. Fuzzy matching
+                # Token-based matching
+                for token in table_tokens:
+                    token_lower = token.lower()
+
+                    # Exact token match
+                    if entity_lower == token_lower:
+                        score += self.ENTITY_MATCH_WEIGHT
+                        reasons.append(f"Exact token match: '{entity}' in table token '{token}'")
+                        break
+
+                    # Substring match in token
+                    elif entity_lower in token_lower or token_lower in entity_lower:
+                        score += self.COLUMN_MATCH_WEIGHT
+                        reasons.append(f"Substring match: '{entity}' in token '{token}'")
+                        break
+
+            # 2. Generic fuzzy matching as fallback
             for entity in entities or []:
                 if not name:
                     continue
-                fuzzy_score = self._fuzzy_match(entity, name)
-                if fuzzy_score > 0.6:
-                    score += fuzzy_score * self.FUZZY_MATCH_WEIGHT
-                    reasons.append(f"Fuzzy match ({fuzzy_score:.2f}): {entity} ~ {name}")
 
-            # 3. Type compatibility
+                fuzzy_score = self._fuzzy_match(entity, name)
+                if fuzzy_score > 0.7:
+                    score += fuzzy_score * self.FUZZY_MATCH_WEIGHT
+                    reasons.append(f"Fuzzy match: '{entity}' ~ '{name}' ({fuzzy_score:.2f})")
+
+            # 4. Table classification bonus based on query intent
+            table_classification = classify_table_by_metadata(table, catalog_adapter)
+
+            # Map query entities to table types for semantic matching
+            entity_to_table_type = {
+                "customer": "customer_table",
+                "customers": "customer_table",
+                "product": "product_table",
+                "products": "product_table",
+                "item": "product_table",
+                "items": "product_table",
+                "order": "transaction_table",
+                "orders": "transaction_table",
+                "transaction": "transaction_table",
+                "transactions": "transaction_table",
+                "sale": "transaction_table",
+                "sales": "transaction_table",
+                "invoice": "financial_table",
+                "invoices": "financial_table",
+                "payment": "financial_table",
+                "payments": "financial_table"
+            }
+
+            # Check if any entity matches a known table type
+            for entity in entities or []:
+                entity_lower = entity.lower()
+                if entity_lower in entity_to_table_type:
+                    table_type = entity_to_table_type[entity_lower]
+                    type_score = table_classification.get(table_type, 0.0)
+                    if type_score > 0.5:
+                        score += type_score * 0.5  # Bonus for matching table type
+                        reasons.append(f"Table type match: '{entity}' → {table_type} ({type_score:.2f})")
+
+            # 5. Type compatibility
             type_score = self._score_type_compatibility(name or "", intent_operations or [], catalog_adapter, table)
             if type_score > 0:
                 score += type_score

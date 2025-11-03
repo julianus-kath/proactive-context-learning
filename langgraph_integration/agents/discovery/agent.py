@@ -127,14 +127,15 @@ class DiscoveryAgent:
     async def _search_candidates_node(self, state: BaseState) -> BaseState:
         """
         Search for tables/views matching user intent.
-        
+
         Builds search keywords from:
         - user_input (main query)
         - intent.entities (explicitly mentioned entities)
-        
+
         Prefers views first (role_coverage >= 0.70).
         """
         logger.info("🔍 DiscoveryAgent: Searching candidates...")
+        logger.critical("🚨🚨🚨 SEARCH_CANDIDATES_NODE IS RUNNING 🚨🚨🚨")
         
         user_input = state.get("user_input", "")
         intent = state.get("intent", {})
@@ -184,6 +185,23 @@ class DiscoveryAgent:
                     seen.add(table_name)
                     unique_candidates.append(c)
             
+            # Always try fallback discovery to supplement results
+            logger.critical("🔄 🔄 🔄 SUPPLEMENTING WITH INTELLIGENT FALLBACK BUSINESS DATA DISCOVERY 🔄 🔄 🔄")
+            fallback_candidates = await self._fallback_business_table_discovery()
+            logger.critical(f"🔄 Fallback returned {len(fallback_candidates) if fallback_candidates else 0} candidates")
+            if fallback_candidates:
+                # Merge with existing candidates
+                all_candidates = unique_candidates + fallback_candidates
+                # Deduplicate
+                seen = set()
+                unique_candidates = []
+                for c in all_candidates:
+                    table_name = c.get("table_name") or c.get("name") or c.get("full_name", "")
+                    if table_name not in seen and table_name:
+                        seen.add(table_name)
+                        unique_candidates.append(c)
+                logger.info(f"✅ Fallback added {len(fallback_candidates)} business tables, total: {len(unique_candidates)}")
+
             if not unique_candidates:
                 logger.warning(f"⚠️  No tables/views found for keywords: {', '.join(keywords)}")
                 # Soft outcome: continue with empty candidates to allow potential fast paths downstream
@@ -204,7 +222,90 @@ class DiscoveryAgent:
             }
             logger.error(f"❌ {error['message']}")
             return {**state, "error_info": error}
-    
+
+    def _all_candidates_low_relevance(self, candidates: List[Dict[str, Any]]) -> bool:
+        """Check if all candidates have low relevance scores."""
+        if not candidates:
+            return True
+        return all(c.get("relevance_score", 0) < 0.4 for c in candidates)
+
+    async def _fallback_business_table_discovery(self) -> List[Dict[str, Any]]:
+        """Intelligent fallback discovery for business-relevant tables when semantic search fails."""
+        logger.info("🔍 Trying intelligent fallback: searching for tables with relevant data patterns...")
+
+        # Test if MCP search is working at all first
+        try:
+            logger.debug("🔍 Testing MCP search connectivity...")
+            test_result = await self.mcp.search_tables("customer", page=1, page_size=3)
+            test_parsed = self._parse_search_result(test_result)
+            logger.debug(f"🔍 MCP test search returned {len(test_parsed)} results")
+        except Exception as e:
+            logger.warning(f"🔍 MCP search test failed: {e}")
+
+        # Generic fallback: search for common business entity patterns
+        # These work across different databases and languages
+        generic_patterns = [
+            # Common business entities (language-agnostic)
+            "customer", "product", "order", "transaction", "invoice",
+            "item", "supplier", "payment", "sale", "purchase"
+        ]
+
+        candidates = []
+        for pattern in generic_patterns[:6]:  # Limit searches to avoid overload
+            try:
+                logger.debug(f"🔍 Searching for generic pattern: '{pattern}'")
+                result = await self.mcp.search_tables(pattern, page=1, page_size=10)
+                parsed = self._parse_search_result(result)
+                if parsed:
+                    logger.debug(f"🔍 Pattern '{pattern}' returned {len(parsed)} results")
+                    candidates.extend(parsed)
+            except Exception as e:
+                logger.debug(f"🔍 Search for '{pattern}' failed: {e}")
+                continue
+
+        # Deduplicate and score intelligently
+        seen = set()
+        unique_candidates = []
+        for c in candidates:
+            table_name = c.get("table_name") or c.get("name") or c.get("full_name", "")
+            if table_name not in seen and table_name:
+                seen.add(table_name)
+
+                # Calculate intelligent relevance score
+                base_score = c.get("relevance_score", 0)
+
+                # Bonus for tables with actual data
+                data_bonus = 0.3 if c.get("estimated_rows", 0) > 10 else 0
+
+                # Bonus for tables with many columns (more likely to be main tables)
+                column_bonus = min(c.get("column_count", 0) / 50, 0.2)
+
+                # Bonus for well-connected tables (FK relationships)
+                fk_bonus = min(c.get("fk_count", 0) / 5, 0.2)
+
+                # Penalty for empty tables
+                empty_penalty = -0.5 if c.get("estimated_rows", 0) == 0 else 0
+
+                c["relevance_score"] = base_score + data_bonus + column_bonus + fk_bonus + empty_penalty
+                c["fallback_discovered"] = True
+                unique_candidates.append(c)
+
+        # Sort by intelligent relevance score
+        unique_candidates.sort(key=lambda x: x.get("relevance_score", 0), reverse=True)
+
+        # Filter out very low scoring tables
+        good_candidates = [c for c in unique_candidates if c.get("relevance_score", 0) > 0.1]
+
+        logger.info(f"📊 Intelligent fallback found {len(good_candidates)} relevant tables:")
+        for i, c in enumerate(good_candidates[:8]):
+            score = c.get("relevance_score", 0)
+            rows = c.get("estimated_rows", 0)
+            cols = c.get("column_count", 0)
+            logger.info(f"  {i+1}. {c.get('full_name')} (score: {score:.3f}, rows: {rows}, cols: {cols})")
+
+        # Return top candidates (more than before to give better selection)
+        return good_candidates[:12]
+
     async def _rank_candidates_node(self, state: BaseState) -> BaseState:
         """
         Rank candidates by:
