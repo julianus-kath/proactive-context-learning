@@ -17,6 +17,10 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+DIM='\033[2m'
+WHITE='\033[0;37m'
 NC='\033[0m' # No Color
 
 # Project root directory
@@ -205,6 +209,10 @@ echo -e "${GREEN}✅ MCP_SERVER_URL is configured: ${MCP_SERVER_URL}${NC}"
 # ============================================
 # Enable/disable LangGraph Studio (default: off to avoid interference)
 ENABLE_STUDIO="${ENABLE_STUDIO:-0}"
+
+# Auto-open debugger in new terminal (default: off, shows instructions instead)
+# Set to 1 to automatically open a new terminal with debugger output
+AUTO_OPEN_DEBUGGER="${AUTO_OPEN_DEBUGGER:-0}"
 
 # Debugger PID (will be set if debugger starts)
 DEBUG_PID=""
@@ -544,6 +552,40 @@ if [ -n "$STUDIO_URL" ]; then
     echo -e "  • Inspect full state at each step"
     echo -e "  • Replay and debug failed runs"
     echo -e "  • Test graph with custom inputs"
+fi
+if [ -n "$DEBUG_PID" ]; then
+    echo ""
+    echo -e "${CYAN}${BOLD}╔═══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}${BOLD}║  🔬 WATCH REAL-TIME AGENT REASONING (Recommended!)          ║${NC}"
+    echo -e "${CYAN}${BOLD}╚═══════════════════════════════════════════════════════════════╝${NC}"
+    
+    # Auto-open debugger in new terminal if enabled
+    if [ "$AUTO_OPEN_DEBUGGER" = "1" ]; then
+        echo -e "${GREEN}✅ Auto-opening debugger in new terminal window...${NC}"
+        # macOS Terminal.app - open new window with tail command
+        osascript -e "tell application \"Terminal\" to do script \"cd '$PROJECT_ROOT' && tail -f logs/langgraph_debugger.log\"" 2>/dev/null || {
+            echo -e "${YELLOW}⚠️  Could not auto-open terminal. Please run manually:${NC}"
+            echo -e "    ${GREEN}${BOLD}tail -f logs/langgraph_debugger.log${NC}"
+        }
+    else
+        echo -e "${WHITE}Open a ${BOLD}NEW TERMINAL${NC}${WHITE} and run:${NC}"
+        echo -e ""
+        echo -e "    ${GREEN}${BOLD}tail -f logs/langgraph_debugger.log${NC}"
+    fi
+    
+    echo -e ""
+    echo -e "${WHITE}This shows:${NC}"
+    echo -e "  ${CYAN}✓${NC} Agent entries/exits with state snapshots"
+    echo -e "  ${CYAN}✓${NC} Intent parsing (keywords, confidence, operation)"
+    echo -e "  ${CYAN}✓${NC} Discovery results (tables found)"
+    echo -e "  ${CYAN}✓${NC} SQL generation and execution"
+    echo -e "  ${CYAN}✓${NC} Routing decisions and error propagation"
+    echo -e ""
+    echo -e "${YELLOW}💡 This is the best way to debug 'missing info' responses!${NC}"
+    
+    if [ "$AUTO_OPEN_DEBUGGER" != "1" ]; then
+        echo -e "${DIM}   (To auto-open debugger, set AUTO_OPEN_DEBUGGER=1 in startup script)${NC}"
+    fi
 fi
 echo ""
 echo -e "${YELLOW}Press Ctrl+C to stop all services${NC}"

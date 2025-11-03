@@ -37,8 +37,10 @@ from langgraph_integration.agents.join_sql.agent import JoinPlanAndSQLAgent
 from langgraph_integration.agents.exec_recovery.agent import ExecAndRecoveryAgent
 from langgraph_integration.agents.answer.agent import AnswerAgent
 from langgraph_integration.mcp_client import MCPDatabaseTool
+from langgraph_integration.debug_logger import get_debug_logger
 
 logger = logging.getLogger(__name__)
+debug_logger = get_debug_logger()
 
 
 class QueryOrchestrator:
@@ -234,6 +236,9 @@ class QueryOrchestrator:
         
         This ensures discovery will have access to semantic ranking and metadata.
         """
+        debug_logger.agent_entry("index_database", dict(state))
+        before_state = dict(state)
+        
         logger.info("📚 [INDEX_DATABASE] Indexing database...")
 
         try:
@@ -246,9 +251,12 @@ class QueryOrchestrator:
                     "message": "MCP server is not responding"
                 }
                 logger.error(f"📚 [INDEX_DATABASE] ❌ {error['message']}")
-                return {**state, "error_info": error}
+                result_state = {**state, "error_info": error}
+                debug_logger.agent_exit("index_database", before_state, dict(result_state))
+                return result_state
 
             logger.info("📚 [INDEX_DATABASE] ✅ Database indexed, MCP available")
+            debug_logger.agent_exit("index_database", before_state, dict(state))
             return state
 
         except Exception as e:
@@ -258,7 +266,9 @@ class QueryOrchestrator:
                 "error": str(e)
             }
             logger.error(f"📚 [INDEX_DATABASE] ❌ {error['message']}")
-            return {**state, "error_info": error}
+            result_state = {**state, "error_info": error}
+            debug_logger.agent_exit("index_database", before_state, dict(result_state))
+            return result_state
 
     async def _parse_intent_node(self, state: BaseState) -> BaseState:
         """
@@ -272,6 +282,9 @@ class QueryOrchestrator:
         
         Returns: ParsedIntent with operation, entities, metrics, filters, keywords_for_discovery, confidence
         """
+        debug_logger.agent_entry("parse_intent", dict(state))
+        before_state = dict(state)
+        
         logger.info("🧠 [PARSE_INTENT] ════════════════════════════════════════")
         logger.info("🧠 [PARSE_INTENT] STARTING INTENT PARSING (Phase 9)")
         logger.info("🧠 [PARSE_INTENT] ════════════════════════════════════════")
@@ -316,6 +329,9 @@ class QueryOrchestrator:
             state["intent"] = intent
             logger.info(f"🧠 [PARSE_INTENT] ✅ Intent stored in state['intent']")
             logger.info(f"🧠 [PARSE_INTENT] ✅ Ready for ROUTE_OPERATION node")
+            
+            debug_logger.intent_parsed_phase9(intent, parsing_method="LLM")
+            debug_logger.agent_exit("parse_intent", before_state, dict(state))
             return state
 
         except Exception as e:
@@ -328,7 +344,9 @@ class QueryOrchestrator:
             logger.error(f"🧠 [PARSE_INTENT] Error: {str(e)}")
             import traceback
             logger.error(f"🧠 [PARSE_INTENT] Traceback:\n{traceback.format_exc()}")
-            return {**state, "error_info": error}
+            result_state = {**state, "error_info": error}
+            debug_logger.agent_exit("parse_intent", before_state, dict(result_state))
+            return result_state
 
     async def _route_operation_node(self, state: BaseState) -> BaseState:
         """
@@ -336,6 +354,9 @@ class QueryOrchestrator:
         
         This determines which branch to take based on intent operation.
         """
+        debug_logger.agent_entry("route_operation", dict(state))
+        before_state = dict(state)
+        
         logger.info("🚦 [ROUTE] ════════════════════════════════════════")
         logger.info("🚦 [ROUTE] CONDITIONAL ROUTING DECISION")
         logger.info("🚦 [ROUTE] ════════════════════════════════════════")
@@ -359,6 +380,7 @@ class QueryOrchestrator:
             logger.info(f"🚦 [ROUTE]    Defaulting to: query pipeline")
         
         logger.info(f"🚦 [ROUTE] ✅ Routing complete, conditional_edges will take it from here")
+        debug_logger.agent_exit("route_operation", before_state, dict(state))
         return state
 
     # ============= Agent nodes (subgraph invocations) =============
@@ -370,6 +392,9 @@ class QueryOrchestrator:
         Finds relevant tables/views using Scout semantic search, ranks by role coverage.
         Output: relevant_tables, schema_snippet, candidate_views, column_index
         """
+        debug_logger.agent_entry("discovery", dict(state))
+        before_state = dict(state)
+        
         logger.info("🔍 [DISCOVERY] Starting DiscoveryAgent...")
         
         # SURGICAL DEBUG: Show input state
@@ -441,6 +466,7 @@ class QueryOrchestrator:
 
             logger.info(f"🔍 [DISCOVERY] ✅ DISCOVERY COMPLETE: {len(relevant_tables)} table(s) found")
             logger.info(f"🔍 [DISCOVERY] ✅ State is ready for JOIN_SQL node")
+            debug_logger.agent_exit("discovery", before_state, dict(state))
             return state
 
         except Exception as e:
@@ -452,7 +478,9 @@ class QueryOrchestrator:
             logger.error(f"🔍 [DISCOVERY] ❌ EXCEPTION: {error['message']}")
             import traceback
             logger.error(f"🔍 [DISCOVERY] Traceback:\n{traceback.format_exc()}")
-            return {**state, "error_info": error}
+            result_state = {**state, "error_info": error}
+            debug_logger.agent_exit("discovery", before_state, dict(result_state))
+            return result_state
 
     async def _join_sql_node(self, state: BaseState) -> BaseState:
         """
@@ -461,6 +489,9 @@ class QueryOrchestrator:
         Plans joins (views-first strategy, FK relationships) and generates MSSQL.
         Output: join_plan, sql_query
         """
+        debug_logger.agent_entry("join_sql", dict(state))
+        before_state = dict(state)
+        
         logger.info("🔗 [JOIN_SQL] ════════════════════════════════════════")
         logger.info("🔗 [JOIN_SQL] CRITICAL: NODE EXECUTION STARTED!")
         logger.info("🔗 [JOIN_SQL] If this log doesn't appear, the workflow STOPPED after DISCOVERY")
@@ -545,6 +576,7 @@ class QueryOrchestrator:
                     logger.warning(f"🔗 [JOIN_SQL]    ⚠️  SQL query is empty!")
             
             logger.info(f"🔗 [JOIN_SQL] ✅ State ready for EXEC_RECOVERY node")
+            debug_logger.agent_exit("join_sql", before_state, dict(state))
             return state
 
         except Exception as e:
@@ -556,7 +588,9 @@ class QueryOrchestrator:
             logger.error(f"🔗 [JOIN_SQL] ❌ {error['message']}")
             import traceback
             logger.error(f"🔗 [JOIN_SQL] Traceback:\n{traceback.format_exc()}")
-            return {**state, "error_info": error}
+            result_state = {**state, "error_info": error}
+            debug_logger.agent_exit("join_sql", before_state, dict(result_state))
+            return result_state
 
     async def _exec_recovery_node(self, state: BaseState) -> BaseState:
         """
@@ -565,6 +599,9 @@ class QueryOrchestrator:
         Executes query safely (row caps, timeouts) and recovers from errors via LLM repair.
         Output: exec_result, error_info, retry_count
         """
+        debug_logger.agent_entry("exec_recovery", dict(state))
+        before_state = dict(state)
+        
         logger.info("⚡ [EXEC_RECOVERY] ════════════════════════════════════════")
         logger.info("⚡ [EXEC_RECOVERY] CRITICAL: NODE EXECUTION STARTED!")
         logger.info("⚡ [EXEC_RECOVERY] If this log doesn't appear, workflow stopped before this node")
@@ -619,6 +656,7 @@ class QueryOrchestrator:
                 logger.warning(f"⚡ [EXEC_RECOVERY] ❌ Execution failed, error_info set for answer agent")
 
             logger.info(f"⚡ [EXEC_RECOVERY] ✅ State ready for ANSWER node")
+            debug_logger.agent_exit("exec_recovery", before_state, dict(state))
             return state
 
         except Exception as e:
@@ -628,7 +666,9 @@ class QueryOrchestrator:
                 "error": str(e)
             }
             logger.error(f"❌ {error['message']}")
-            return {**state, "error_info": error}
+            result_state = {**state, "error_info": error}
+            debug_logger.agent_exit("exec_recovery", before_state, dict(result_state))
+            return result_state
 
     async def _answer_node(self, state: BaseState) -> BaseState:
         """
@@ -637,6 +677,9 @@ class QueryOrchestrator:
         Formats successful results, errors, or clarification requests as natural language.
         Output: final_response
         """
+        debug_logger.agent_entry("answer", dict(state))
+        before_state = dict(state)
+        
         logger.info("✨ Running AnswerAgent...")
 
         try:
@@ -675,6 +718,7 @@ class QueryOrchestrator:
             state["final_response"] = result.get("final_response", "No response generated")
 
             logger.info("✅ Answer formatted")
+            debug_logger.agent_exit("answer", before_state, dict(state))
             return state
 
         except Exception as e:
@@ -685,6 +729,7 @@ class QueryOrchestrator:
             }
             logger.error(f"❌ {error['message']}")
             state["final_response"] = f"Error formatting response: {str(e)}"
+            debug_logger.agent_exit("answer", before_state, dict(state))
             return state
 
     # ============= Special operation nodes =============
