@@ -158,6 +158,31 @@ class ScoutRunner:
 
         return age_hours >= self.ttl_hours
 
+    def _build_catalog_sync(self) -> Dict[str, Any]:
+        """
+        Synchronous catalog building (runs in thread pool).
+
+        Returns:
+            Built catalog data
+        """
+        # For now, return a minimal catalog to avoid complex async issues
+        # TODO: Properly implement sync catalog building
+        logger.warning("Using minimal catalog - async catalog building not fully implemented")
+
+        return {
+            "metadata": {
+                "database_type": "mssql",
+                "build_timestamp": datetime.utcnow().isoformat(),
+                "tables_count": 0,
+                "views_count": 0,
+                "relationships_count": 0,
+                "note": "Minimal catalog - full build failed"
+            },
+            "tables": {},
+            "views": {},
+            "relationships": []
+        }
+
     async def _build_catalog_async(self) -> bool:
         """
         Build catalog asynchronously in background.

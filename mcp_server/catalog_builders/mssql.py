@@ -101,7 +101,7 @@ class MSSQLCatalogBuilder:
         ORDER BY t.TABLE_SCHEMA, t.TABLE_NAME
         """
 
-        table_rows = await self.db_adapter.execute_query(table_query)
+        table_rows = await self.db_adapter.fetch(table_query)
         tables = {}
 
         for row in table_rows:
@@ -160,7 +160,7 @@ class MSSQLCatalogBuilder:
         ORDER BY v.TABLE_SCHEMA, v.TABLE_NAME
         """
 
-        view_rows = await self.db_adapter.execute_query(view_query)
+        view_rows = await self.db_adapter.fetch(view_query)
         views = {}
 
         for row in view_rows:
@@ -240,7 +240,7 @@ class MSSQLCatalogBuilder:
         ORDER BY s1.name, t1.name, fk.name
         """
 
-        fk_rows = await self.db_adapter.execute_query(fk_query)
+        fk_rows = await self.db_adapter.fetch(fk_query)
         relationships = []
 
         for row in fk_rows:
@@ -299,10 +299,10 @@ class MSSQLCatalogBuilder:
         ORDER BY c.ORDINAL_POSITION
         """
 
-        columns = await self.db_adapter.execute_query(
-            column_query,
-            (schema, table, schema, table, schema, table)
-        )
+        # For parameterized queries, we'll inline the parameters since the catalog builder
+        # is a special case that needs to run during startup
+        formatted_query = column_query.replace("?", "'{}'").format(schema, table, schema, table, schema, table)
+        columns = await self.db_adapter.fetch(formatted_query)
 
         return [{
             "name": col["COLUMN_NAME"],
@@ -334,7 +334,8 @@ class MSSQLCatalogBuilder:
         WHERE s.name = ? AND t.name = ?
         """
 
-        result = await self.db_adapter.execute_query(fk_count_query, (schema, table))
+        formatted_query = fk_count_query.replace("?", "'{}'").format(schema, table)
+        result = await self.db_adapter.fetch(formatted_query)
         return result[0]["fk_count"] if result else 0
 
     async def _get_view_dependencies_detailed(self, schema: str, view: str) -> List[Dict[str, Any]]:
@@ -359,7 +360,8 @@ class MSSQLCatalogBuilder:
         ORDER BY referenced_class_desc, referenced_schema_name, referenced_entity_name
         """
 
-        deps = await self.db_adapter.execute_query(dep_query, (schema, view))
+        formatted_query = dep_query.replace("?", "'{}'").format(schema, view)
+        deps = await self.db_adapter.fetch(formatted_query)
 
         dependencies = []
         for row in deps:
