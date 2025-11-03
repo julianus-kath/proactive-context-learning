@@ -138,6 +138,7 @@ cleanup() {
     kill_by_name "uvicorn"
     kill_by_name "langgraph_service"
     kill_by_name "web_app"
+    kill_by_name "debug_langgraph_comprehensive"
     
     # Kill services on known ports (NOT 8000 - that's on Windows)
     kill_port 3000  # Web UI
@@ -204,6 +205,9 @@ echo -e "${GREEN}✅ MCP_SERVER_URL is configured: ${MCP_SERVER_URL}${NC}"
 # ============================================
 # Enable/disable LangGraph Studio (default: off to avoid interference)
 ENABLE_STUDIO="${ENABLE_STUDIO:-0}"
+
+# Debugger PID (will be set if debugger starts)
+DEBUG_PID=""
 if [ "$ENABLE_STUDIO" = "1" ]; then
     echo -e "${YELLOW}🔧 Feature toggle: LangGraph Studio is ENABLED (ENABLE_STUDIO=1)${NC}"
 else
@@ -453,6 +457,25 @@ wait_for_service "http://localhost:5001/health" "LangGraph Service" || {
     cleanup
 }
 
+# Start LangGraph Debugger (Real-time agent reasoning monitor)
+echo ""
+echo -e "${YELLOW}🔬 Starting LangGraph Debugger (Real-time agent reasoning monitor)...${NC}"
+cd "$PROJECT_ROOT"
+
+if [ ! -f "debug_langgraph_comprehensive.py" ]; then
+    echo -e "${YELLOW}⚠️  debug_langgraph_comprehensive.py not found, skipping debugger${NC}"
+    DEBUG_PID=""
+else
+    > "$LOG_DIR/langgraph_debugger.log"
+    # Use default API key if not set (debug script defaults to supersecretapikey)
+    DEBUG_API_KEY="${API_KEY:-supersecretapikey}"
+    nohup python3 debug_langgraph_comprehensive.py --url "http://localhost:5001" --api-key "$DEBUG_API_KEY" > "$LOG_DIR/langgraph_debugger.log" 2>&1 &
+    DEBUG_PID=$!
+    echo -e "${GREEN}✅ LangGraph Debugger started (PID: $DEBUG_PID)${NC}"
+    echo -e "${YELLOW}   Debugger output: tail -f $LOG_DIR/langgraph_debugger.log${NC}"
+    echo -e "${YELLOW}   Or view directly in terminal${NC}"
+fi
+
 # Start Web UI
 echo ""
 echo -e "${YELLOW}🌐 Starting Web UI (Port 3000)...${NC}"
@@ -503,6 +526,10 @@ echo -e "  Web UI:             tail -f $LOG_DIR/web_ui.log"
 echo -e "  LangGraph Service:  tail -f $LOG_DIR/langgraph.log"
 if [ -n "$STUDIO_URL" ]; then
     echo -e "  LangGraph Studio:   tail -f $LOG_DIR/langgraph_studio.log"
+fi
+if [ -n "$DEBUG_PID" ]; then
+    echo -e "  LangGraph Debugger: tail -f $LOG_DIR/langgraph_debugger.log"
+    echo -e "                    (Shows real-time agent reasoning steps)"
 fi
 echo ""
 echo -e "${BLUE}Documentation & Debugging:${NC}"
