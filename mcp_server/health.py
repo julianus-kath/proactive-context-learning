@@ -25,7 +25,7 @@ def set_scout_runner(scout_runner):
     logger.info("✅ Scout Runner reference set for health monitoring")
 
 
-def get_health_status(db_manager=None) -> Dict[str, Any]:
+async def get_health_status(db_manager=None) -> Dict[str, Any]:
     """
     Get comprehensive health status including Scout catalog metrics.
 
@@ -102,14 +102,14 @@ def get_health_status(db_manager=None) -> Dict[str, Any]:
     return health
 
 
-def get_health_summary() -> str:
+async def get_health_summary() -> str:
     """
     Get a human-readable health summary.
 
     Returns:
         Formatted health summary string
     """
-    health = get_health_status()
+    health = await get_health_status()
 
     summary = f"🏥 MCP Server Health: {health['status'].upper()}\n\n"
 

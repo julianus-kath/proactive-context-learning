@@ -171,7 +171,7 @@ async def health_check():
     - Build statistics and performance
     """
     try:
-        health_status = get_health_status(db_manager)
+        health_status = await get_health_status(db_manager)
         return health_status
     except Exception as e:
         logger.error(f"Health check failed: {e}")
