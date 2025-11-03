@@ -573,7 +573,13 @@ class DiscoveryAgent:
         # From user input (main nouns)
         # Simple heuristic: split and filter common words
         words = user_input.lower().split()
-        common_words = {"the", "a", "an", "is", "are", "was", "were", "by", "of", "for", "to", "and", "or", "in", "on", "at", "how", "many", "show", "me", "please", "get", "list", "find", "search", "what"}
+        # 🔧 CRITICAL FIX: Added "have", "do", "does", "did" to common_words to prevent "have" being searched as a table keyword
+        common_words = {
+            "the", "a", "an", "is", "are", "was", "were", "by", "of", "for", "to", "and", "or", "in", "on", "at",
+            "how", "many", "show", "me", "please", "get", "list", "find", "search", "what",
+            "have", "has", "had", "do", "does", "did", "be", "been", "be", "with", "from", "as", "it",
+            "we", "you", "they", "he", "she", "this", "that", "there", "where", "when", "why", "which", "who"
+        }
         for word in words:
             if word not in common_words and len(word) > 2:
                 keywords.append(word.strip("?,.!"))
@@ -582,6 +588,7 @@ class DiscoveryAgent:
         keywords = [k for k in keywords if k and len(k) > 1]
         keywords = list(dict.fromkeys(keywords))  # Remove duplicates preserving order
         
+        logger.info(f"📌 Extracted keywords: {keywords}")
         return keywords[:5]  # Limit to 5 keywords
     
     def _parse_search_result(self, result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

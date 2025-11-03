@@ -217,7 +217,12 @@ class JoinPlanAndSQLAgent:
         if not relevant_tables:
             error = {
                 "type": "NO_TABLES",
-                "message": "No relevant tables available for join planning",
+                "message": "No relevant tables available for join planning. Discovery did not find matching tables.",
+                "debug": {
+                    "schema_snippet": state.get("schema_snippet", ""),
+                    "candidate_views": state.get("candidate_views", []),
+                    "discovery_error": state.get("error_info")
+                }
             }
             logger.error(f"❌ {error['message']}")
             return {**state, "error_info": error}
@@ -368,6 +373,17 @@ class JoinPlanAndSQLAgent:
                     if where_conditions:
                         sql += " WHERE " + " AND ".join(where_conditions)
 
+            # 🔧 CRITICAL VALIDATION: Ensure SQL is valid before returning
+            if not sql or sql.strip() == "":
+                raise ValueError("Generated SQL is empty")
+            
+            if not sql.upper().startswith("SELECT TOP"):
+                raise ValueError(f"Generated SQL doesn't start with 'SELECT TOP': {sql[:50]}")
+            
+            # Check for required table reference
+            if "FROM" not in sql.upper():
+                raise ValueError("Generated SQL has no FROM clause")
+            
             logger.info(f"✅ Generated SQL ({len(sql)} chars)")
             logger.debug(f"SQL: {sql[:200]}...")
 

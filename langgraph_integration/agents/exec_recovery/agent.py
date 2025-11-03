@@ -326,8 +326,13 @@ class ExecAndRecoveryAgent:
             # Extract SQL from response (might have explanations)
             repaired_sql = self._extract_sql(repaired_sql)
 
-            if not repaired_sql:
-                raise ValueError("LLM returned no SQL")
+            if not repaired_sql or repaired_sql.strip() == "":
+                # 🔧 CRITICAL FIX: LLM returned explanatory text, not SQL
+                raise ValueError("LLM returned no valid SQL (likely explanatory text)")
+            
+            # Ensure it starts with SELECT
+            if not repaired_sql.upper().strip().startswith("SELECT"):
+                raise ValueError(f"Repaired query doesn't start with SELECT: {repaired_sql[:50]}")
 
             logger.info(f"✅ LLM repaired SQL ({len(repaired_sql)} chars)")
             logger.debug(f"  Repaired: {repaired_sql[:100]}...")
@@ -339,6 +344,13 @@ class ExecAndRecoveryAgent:
 
         except Exception as e:
             logger.warning(f"  Repair attempt failed: {e}")
+            # 🔧 FIX: Mark that repair failed and don't use broken SQL
+            state["error_info"] = {
+                "type": "REPAIR_FAILED",
+                "message": f"SQL repair attempt failed: {str(e)}",
+                "error": str(e),
+                "stage": "repair"
+            }
             # Fall through to simplification
             return state
 
@@ -410,8 +422,14 @@ class ExecAndRecoveryAgent:
             simplified_sql = response.content.strip()
             simplified_sql = self._extract_sql(simplified_sql)
 
-            if not simplified_sql:
-                logger.warning("  Simplification returned no SQL, using original")
+            if not simplified_sql or simplified_sql.strip() == "":
+                # 🔧 FIX: LLM returned explanatory text or no SQL
+                logger.warning("  Simplification returned no valid SQL (likely explanatory text), using original")
+                return state
+            
+            # Ensure it starts with SELECT
+            if not simplified_sql.upper().strip().startswith("SELECT"):
+                logger.warning(f"  Simplified query doesn't start with SELECT, using original")
                 return state
 
             logger.info(f"✅ Simplified SQL ({len(simplified_sql)} chars)")
@@ -532,7 +550,11 @@ class ExecAndRecoveryAgent:
             return {"ok": False, "error": str(e)}
 
     def _extract_sql(self, text: str) -> str:
-        """Extract SQL from LLM response."""
+        """Extract SQL from LLM response.
+        
+        🔧 CRITICAL FIX: If no SELECT found, return empty string (not explanatory text)
+        This prevents LLM explanations from being treated as SQL queries.
+        """
         text = text.strip()
 
         # Remove markdown code fence
@@ -545,8 +567,14 @@ class ExecAndRecoveryAgent:
 
         # Remove explanations (text before SELECT)
         select_idx = text.upper().find("SELECT")
-        if select_idx > 0:
+        if select_idx >= 0:
+            # SELECT found, extract SQL from that point
             text = text[select_idx:]
+        elif select_idx < 0:
+            # 🔧 CRITICAL: No SELECT found means LLM returned explanations, not SQL
+            logger.warning("⚠️  No SELECT keyword found in LLM response - likely LLM returned explanatory text instead of SQL")
+            logger.debug(f"  Response preview: {text[:200]}...")
+            return ""  # Return empty instead of returning the explanation
 
         return text.strip()
 

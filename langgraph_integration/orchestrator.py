@@ -34,29 +34,6 @@ from langgraph_integration.mcp_client import MCPDatabaseTool
 logger = logging.getLogger(__name__)
 
 
-def _run_async(coro):
-    """
-    Helper to run async functions synchronously.
-    
-    LangGraph nodes must be synchronous for .invoke() to work.
-    This wrapper allows async node implementations while maintaining sync interface.
-    """
-    try:
-        # Check if there's already an event loop in this thread
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # If loop is running, create new one (shouldn't happen in this context)
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                future = pool.submit(asyncio.run, coro)
-                return future.result()
-        else:
-            return loop.run_until_complete(coro)
-    except RuntimeError:
-        # No event loop, create new one
-        return asyncio.run(coro)
-
-
 class QueryOrchestrator:
     """
     Orchestrates query processing through 4 specialized agents.
@@ -139,6 +116,8 @@ class QueryOrchestrator:
         Returns:
             Compiled LangGraph StateGraph ready for execution
         """
+        from typing import Literal
+        
         logger.info("🏗️  Building orchestrator graph...")
         graph = StateGraph(BaseState)
 
@@ -165,9 +144,20 @@ class QueryOrchestrator:
         graph.add_edge("index_database", "parse_intent")
         graph.add_edge("parse_intent", "route_operation")
 
-        # Conditional routing based on operation type
-        def route_operation(state: BaseState) -> str:
-            """Route to appropriate handler based on intent operation."""
+        # ============= CONDITIONAL ROUTING FROM route_operation =============
+        # Based on operation type, route to appropriate handler
+        def route_to_operation(state: BaseState) -> str:
+            """
+            Route to appropriate handler based on intent operation.
+            
+            This determines which branch of the orchestrator to take:
+            - "clarify": Ask user for clarification
+            - "schema_query": Discover tables/views and explain schema
+            - "health_check": Check system health
+            - "execute_direct": Execute pre-written SQL
+            - "error": Handle errors
+            - "query" (default): Full query pipeline
+            """
             intent = state.get("intent", {})
             operation = intent.get("operation", "query")
 
@@ -176,28 +166,44 @@ class QueryOrchestrator:
             if operation == "clarify":
                 return "answer"
             elif operation == "schema_query":
-                return "discovery"  # Followed by answer_schema
+                return "discovery_for_schema"
             elif operation == "health_check":
                 return "answer_health"
             elif operation == "execute_direct":
-                return "exec_recovery"  # SQL already provided
+                return "exec_recovery"
             elif operation == "error":
                 return "answer_error"
             else:
                 # Default: query → discovery → join_sql → exec → answer
                 return "discovery"
 
-        graph.add_conditional_edges("route_operation", route_operation)
+        # Add conditional edges from route_operation with explicit mapping
+        graph.add_conditional_edges(
+            "route_operation",
+            route_to_operation,
+            {
+                "answer": "answer",
+                "discovery_for_schema": "discovery_for_schema",
+                "answer_health": "answer_health",
+                "exec_recovery": "exec_recovery",
+                "answer_error": "answer_error",
+                "discovery": "discovery",
+            }
+        )
 
-        # Main query flow: discovery → join_sql → exec_recovery → answer
+        # ============= QUERY PIPELINE =============
+        # Standard query flow: discovery → join_sql → exec_recovery → answer
         graph.add_edge("discovery", "join_sql")
         graph.add_edge("join_sql", "exec_recovery")
         graph.add_edge("exec_recovery", "answer")
 
-        # Schema flow: discovery → answer_schema
-        graph.add_edge("discovery", "answer_schema")
+        # ============= SCHEMA QUERY PIPELINE =============
+        # Schema discovery flow: discovery_for_schema → answer_schema
+        # (We use a separate entry point node name to make the graph topology clear)
+        graph.add_node("discovery_for_schema", self._discovery_node)  # Same implementation
+        graph.add_edge("discovery_for_schema", "answer_schema")
 
-        # Terminal nodes
+        # ============= TERMINAL NODES =============
         graph.add_edge("answer", END)
         graph.add_edge("answer_schema", END)
         graph.add_edge("answer_health", END)
@@ -205,6 +211,8 @@ class QueryOrchestrator:
 
         compiled = graph.compile()
         logger.info("✅ Orchestrator graph compiled successfully")
+        logger.info(f"   Graph nodes: {list(compiled.nodes.keys())}")
+        logger.info(f"   Start → route_operation (conditional) → multiple paths → END")
         return compiled
 
     # ============= Core node implementations =============

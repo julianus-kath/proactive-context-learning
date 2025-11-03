@@ -27,12 +27,9 @@ cd "$PROJECT_ROOT"
 LOG_DIR="$PROJECT_ROOT/logs"
 mkdir -p "$LOG_DIR"
 
-echo -e "${BLUE}"
-echo "=========================================="
-echo "  Mac Services Startup"
-echo "  Web UI + LangGraph Service"
-echo "=========================================="
-echo -e "${NC}"
+# ============================================
+# HELPER FUNCTIONS (defined early)
+# ============================================
 
 # Function to check if a port is in use
 check_port() {
@@ -55,12 +52,58 @@ kill_port() {
     fi
 }
 
-# Function to kill process by name pattern
+# Function to kill process by name pattern (enhanced)
 kill_by_name() {
     local pattern=$1
-    pkill -f "$pattern" 2>/dev/null || true
-    sleep 1
+    local count=$(pgrep -f "$pattern" 2>/dev/null | wc -l)
+    if [ "$count" -gt 0 ]; then
+        echo -e "${YELLOW}   Killing $count process(es) matching '$pattern'${NC}"
+        pkill -9 -f "$pattern" 2>/dev/null || true
+        sleep 1
+    fi
 }
+
+echo -e "${BLUE}"
+echo "=========================================="
+echo "  Mac Services Startup"
+echo "  Web UI + LangGraph Service"
+echo "=========================================="
+echo -e "${NC}"
+
+# ============================================
+# AGGRESSIVE CLEANUP: Kill ALL LangChain/LangGraph instances
+# ============================================
+echo -e "${BLUE}🔥 Aggressive Cleanup Phase...${NC}"
+echo -e "${YELLOW}   Killing ALL langchain/langgraph processes...${NC}"
+
+# Kill by process names (most aggressive)
+kill_by_name "langchain"
+kill_by_name "langgraph"
+kill_by_name "uvicorn"
+
+# Kill Python processes that might be our services
+kill_by_name "langgraph_service"
+kill_by_name "web_app"
+
+# Kill known ports (Web UI, LangGraph Studio, LangGraph Service)
+kill_port 3000
+kill_port 2024
+kill_port 5001
+
+# Final verification - list any remaining Python processes on our ports
+echo -e "${YELLOW}   Verifying ports are clear...${NC}"
+for port in 3000 2024 5001; do
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo -e "${RED}   ⚠️  Port $port still in use, forcing hard kill...${NC}"
+        kill_port $port
+        sleep 2
+    else
+        echo -e "${GREEN}   ✅ Port $port is clear${NC}"
+    fi
+done
+
+echo -e "${GREEN}✅ Cleanup complete${NC}"
+echo ""
 
 # Function to wait for service to be ready
 wait_for_service() {
@@ -89,16 +132,17 @@ wait_for_service() {
 cleanup() {
     echo -e "\n${YELLOW}🛑 Shutting down services...${NC}"
     
+    # Kill all LangChain/LangGraph related processes
+    kill_by_name "langchain"
+    kill_by_name "langgraph"
+    kill_by_name "uvicorn"
+    kill_by_name "langgraph_service"
+    kill_by_name "web_app"
+    
     # Kill services on known ports (NOT 8000 - that's on Windows)
     kill_port 3000  # Web UI
     kill_port 2024  # LangGraph Studio
     kill_port 5001  # LangGraph Service
-    
-    # Kill any remaining Python processes related to our services
-    pkill -f "web_app.py" 2>/dev/null || true
-    pkill -f "langgraph_service.py" 2>/dev/null || true
-    pkill -f "langgraph dev" 2>/dev/null || true
-    pkill -f "langgraph.*build_graph" 2>/dev/null || true
     
     echo -e "${GREEN}✅ All Mac services stopped${NC}"
     exit 0
@@ -251,14 +295,8 @@ fi
 echo -e "${GREEN}✅ Dependencies installed${NC}"
 
 # ============================================
-# Clean up existing processes
+# Note: Aggressive cleanup already performed above
 # ============================================
-echo ""
-echo -e "${BLUE}🧹 Cleaning up existing processes...${NC}"
-kill_port 3000
-kill_port 2024
-kill_port 5001
-kill_by_name "langgraph dev"
 
 # ============================================
 # Start Services
