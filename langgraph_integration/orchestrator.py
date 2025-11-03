@@ -185,21 +185,40 @@ class QueryOrchestrator:
             """
             Route to appropriate handler based on intent operation.
 
-            This determines which branch of the orchestrator to take:
-            - "clarify": Ask user for clarification
+            Priority order:
+            1. needs_clarification: Ask user for clarification (highest priority)
+            2. error_info: Handle errors
+            3. operation type: Route based on intent operation
+
+            Branches:
+            - "clarify": Ask user for clarification (needs_clarification=True)
+            - "error": Handle errors (error_info present)
             - "schema_query": Discover tables/views and explain schema
             - "health_check": Check system health
             - "execute_direct": Execute pre-written SQL
-            - "error": Handle errors
             - "query" (default): Full query pipeline
             """
             intent = state.get("intent", {})
             operation = intent.get("operation", "query")
+            needs_clarification = intent.get("needs_clarification", False)
+            error_info = state.get("error_info")
 
             logger.info(f"🚦 [ROUTE_TO_OPERATION] intent: {intent}")
             logger.info(f"🚦 [ROUTE_TO_OPERATION] operation: {operation}")
-            logger.info(f"🚦 [ROUTE_TO_OPERATION] error_info: {state.get('error_info')}")
+            logger.info(f"🚦 [ROUTE_TO_OPERATION] needs_clarification: {needs_clarification}")
+            logger.info(f"🚦 [ROUTE_TO_OPERATION] error_info: {error_info}")
 
+            # HIGHEST PRIORITY: Check for clarification needs
+            if needs_clarification:
+                logger.info("🚦 [ROUTE_TO_OPERATION] ⚠️  Query needs clarification, routing to answer")
+                return "answer"
+
+            # SECOND PRIORITY: Check for errors
+            if error_info:
+                logger.info("🚦 [ROUTE_TO_OPERATION] ❌ Error detected, routing to answer_error")
+                return "answer_error"
+
+            # THIRD PRIORITY: Route by operation type
             result = None
             if operation == "clarify":
                 result = "answer"
@@ -300,21 +319,26 @@ class QueryOrchestrator:
 
     async def _parse_intent_node(self, state: BaseState) -> BaseState:
         """
-        Parse user intent using LLM-based semantic analysis (Phase 9).
-        
-        🆕 Phase 9: Replaces naive _simple_intent_parser with IntentParserAgent
-        - Extracts structured ParsedIntent (not loose dict)
-        - Produces clean keywords for discovery (NO noise from function words)
-        - Returns metrics, filters, time_window for better ranking
-        - Fixes double-keyword-extraction problem
-        
-        Returns: ParsedIntent with operation, entities, metrics, filters, keywords_for_discovery, confidence
+        Parse user intent using LangGraph subgraph with agentic reasoning (Phase 9.1).
+
+        🆕 Phase 9.1: IntentParserAgent is now a FULL LangGraph subgraph
+        - Multi-step reasoning instead of single LLM call
+        - Built-in error recovery and fallbacks
+        - Conditional routing for ambiguous queries
+        - State persistence across reasoning steps
+
+        Subgraph flow:
+        analyze_query → classify_operation → extract_entities → validate_intent
+            ↓ (conditional)
+        handle_ambiguity (if needed) → END
+
+        Returns: Updated state with intent, confidence, and clarification flags
         """
         debug_logger.agent_entry("parse_intent", dict(state))
         before_state = dict(state)
-        
+
         logger.info("🧠 [PARSE_INTENT] ════════════════════════════════════════")
-        logger.info("🧠 [PARSE_INTENT] STARTING INTENT PARSING (Phase 9)")
+        logger.info("🧠 [PARSE_INTENT] STARTING AGENTIC INTENT PARSING (Phase 9.1)")
         logger.info("🧠 [PARSE_INTENT] ════════════════════════════════════════")
 
         user_input = state.get("user_input", "")
@@ -326,17 +350,35 @@ class QueryOrchestrator:
                 "message": "No user input provided"
             }
             logger.error("🧠 [PARSE_INTENT] ❌ No user input!")
-            return {**state, "error_info": error}
+            result_state = {**state, "error_info": error}
+            debug_logger.agent_exit("parse_intent", before_state, dict(result_state))
+            return result_state
 
         try:
             logger.info(f"🧠 [PARSE_INTENT] Query: \"{user_input}\"")
-            logger.info(f"🧠 [PARSE_INTENT] Calling IntentParserAgent.parse()...")
-            
-            # 🆕 Phase 9: Use IntentParserAgent for semantic parsing
-            intent = await self.intent_parser.parse(user_input)
-            
-            logger.info(f"🧠 [PARSE_INTENT] ✅ Intent parsing COMPLETE")
-            logger.info(f"🧠 [PARSE_INTENT] ━━━ PARSED INTENT ━━━")
+            logger.info("🧠 [PARSE_INTENT] Invoking IntentParserAgent subgraph...")
+
+            # 🆕 Phase 9.1: Build and invoke intent parsing subgraph
+            intent_subgraph = self.intent_parser.build_subgraph()
+            result = await intent_subgraph.ainvoke(state)
+
+            logger.info("🧠 [PARSE_INTENT] ✅ Intent parsing subgraph completed")
+
+            # Extract results from subgraph
+            intent = result.get("intent", {})
+
+            if not intent:
+                logger.error("🧠 [PARSE_INTENT] ❌ CRITICAL: No intent returned from subgraph!")
+                error = {
+                    "type": "INTENT_PARSE_ERROR",
+                    "message": "Intent parsing subgraph returned no intent",
+                    "error": "Subgraph execution failed"
+                }
+                result_state = {**state, "error_info": error}
+                debug_logger.agent_exit("parse_intent", before_state, dict(result_state))
+                return result_state
+
+            logger.info("🧠 [PARSE_INTENT] ━━━ PARSED INTENT ━━━")
             logger.info(f"🧠 [PARSE_INTENT]   operation: {intent.get('operation')}")
             logger.info(f"🧠 [PARSE_INTENT]   primary_entities: {intent.get('primary_entities', [])}")
             logger.info(f"🧠 [PARSE_INTENT]   metrics: {intent.get('metrics', [])}")
@@ -344,28 +386,36 @@ class QueryOrchestrator:
             logger.info(f"🧠 [PARSE_INTENT]   time_window: {intent.get('time_window')}")
             logger.info(f"🧠 [PARSE_INTENT]   keywords_for_discovery: {intent.get('keywords_for_discovery', [])} ← CRITICAL!")
             logger.info(f"🧠 [PARSE_INTENT]   confidence: {intent.get('confidence', 0):.2f}")
-            
+            logger.info(f"🧠 [PARSE_INTENT]   needs_clarification: {intent.get('needs_clarification', False)}")
+
             # CRITICAL CHECK
             keywords = intent.get("keywords_for_discovery", [])
-            if not keywords:
+            needs_clarification = intent.get("needs_clarification", False)
+
+            if needs_clarification:
+                logger.warning("🧠 [PARSE_INTENT] ⚠️  Query needs clarification")
+                logger.warning(f"🧠 [PARSE_INTENT]    Question: {intent.get('clarification_question', 'N/A')}")
+                logger.warning(f"🧠 [PARSE_INTENT]    Reason: {intent.get('ambiguity_reason', 'N/A')}")
+            elif not keywords:
                 logger.error("🧠 [PARSE_INTENT] ❌ CRITICAL: keywords_for_discovery is EMPTY!")
                 logger.error("🧠 [PARSE_INTENT]    This will cause discovery to use fallback extraction")
                 logger.error("🧠 [PARSE_INTENT]    Result: All 943 tables will be searched")
             else:
                 logger.info(f"🧠 [PARSE_INTENT] ✅ Keywords OK: {keywords}")
-            
+
+            # Store the parsed intent in state
             state["intent"] = intent
-            logger.info(f"🧠 [PARSE_INTENT] ✅ Intent stored in state['intent']")
-            logger.info(f"🧠 [PARSE_INTENT] ✅ Ready for ROUTE_OPERATION node")
-            
-            debug_logger.intent_parsed_phase9(intent, parsing_method="LLM")
+            logger.info("🧠 [PARSE_INTENT] ✅ Intent stored in state['intent']")
+            logger.info("🧠 [PARSE_INTENT] ✅ Ready for ROUTE_OPERATION node")
+
+            debug_logger.intent_parsed_phase9(intent, parsing_method="LangGraph_Subgraph")
             debug_logger.agent_exit("parse_intent", before_state, dict(state))
             return state
 
         except Exception as e:
             error = {
                 "type": "INTENT_PARSE_ERROR",
-                "message": f"Failed to parse intent: {str(e)}",
+                "message": f"Failed to execute intent parsing subgraph: {str(e)}",
                 "error": str(e)
             }
             logger.error(f"🧠 [PARSE_INTENT] ❌ EXCEPTION: {error['message']}")
@@ -895,6 +945,31 @@ class QueryOrchestrator:
             logger.info(f"✨ [ANSWER] exec_result.ok: {exec_result.get('ok') if isinstance(exec_result, dict) else 'Not a dict'}")
             logger.info(f"✨ [ANSWER] error_info: {error_info}")
             logger.info(f"✨ [ANSWER] intent.operation: {state.get('intent', {}).get('operation')}")
+
+            # HIGHEST PRIORITY: Handle clarification requests from intent parsing
+            intent = state.get("intent", {})
+            needs_clarification = intent.get("needs_clarification", False)
+            if needs_clarification:
+                clarification_question = intent.get("clarification_question", "Could you please clarify your request?")
+                suggested_options = intent.get("suggested_options", [])
+                ambiguity_reason = intent.get("ambiguity_reason", "Your query needs clarification")
+
+                logger.info(f"✨ [ANSWER] 📝 Handling clarification request: {clarification_question}")
+
+                response_parts = [
+                    f"I need a bit more information to help you effectively. {clarification_question}",
+                    f"\n\nReason: {ambiguity_reason}"
+                ]
+
+                if suggested_options:
+                    response_parts.append(f"\n\nHere are some options to consider:")
+                    for i, option in enumerate(suggested_options, 1):
+                        response_parts.append(f"{i}. {option}")
+
+                state["final_response"] = "".join(response_parts)
+                logger.info(f"✨ [ANSWER] ✅ Clarification response generated")
+                debug_logger.agent_exit("answer", before_state, dict(state))
+                return state
 
             # Fast return: if we have a successful exec_result, synthesize a concise answer
             if isinstance(exec_result, dict) and exec_result.get("ok", False):

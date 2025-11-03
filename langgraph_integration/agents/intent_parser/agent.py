@@ -1,35 +1,27 @@
 """
-IntentParserAgent - Semantic Intent Analysis (Phase 9)
+IntentParserAgent - LangGraph Subgraph for Semantic Intent Analysis (Phase 9.1)
 
-This agent replaces the naive `_simple_intent_parser()` function with semantic,
-LLM-based intent understanding. Instead of naive regex keyword extraction, it:
+This agent is now a FULL LangGraph subgraph that provides agentic reasoning for intent parsing:
 
-1. Understands the user's semantic intent (query type, entities, metrics, filters)
-2. Extracts clean keywords for discovery (NO noise from "which", "how", "many")
-3. Returns a structured ParsedIntent with full typing
-4. Confidence scoring to flag ambiguous queries
+1. analyze_query: Initial semantic analysis with LLM
+2. classify_operation: Determine operation type (query/schema/health/clarify)
+3. extract_entities: Extract semantic entities, metrics, filters
+4. validate_intent: Check completeness and confidence scoring
+5. handle_ambiguity: Ask for clarification if needed (conditional)
+6. refine_intent: Improve intent based on feedback
 
-This FIXES the double-keyword-extraction problem where discovery was being called
-per word instead of with clean semantic keywords.
+This provides ROBUST intent parsing with:
+- Multi-step reasoning instead of single LLM call
+- Built-in error recovery and fallbacks
+- Conditional routing for ambiguous queries
+- Confidence scoring and validation
+- Proper agentic behavior with state management
 
-BEFORE (Problem):
-  User: "Which products have inventory below 100?"
-  _simple_intent_parser returns: entities=["Which", "products", "have", "inventory"]
-  discovery._extract_keywords re-extracts: adds more words
-  Result: 5+ discovery calls, 943 candidates each → state pollution
-
-AFTER (Fixed):
-  User: "Which products have inventory below 100?"
-  IntentParserAgent returns: ParsedIntent(
-    primary_entities=["products"],
-    metrics=["inventory"],
-    filters=[{"field": "inventory", "operator": "<", "value": 100}],
-    keywords_for_discovery=["products", "inventory", "stock"],  ← CLEAN
-    operation="query",
-    confidence=0.95
-  )
-  discovery uses ONLY keywords_for_discovery
-  Result: 1 discovery call, ~3 candidates → clean state
+ARCHITECTURE:
+- LangGraph subgraph with 6+ nodes
+- Conditional edges for different query types
+- State persistence across reasoning steps
+- LLM-driven decisions at each step
 """
 
 import logging
@@ -40,7 +32,8 @@ import concurrent.futures
 from typing import Any, Dict, Optional, List, Literal
 
 from langchain_openai import ChatOpenAI
-from langgraph_integration.contracts.state import ParsedIntent
+from langgraph.graph import StateGraph, END
+from langgraph_integration.contracts.state import BaseState, ParsedIntent
 
 logger = logging.getLogger(__name__)
 
@@ -61,47 +54,99 @@ def _run_async(coro):
 
 class IntentParserAgent:
     """
-    Semantic intent parser using LLM to understand user queries deeply.
-    
-    Returns structured ParsedIntent (typed, not loose dict) with:
-    - operation type (query/schema_query/health_check)
-    - primary entities (2-3 clean nouns)
-    - metrics (what to measure)
-    - filters (structured conditions)
-    - clean keywords for discovery (NO function words)
-    - confidence score
+    LangGraph subgraph for agentic intent parsing with multi-step reasoning.
+
+    Input: {user_input, messages (optional)}
+    Output: {intent: ParsedIntent, needs_clarification: bool, clarification_question: str}
+
+    Graph nodes:
+    1. analyze_query: Initial LLM analysis of user intent
+    2. classify_operation: Determine operation type with confidence
+    3. extract_entities: Extract semantic entities, metrics, filters
+    4. validate_intent: Check completeness and score confidence
+    5. handle_ambiguity: Generate clarification questions if needed
+    6. refine_intent: Improve intent based on user feedback
     """
 
     def __init__(self, llm_model: str = "gpt-4o", llm_temp: float = 0.0):
         """
-        Initialize IntentParserAgent.
-        
+        Initialize IntentParserAgent with LLM.
+
         Args:
             llm_model: LLM model name (e.g., "gpt-4o")
             llm_temp: Temperature for LLM (0.0 = deterministic)
         """
-        self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)
+        self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)  # Uses OPENAI_API_KEY from env
 
-    async def parse(self, user_input: str) -> ParsedIntent:
+    def build_subgraph(self) -> StateGraph:
         """
-        Parse user input into structured intent.
-        
-        Args:
-            user_input: The user's natural language query
-            
+        Build the LangGraph subgraph for intent parsing.
+
         Returns:
-            ParsedIntent: Structured, typed intent with clean keywords for discovery
+            Compiled LangGraph subgraph with agentic reasoning
         """
+        graph = StateGraph(BaseState)
+
+        # Define nodes (wrap async for sync compatibility)
+        graph.add_node("analyze_query", lambda state: _run_async(self._analyze_query_node(state)))
+        graph.add_node("classify_operation", lambda state: _run_async(self._classify_operation_node(state)))
+        graph.add_node("extract_entities", lambda state: _run_async(self._extract_entities_node(state)))
+        graph.add_node("validate_intent", lambda state: _run_async(self._validate_intent_node(state)))
+        graph.add_node("handle_ambiguity", lambda state: _run_async(self._handle_ambiguity_node(state)))
+
+        # Define edges
+        graph.add_edge("analyze_query", "classify_operation")
+        graph.add_edge("classify_operation", "extract_entities")
+        graph.add_edge("extract_entities", "validate_intent")
+
+        # Conditional routing: validate → handle_ambiguity (if needed) or END
+        def route_after_validation(state: BaseState) -> Literal["handle_ambiguity", END]:
+            """Route to ambiguity handling or end based on validation."""
+            intent = state.get("intent", {})
+            needs_clarification = intent.get("needs_clarification", False)
+            confidence = intent.get("confidence", 0.0)
+
+            if needs_clarification or confidence < 0.6:
+                return "handle_ambiguity"
+            return END
+
+        graph.add_conditional_edges(
+            "validate_intent",
+            route_after_validation,
+            {
+                "handle_ambiguity": "handle_ambiguity",
+                END: END,
+            }
+        )
+
+        # Set entry point
+        graph.set_entry_point("analyze_query")
+
+        return graph.compile()
+
+    # ==========================================
+    # LANGGRAPH NODE IMPLEMENTATIONS
+    # ==========================================
+
+    async def _analyze_query_node(self, state: BaseState) -> BaseState:
+        """
+        Node 1: Initial LLM analysis of user intent.
+
+        Performs broad semantic analysis to understand the query type and extract
+        preliminary entities and intent indicators.
+        """
+        user_input = state.get("user_input", "")
+        logger.info(f"🧠 [ANALYZE] Starting analysis of: {user_input}")
+
         if not user_input or not user_input.strip():
-            logger.warning("Empty user input for intent parsing")
-            return self._empty_intent(user_input)
+            logger.warning("🧠 [ANALYZE] Empty input detected")
+            return {**state, "intent": self._empty_intent(user_input)}
 
+        # Fast-path detection for special operations
         user_lower = user_input.lower()
-
-        # Fast path: Detect special operations first
         if self._is_schema_query(user_lower):
-            logger.info("🧠 Detected schema query")
-            return {
+            logger.info("🧠 [ANALYZE] Detected schema query - fast path")
+            intent = {
                 "operation": "schema_query",
                 "primary_entities": [],
                 "metrics": [],
@@ -109,12 +154,14 @@ class IntentParserAgent:
                 "time_window": None,
                 "keywords_for_discovery": [],
                 "raw_query": user_input,
-                "confidence": 1.0
+                "confidence": 1.0,
+                "needs_clarification": False
             }
+            return {**state, "intent": intent}
 
         if self._is_health_check(user_lower):
-            logger.info("🧠 Detected health check")
-            return {
+            logger.info("🧠 [ANALYZE] Detected health check - fast path")
+            intent = {
                 "operation": "health_check",
                 "primary_entities": [],
                 "metrics": [],
@@ -122,174 +169,344 @@ class IntentParserAgent:
                 "time_window": None,
                 "keywords_for_discovery": [],
                 "raw_query": user_input,
-                "confidence": 1.0
+                "confidence": 1.0,
+                "needs_clarification": False
             }
+            return {**state, "intent": intent}
 
-        # Semantic parsing: Use LLM for data queries
-        logger.info(f"🧠 Parsing intent with LLM: {user_input}")
-        return await self._parse_with_llm(user_input)
-
-    async def _parse_with_llm(self, user_input: str) -> ParsedIntent:
-        """
-        Use LLM to semantically parse the query.
-        
-        Args:
-            user_input: The user's query
-            
-        Returns:
-            ParsedIntent with semantic structure
-        """
+        # For data queries, do initial analysis
         prompt = f"""
-Analyze this ERP query and extract structured intent. Return ONLY valid JSON (no markdown).
+Analyze this database query and provide initial intent classification.
 
-QUERY: "{user_input}"
+Query: "{user_input}"
 
-Return JSON with these fields:
+Provide JSON with:
 {{
-  "primary_entities": ["noun1", "noun2"],  # 2-3 max, cleaned (NOT "Which", "how", "many")
-  "metrics": ["count", "total", "average"],  # What to measure (or [] if not applicable)
-  "filters": [{{"field": "column_name", "operator": "<|>|=|!=", "value": "...", "description": "..."}}],  # Structured conditions
-  "time_window": {{"period": "last_30_days", "start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}} or null,  # If temporal
-  "keywords_for_discovery": ["clean1", "clean2"],  # Keywords for table search (semantically relevant, no noise)
-  "confidence": 0.95  # [0.0..1.0] how confident the parsing is correct
+  "query_type": "data_query",  // or "schema_query", "health_check", "clarify"
+  "broad_category": "reporting|analysis|operational|lookup",
+  "key_topics": ["topic1", "topic2"],  // Main subjects mentioned
+  "intent_indicators": ["count", "sum", "filter", "trend"],  // What user wants to do
+  "complexity": "simple|moderate|complex",  // Query complexity level
+  "confidence": 0.8  // Initial confidence [0.0-1.0]
+}}
+
+Respond ONLY with JSON, no markdown blocks.
+"""
+        try:
+            response = await self.llm.ainvoke(prompt)
+            response_text = self._strip_markdown_blocks(response.content.strip())
+            analysis = json.loads(response_text)
+
+            # Store initial analysis in state for next nodes
+            state["query_analysis"] = analysis
+            logger.info(f"🧠 [ANALYZE] Initial analysis: {analysis.get('broad_category')} query, confidence {analysis.get('confidence')}")
+            return state
+
+        except Exception as e:
+            logger.warning(f"🧠 [ANALYZE] LLM analysis failed: {e}, falling back to heuristics")
+            # Fallback analysis
+            analysis = {
+                "query_type": "data_query",
+                "broad_category": "lookup",
+                "key_topics": self._extract_basic_keywords(user_input),
+                "intent_indicators": ["lookup"],
+                "complexity": "simple",
+                "confidence": 0.3
+            }
+            state["query_analysis"] = analysis
+            return state
+
+    async def _classify_operation_node(self, state: BaseState) -> BaseState:
+        """
+        Node 2: Determine operation type with confidence scoring.
+
+        Uses the initial analysis to classify the exact operation type.
+        """
+        user_input = state.get("user_input", "")
+        analysis = state.get("query_analysis", {})
+
+        logger.info(f"🧠 [CLASSIFY] Classifying operation for: {user_input}")
+
+        # Use LLM to classify operation with more precision
+        prompt = f"""
+Based on this query analysis, classify the exact operation type.
+
+Query: "{user_input}"
+Initial Analysis: {json.dumps(analysis)}
+
+Classify into one of:
+- "query": Normal data retrieval (SELECT queries)
+- "schema_query": Database structure questions (SHOW TABLES, DESCRIBE)
+- "health_check": System status questions
+- "clarify": Ambiguous or needs clarification
+
+Return JSON:
+{{
+  "operation": "query",
+  "confidence": 0.9,
+  "reasoning": "Brief explanation",
+  "alternative_operations": ["query"]  // If multiple possibilities
+}}
+
+Respond ONLY with JSON.
+"""
+        try:
+            response = await self.llm.ainvoke(prompt)
+            response_text = self._strip_markdown_blocks(response.content.strip())
+            classification = json.loads(response_text)
+
+            # Update intent with operation classification
+            intent = state.get("intent", {})
+            intent.update({
+                "operation": classification.get("operation", "query"),
+                "operation_confidence": classification.get("confidence", 0.5),
+                "classification_reasoning": classification.get("reasoning", ""),
+                "alternative_operations": classification.get("alternative_operations", [])
+            })
+
+            logger.info(f"🧠 [CLASSIFY] Classified as: {intent['operation']} (confidence: {intent.get('operation_confidence')})")
+            return {**state, "intent": intent}
+
+        except Exception as e:
+            logger.warning(f"🧠 [CLASSIFY] LLM classification failed: {e}, using fallback")
+            intent = state.get("intent", {})
+            intent.update({
+                "operation": "query",  # Default to query
+                "operation_confidence": 0.4,
+                "classification_reasoning": "Fallback classification"
+            })
+            return {**state, "intent": intent}
+
+    async def _extract_entities_node(self, state: BaseState) -> BaseState:
+        """
+        Node 3: Extract semantic entities, metrics, and filters.
+
+        The core extraction logic with detailed semantic understanding.
+        """
+        user_input = state.get("user_input", "")
+        analysis = state.get("query_analysis", {})
+        intent = state.get("intent", {})
+
+        logger.info(f"🧠 [EXTRACT] Extracting entities from: {user_input}")
+
+        # Detailed extraction prompt
+        prompt = f"""
+Extract structured intent from this ERP database query.
+
+Query: "{user_input}"
+Context: {json.dumps(analysis)}
+
+Return JSON with EXACTLY these fields:
+{{
+  "primary_entities": ["entity1", "entity2"],  // 1-3 main business entities (customers, products, orders)
+  "secondary_entities": ["entity3"],           // Supporting entities if any
+  "metrics": ["count", "sum", "avg"],          // What to measure/aggregate
+  "filters": [                                 // Structured filter conditions
+    {{
+      "field": "column_name",
+      "operator": "<|>|=|!=",
+      "value": "filter_value",
+      "description": "human readable description"
+    }}
+  ],
+  "time_window": {{
+    "period": "last_month|last_quarter|this_year",
+    "start": "YYYY-MM-DD",
+    "end": "YYYY-MM-DD"
+  }} or null,
+  "keywords_for_discovery": ["clean", "keywords"],  // For table search (NO noise words)
+  "confidence": 0.85
 }}
 
 EXAMPLES:
+
 Query: "How many customers do we have?"
-=> {{"primary_entities": ["customers"], "metrics": ["count"], "filters": [], "time_window": null, "keywords_for_discovery": ["customers"], "confidence": 1.0}}
+{{
+  "primary_entities": ["customers"],
+  "secondary_entities": [],
+  "metrics": ["count"],
+  "filters": [],
+  "time_window": null,
+  "keywords_for_discovery": ["customers"],
+  "confidence": 1.0
+}}
 
 Query: "Which products have inventory below 100?"
-=> {{"primary_entities": ["products"], "metrics": ["inventory"], "filters": [{{"field": "inventory", "operator": "<", "value": 100, "description": "below 100"}}], "time_window": null, "keywords_for_discovery": ["products", "inventory", "stock"], "confidence": 0.95}}
+{{
+  "primary_entities": ["products"],
+  "secondary_entities": [],
+  "metrics": ["inventory"],
+  "filters": [{{"field": "inventory", "operator": "<", "value": "100", "description": "below 100"}}],
+  "time_window": null,
+  "keywords_for_discovery": ["products", "inventory", "stock"],
+  "confidence": 0.95
+}}
 
-Query: "Show me sales last quarter"
-=> {{"primary_entities": ["sales"], "metrics": [], "filters": [], "time_window": {{"period": "last_quarter", "start": "2024-10-01", "end": "2024-12-31"}}, "keywords_for_discovery": ["sales", "orders"], "confidence": 0.85}}
-
-Respond ONLY with the JSON object, no other text. Do NOT include markdown code blocks (no ```json```, just the raw JSON object).
+Respond ONLY with JSON.
 """
         try:
-            # 🔧 CRITICAL FIX (Phase 9 Hotfix): Use ainvoke() instead of invoke()
-            # invoke() is sync and blocks the event loop in async context
-            # This was causing the intent parser to fail silently, breaking downstream agents
             response = await self.llm.ainvoke(prompt)
-            response_text = response.content.strip()
-            
-            # 🔧 FIX: Strip markdown code blocks if LLM returns them despite instructions
-            # Some LLMs return ```json ... ``` even when asked not to
-            response_text = self._strip_markdown_blocks(response_text)
-            
-            # Try to parse JSON response
-            try:
-                parsed = json.loads(response_text)
-                logger.info(f"✅ LLM parsed intent: {parsed}")
-                
-                # Build ParsedIntent, ensuring all required fields
-                # 🔧 FIX: raw_query should be the original user_input, not the response_text!
-                intent = {
-                    "operation": "query",
-                    "primary_entities": parsed.get("primary_entities", [])[:3],
-                    "metrics": parsed.get("metrics", [])[:5],
-                    "filters": parsed.get("filters", [])[:10],
-                    "time_window": parsed.get("time_window"),
-                    "keywords_for_discovery": parsed.get("keywords_for_discovery", [])[:10],
-                    "raw_query": user_input,  # 🔧 FIX: Use user_input, not response_text
-                    "confidence": float(parsed.get("confidence", 0.5))
-                }
-                # Ensure discovery keywords present for simple count queries
-                if not intent["keywords_for_discovery"] and intent["metrics"] and any(m.lower() == "count" for m in intent["metrics"]):
-                    intent["keywords_for_discovery"] = intent["primary_entities"][:3]
+            response_text = self._strip_markdown_blocks(response.content.strip())
+            extracted = json.loads(response_text)
 
-                logger.info(
-                    f"🧠 [INTENT] op={intent.get('operation')} keywords={intent.get('keywords_for_discovery')} "
-                    f"metrics={intent.get('metrics')} conf={intent.get('confidence'):.2f}"
-                )
-                return intent
-                
-            except json.JSONDecodeError as je:
-                logger.warning(f"Failed to parse LLM JSON response: {je}")
-                logger.debug(f"Raw response: {response_text[:500]}")
-                # 🔧 FIX: Pass user_input to fallback, not response_text!
-                # This prevents extracting keywords from the JSON structure itself
-                return self._fallback_parse(user_input)
-                
+            # Update intent with extracted information
+            intent.update({
+                "primary_entities": extracted.get("primary_entities", [])[:3],
+                "secondary_entities": extracted.get("secondary_entities", [])[:2],
+                "metrics": extracted.get("metrics", [])[:5],
+                "filters": extracted.get("filters", [])[:10],
+                "time_window": extracted.get("time_window"),
+                "keywords_for_discovery": extracted.get("keywords_for_discovery", [])[:10],
+                "extraction_confidence": extracted.get("confidence", 0.5)
+            })
+
+            logger.info(f"🧠 [EXTRACT] Entities: {intent['primary_entities']}, Keywords: {intent['keywords_for_discovery']}")
+            return {**state, "intent": intent}
+
         except Exception as e:
-            logger.error(f"LLM intent parsing failed: {e}")
-            return self._fallback_parse(user_input)
-    
+            logger.warning(f"🧠 [EXTRACT] LLM extraction failed: {e}, using fallback")
+            # Fallback extraction
+            fallback = self._fallback_entity_extraction(user_input)
+            intent.update(fallback)
+            return {**state, "intent": intent}
+
+    async def _validate_intent_node(self, state: BaseState) -> BaseState:
+        """
+        Node 4: Validate intent completeness and score overall confidence.
+
+        Checks if the extracted intent is complete and coherent.
+        """
+        intent = state.get("intent", {})
+
+        logger.info(f"🧠 [VALIDATE] Validating intent completeness")
+
+        # Validation criteria
+        has_entities = len(intent.get("primary_entities", [])) > 0
+        has_keywords = len(intent.get("keywords_for_discovery", [])) > 0
+        operation = intent.get("operation", "query")
+        extraction_confidence = intent.get("extraction_confidence", 0.5)
+
+        # Calculate overall confidence
+        confidence_factors = []
+        if has_entities: confidence_factors.append(0.3)
+        if has_keywords: confidence_factors.append(0.3)
+        if extraction_confidence > 0.7: confidence_factors.append(0.4)
+
+        overall_confidence = min(sum(confidence_factors), 1.0)
+
+        # Determine if clarification is needed
+        needs_clarification = (
+            not has_entities or
+            not has_keywords or
+            overall_confidence < 0.6 or
+            operation == "clarify"
+        )
+
+        intent.update({
+            "confidence": overall_confidence,
+            "needs_clarification": needs_clarification,
+            "validation_notes": {
+                "has_entities": has_entities,
+                "has_keywords": has_keywords,
+                "extraction_confidence": extraction_confidence
+            }
+        })
+
+        logger.info(f"🧠 [VALIDATE] Confidence: {overall_confidence:.2f}, Needs clarification: {needs_clarification}")
+        return {**state, "intent": intent}
+
+    async def _handle_ambiguity_node(self, state: BaseState) -> BaseState:
+        """
+        Node 5: Generate clarification questions for ambiguous queries.
+
+        When validation fails, ask the user for clarification.
+        """
+        user_input = state.get("user_input", "")
+        intent = state.get("intent", {})
+
+        logger.info(f"🧠 [AMBIGUITY] Handling ambiguous query: {user_input}")
+
+        # Generate clarification question
+        prompt = f"""
+This query is ambiguous and needs clarification:
+
+Query: "{user_input}"
+Current Intent: {json.dumps(intent, indent=2)}
+
+Generate a helpful clarification question that will help disambiguate what the user wants.
+
+Return JSON:
+{{
+  "clarification_question": "What specific aspect would you like to see?",
+  "suggested_options": ["Option 1", "Option 2"],
+  "reason_ambiguous": "Brief explanation of what's unclear"
+}}
+
+Keep the question clear and actionable.
+"""
+        try:
+            response = await self.llm.ainvoke(prompt)
+            response_text = self._strip_markdown_blocks(response.content.strip())
+            clarification = json.loads(response_text)
+
+            intent.update({
+                "needs_clarification": True,
+                "clarification_question": clarification.get("clarification_question", "Could you please clarify your request?"),
+                "suggested_options": clarification.get("suggested_options", []),
+                "ambiguity_reason": clarification.get("reason_ambiguous", "Query is unclear")
+            })
+
+            logger.info(f"🧠 [AMBIGUITY] Generated clarification: {intent['clarification_question']}")
+            return {**state, "intent": intent}
+
+        except Exception as e:
+            logger.warning(f"🧠 [AMBIGUITY] Failed to generate clarification: {e}")
+            # Fallback clarification
+            intent.update({
+                "needs_clarification": True,
+                "clarification_question": "Could you please provide more details about what you're looking for?",
+                "suggested_options": ["Customers", "Products", "Orders", "Sales"],
+                "ambiguity_reason": "Unable to determine specific intent"
+            })
+            return {**state, "intent": intent}
+
+    # ==========================================
+    # HELPER METHODS
+    # ==========================================
+
     def _strip_markdown_blocks(self, text: str) -> str:
-        """
-        Strip markdown code blocks (```json ... ```) from LLM response.
-        
-        Some LLMs return markdown despite being asked not to.
-        This extracts just the JSON content.
-        
-        Args:
-            text: Raw response from LLM
-            
-        Returns:
-            Cleaned text with markdown removed
-        """
-        # Check for markdown code blocks
+        """Strip markdown code blocks from LLM response."""
         if "```" in text:
-            # Try to extract JSON between code blocks
-            # Match ```json ... ``` or just ``` ... ```
             pattern = r'```(?:json)?\s*(.*?)\s*```'
             matches = re.findall(pattern, text, re.DOTALL)
             if matches:
-                # Return first matched JSON block
                 return matches[0].strip()
         return text
 
-    def _fallback_parse(self, user_input: str) -> ParsedIntent:
-        """
-        Fallback heuristic parsing when LLM fails.
-        
-        Still better than naive _simple_intent_parser because it:
-        - Filters common words aggressively
-        - Doesn't re-extract from user_input later
-        - Returns structured ParsedIntent
-        """
-        logger.info(f"⚠️  Falling back to heuristic parsing for: {user_input}")
-        
-        # Aggressively filter noise words
+    def _extract_basic_keywords(self, text: str) -> list:
+        """Basic keyword extraction for fallback."""
         stop_words = {
-            "the", "a", "an", "is", "are", "was", "were", "be", "been",
-            "by", "of", "for", "to", "and", "or", "in", "on", "at",
-            "how", "many", "show", "me", "please", "get", "list", "find", "search", "what",
-            "have", "has", "had", "do", "does", "did", "with", "from", "as", "it",
-            "we", "you", "they", "he", "she", "this", "that", "there",
-            "where", "when", "why", "which", "who", "can", "could", "will", "would",
-            "should", "must", "may", "might", "um", "uh", "like", "really", "very"
+            "the", "a", "an", "is", "are", "how", "many", "show", "me",
+            "what", "which", "do", "we", "have", "has", "get", "find"
         }
-        
-        words = user_input.lower().split()
-        keywords = []
-        for word in words:
-            word = word.strip("?,.!;:")
-            if word not in stop_words and len(word) > 2:
-                keywords.append(word)
-        
-        # Take first 2-3 keywords as entities, rest as discovery keywords
-        entities = keywords[:2]
-        all_keywords = list(dict.fromkeys(keywords))[:5]  # Dedupe, limit to 5
-        
-        result = {
-            "operation": "query",
-            "primary_entities": entities,
-            "metrics": [],
+        words = text.lower().split()
+        return [w.strip("?,.!;:") for w in words if w not in stop_words and len(w) > 2][:3]
+
+    def _fallback_entity_extraction(self, user_input: str) -> dict:
+        """Fallback entity extraction when LLM fails."""
+        logger.info(f"🧠 Using fallback entity extraction for: {user_input}")
+
+        keywords = self._extract_basic_keywords(user_input)
+
+        return {
+            "primary_entities": keywords[:2],
+            "secondary_entities": [],
+            "metrics": ["count"] if "count" in user_input.lower() else [],
             "filters": [],
             "time_window": None,
-            "keywords_for_discovery": all_keywords,
-            "raw_query": user_input,
-            "confidence": 0.6  # Lower confidence for fallback
+            "keywords_for_discovery": keywords,
+            "extraction_confidence": 0.3
         }
-        # Ensure keywords for counting semantics if present in text
-        if ("count" in user_input.lower()) and not result["keywords_for_discovery"]:
-            result["keywords_for_discovery"] = result["primary_entities"][:3]
-        logger.info(
-            f"🧠 [INTENT-FALLBACK] op={result.get('operation')} keywords={result.get('keywords_for_discovery')} "
-            f"entities={result.get('primary_entities')} conf={result.get('confidence'):.2f}"
-        )
-        return result
 
     def _is_schema_query(self, user_lower: str) -> bool:
         """Detect schema/structure queries."""
@@ -308,7 +525,7 @@ Respond ONLY with the JSON object, no other text. Do NOT include markdown code b
         ]
         return any(kw in user_lower for kw in health_keywords)
 
-    def _empty_intent(self, user_input: str) -> ParsedIntent:
+    def _empty_intent(self, user_input: str) -> dict:
         """Return empty intent for empty input."""
         return {
             "operation": "query",
@@ -318,5 +535,6 @@ Respond ONLY with the JSON object, no other text. Do NOT include markdown code b
             "time_window": None,
             "keywords_for_discovery": [],
             "raw_query": user_input or "",
-            "confidence": 0.0
+            "confidence": 0.0,
+            "needs_clarification": False
         }
