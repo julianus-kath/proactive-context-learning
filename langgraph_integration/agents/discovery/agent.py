@@ -185,22 +185,29 @@ class DiscoveryAgent:
                     seen.add(table_name)
                     unique_candidates.append(c)
             
-            # Always try fallback discovery to supplement results
-            logger.critical("🔄 🔄 🔄 SUPPLEMENTING WITH INTELLIGENT FALLBACK BUSINESS DATA DISCOVERY 🔄 🔄 🔄")
-            fallback_candidates = await self._fallback_business_table_discovery()
-            logger.critical(f"🔄 Fallback returned {len(fallback_candidates) if fallback_candidates else 0} candidates")
-            if fallback_candidates:
-                # Merge with existing candidates
-                all_candidates = unique_candidates + fallback_candidates
-                # Deduplicate
-                seen = set()
-                unique_candidates = []
-                for c in all_candidates:
-                    table_name = c.get("table_name") or c.get("name") or c.get("full_name", "")
-                    if table_name not in seen and table_name:
-                        seen.add(table_name)
-                        unique_candidates.append(c)
-                logger.info(f"✅ Fallback added {len(fallback_candidates)} business tables, total: {len(unique_candidates)}")
+            # Only try fallback discovery if we have insufficient good candidates
+            # Check if we have at least 3 candidates with relevance score > 0.3
+            good_candidates = [c for c in unique_candidates if c.get("relevance_score", 0) > 0.3]
+            needs_fallback = len(good_candidates) < 3 or len(unique_candidates) < 5
+
+            if needs_fallback:
+                logger.info(f"🔄 Primary search found {len(unique_candidates)} candidates ({len(good_candidates)} good), trying fallback...")
+                fallback_candidates = await self._fallback_business_table_discovery()
+                logger.info(f"🔄 Fallback returned {len(fallback_candidates) if fallback_candidates else 0} candidates")
+                if fallback_candidates:
+                    # Merge with existing candidates
+                    all_candidates = unique_candidates + fallback_candidates
+                    # Deduplicate
+                    seen = set()
+                    unique_candidates = []
+                    for c in all_candidates:
+                        table_name = c.get("table_name") or c.get("name") or c.get("full_name", "")
+                        if table_name not in seen and table_name:
+                            seen.add(table_name)
+                            unique_candidates.append(c)
+                    logger.info(f"✅ Fallback added {len(fallback_candidates)} business tables, total: {len(unique_candidates)}")
+            else:
+                logger.info(f"✅ Primary search sufficient: {len(unique_candidates)} candidates ({len(good_candidates)} good), skipping fallback")
 
             if not unique_candidates:
                 logger.warning(f"⚠️  No tables/views found for keywords: {', '.join(keywords)}")

@@ -84,17 +84,17 @@ class CatalogStore:
                 "data": catalog_data
             }
 
-            # Serialize to JSON
+            # Serialize to JSON (without checksum first)
             json_data = json.dumps(enriched_data, indent=None, default=str)
             json_bytes = json_data.encode('utf-8')
 
-            # Calculate checksum
+            # Calculate checksum on the JSON bytes
             checksum = hashlib.sha256(json_bytes).hexdigest()
 
             # Add checksum to metadata
             enriched_data["checksum"] = checksum
 
-            # Re-serialize with checksum
+            # Final serialization with checksum
             json_data = json.dumps(enriched_data, indent=None, default=str)
             json_bytes = json_data.encode('utf-8')
 
@@ -167,17 +167,20 @@ class CatalogStore:
                 logger.info(f"Catalog expired: {age_hours:.1f}h > {metadata['ttl_hours']}h TTL")
                 return None
 
-            # Load compressed catalog
+            # Load compressed catalog (gzip.open automatically decompresses)
             with gzip.open(self.catalog_file, 'rb') as f:
-                compressed_data = f.read()
+                json_bytes = f.read()
 
-            # Decompress
-            json_bytes = gzip.decompress(compressed_data)
+            # Parse JSON
             enriched_data = json.loads(json_bytes.decode('utf-8'))
 
-            # Verify checksum
-            stored_checksum = metadata["checksum"]
-            calculated_checksum = hashlib.sha256(json_bytes).hexdigest()
+            # Verify checksum: calculate on data without checksum field
+            stored_checksum = enriched_data.pop("checksum", "")
+            json_without_checksum = json.dumps(enriched_data, indent=None, default=str).encode('utf-8')
+            calculated_checksum = hashlib.sha256(json_without_checksum).hexdigest()
+
+            # Restore checksum for return
+            enriched_data["checksum"] = stored_checksum
 
             if stored_checksum != calculated_checksum:
                 logger.error("Catalog checksum mismatch - data corrupted")
@@ -191,7 +194,7 @@ class CatalogStore:
             catalog_data = enriched_data["data"]
 
             logger.info(
-                f"✅ Catalog loaded: {len(compressed_data):,} bytes, "
+                f"✅ Catalog loaded: {len(json_bytes):,} bytes, "
                 f"age={age_hours:.1f}h, TTL={metadata['ttl_hours']}h"
             )
 

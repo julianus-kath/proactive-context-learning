@@ -16,6 +16,7 @@ class RankedTable:
     reasons: List[str]  # Why this table was ranked high
     estimated_rows: Optional[int] = None
     column_count: Optional[int] = None
+    fk_count: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -25,7 +26,8 @@ class RankedTable:
             "score": self.score,
             "reasons": self.reasons,
             "estimated_rows": self.estimated_rows,
-            "column_count": self.column_count
+            "column_count": self.column_count,
+            "fk_count": self.fk_count
         }
 
 class TableRanker:
@@ -120,7 +122,8 @@ class TableRanker:
                     score=score,
                     reasons=reasons,
                     estimated_rows=estimated_rows,
-                    column_count=column_count
+                    column_count=column_count,
+                    fk_count=fk_count
                 )
                 ranked_tables.append(ranked_table)
 
