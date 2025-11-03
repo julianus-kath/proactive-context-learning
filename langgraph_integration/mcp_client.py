@@ -606,10 +606,21 @@ class MCPDatabaseTool:
         Returns:
             Query results with safety guarantees
         """
+        # Detect simple COUNT aggregate to avoid limit injection changing semantics.
+        sql_lc = (sql or "").lower()
+        is_simple_count = ("count(" in sql_lc) and (" group by " not in sql_lc)
+        
+        # Server expects 'limit', not 'max_rows'. Use correct key.
+        if is_simple_count:
+            # Use unbounded legacy 'query' for aggregate counts to avoid TOP injection
+            arguments = {"sql": sql}
+            return await self.call_tool("query", arguments)
+        
         arguments = {"sql": sql}
         if max_rows is not None:
-            arguments["max_rows"] = max_rows
+            arguments["limit"] = max_rows
         if timeout_ms is not None:
+            # Not supported by server; included for forward compatibility, server will ignore
             arguments["timeout_ms"] = timeout_ms
         return await self.call_tool("query_bounded", arguments)
     
