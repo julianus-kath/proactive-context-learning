@@ -1,5 +1,8 @@
 # Add view ranking functionality to the existing table_ranker.py
 
+from dataclasses import dataclass
+from typing import Dict, Any, List, Optional
+
 # Extend the existing RankedTable class for views
 @dataclass
 class RankedView:

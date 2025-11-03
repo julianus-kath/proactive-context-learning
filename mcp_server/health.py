@@ -48,7 +48,7 @@ def get_health_status(db_manager=None) -> Dict[str, Any]:
         if db_manager:
             try:
                 # Simple connectivity test
-                test_result = db_manager.execute_query("SELECT 1 as test")
+                test_result = await db_manager.fetch("SELECT 1 as test")
                 db_healthy = len(test_result) > 0
             except Exception as e:
                 logger.warning(f"Database health check failed: {e}")

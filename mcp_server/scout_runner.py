@@ -158,48 +158,22 @@ class ScoutRunner:
 
         return age_hours >= self.ttl_hours
 
-    def _build_catalog_sync(self) -> Dict[str, Any]:
-        """
-        Synchronous catalog building (runs in thread pool).
-
-        Returns:
-            Built catalog data
-        """
-        # For now, return a minimal catalog to avoid complex async issues
-        # TODO: Properly implement sync catalog building
-        logger.warning("Using minimal catalog - async catalog building not fully implemented")
-
-        return {
-            "metadata": {
-                "database_type": "mssql",
-                "build_timestamp": datetime.utcnow().isoformat(),
-                "tables_count": 0,
-                "views_count": 0,
-                "relationships_count": 0,
-                "note": "Minimal catalog - full build failed"
-            },
-            "tables": {},
-            "views": {},
-            "relationships": []
-        }
-
     async def _build_catalog_async(self) -> bool:
         """
-        Build catalog asynchronously in background.
+        Build catalog asynchronously.
 
         Returns:
             True if successful
         """
         build_start = datetime.utcnow()
-        logger.info("🏗️ Starting background catalog build...")
+        logger.info("🏗️ Starting catalog build...")
 
         try:
-            # Run catalog building in thread pool to avoid blocking
-            loop = asyncio.get_event_loop()
-            catalog_data = await loop.run_in_executor(
-                self._executor,
-                self._build_catalog_sync
-            )
+            # Create catalog builder
+            builder = MSSQLCatalogBuilder(self.db_adapter)
+
+            # Build catalog directly (no thread pool needed since we're already async)
+            catalog_data = await builder.build_catalog()
 
             # Store catalog
             success = self.store.store_catalog(catalog_data)
@@ -211,13 +185,18 @@ class ScoutRunner:
                 self.last_build_duration = build_duration
                 self.last_build_time = datetime.utcnow()
 
+                metadata = catalog_data.get("metadata", {})
+                tables_count = metadata.get("tables_count", 0)
+                views_count = metadata.get("views_count", 0)
+
                 logger.info(
                     f"✅ Catalog build completed in {build_duration:.1f}s, "
-                    f"total builds: {self.build_count}"
+                    f"{tables_count} tables, {views_count} views"
                 )
+
                 return True
             else:
-                logger.error("❌ Failed to store built catalog")
+                logger.error("❌ Catalog storage failed")
                 return False
 
         except Exception as e:
@@ -225,22 +204,7 @@ class ScoutRunner:
             logger.error(f"❌ Catalog build failed after {build_duration:.1f}s: {e}")
             return False
 
-    def _build_catalog_sync(self) -> Dict[str, Any]:
-        """
-        Synchronous catalog building (runs in thread pool).
 
-        Returns:
-            Built catalog data
-        """
-        # Create catalog builder
-        builder = MSSQLCatalogBuilder(self.db_adapter)
-
-        # Run synchronous catalog build
-        # Note: This assumes db_adapter has sync methods or we wrap async ones
-        # For now, we'll implement a sync version
-
-        catalog = asyncio.run(builder.build_catalog())
-        return catalog
 
     def get_catalog(self) -> Optional[Dict[str, Any]]:
         """

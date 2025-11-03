@@ -39,11 +39,7 @@ from langgraph_integration.agents.answer.agent import AnswerAgent
 from langgraph_integration.mcp_client import MCPDatabaseTool
 from langgraph_integration.debug_logger import get_debug_logger
 
-# Import for Scout catalog access
-try:
-    from mcp_server.tools import _get_scout_runner
-except ImportError:
-    _get_scout_runner = None
+# Scout Mode is handled by MCP server, not accessed directly from LangGraph
 
 logger = logging.getLogger(__name__)
 debug_logger = get_debug_logger()
@@ -758,83 +754,22 @@ class QueryOrchestrator:
         """
         Phase 5: Try join planning as fallback when no suitable single table/view is found.
 
-        Uses Scout catalog relationships to find multi-table join paths.
+        NOTE: Join planning should be handled by MCP server, not LangGraph client.
+        For now, disabled to avoid direct Scout catalog access from client.
         """
-        try:
-            # Get Scout catalog for relationship data
-            scout_runner = _get_scout_runner(self.db_manager) if hasattr(self, 'db_manager') else None
-            if not scout_runner:
-                logger.debug("🔗 [JOIN_PLANNER] No Scout catalog available for join planning")
-                return None
-
-            catalog = scout_runner.get_catalog()
-            if not catalog:
-                logger.debug("🔗 [JOIN_PLANNER] Scout catalog not loaded")
-                return None
-
-            # Initialize join planner
-            from mcp_server.join_planner import JoinPlanner
-            planner = JoinPlanner(catalog)
-
-            # Extract available table names
-            available_tables = [t.get("full_name", t.get("name", "")) for t in relevant_tables if t.get("full_name") or t.get("name")]
-
-            # Get query entities to find join targets
-            entities = intent.get("primary_entities", []) + intent.get("keywords_for_discovery", [])
-
-            if not available_tables or not entities:
-                logger.debug(f"🔗 [JOIN_PLANNER] Insufficient data: tables={len(available_tables)}, entities={len(entities)}")
-                return None
-
-            # Try to find join path
-            join_plan = planner.find_join_path(available_tables, entities, max_hops=3)
-
-            if join_plan:
-                # Validate join plan complexity
-                complexity = planner.estimate_join_complexity(join_plan)
-                if complexity["performance_rating"] in ["excellent", "good", "fair"]:
-                    logger.info(f"🔗 [JOIN_PLANNER] Found viable join plan: {len(join_plan['tables'])} tables, {complexity['performance_rating']} performance")
-                    return join_plan
-                else:
-                    logger.info(f"🔗 [JOIN_PLANNER] Join plan too complex: {complexity['performance_rating']} performance")
-                    return None
-
-            logger.debug("🔗 [JOIN_PLANNER] No suitable join path found")
-            return None
-
-        except Exception as e:
-            logger.warning(f"🔗 [JOIN_PLANNER] Join planning failed: {e}")
-            return None
+        # TODO: Implement join planning through MCP server API calls
+        logger.debug("🔗 [JOIN_PLANNER] Join planning disabled - should be handled by MCP server")
+        return None
 
     async def _generate_sql_from_join_plan(self, join_plan: Dict[str, Any], intent: Dict[str, Any]) -> str:
         """
-        Phase 5: Generate SQL from join plan using the join planner.
+        Phase 5: Generate SQL from join plan.
+
+        NOTE: SQL generation from join plans should be handled by MCP server.
+        For now, return empty string to disable complex joins.
         """
-        try:
-            # Get Scout catalog
-            scout_runner = _get_scout_runner(self.db_manager) if hasattr(self, 'db_manager') else None
-            if not scout_runner:
-                return ""
-
-            catalog = scout_runner.get_catalog()
-            if not catalog:
-                return ""
-
-            # Use join planner to generate SQL
-            from mcp_server.join_planner import JoinPlanner
-            planner = JoinPlanner(catalog)
-            sql = planner.generate_sql_from_plan(join_plan, intent)
-
-            if sql:
-                logger.info(f"🔗 [JOIN_SQL] Generated join SQL: {sql[:100]}...")
-                return sql
-            else:
-                logger.warning("🔗 [JOIN_SQL] Join planner failed to generate SQL")
-                return ""
-
-        except Exception as e:
-            logger.error(f"🔗 [JOIN_SQL] Error generating SQL from join plan: {e}")
-            return ""
+        logger.debug("🔗 [JOIN_SQL] Join plan SQL generation disabled - should be handled by MCP server")
+        return ""
 
     async def _exec_recovery_node(self, state: BaseState) -> BaseState:
         """
