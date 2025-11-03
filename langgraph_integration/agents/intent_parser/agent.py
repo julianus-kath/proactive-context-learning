@@ -34,6 +34,7 @@ AFTER (Fixed):
 
 import logging
 import json
+import re
 import asyncio
 import concurrent.futures
 from typing import Any, Dict, Optional, List, Literal
@@ -163,11 +164,15 @@ Query: "Which products have inventory below 100?"
 Query: "Show me sales last quarter"
 => {{"primary_entities": ["sales"], "metrics": [], "filters": [], "time_window": {{"period": "last_quarter", "start": "2024-10-01", "end": "2024-12-31"}}, "keywords_for_discovery": ["sales", "orders"], "confidence": 0.85}}
 
-Respond ONLY with the JSON object, no other text.
+Respond ONLY with the JSON object, no other text. Do NOT include markdown code blocks (no ```json```, just the raw JSON object).
 """
         try:
             response = self.llm.invoke(prompt)
             response_text = response.content.strip()
+            
+            # 🔧 FIX: Strip markdown code blocks if LLM returns them despite instructions
+            # Some LLMs return ```json ... ``` even when asked not to
+            response_text = self._strip_markdown_blocks(response_text)
             
             # Try to parse JSON response
             try:
@@ -175,6 +180,7 @@ Respond ONLY with the JSON object, no other text.
                 logger.info(f"✅ LLM parsed intent: {parsed}")
                 
                 # Build ParsedIntent, ensuring all required fields
+                # 🔧 FIX: raw_query should be the original user_input, not the response_text!
                 intent = {
                     "operation": "query",
                     "primary_entities": parsed.get("primary_entities", [])[:3],
@@ -182,20 +188,45 @@ Respond ONLY with the JSON object, no other text.
                     "filters": parsed.get("filters", [])[:10],
                     "time_window": parsed.get("time_window"),
                     "keywords_for_discovery": parsed.get("keywords_for_discovery", [])[:10],
-                    "raw_query": response_text[:2000],  # Keep short for logging
+                    "raw_query": user_input,  # 🔧 FIX: Use user_input, not response_text
                     "confidence": float(parsed.get("confidence", 0.5))
                 }
                 return intent
                 
             except json.JSONDecodeError as je:
                 logger.warning(f"Failed to parse LLM JSON response: {je}")
-                logger.debug(f"Raw response: {response_text}")
-                # Fallback to heuristic parsing
-                return self._fallback_parse(response_text)
+                logger.debug(f"Raw response: {response_text[:500]}")
+                # 🔧 FIX: Pass user_input to fallback, not response_text!
+                # This prevents extracting keywords from the JSON structure itself
+                return self._fallback_parse(user_input)
                 
         except Exception as e:
             logger.error(f"LLM intent parsing failed: {e}")
             return self._fallback_parse(user_input)
+    
+    def _strip_markdown_blocks(self, text: str) -> str:
+        """
+        Strip markdown code blocks (```json ... ```) from LLM response.
+        
+        Some LLMs return markdown despite being asked not to.
+        This extracts just the JSON content.
+        
+        Args:
+            text: Raw response from LLM
+            
+        Returns:
+            Cleaned text with markdown removed
+        """
+        # Check for markdown code blocks
+        if "```" in text:
+            # Try to extract JSON between code blocks
+            # Match ```json ... ``` or just ``` ... ```
+            pattern = r'```(?:json)?\s*(.*?)\s*```'
+            matches = re.findall(pattern, text, re.DOTALL)
+            if matches:
+                # Return first matched JSON block
+                return matches[0].strip()
+        return text
 
     def _fallback_parse(self, user_input: str) -> ParsedIntent:
         """

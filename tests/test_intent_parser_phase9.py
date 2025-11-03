@@ -225,6 +225,83 @@ class TestIntentParserFallback:
                 # Fallback is more aggressive, but shouldn't have these
                 pass  # Allow for now, heuristic may vary
 
+    def test_strip_markdown_blocks_with_json(self):
+        """Test markdown block stripping - critical Phase 9 fix."""
+        # Create a minimal mock parser just for testing _strip_markdown_blocks
+        from unittest.mock import MagicMock
+        
+        parser = MagicMock(spec=IntentParserAgent)
+        # Bind the actual method to the mock
+        parser._strip_markdown_blocks = IntentParserAgent._strip_markdown_blocks.__get__(parser, IntentParserAgent)
+        
+        # Case 1: JSON with ```json code blocks (common from LLMs)
+        json_with_markdown = '''```json
+{
+  "primary_entities": ["customers"],
+  "keywords_for_discovery": ["customers"],
+  "confidence": 0.95
+}
+```'''
+        
+        result = parser._strip_markdown_blocks(json_with_markdown)
+        
+        # Should extract just the JSON
+        assert "```" not in result
+        assert "{" in result
+        assert "}" in result
+        assert "primary_entities" in result
+        
+        # Should be valid JSON
+        import json
+        parsed = json.loads(result)
+        assert parsed["primary_entities"] == ["customers"]
+    
+    def test_strip_markdown_blocks_without_json(self):
+        """Test markdown block stripping with plain JSON (no code blocks)."""
+        from unittest.mock import MagicMock
+        
+        parser = MagicMock(spec=IntentParserAgent)
+        parser._strip_markdown_blocks = IntentParserAgent._strip_markdown_blocks.__get__(parser, IntentParserAgent)
+        
+        # Case 2: Plain JSON without markdown
+        plain_json = '{"primary_entities": ["customers"], "keywords_for_discovery": ["customers"]}'
+        
+        result = parser._strip_markdown_blocks(plain_json)
+        
+        # Should be unchanged
+        assert result == plain_json
+        
+        # Should still be valid JSON
+        import json
+        parsed = json.loads(result)
+        assert parsed["primary_entities"] == ["customers"]
+    
+    def test_strip_markdown_blocks_with_triple_backticks_only(self):
+        """Test markdown block stripping with ``` only (not ```json)."""
+        from unittest.mock import MagicMock
+        
+        parser = MagicMock(spec=IntentParserAgent)
+        parser._strip_markdown_blocks = IntentParserAgent._strip_markdown_blocks.__get__(parser, IntentParserAgent)
+        
+        # Case 3: Code blocks with just ``` (not ```json)
+        json_with_triple_backticks = '''```
+{
+  "primary_entities": ["products"],
+  "keywords_for_discovery": ["products", "inventory"]
+}
+```'''
+        
+        result = parser._strip_markdown_blocks(json_with_triple_backticks)
+        
+        # Should extract just the JSON
+        assert "```" not in result
+        assert "{" in result
+        
+        # Should be valid JSON
+        import json
+        parsed = json.loads(result)
+        assert parsed["primary_entities"] == ["products"]
+
 
 if __name__ == "__main__":
     # Run tests
