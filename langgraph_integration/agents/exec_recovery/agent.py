@@ -300,6 +300,7 @@ class ExecAndRecoveryAgent:
         Attempt to repair failed SQL.
         
         Uses LLM to analyze error and suggest fix.
+        Includes robust extraction and validation.
         """
         logger.info("🔧 Attempting SQL repair...")
 
@@ -321,18 +322,17 @@ class ExecAndRecoveryAgent:
 
             logger.debug(f"  Sending repair prompt to LLM...")
             response = await self.llm.ainvoke(repair_prompt)
-            repaired_sql = response.content.strip()
+            llm_response = response.content.strip()
 
-            # Extract SQL from response (might have explanations)
-            repaired_sql = self._extract_sql(repaired_sql)
+            # 🔧 Stage 1: Extract SQL from response (robust extraction)
+            repaired_sql = self._extract_sql(llm_response)
 
-            if not repaired_sql or repaired_sql.strip() == "":
-                # 🔧 CRITICAL FIX: LLM returned explanatory text, not SQL
-                raise ValueError("LLM returned no valid SQL (likely explanatory text)")
+            if not repaired_sql:
+                raise ValueError("Failed to extract valid SQL from LLM response (likely returned explanatory text)")
             
-            # Ensure it starts with SELECT
-            if not repaired_sql.upper().strip().startswith("SELECT"):
-                raise ValueError(f"Repaired query doesn't start with SELECT: {repaired_sql[:50]}")
+            # 🔧 Stage 2: Validate extracted SQL
+            if not self._validate_extracted_sql(repaired_sql):
+                raise ValueError("Extracted SQL failed validation (likely multiple statements or dangerous keywords)")
 
             logger.info(f"✅ LLM repaired SQL ({len(repaired_sql)} chars)")
             logger.debug(f"  Repaired: {repaired_sql[:100]}...")
@@ -405,6 +405,7 @@ class ExecAndRecoveryAgent:
     async def _simplify_query_node(self, state: BaseState) -> BaseState:
         """
         Simplify query for another retry attempt.
+        Includes robust extraction and validation.
         """
         logger.info("⚙️  Attempting to simplify query...")
 
@@ -419,20 +420,23 @@ class ExecAndRecoveryAgent:
             )
 
             response = await self.llm.ainvoke(simplify_prompt)
-            simplified_sql = response.content.strip()
-            simplified_sql = self._extract_sql(simplified_sql)
+            llm_response = response.content.strip()
+            
+            # 🔧 Stage 1: Extract SQL from response (robust extraction)
+            simplified_sql = self._extract_sql(llm_response)
 
-            if not simplified_sql or simplified_sql.strip() == "":
+            if not simplified_sql:
                 # 🔧 FIX: LLM returned explanatory text or no SQL
-                logger.warning("  Simplification returned no valid SQL (likely explanatory text), using original")
+                logger.warning("⚠️  Simplification returned no valid SQL (likely explanatory text), using original")
                 return state
             
-            # Ensure it starts with SELECT
-            if not simplified_sql.upper().strip().startswith("SELECT"):
-                logger.warning(f"  Simplified query doesn't start with SELECT, using original")
+            # 🔧 Stage 2: Validate extracted SQL
+            if not self._validate_extracted_sql(simplified_sql):
+                logger.warning(f"⚠️  Simplified query failed validation, using original")
                 return state
 
             logger.info(f"✅ Simplified SQL ({len(simplified_sql)} chars)")
+            logger.debug(f"  Simplified: {simplified_sql[:100]}...")
             state["sql_query"] = simplified_sql
 
             return state
@@ -550,33 +554,176 @@ class ExecAndRecoveryAgent:
             return {"ok": False, "error": str(e)}
 
     def _extract_sql(self, text: str) -> str:
-        """Extract SQL from LLM response.
+        """
+        🔧 ROBUST FIX: Extract single SQL statement from LLM response.
         
-        🔧 CRITICAL FIX: If no SELECT found, return empty string (not explanatory text)
-        This prevents LLM explanations from being treated as SQL queries.
+        Handles multiple scenarios:
+        - Markdown code fences (```sql ... ```)
+        - Explanations before/after SQL
+        - Multiple SELECT statements (extracts only clean one)
+        - Markdown markers (#, ##, etc.)
+        - Special tokens (CANNOT_FIX, CANNOT_SIMPLIFY)
+        
+        Returns: Single clean SQL statement or empty string if extraction fails
         """
         text = text.strip()
+        
+        # Stage 1: Check for special tokens (LLM indicating it cannot fix)
+        if "CANNOT_FIX" in text or "CANNOT_SIMPLIFY" in text:
+            logger.warning("❌ LLM indicated it cannot repair/simplify this query")
+            return ""
+        
+        # Stage 2: Extract from markdown code fence if present (preferred)
+        sql_from_fence = self._extract_from_code_fence(text)
+        if sql_from_fence:
+            logger.debug("✅ Extracted SQL from markdown code fence")
+            return sql_from_fence
+        
+        # Stage 3: Extract first SELECT...semicolon (fallback)
+        sql_from_select = self._extract_select_to_semicolon(text)
+        if sql_from_select:
+            logger.debug("✅ Extracted SQL from SELECT statement")
+            return sql_from_select
+        
+        # Stage 4: Nothing valid found
+        logger.warning("⚠️  Could not extract valid SQL from LLM response")
+        logger.debug(f"  Response preview: {text[:300]}...")
+        return ""
 
-        # Remove markdown code fence
-        if text.startswith("```sql"):
-            text = text[6:]
-        if text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
+    def _extract_from_code_fence(self, text: str) -> str:
+        """Extract SQL from markdown code fence (```sql ... ```)."""
+        # Check for multiple code fences (suggests multiple examples - reject)
+        fence_count = text.count("```")
+        if fence_count > 2:  # Each fence pair = 2 backticks, so >2 means multiple fences
+            logger.warning(f"⚠️  Multiple code fences detected ({fence_count//2} blocks) - ambiguous response")
+            return ""
+        
+        # Find ```sql block
+        fence_start = text.find("```sql")
+        if fence_start < 0:
+            fence_start = text.find("```SQL")
+        if fence_start < 0:
+            return ""  # No code fence found
+        
+        fence_start += 6  # Skip "```sql"
+        
+        # Find closing fence
+        fence_end = text.find("```", fence_start)
+        if fence_end < 0:
+            # No closing fence - take to end
+            fence_end = len(text)
+        
+        sql = text[fence_start:fence_end].strip()
+        
+        if not sql:
+            return ""  # Empty fence
+        
+        # Validate: must start with SELECT (after whitespace, possibly after SQL comments)
+        upper_sql = sql.upper().lstrip()
+        # Allow SQL comments (-- comment) before SELECT
+        if upper_sql.startswith("--"):
+            # Skip the comment line and check the next line
+            lines = sql.lstrip().split("\n")
+            for line in lines:
+                if line.strip() and not line.strip().startswith("--"):
+                    upper_sql = line.upper()
+                    break
+        
+        if not upper_sql.startswith("SELECT"):
+            logger.warning("⚠️  Code fence does not contain SELECT statement")
+            return ""
+        
+        # Remove trailing markdown (###, ##, etc. or other code fences)
+        lines = sql.split("\n")
+        clean_lines = []
+        for line in lines:
+            stripped = line.strip()
+            # Stop at markdown markers or other code fences
+            if stripped.startswith("#") or stripped.startswith("```"):
+                logger.debug(f"  Stopping extraction at markdown: {stripped[:30]}")
+                break
+            clean_lines.append(line)
+        
+        sql = "\n".join(clean_lines).strip()
+        
+        if not sql:
+            return ""
+        
+        # Remove trailing semicolons for consistency
+        sql = sql.rstrip(";").strip()
+        
+        # Validate no multiple SELECTs
+        if sql.upper().count("SELECT") > 1:
+            logger.warning(f"⚠️  Multiple SELECT statements found in fence - ambiguous")
+            return ""
+        
+        return sql
 
-        # Remove explanations (text before SELECT)
+    def _extract_select_to_semicolon(self, text: str) -> str:
+        """
+        Fallback: Extract SELECT statement from first SELECT to first semicolon.
+        This handles responses without code fences.
+        """
+        # Find first SELECT (case-insensitive)
         select_idx = text.upper().find("SELECT")
-        if select_idx >= 0:
-            # SELECT found, extract SQL from that point
-            text = text[select_idx:]
-        elif select_idx < 0:
-            # 🔧 CRITICAL: No SELECT found means LLM returned explanations, not SQL
-            logger.warning("⚠️  No SELECT keyword found in LLM response - likely LLM returned explanatory text instead of SQL")
-            logger.debug(f"  Response preview: {text[:200]}...")
-            return ""  # Return empty instead of returning the explanation
+        if select_idx < 0:
+            return ""
+        
+        # Find first semicolon after SELECT
+        semicolon_idx = text.find(";", select_idx)
+        if semicolon_idx < 0:
+            # No semicolon - might be unfinished
+            logger.debug("⚠️  SELECT found but no terminating semicolon")
+            return ""
+        
+        sql = text[select_idx:semicolon_idx].strip()
+        
+        if not sql:
+            return ""
+        
+        # Validate: single SELECT only, no multiple statements
+        if text[select_idx:semicolon_idx].upper().count("SELECT") > 1:
+            logger.warning("⚠️  Multiple SELECT statements found - cannot disambiguate")
+            return ""
+        
+        # Check for additional SQL statements after this one (indicates multiple statements)
+        after_sql = text[semicolon_idx+1:].strip()
+        if after_sql:
+            # Check if there's another SELECT after the semicolon
+            if "SELECT" in after_sql.upper()[:100]:  # Check first 100 chars
+                logger.warning("⚠️  Multiple SQL statements detected (SELECT found after first statement)")
+                return ""
+        
+        return sql
 
-        return text.strip()
+    def _validate_extracted_sql(self, sql: str) -> bool:
+        """Validate extracted SQL is a single, complete SELECT."""
+        sql = sql.strip()
+        
+        # Must start with SELECT
+        if not sql.upper().startswith("SELECT"):
+            logger.error("❌ Extracted SQL does not start with SELECT")
+            return False
+        
+        # Must not have multiple statements
+        statement_count = sql.upper().count("SELECT")
+        if statement_count > 1:
+            logger.error(f"❌ Multiple SELECT statements ({statement_count}) found")
+            return False
+        
+        # Must not have dangerous statements
+        dangerous_keywords = ["INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER", "EXEC", "EXECUTE"]
+        for keyword in dangerous_keywords:
+            if keyword in sql.upper():
+                logger.error(f"❌ Dangerous keyword found: {keyword}")
+                return False
+        
+        # Minimum sanity check: has FROM clause
+        if "FROM" not in sql.upper():
+            logger.warning(f"⚠️  SQL missing FROM clause (might be incomplete)")
+            # Don't fail on this - it could be a valid edge case
+        
+        return True
 
 
 # Exported function to create the agent

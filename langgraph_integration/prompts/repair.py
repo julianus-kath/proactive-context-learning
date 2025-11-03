@@ -69,8 +69,20 @@ The following query failed. Analyze the error and generate a corrected version.
 - Apply same filters as original intent
 - Keep row limit and safety constraints
 
-**Output (corrected SQL only, no explanation):**
-SELECT ...
+**🔧 CRITICAL OUTPUT FORMAT (STRICTLY REQUIRED):**
+1. Return ONLY a single SELECT statement wrapped in markdown code fence
+2. Format: 
+   ```sql
+   SELECT ... FROM ... WHERE ...
+   ```
+3. DO NOT include any text before the ```sql or after the closing ```
+4. DO NOT include explanations, markdown headings, or multiple SQL blocks
+5. If you cannot fix this query, respond with only: CANNOT_FIX
+6. Example of WRONG format:
+   ❌ "Here's the fix:\n\n```sql SELECT ... ```"
+   ❌ "```sql SELECT ... ``` \n\nThe issue was that..."
+7. Example of CORRECT format:
+   ✅ "```sql\nSELECT TOP 100 id, name FROM dbo.customers\n```"
 """
 
 REPAIR_WITH_FALLBACK = """You are a SQL recovery expert.
@@ -105,6 +117,18 @@ QUERY_SIMPLIFICATION = """You are simplifying an overly complex query.
 2. Remove expensive aggregations (if possible)
 3. Add more specific WHERE filters to reduce rows
 4. Consider sampling (TOP N rows only)
+
+**🔧 CRITICAL OUTPUT FORMAT (STRICTLY REQUIRED):**
+1. Return ONLY a single simplified SELECT statement wrapped in markdown code fence
+2. Format:
+   ```sql
+   SELECT TOP 100 ... FROM ... WHERE ...
+   ```
+3. DO NOT include any text before the ```sql or after the closing ```
+4. DO NOT include explanations, markdown headings, multiple versions, or analysis
+5. If you cannot simplify, respond with only: CANNOT_SIMPLIFY
+6. Example of CORRECT format:
+   ✅ "```sql\nSELECT TOP 100 id, total_sales FROM dbo.orders WHERE status = 'active'\n```"
 
 **Generate simplified version:**
 """
