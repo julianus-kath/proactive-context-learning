@@ -1117,7 +1117,7 @@ class MCPTools:
                 catalog = scout_runner.get_catalog()
                 if catalog:
                     # Perform catalog-based search
-                    return await MCPTools._search_tables_from_catalog(
+                    return await _search_tables_from_catalog(
                         catalog, query, page, page_size
                     )
 

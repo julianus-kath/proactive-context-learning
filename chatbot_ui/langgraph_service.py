@@ -86,7 +86,7 @@ class DebugLogsResponse(BaseModel):
     logs: list = []
     status: str = "success"
 
-# Global orchestrator instance (Phase 8: Multi-agent system)
+# Global orchestrator instance (Phase 9.1: Multi-agent system with IntentParserAgent subgraph)
 orchestrator = None
 debug_logger = None
 
@@ -95,10 +95,11 @@ async def startup_event():
     """Initialize the multi-agent orchestrator on startup."""
     global orchestrator, debug_logger
     try:
-        print("🚀 Initializing multi-agent orchestrator (Phase 8)...")
+        print("🚀 Initializing multi-agent orchestrator (Phase 9.1)...")
         orchestrator = create_query_orchestrator()
         debug_logger = get_debug_logger()
         print("✅ Multi-agent orchestrator initialized successfully")
+        print("  ├─ IntentParserAgent (LangGraph subgraph, semantic parsing)")
         print("  ├─ DiscoveryAgent (Scout semantic search)")
         print("  ├─ JoinPlanAndSQLAgent (Views-first, MSSQL)")
         print("  ├─ ExecAndRecoveryAgent (Safe execution, auto-repair)")
@@ -113,9 +114,9 @@ async def health_check():
     """Health check endpoint."""
     return {
         "status": "healthy",
-        "service": "Multi-Agent Orchestrator (Phase 8)",
+        "service": "Multi-Agent Orchestrator (Phase 9.1)",
         "orchestrator_ready": orchestrator is not None,
-        "agents": ["DiscoveryAgent", "JoinPlanAndSQLAgent", "ExecAndRecoveryAgent", "AnswerAgent"]
+        "agents": ["IntentParserAgent", "DiscoveryAgent", "JoinPlanAndSQLAgent", "ExecAndRecoveryAgent", "AnswerAgent"]
     }
 
 @app.post("/process_query", response_model=QueryResponse)
