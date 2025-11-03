@@ -640,6 +640,31 @@ class QueryOrchestrator:
         logger.info("✨ Running AnswerAgent...")
 
         try:
+            # Fast return: if we have a successful exec_result, synthesize a concise answer
+            exec_result = state.get("exec_result", {}) or {}
+            if isinstance(exec_result, dict) and exec_result.get("ok"):
+                # Try to extract a scalar count if present in rows
+                count_value = None
+                rows = exec_result.get("rows") or exec_result.get("data") or []
+                if isinstance(rows, list) and rows:
+                    first = rows[0]
+                    if isinstance(first, dict):
+                        # Look for common count keys
+                        for key in ["total_count", "count", "cnt", "total"]:
+                            if key in first and isinstance(first[key], (int, float)):
+                                count_value = int(first[key]) if isinstance(first[key], (int, float)) else None
+                                break
+                        # Fallback: any single numeric value
+                        if count_value is None:
+                            for v in first.values():
+                                if isinstance(v, (int, float)):
+                                    count_value = int(v)
+                                    break
+                if count_value is not None:
+                    state["final_response"] = f"There are {count_value} customers."
+                    logger.info("✅ Answer synthesized from exec_result (count)")
+                    return state
+
             # Build and run answer subgraph
             answer_graph = self.answer_agent.build_subgraph()
 
