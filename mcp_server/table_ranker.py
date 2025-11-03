@@ -2,6 +2,200 @@
 
 from dataclasses import dataclass
 from typing import Dict, Any, List, Optional
+from functools import lru_cache
+import re
+
+# Table ranking dataclass
+@dataclass
+class RankedTable:
+    """A table with its relevance score and metadata."""
+    schema: str
+    name: str
+    full_name: str
+    score: float  # 0.0 to 1.0
+    reasons: List[str]  # Why this table was ranked high
+    estimated_rows: Optional[int] = None
+    column_count: Optional[int] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "schema": self.schema,
+            "name": self.name,
+            "full_name": self.full_name,
+            "score": self.score,
+            "reasons": self.reasons,
+            "estimated_rows": self.estimated_rows,
+            "column_count": self.column_count
+        }
+
+class TableRanker:
+    """
+    Semantic table ranking system for MCP discovery.
+
+    Implements multi-dimensional scoring as described in ADR-0015.
+    """
+
+    def __init__(self):
+        """Initialize the table ranker with default weights."""
+        self.weights = {
+            'entity_match': 1.0,
+            'fuzzy_match': 0.4,
+            'type_compatibility': 0.3,
+            'size_bonus': 0.05,
+            'fk_bonus': 0.1
+        }
+
+    def rank_tables(
+        self,
+        tables: List[Dict[str, Any]],
+        entities: List[str],
+        intent_operations: List[str],
+        catalog_adapter=None,
+    ) -> List[RankedTable]:
+        """
+        Rank tables based on relevance to query entities and operations.
+
+        Args:
+            tables: List of table metadata dicts
+            entities: Query entities (e.g., ["customer", "order"])
+            intent_operations: Query operations (e.g., ["count", "sum"])
+            catalog_adapter: Optional catalog adapter for additional metadata
+
+        Returns:
+            List of RankedTable objects sorted by score desc
+        """
+        ranked_tables = []
+
+        for table in tables:
+            score = 0.0
+            reasons = []
+
+            # Extract table info
+            schema = table.get('schema', 'dbo')
+            name = table.get('name', table.get('table_name', ''))
+            full_name = table.get('full_name', f"{schema}.{name}")
+            estimated_rows = table.get('estimated_rows', 0)
+            column_count = table.get('column_count', 0)
+
+            # 1. Entity matching (highest weight)
+            entity_score = self._score_entity_match(name, full_name, entities)
+            if entity_score > 0:
+                score += entity_score * self.weights['entity_match']
+                reasons.append(f"Entity match: {entity_score:.2f}")
+
+            # 2. Fuzzy matching for partial matches
+            fuzzy_score = self._score_fuzzy_match(name, full_name, entities)
+            if fuzzy_score > 0:
+                score += fuzzy_score * self.weights['fuzzy_match']
+                reasons.append(f"Fuzzy match: {fuzzy_score:.2f}")
+
+            # 3. Type compatibility based on operations
+            type_score = self._score_type_compatibility(table, intent_operations)
+            if type_score > 0:
+                score += type_score * self.weights['type_compatibility']
+                reasons.append(f"Type compatibility: {type_score:.2f}")
+
+            # 4. Size bonus for larger tables (more likely to be important)
+            if estimated_rows and estimated_rows > 1000:
+                size_score = min(estimated_rows / 100000, 1.0)  # Cap at 100k rows
+                score += size_score * self.weights['size_bonus']
+                reasons.append(f"Size bonus: {size_score:.2f}")
+
+            # 5. FK bonus for well-connected tables
+            fk_count = table.get('fk_count', 0)
+            if fk_count > 0:
+                fk_score = min(fk_count / 5, 1.0)  # Cap at 5 FKs
+                score += fk_score * self.weights['fk_bonus']
+                reasons.append(f"FK connectivity: {fk_score:.2f}")
+
+            # Cap score at 1.0
+            score = min(score, 1.0)
+
+            # Only include tables with meaningful scores
+            if score > 0.0:
+                ranked_table = RankedTable(
+                    schema=schema,
+                    name=name,
+                    full_name=full_name,
+                    score=score,
+                    reasons=reasons,
+                    estimated_rows=estimated_rows,
+                    column_count=column_count
+                )
+                ranked_tables.append(ranked_table)
+
+        # Sort by score descending
+        ranked_tables.sort(key=lambda x: x.score, reverse=True)
+        return ranked_tables
+
+    def _score_entity_match(self, name: str, full_name: str, entities: List[str]) -> float:
+        """Score based on exact entity matches in table name."""
+        if not entities:
+            return 0.0
+
+        name_lower = name.lower()
+        full_name_lower = full_name.lower()
+
+        max_score = 0.0
+        for entity in entities:
+            entity_lower = entity.lower()
+            if entity_lower in name_lower or entity_lower in full_name_lower:
+                # Exact substring match gets full score
+                max_score = max(max_score, 1.0)
+            elif any(part in name_lower for part in entity_lower.split('_')):
+                # Partial match on underscore-separated parts
+                max_score = max(max_score, 0.8)
+
+        return max_score
+
+    def _score_fuzzy_match(self, name: str, full_name: str, entities: List[str]) -> float:
+        """Score based on fuzzy/partial matches."""
+        if not entities:
+            return 0.0
+
+        name_lower = name.lower()
+        full_name_lower = full_name.lower()
+
+        max_score = 0.0
+        for entity in entities:
+            entity_lower = entity.lower()
+            # Simple fuzzy matching - could be enhanced with proper fuzzy libraries
+            if len(entity_lower) > 3:  # Only for meaningful entities
+                # Check for substring matches with some tolerance
+                if entity_lower in name_lower:
+                    max_score = max(max_score, 0.6)
+                elif any(entity_lower.startswith(name_lower[:i]) for i in range(3, len(name_lower))):
+                    max_score = max(max_score, 0.3)
+
+        return max_score
+
+    def _score_type_compatibility(self, table: Dict[str, Any], operations: List[str]) -> float:
+        """Score based on table's compatibility with query operations."""
+        if not operations:
+            return 0.0
+
+        score = 0.0
+
+        # Check for aggregation operations
+        agg_ops = ['count', 'sum', 'avg', 'min', 'max']
+        if any(op in operations for op in agg_ops):
+            # Tables with numeric columns are good for aggregation
+            numeric_cols = table.get('numeric_columns', [])
+            if numeric_cols:
+                score += 0.5
+            # Tables with many rows suggest they contain data to aggregate
+            if table.get('estimated_rows', 0) > 100:
+                score += 0.3
+
+        # Check for temporal operations
+        temporal_ops = ['trend', 'monthly', 'yearly', 'date', 'time']
+        if any(op in operations for op in temporal_ops):
+            # Tables with date columns are good for temporal queries
+            date_cols = table.get('date_columns', [])
+            if date_cols:
+                score += 0.6
+
+        return min(score, 1.0)  # Cap at 1.0
 
 # Extend the existing RankedTable class for views
 @dataclass

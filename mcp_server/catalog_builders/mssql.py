@@ -200,8 +200,8 @@ class MSSQLCatalogBuilder:
                 "has_rows": (row.get("estimated_rows") or 0) > 0,
                 "is_replicated": bool(row.get("is_replicated", 0)),
                 "has_opaque_metadata": bool(row.get("has_opaque_metadata", 0)),
-                "create_date": row.get("create_date").isoformat() if row.get("create_date") else None,
-                "modify_date": row.get("modify_date").isoformat() if row.get("modify_date") else None,
+                "create_date": row.get("create_date").isoformat() if row.get("create_date") and hasattr(row.get("create_date"), 'isoformat') else row.get("create_date"),
+                "modify_date": row.get("modify_date").isoformat() if row.get("modify_date") and hasattr(row.get("modify_date"), 'isoformat') else row.get("modify_date"),
                 "last_updated": datetime.utcnow().isoformat()
             }
 
