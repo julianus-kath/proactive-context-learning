@@ -1314,14 +1314,28 @@ async def get_column_index_mcp(table_names: List[str]) -> Dict[str, List[str]]:
     try:
         result = await tool.call_tool("get_column_index", {"table_names": table_names})
         
-        if result and result.get("ok"):
-            column_index = result.get("data", {})
-            logger.info(f"✅ Column index fetched: {len(column_index)} tables")
-            return column_index
-        else:
-            error = result.get("error", "Unknown error")
-            logger.error(f"❌ Failed to get column index: {error}")
-            return {}
+        # result is typically a List[Dict] with a text field containing JSON
+        if isinstance(result, list) and len(result) > 0 and isinstance(result[0], dict):
+            response_text = result[0].get("text", "{}")
+            try:
+                payload = _extract_json_from_text(response_text)
+            except Exception:
+                # Fallback to plain json parse
+                import json as json_lib
+                payload = json_lib.loads(response_text) if isinstance(response_text, str) else {}
+
+            if isinstance(payload, dict):
+                if payload.get("ok"):
+                    column_index = payload.get("data", {})
+                    logger.info(f"✅ Column index fetched: {len(column_index)} tables")
+                    return column_index
+                else:
+                    error = payload.get("error", "Unknown error")
+                    logger.error(f"❌ Failed to get column index: {error}")
+                    return {}
+        
+        logger.error("❌ Unexpected response format from get_column_index")
+        return {}
     
     except Exception as e:
         logger.error(f"❌ Error calling get_column_index: {e}")

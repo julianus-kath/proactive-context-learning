@@ -1110,13 +1110,13 @@ class MCPTools:
                 include_sample=include_sample
             )
             
-            # Validate response is a DiscoveryResponse object
-            if not isinstance(response, DiscoveryTools.DiscoveryResponse):
-                logger.error(f"describe_table returned unexpected type: {type(response).__name__}")
+            # Validate response via duck-typing instead of strict class check
+            if not hasattr(response, 'to_dict'):
+                logger.error(f"describe_table: response missing to_dict(), type={type(response).__name__}")
                 return MCPToolResult(
                     content=[{
                         "type": "text",
-                        "text": f"Internal error: Invalid response type from describe_table"
+                        "text": f"Internal error: Invalid response object from describe_table"
                     }],
                     isError=True
                 )

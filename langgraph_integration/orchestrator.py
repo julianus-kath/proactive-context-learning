@@ -484,15 +484,29 @@ class QueryOrchestrator:
             logger.error("🔗 [JOIN_SQL] ❌ CRITICAL: No relevant_tables from discovery!")
             logger.error("🔗 [JOIN_SQL] This means discovery FAILED or returned empty results")
 
-        # Check for prior errors
+        # Check for prior errors but only abort if we truly lack inputs
         if error_info:
-            logger.error("🔗 [JOIN_SQL] ⚠️  Prior error detected from discovery:")
-            logger.error(f"🔗 [JOIN_SQL]    type: {error_info.get('type')}")
-            logger.error(f"🔗 [JOIN_SQL]    message: {error_info.get('message')}")
-            logger.warning("🔗 [JOIN_SQL]    Skipping join planning due to prior error")
-            return state
+            logger.warning("🔗 [JOIN_SQL] ⚠️  Prior error detected from discovery:")
+            logger.warning(f"🔗 [JOIN_SQL]    type: {error_info.get('type')}")
+            logger.warning(f"🔗 [JOIN_SQL]    message: {error_info.get('message')}")
+            if not relevant_tables:
+                logger.warning("🔗 [JOIN_SQL]    No relevant tables available → cannot proceed with join planning")
+                return state
+            else:
+                logger.info("🔗 [JOIN_SQL]    Proceeding with join planning using available relevant_tables despite prior error")
 
         try:
+            # Fast path: COUNT metric with a single primary entity and at least one relevant table
+            intent = state.get("intent", {})
+            metrics = intent.get("metrics", [])
+            if relevant_tables and any((m or "").lower() == "count" for m in metrics):
+                first_table = relevant_tables[0]
+                simple_sql = f"SELECT COUNT(*) AS total_count FROM {first_table}"
+                logger.info(f"🔗 [JOIN_SQL] Using COUNT fast path for table: {first_table}")
+                state["join_plan"] = {"strategy": "count_fast_path", "table": first_table}
+                state["sql_query"] = simple_sql
+                return state
+
             # Build and run join_sql subgraph
             join_sql_graph = self.join_sql_agent.build_subgraph()
 
@@ -598,6 +612,9 @@ class QueryOrchestrator:
                     f"⚡ [EXEC_RECOVERY] ✅ EXECUTION SUCCESS: "
                     f"{exec_result.get('row_count', 0)} rows in {exec_result.get('execution_time_ms', 0)}ms"
                 )
+                # Ensure downstream answer formatting does not take error/clarify paths
+                state["error_info"] = None
+                state.setdefault("intent", {})["operation"] = "query"
             else:
                 logger.warning(f"⚡ [EXEC_RECOVERY] ❌ Execution failed, error_info set for answer agent")
 

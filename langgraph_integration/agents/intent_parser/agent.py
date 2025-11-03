@@ -194,6 +194,14 @@ Respond ONLY with the JSON object, no other text. Do NOT include markdown code b
                     "raw_query": user_input,  # 🔧 FIX: Use user_input, not response_text
                     "confidence": float(parsed.get("confidence", 0.5))
                 }
+                # Ensure discovery keywords present for simple count queries
+                if not intent["keywords_for_discovery"] and intent["metrics"] and any(m.lower() == "count" for m in intent["metrics"]):
+                    intent["keywords_for_discovery"] = intent["primary_entities"][:3]
+
+                logger.info(
+                    f"🧠 [INTENT] op={intent.get('operation')} keywords={intent.get('keywords_for_discovery')} "
+                    f"metrics={intent.get('metrics')} conf={intent.get('confidence'):.2f}"
+                )
                 return intent
                 
             except json.JSONDecodeError as je:
@@ -264,7 +272,7 @@ Respond ONLY with the JSON object, no other text. Do NOT include markdown code b
         entities = keywords[:2]
         all_keywords = list(dict.fromkeys(keywords))[:5]  # Dedupe, limit to 5
         
-        return {
+        result = {
             "operation": "query",
             "primary_entities": entities,
             "metrics": [],
@@ -274,6 +282,14 @@ Respond ONLY with the JSON object, no other text. Do NOT include markdown code b
             "raw_query": user_input,
             "confidence": 0.6  # Lower confidence for fallback
         }
+        # Ensure keywords for counting semantics if present in text
+        if ("count" in user_input.lower()) and not result["keywords_for_discovery"]:
+            result["keywords_for_discovery"] = result["primary_entities"][:3]
+        logger.info(
+            f"🧠 [INTENT-FALLBACK] op={result.get('operation')} keywords={result.get('keywords_for_discovery')} "
+            f"entities={result.get('primary_entities')} conf={result.get('confidence'):.2f}"
+        )
+        return result
 
     def _is_schema_query(self, user_lower: str) -> bool:
         """Detect schema/structure queries."""

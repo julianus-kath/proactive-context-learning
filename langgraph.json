@@ -1,7 +1,5 @@
 {
-  "dependencies": [
-    "."
-  ],
+  "dependencies": [],
   "graphs": {
     "main_orchestrator": "langgraph_integration.orchestrator:build_graph",
     "discovery_agent": "langgraph_integration.agents.discovery.agent:build_discovery_graph",

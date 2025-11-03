@@ -20,7 +20,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
 from langgraph_integration.contracts.state import BaseState, DiscoveryAgentOutput
-from langgraph_integration.mcp_client import MCPDatabaseTool, get_column_index_mcp
+from langgraph_integration.mcp_client import MCPDatabaseTool, get_column_index_mcp, _extract_json_from_text
 from langgraph_integration.prompts.discovery import TABLE_FOCUS_PROMPT, VIEWS_FIRST_GUIDANCE
 
 logger = logging.getLogger(__name__)
@@ -152,17 +152,28 @@ class DiscoveryAgent:
             return {**state, "error_info": error}
         
         try:
-            # Search for matching tables/views
-            candidates = []
-            for keyword in keywords:
-                logger.debug(f"  Searching for: '{keyword}'")
-                try:
-                    result = await self.mcp.search_tables(keyword, page=1, page_size=10)
-                    parsed = self._parse_search_result(result)
-                    candidates.extend(parsed)
-                except Exception as e:
-                    logger.warning(f"  Search for '{keyword}' failed: {e}")
-                    continue
+            # Search for matching tables/views using a single joined query first
+            candidates: List[Dict[str, Any]] = []
+            query_str = " ".join(keywords)
+            logger.debug(f"  Searching with joined keywords: '{query_str}'")
+            try:
+                result = await self.mcp.search_tables(query_str, page=1, page_size=10)
+                parsed = self._parse_search_result(result)
+                candidates.extend(parsed)
+            except Exception as e:
+                logger.warning(f"  Joined search failed: {e}")
+
+            # Fallback: per-keyword search if joined returned nothing
+            if not candidates:
+                for keyword in keywords:
+                    logger.debug(f"  Fallback search for: '{keyword}'")
+                    try:
+                        result = await self.mcp.search_tables(keyword, page=1, page_size=10)
+                        parsed = self._parse_search_result(result)
+                        candidates.extend(parsed)
+                    except Exception as e:
+                        logger.warning(f"  Search for '{keyword}' failed: {e}")
+                        continue
             
             # Deduplicate by table name
             seen = set()
@@ -174,13 +185,10 @@ class DiscoveryAgent:
                     unique_candidates.append(c)
             
             if not unique_candidates:
-                error = {
-                    "type": "NO_CANDIDATES",
-                    "message": f"No tables/views found for keywords: {', '.join(keywords)}",
-                    "context": {"keywords": keywords}
-                }
-                logger.warning(f"⚠️  {error['message']}")
-                return {**state, "error_info": error}
+                logger.warning(f"⚠️  No tables/views found for keywords: {', '.join(keywords)}")
+                # Soft outcome: continue with empty candidates to allow potential fast paths downstream
+                state["candidate_views"] = []
+                return state
             
             logger.info(f"✅ Found {len(unique_candidates)} candidate tables/views")
             
@@ -620,25 +628,32 @@ class DiscoveryAgent:
         return list(dict.fromkeys(keywords))[:5]
     
     def _parse_search_result(self, result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Parse MCP search_tables result."""
+        """Parse MCP search_tables result with robust JSON extraction."""
         if not result or len(result) == 0:
             return []
-        
+
         try:
             content = result[0].get("text", "")
-            data = json.loads(content) if isinstance(content, str) else content
-            
-            # Handle different response formats
+            # Robustly extract JSON from possible decorated text
+            data = _extract_json_from_text(content) if isinstance(content, str) else content
+
+            # Handle different response formats (including {ok, data: {results|tables}})
+            tables: List[Dict[str, Any]] = []
             if isinstance(data, dict):
-                # Format 1: {results: [...]} or {tables: [...]}
-                tables = data.get("results") or data.get("tables", [])
+                container = data
+                if "data" in data and isinstance(data["data"], dict):
+                    container = data["data"]
+                if "results" in container:
+                    tables = container.get("results", [])
+                elif "tables" in container:
+                    tables = container.get("tables", [])
             elif isinstance(data, list):
                 tables = data
             else:
                 return []
-            
+
             # Normalize table format
-            normalized = []
+            normalized: List[Dict[str, Any]] = []
             for t in tables:
                 if isinstance(t, dict):
                     normalized.append({
@@ -648,29 +663,34 @@ class DiscoveryAgent:
                         "role_coverage": float(t.get("role_coverage", 0)),
                         "has_rows": t.get("has_rows", True)
                     })
-            
+
             return normalized
         except Exception as e:
             logger.warning(f"Failed to parse search result: {e}")
             return []
     
     def _parse_describe_result(self, result: List[Dict[str, Any]], table_name: str) -> Dict[str, Any]:
-        """Parse MCP describe_table result."""
+        """Parse MCP describe_table result with robust JSON extraction."""
         if not result or len(result) == 0:
             return {"table_name": table_name, "columns": []}
-        
+
         try:
             content = result[0].get("text", "")
-            data = json.loads(content) if isinstance(content, str) else content
-            
+            data = _extract_json_from_text(content) if isinstance(content, str) else content
+
+            # Support nesting under data
+            details = data
+            if isinstance(data, dict) and "data" in data and isinstance(data["data"], dict):
+                details = data["data"]
+
             return {
                 "table_name": table_name,
-                "columns": data.get("columns", []),
-                "row_count": data.get("row_count", 0),
-                "has_rows": data.get("has_rows", True),
-                "is_view": data.get("is_view", False),
-                "role_coverage": float(data.get("role_coverage", 0)),
-                "relationships": data.get("relationships", [])
+                "columns": details.get("columns", []),
+                "row_count": details.get("row_count", 0),
+                "has_rows": details.get("has_rows", True),
+                "is_view": details.get("is_view", False),
+                "role_coverage": float(details.get("role_coverage", 0)),
+                "relationships": details.get("relationships", [])
             }
         except Exception as e:
             logger.warning(f"Failed to parse describe result for {table_name}: {e}")

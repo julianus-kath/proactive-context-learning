@@ -20,7 +20,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Project root directory
-PROJECT_ROOT="/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code"
+PROJECT_ROOT="/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code_cursor/proactive-context-learning"
 cd "$PROJECT_ROOT"
 
 # Log file for services
@@ -200,6 +200,17 @@ fi
 echo -e "${GREEN}✅ MCP_SERVER_URL is configured: ${MCP_SERVER_URL}${NC}"
 
 # ============================================
+# Feature toggles
+# ============================================
+# Enable/disable LangGraph Studio (default: off to avoid interference)
+ENABLE_STUDIO="${ENABLE_STUDIO:-0}"
+if [ "$ENABLE_STUDIO" = "1" ]; then
+    echo -e "${YELLOW}🔧 Feature toggle: LangGraph Studio is ENABLED (ENABLE_STUDIO=1)${NC}"
+else
+    echo -e "${YELLOW}🔧 Feature toggle: LangGraph Studio is DISABLED (set ENABLE_STUDIO=1 to enable)${NC}"
+fi
+
+# ============================================
 # Check Windows MCP Server Connection
 # ============================================
 echo ""
@@ -274,10 +285,17 @@ echo -e "${GREEN}✅ Windows MCP server is ready${NC}"
 echo ""
 echo -e "${BLUE}📦 Installing dependencies...${NC}"
 
+# Upgrade build tooling for reliable wheel builds
+echo -e "${YELLOW}   Upgrading pip/setuptools/wheel...${NC}"
+python3 -m pip install --upgrade pip setuptools wheel || {
+    echo -e "${RED}❌ Failed to upgrade pip/setuptools/wheel${NC}"
+    exit 1
+}
+
 # Install LangGraph integration dependencies
 if [ -f "langgraph_integration/requirements.txt" ]; then
     echo -e "${YELLOW}   Installing LangGraph integration dependencies...${NC}"
-    pip3 install -q -r langgraph_integration/requirements.txt || {
+    pip3 install -r langgraph_integration/requirements.txt || {
         echo -e "${RED}❌ Failed to install LangGraph dependencies${NC}"
         exit 1
     }
@@ -286,7 +304,7 @@ fi
 # Install chatbot UI dependencies
 if [ -f "chatbot_ui/requirements.txt" ]; then
     echo -e "${YELLOW}   Installing Chatbot UI dependencies...${NC}"
-    pip3 install -q -r chatbot_ui/requirements.txt || {
+    pip3 install -r chatbot_ui/requirements.txt || {
         echo -e "${RED}❌ Failed to install Chatbot UI dependencies${NC}"
         exit 1
     }
@@ -305,69 +323,88 @@ echo ""
 echo -e "${BLUE}🚀 Starting Mac services...${NC}"
 echo ""
 
-# ============================================
-# Start LangGraph Studio (Visualization)
-# ============================================
-echo -e "${YELLOW}📊 Starting LangGraph Studio (Port 2024) - Graph Visualization & Debugging...${NC}"
-cd "$PROJECT_ROOT"
-
-# Ensure langgraph-cli is installed
-echo -e "${YELLOW}   Checking langgraph-cli installation...${NC}"
-if ! command -v langgraph &> /dev/null; then
-    echo -e "${YELLOW}   Installing langgraph-cli (this may take a moment)...${NC}"
-    pip3 install langgraph-cli >/dev/null 2>&1
-    if ! command -v langgraph &> /dev/null; then
-        echo -e "${YELLOW}⚠️  Failed to install langgraph-cli, skipping Studio${NC}"
-        STUDIO_URL=""
-    else
-        echo -e "${GREEN}   ✅ langgraph-cli installed${NC}"
-    fi
-else
-    LANGGRAPH_CLI_VERSION=$(langgraph --version 2>&1 | head -1)
-    echo -e "${GREEN}   ✅ langgraph-cli found: ${LANGGRAPH_CLI_VERSION}${NC}"
-fi
-
-# Start LangGraph Studio in the background (if CLI is available)
-if command -v langgraph &> /dev/null; then
-    # Clear old logs
-    > "$LOG_DIR/langgraph_studio.log"
-    
-    # Start langgraph dev server (uses langgraph.json config for build_graph reference)
+if [ "$ENABLE_STUDIO" = "1" ]; then
+    # ============================================
+    # Start LangGraph Studio (Visualization)
+    # ============================================
+    echo -e "${YELLOW}📊 Starting LangGraph Studio (Port 2024) - Graph Visualization & Debugging...${NC}"
     cd "$PROJECT_ROOT"
-    nohup langgraph dev --port 2024 --no-reload --tunnel > "$LOG_DIR/langgraph_studio.log" 2>&1 &
-    STUDIO_PID=$!
-    echo -e "${GREEN}✅ LangGraph Studio started (PID: $STUDIO_PID)${NC}"
-    
-    # Wait for Studio to be ready
-    studio_attempts=0
-    while [ $studio_attempts -lt 15 ]; do
-        if curl -s "http://localhost:2024" >/dev/null 2>&1; then
-            echo -e "${GREEN}✅ LangGraph Studio is ready!${NC}"
-            STUDIO_URL="http://localhost:2024"
-            break
-        fi
-        echo -n "."
-        sleep 1
-        studio_attempts=$((studio_attempts + 1))
-    done
-    
-    if [ $studio_attempts -ge 15 ]; then
-        echo -e "${YELLOW}⚠️  LangGraph Studio is taking longer to start (this is normal)${NC}"
+
+    # Ensure langgraph-cli (with in-memory API) is installed
+    echo -e "${YELLOW}   Checking langgraph-cli installation...${NC}"
+    if ! command -v langgraph &> /dev/null; then
+        echo -e "${YELLOW}   Installing langgraph-cli[inmem] (this may take a moment)...${NC}"
+        python3 -m pip install -U "langgraph-cli[inmem]" || true
     fi
-    
-    # Extract tunnel URL from logs
-    sleep 3  # Give it a moment to write the tunnel info to logs
-    TUNNEL_URL=$(grep "Studio UI:" "$LOG_DIR/langgraph_studio.log" 2>/dev/null | sed 's/.*\[\[0-9;]*m//g' | sed 's/\[\[0-9;]*m.*//g' | grep -o 'https://[^ ]*')
-    
-    if [ -n "$TUNNEL_URL" ]; then
-        STUDIO_URL="$TUNNEL_URL"
-        echo -e "${GREEN}✅ LangGraph Studio tunnel URL: ${STUDIO_URL}${NC}"
+
+    # Verify both CLI and API are available
+    if command -v langgraph &> /dev/null; then
+        LANGGRAPH_CLI_VERSION=$(langgraph --version 2>&1 | head -1)
+        echo -e "${GREEN}   ✅ langgraph-cli found: ${LANGGRAPH_CLI_VERSION}${NC}"
     else
-        STUDIO_URL="http://localhost:2024"
-        echo -e "${YELLOW}⚠️  Could not extract tunnel URL, using localhost${NC}"
+        echo -e "${YELLOW}⚠️  langgraph CLI not found after install attempt${NC}"
+    fi
+
+    python3 - << 'PY' 2>/dev/null || export LANGGRAPH_API_MISSING=1
+try:
+    import langgraph_api  # type: ignore
+    print("langgraph_api: ok")
+except Exception as e:
+    raise SystemExit(1)
+PY
+
+    if [ "$LANGGRAPH_API_MISSING" = "1" ]; then
+        echo -e "${YELLOW}   Installing missing langgraph-api via langgraph-cli[inmem]...${NC}"
+        python3 -m pip install -U "langgraph-cli[inmem]" || true
+    fi
+
+    # Start LangGraph Studio in the background (if CLI is available)
+    if command -v langgraph &> /dev/null; then
+        # Clear old logs
+        > "$LOG_DIR/langgraph_studio.log"
+        
+        # Start langgraph dev server (uses langgraph.json config for build_graph reference)
+        cd "$PROJECT_ROOT"
+        nohup langgraph dev --port 2024 --no-reload --tunnel > "$LOG_DIR/langgraph_studio.log" 2>&1 &
+        STUDIO_PID=$!
+        echo -e "${GREEN}✅ LangGraph Studio started (PID: $STUDIO_PID)${NC}"
+        
+        # Wait for Studio to be ready
+        studio_attempts=0
+        while [ $studio_attempts -lt 15 ]; do
+            if curl -s "http://localhost:2024" >/dev/null 2>&1; then
+                echo -e "${GREEN}✅ LangGraph Studio is ready!${NC}"
+                STUDIO_URL="http://localhost:2024"
+                break
+            fi
+            echo -n "."
+            sleep 1
+            studio_attempts=$((studio_attempts + 1))
+        done
+        
+        if [ $studio_attempts -ge 15 ]; then
+            echo -e "${YELLOW}⚠️  LangGraph Studio is taking longer to start (this can happen on first run)${NC}"
+            echo -e "${YELLOW}   Showing recent Studio logs for diagnosis...${NC}"
+            tail -n 80 "$LOG_DIR/langgraph_studio.log" 2>/dev/null || true
+        fi
+        
+        # Extract tunnel URL from logs
+        sleep 3  # Give it a moment to write the tunnel info to logs
+        TUNNEL_URL=$(grep "Studio UI:" "$LOG_DIR/langgraph_studio.log" 2>/dev/null | sed 's/.*\[\[0-9;]*m//g' | sed 's/\[\[0-9;]*m.*//g' | grep -o 'https://[^ ]*')
+        
+        if [ -n "$TUNNEL_URL" ]; then
+            STUDIO_URL="$TUNNEL_URL"
+            echo -e "${GREEN}✅ LangGraph Studio tunnel URL: ${STUDIO_URL}${NC}"
+        else
+            STUDIO_URL="http://localhost:2024"
+            echo -e "${YELLOW}⚠️  Could not extract tunnel URL, using localhost${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  LangGraph CLI not available, skipping Studio${NC}"
+        STUDIO_URL=""
     fi
 else
-    echo -e "${YELLOW}⚠️  LangGraph CLI not available, skipping Studio${NC}"
+    echo -e "${YELLOW}📊 LangGraph Studio is DISABLED (ENABLE_STUDIO=0). Skipping Studio startup.${NC}"
     STUDIO_URL=""
 fi
 
