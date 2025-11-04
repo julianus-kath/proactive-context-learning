@@ -1,5 +1,6 @@
 # Add view ranking functionality to the existing table_ranker.py
 
+import logging
 from dataclasses import dataclass
 from typing import Dict, Any, List, Optional
 from functools import lru_cache
