@@ -24,7 +24,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
 from langgraph_integration.contracts.state import BaseState, ExecAndRecoveryAgentInput, ExecAndRecoveryAgentOutput
-from langgraph_integration.mcp_client import MCPDatabaseTool
+from langgraph_integration.mcp_client import get_shared_mcp_tool
 from langgraph_integration.prompts.repair import (
     SQL_REPAIR_PROMPT,
     QUERY_SIMPLIFICATION
@@ -74,7 +74,7 @@ class ExecAndRecoveryAgent:
             row_limit: Maximum rows to return
             query_timeout_seconds: Query timeout in seconds
         """
-        self.mcp = MCPDatabaseTool()
+        self.mcp = get_shared_mcp_tool()
         self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)
         self.max_retries = max_retries
         self.row_limit = row_limit
@@ -112,15 +112,15 @@ class ExecAndRecoveryAgent:
         """
         graph = StateGraph(BaseState)
 
-        # Define nodes (wrap async nodes for sync .invoke() compatibility)
-        graph.add_node("execute_query", lambda state: _run_async(self._execute_query_node(state)))
-        graph.add_node("check_result", lambda state: _run_async(self._check_result_node(state)))
-        graph.add_node("repair_sql", lambda state: _run_async(self._repair_sql_node(state)))
-        graph.add_node("retry_query", lambda state: _run_async(self._retry_query_node(state)))
-        graph.add_node("check_retry_result", lambda state: _run_async(self._check_retry_result_node(state)))
-        graph.add_node("simplify_query", lambda state: _run_async(self._simplify_query_node(state)))
-        graph.add_node("final_retry", lambda state: _run_async(self._final_retry_node(state)))
-        graph.add_node("prepare_error", lambda state: _run_async(self._prepare_error_node(state)))
+        # Define nodes (use async nodes directly to avoid thread/event loop issues)
+        graph.add_node("execute_query", self._execute_query_node)
+        graph.add_node("check_result", self._check_result_node)
+        graph.add_node("repair_sql", self._repair_sql_node)
+        graph.add_node("retry_query", self._retry_query_node)
+        graph.add_node("check_retry_result", self._check_retry_result_node)
+        graph.add_node("simplify_query", self._simplify_query_node)
+        graph.add_node("final_retry", self._final_retry_node)
+        graph.add_node("prepare_error", self._prepare_error_node)
 
         # Define edges with conditional routing
         from typing import Literal
@@ -554,30 +554,50 @@ class ExecAndRecoveryAgent:
 
             content = first_result.get("text", "")
 
-            # Try to parse as JSON first (for query_bounded responses)
+            # Try to parse as JSON first (for query_bounded responses). The server returns
+            # human-readable text plus a JSON block after 'Full response (JSON):'.
             try:
-                data = json.loads(content) if isinstance(content, str) else content
+                text = content if isinstance(content, str) else str(content)
+                data = None
+                if isinstance(text, str):
+                    marker = "Full response (JSON):"
+                    if marker in text:
+                        json_part = text.split(marker, 1)[-1].strip()
+                        # In case there is leading text before '{', trim to first '{'
+                        brace_idx = json_part.find('{')
+                        if brace_idx >= 0:
+                            json_part = json_part[brace_idx:]
+                        data = json.loads(json_part)
+                    else:
+                        # Fallback: try parsing from the last '{' occurrence
+                        last_brace = text.rfind('{')
+                        if last_brace >= 0:
+                            json_part = text[last_brace:]
+                            data = json.loads(json_part)
+                else:
+                    data = content
 
-                # This is a JSON response from query_bounded
-                ok = data.get("ok", False)
-                rows = data.get("rows", [])
-                row_count = data.get("row_count", len(rows))
-                execution_time_ms = data.get("execution_time_ms", 0)
-                truncated = data.get("truncated", False)
-                warnings = data.get("warnings", [])
-                error = data.get("error")
+                if isinstance(data, dict):
+                    # This is a JSON response from query_bounded
+                    ok = data.get("ok", False)
+                    rows = data.get("rows", [])
+                    row_count = data.get("row_count", len(rows))
+                    execution_time_ms = data.get("execution_time_ms", 0)
+                    truncated = data.get("truncated", False)
+                    warnings = data.get("warnings", [])
+                    error = data.get("error")
 
-                return {
-                    "ok": ok,
-                    "rows": rows,
-                    "row_count": row_count,
-                    "execution_time_ms": execution_time_ms,
-                    "truncated": truncated,
-                    "warnings": warnings,
-                    "error": error
-                }
-            except json.JSONDecodeError:
-                # Not JSON - this is a text table response from query (unbounded)
+                    return {
+                        "ok": ok,
+                        "rows": rows,
+                        "row_count": row_count,
+                        "execution_time_ms": execution_time_ms,
+                        "truncated": truncated,
+                        "warnings": warnings,
+                        "error": error
+                    }
+            except Exception:
+                # Not JSON or failed to extract JSON - handle as text-table format
                 logger.info("Received text table response from unbounded query, parsing manually...")
 
                 if not content or "Query execution failed" in content:

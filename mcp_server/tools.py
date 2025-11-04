@@ -1674,11 +1674,29 @@ class MCPTools:
             raw_views = [t for t in items if str(t.get('type','')).upper()== 'VIEW']
             # Enrich minimal dicts for ranker (columns/tags/def may be missing; ranker handles gracefully)
             # For now we pass through basic fields and estimated_rows
-            ranked = rank_views(
-                query,
-                views=[{"schema":v["schema"],"name":v["name"],"full_name":v["full_name"],"estimated_rows":v.get("estimated_rows",0)} for v in raw_views],
-                include_empty=include_empty
-            )
+            # Build views dict expected by rank_views(views_dict, entities, operations)
+            views_dict = {}
+            for v in raw_views:
+                est = int(v.get("estimated_rows", 0) or 0)
+                if not include_empty and est <= 0:
+                    continue
+                key = v.get("full_name") or f"{v.get('schema','dbo')}.{v.get('name','')}"
+                if not key:
+                    continue
+                views_dict[key] = {
+                    "schema": v.get("schema", ""),
+                    "name": v.get("name", ""),
+                    "full_name": key,
+                    "estimated_rows": est,
+                    "column_count": v.get("column_count", 0),
+                    "has_rows": est > 0,
+                    "role_coverage": v.get("role_coverage", {}),
+                    "complexity": v.get("complexity", {})
+                }
+
+            # Naive entity extraction from query (split words); ranker has synonyms internally
+            entities = [w for w in (query.split() if query else []) if len(w) > 1]
+            ranked = rank_views(views=views_dict, entities=entities, operations=[])
             total = len(ranked)
             page = max(1, page)
             page_size = min(max(1, page_size), 50)
@@ -1693,7 +1711,6 @@ class MCPTools:
                         "full_name": r.full_name,
                         "relevance_score": r.score,
                         "role_coverage": r.role_coverage,
-                        "subject_match": r.subject_match,
                         "estimated_rows": r.estimated_rows,
                         "has_rows": r.has_rows,
                         "reasons": r.reasons,

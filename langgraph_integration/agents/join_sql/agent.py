@@ -20,7 +20,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
 from langgraph_integration.contracts.state import BaseState, JoinPlanAndSQLAgentInput, JoinPlanAndSQLAgentOutput
-from langgraph_integration.mcp_client import MCPDatabaseTool
+from langgraph_integration.mcp_client import get_shared_mcp_tool
 from langgraph_integration.prompts.join_sql import (
     JOIN_PLANNER_PROMPT,
     SQL_GENERATOR_PROMPT_MSSQL,
@@ -80,7 +80,7 @@ class JoinPlanAndSQLAgent:
             row_limit: Default row limit for queries
             query_timeout_seconds: Query timeout in seconds
         """
-        self.mcp = MCPDatabaseTool()
+        self.mcp = get_shared_mcp_tool()
         self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)
         self.max_joins = max_joins
         self.view_role_coverage_threshold = view_role_coverage_threshold
@@ -316,7 +316,12 @@ class JoinPlanAndSQLAgent:
             strategy = join_plan.get("strategy", "joins")
             intent = state.get("intent", {})
             metrics = intent.get("metrics", [])
+            # Heuristic: treat "how many"/"wie viele" as COUNT if metrics empty
+            user_text = (state.get("user_input") or "").lower()
+            if (not metrics) and ("how many" in user_text or "wie viele" in user_text):
+                metrics = ["count"]
             time_window = intent.get("time_window")
+            column_index = state.get("column_index", {}) or {}
 
             # Determine if this is an aggregation query
             has_aggregation = any(m.lower() in ["count", "sum", "total", "avg", "average", "max", "min", "most"] for m in metrics)
@@ -327,8 +332,8 @@ class JoinPlanAndSQLAgent:
                 filters = join_plan.get("where_filters", [])
 
                 if has_aggregation:
-                    # Generate aggregation SQL based on intent
-                    sql = self._generate_aggregation_sql(primary_table, metrics, filters, time_window)
+                    # Generate aggregation SQL based on intent using column_index hints
+                    sql = self._generate_aggregation_sql_with_hints(primary_table, metrics, time_window, column_index)
                 else:
                     # Regular SELECT * query
                     sql = f"SELECT TOP {self.row_limit} * FROM {primary_table}"
@@ -345,9 +350,8 @@ class JoinPlanAndSQLAgent:
                 filters = join_plan.get("where_filters", [])
 
                 if has_aggregation:
-                    # For now, generate exploratory SQL that shows data structure
-                    # This is better than failing with hardcoded column names
-                    sql = f"SELECT TOP 10 * FROM {primary_table}"
+                    # Try to produce a meaningful aggregate using column_index hints
+                    sql = self._generate_aggregation_sql_with_hints(primary_table, metrics, time_window, column_index)
 
                     # Add JOINs if present
                     for join in joins:
@@ -599,6 +603,84 @@ async def create_join_sql_agent(
             conditions.append("YEAR(order_date) = YEAR(GETDATE()) - 1")
 
         return conditions
+
+
+    def _generate_aggregation_sql_with_hints(self, primary_table: str, metrics: List[str], time_window: Optional[str], column_index: Dict[str, List[str]]) -> str:
+        """Heuristic aggregate SQL using column_index to pick columns."""
+        cols = column_index.get(primary_table, []) if isinstance(column_index, dict) else []
+
+        def pick_id_column(columns: List[str]) -> str:
+            tokens = ["id", "nr", "nummer", "no", "key", "kunde", "kundennr", "customer"]
+            lc = [c.lower() for c in columns]
+            for t in tokens:
+                for i, name in enumerate(lc):
+                    if t in name:
+                        return columns[i]
+            return columns[0] if columns else "*"
+
+        def pick_sum_column(columns: List[str]) -> str:
+            tokens = ["umsatz", "betrag", "amount", "total", "summe", "value", "preis"]
+            lc = [c.lower() for c in columns]
+            for t in tokens:
+                for i, name in enumerate(lc):
+                    if t in name:
+                        return columns[i]
+            return None
+
+        def pick_date_column(columns: List[str]) -> str:
+            tokens = ["datum", "date", "zeit", "time", "created", "erfass", "belegdatum", "posted"]
+            lc = [c.lower() for c in columns]
+            for t in tokens:
+                for i, name in enumerate(lc):
+                    if t in name:
+                        return columns[i]
+            return None
+
+        metrics_lc = [m.lower() for m in metrics or []]
+        wants_count = any(m in ["count"] for m in metrics_lc) or (not metrics_lc)
+        wants_sum = any(m in ["sum", "total"] for m in metrics_lc)
+
+        where_conditions = []
+        date_col = pick_date_column(cols)
+        if time_window and date_col:
+            # Use MSSQL-safe expressions; replace generic order_date with date_col
+            tw_conds = []
+            tw = (time_window or "").lower()
+            if "last month" in tw or "letzten monat" in tw:
+                tw_conds = [
+                    f"{date_col} >= DATEADD(month, -1, DATEADD(day, 1, EOMONTH(GETDATE(), -1)))",
+                    f"{date_col} <= EOMONTH(GETDATE(), -1)"
+                ]
+            elif "this month" in tw or "diesen monat" in tw:
+                tw_conds = [
+                    f"{date_col} >= DATEADD(day, 1, EOMONTH(GETDATE(), -1))",
+                    f"{date_col} <= EOMONTH(GETDATE())"
+                ]
+            elif "this year" in tw or "dieses jahr" in tw:
+                tw_conds = [f"YEAR({date_col}) = YEAR(GETDATE())"]
+            elif "last year" in tw or "letztes jahr" in tw:
+                tw_conds = [f"YEAR({date_col}) = YEAR(GETDATE()) - 1"]
+            where_conditions.extend(tw_conds)
+
+        if wants_sum:
+            sum_col = pick_sum_column(cols)
+            if not sum_col:
+                # Fallback to exploratory
+                sql = f"SELECT TOP 10 * FROM {primary_table}"
+            else:
+                sql = f"SELECT SUM({sum_col}) AS total_value FROM {primary_table}"
+        elif wants_count:
+            id_col = pick_id_column(cols)
+            if id_col and id_col != "*":
+                sql = f"SELECT COUNT(DISTINCT {id_col}) AS total_count FROM {primary_table}"
+            else:
+                sql = f"SELECT COUNT(*) AS total_count FROM {primary_table}"
+        else:
+            sql = f"SELECT TOP 10 * FROM {primary_table}"
+
+        if where_conditions:
+            sql += " WHERE " + " AND ".join(where_conditions)
+        return sql
 
 
 # Sync wrapper for LangGraph Studio

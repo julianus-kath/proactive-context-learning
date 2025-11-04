@@ -20,7 +20,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
 from langgraph_integration.contracts.state import BaseState, DiscoveryAgentOutput
-from langgraph_integration.mcp_client import MCPDatabaseTool, get_column_index_mcp, _extract_json_from_text
+from langgraph_integration.mcp_client import get_shared_mcp_tool, get_column_index_mcp, _extract_json_from_text
 from langgraph_integration.prompts.discovery import TABLE_FOCUS_PROMPT, VIEWS_FIRST_GUIDANCE
 
 logger = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ class DiscoveryAgent:
             llm_model: LLM model name for tie-breaking
             llm_temp: Temperature for LLM (0.0 = deterministic)
         """
-        self.mcp = MCPDatabaseTool()
+        self.mcp = get_shared_mcp_tool()
         self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)
         self.max_candidates_to_describe = 3  # Never describe more than 3 tables
         self.view_role_coverage_threshold = 0.70  # Views-first if coverage >= this
@@ -173,7 +173,16 @@ class DiscoveryAgent:
                 parsed = self._parse_search_result(result)
                 candidates.extend(parsed)
             except Exception as e:
-                logger.warning(f"  Joined search failed: {e}")
+                logger.warning(f"  Joined search (tables) failed: {e}")
+            # Also search views-first and merge results
+            try:
+                vres = await self.mcp.search_views(query_str, page=1, page_size=10, include_empty=False)
+                vparsed = self._parse_search_result(vres)
+                for v in vparsed:
+                    v["is_view"] = True
+                candidates.extend(vparsed)
+            except Exception as e:
+                logger.warning(f"  Joined search (views) failed: {e}")
 
             # Fallback: per-keyword search if joined returned nothing
             if not candidates:
@@ -184,8 +193,15 @@ class DiscoveryAgent:
                         parsed = self._parse_search_result(result)
                         candidates.extend(parsed)
                     except Exception as e:
-                        logger.warning(f"  Search for '{keyword}' failed: {e}")
-                        continue
+                        logger.warning(f"  Search tables for '{keyword}' failed: {e}")
+                    try:
+                        vres = await self.mcp.search_views(keyword, page=1, page_size=10, include_empty=False)
+                        vparsed = self._parse_search_result(vres)
+                        for v in vparsed:
+                            v["is_view"] = True
+                        candidates.extend(vparsed)
+                    except Exception as e:
+                        logger.warning(f"  Search views for '{keyword}' failed: {e}")
             
             # Deduplicate by table name
             seen = set()
@@ -405,6 +421,16 @@ class DiscoveryAgent:
                 # Still use the best candidate even if below threshold
                 filtered = candidates[:1]
             
+            # Prefer non-empty entities and higher estimated_rows, then by score
+            def rank_key(c):
+                return (
+                    1 if c.get("has_rows", False) else 0,
+                    int(c.get("estimated_rows", 0) or 0),
+                    float(c.get("score", 0.0))
+                )
+
+            filtered.sort(key=rank_key, reverse=True)
+
             # Limit to ≤3
             selected = filtered[:self.max_candidates_to_describe]
             
@@ -473,8 +499,23 @@ class DiscoveryAgent:
                     async with semaphore:
                         try:
                             logger.debug(f"  Describing {table_name}...")
-                            result = await self.mcp.describe_table(table_name, include_sample=False)
+                            # Use view-aware describe when candidate is a view
+                            if cand.get("is_view", False):
+                                result = await self.mcp.describe_view(table_name, include_sample=False)
+                            else:
+                                result = await self.mcp.describe_table(table_name, include_sample=False)
                             parsed = self._parse_describe_result(result, table_name)
+                            # Optionally fetch view dependencies
+                            if cand.get("is_view", False):
+                                try:
+                                    deps_res = await self.mcp.get_view_dependencies(table_name)
+                                    # Try to parse simple JSON envelope
+                                    deps_text = deps_res[0].get("text", "") if deps_res and isinstance(deps_res[0], dict) else ""
+                                    deps_json = _extract_json_from_text(deps_text) if deps_text else {}
+                                    if isinstance(deps_json, dict):
+                                        parsed["dependencies"] = deps_json.get("data", {}).get("dependencies", [])
+                                except Exception as dep_err:
+                                    logger.debug(f"  Dependencies fetch failed for {table_name}: {dep_err}")
                             session_cache[table_name] = parsed
                             return parsed
                         except Exception as e:

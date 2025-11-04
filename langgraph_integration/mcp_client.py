@@ -16,6 +16,7 @@ import json
 import re
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
+import atexit
 
 # Load environment variables
 load_dotenv()
@@ -269,83 +270,96 @@ class MCPDatabaseTool:
             # Default 30s, but 120s for get_schema (expensive operation)
             timeout_seconds = 120 if tool_name == "get_schema" else 30
 
-            async with session.post(
-                f"{self.mcp_url}/mcp",
-                json=payload,
-                timeout=aiohttp.ClientTimeout(total=timeout_seconds)
-            ) as response:
-                # Set proper content-type check
-                content_type = response.headers.get('Content-Type', '')
-                if 'application/json' not in content_type:
-                    logger.warning(f"Unexpected content-type: {content_type}")
-
-                response.raise_for_status()
-
-                # Safely parse JSON
+            attempts = 0
+            last_error = None
+            while attempts < 2:
+                attempts += 1
                 try:
-                    data = await response.json()
-                except ValueError as json_err:
-                    error_msg = f"Failed to parse JSON response: {json_err}"
-                    logger.error(error_msg)
-                    logger.error(f"Response text: {await response.text()}")
-                    if debug_logger:
-                        debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
-                    raise ValueError(f"Invalid JSON from MCP server: {json_err}")
+                    async with session.post(
+                        f"{self.mcp_url}/mcp",
+                        json=payload,
+                        timeout=aiohttp.ClientTimeout(total=timeout_seconds)
+                    ) as response:
+                        # Set proper content-type check
+                        content_type = response.headers.get('Content-Type', '')
+                        if 'application/json' not in content_type:
+                            logger.warning(f"Unexpected content-type: {content_type}")
 
-                if data is None or not isinstance(data, dict):
-                    error_msg = f"Invalid response data type: {type(data)}"
-                    logger.error(f"MCP call failed: {error_msg}")
-                    if debug_logger:
-                        debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
-                    raise ValueError("MCP call failed: No response data or invalid type")
+                        response.raise_for_status()
 
-                # Check for JSON-RPC errors (standard envelope)
-                if "error" in data and data["error"] is not None:
-                    error_info = data["error"]
-                    if isinstance(error_info, dict):
-                        error_msg = error_info.get("message", "Unknown MCP error")
-                        error_code = error_info.get("code", -1)
-                        logger.error(f"MCP server error (code {error_code}): {error_msg}")
-                    else:
-                        error_msg = str(error_info)
-                        logger.error(f"MCP server error: {error_msg}")
-                    if debug_logger:
-                        debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
-                    raise ValueError(f"MCP server error: {error_msg}")
+                        # Safely parse JSON
+                        try:
+                            data = await response.json()
+                        except ValueError as json_err:
+                            error_msg = f"Failed to parse JSON response: {json_err}"
+                            logger.error(error_msg)
+                            logger.error(f"Response text: {await response.text()}")
+                            if debug_logger:
+                                debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
+                            raise ValueError(f"Invalid JSON from MCP server: {json_err}")
 
-                # Return the content from the result - handle both formats
-                result = data.get("result", {})
+                        if data is None or not isinstance(data, dict):
+                            error_msg = f"Invalid response data type: {type(data)}"
+                            logger.error(f"MCP call failed: {error_msg}")
+                            if debug_logger:
+                                debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
+                            raise ValueError("MCP call failed: No response data or invalid type")
 
-                # If result is empty or None, this is likely an error state
-                if not result:
-                    logger.warning("MCP result is empty, checking for alternative response format")
-                    if "data" in data:
-                        # Alternative format support
-                        result = {"content": [{"type": "text", "text": json.dumps(data["data"])}]}
-                    else:
-                        error_msg = "MCP response has empty result and no alternative data format"
+                        # Check for JSON-RPC errors (standard envelope)
+                        if "error" in data and data["error"] is not None:
+                            error_info = data["error"]
+                            if isinstance(error_info, dict):
+                                error_msg = error_info.get("message", "Unknown MCP error")
+                                error_code = error_info.get("code", -1)
+                                logger.error(f"MCP server error (code {error_code}): {error_msg}")
+                            else:
+                                error_msg = str(error_info)
+                                logger.error(f"MCP server error: {error_msg}")
+                            if debug_logger:
+                                debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
+                            raise ValueError(f"MCP server error: {error_msg}")
+
+                        # Return the content from the result - handle both formats
+                        result = data.get("result", {})
+
+                        # If result is empty or None, this is likely an error state
+                        if not result:
+                            logger.warning("MCP result is empty, checking for alternative response format")
+                            if "data" in data:
+                                # Alternative format support
+                                result = {"content": [{"type": "text", "text": json.dumps(data["data"])}]}
+                            else:
+                                error_msg = "MCP response has empty result and no alternative data format"
+                                if debug_logger:
+                                    debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
+                                raise ValueError(error_msg)
+
+                        # Handle case where result is already a list (MCP server returns content directly)
+                        if isinstance(result, list):
+                            logger.info("MCP result is already a list, using directly")
+                            content = result
+                        else:
+                            # Ensure content is a list
+                            content = result.get("content", [])
+                            if not isinstance(content, list):
+                                logger.warning(f"Content is not a list, converting: {type(content)}")
+                                content = [{"type": "text", "text": str(content)}]
+
+                        duration_ms = (time.time() - start_time) * 1000
+                        logger.info(f"✅ MCP tool call successful, received {len(content)} content items")
+
                         if debug_logger:
-                            debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
-                        raise ValueError(error_msg)
+                            debug_logger.tool_result(tool_name, {"content_items": len(content)}, duration_ms=duration_ms)
 
-                # Handle case where result is already a list (MCP server returns content directly)
-                if isinstance(result, list):
-                    logger.info("MCP result is already a list, using directly")
-                    content = result
-                else:
-                    # Ensure content is a list
-                    content = result.get("content", [])
-                    if not isinstance(content, list):
-                        logger.warning(f"Content is not a list, converting: {type(content)}")
-                        content = [{"type": "text", "text": str(content)}]
-
-                duration_ms = (time.time() - start_time) * 1000
-                logger.info(f"✅ MCP tool call successful, received {len(content)} content items")
-
-                if debug_logger:
-                    debug_logger.tool_result(tool_name, {"content_items": len(content)}, duration_ms=duration_ms)
-
-                return content
+                        return content
+                except aiohttp.ClientResponseError as cre:
+                    last_error = cre
+                    # Retry once on transient 404/503 immediately-starting servers
+                    if cre.status in (404, 503) and attempts < 2:
+                        logger.warning(f"MCP returned {cre.status} on /mcp; retrying once...")
+                        await asyncio.sleep(0.2)
+                        continue
+                    raise
                     
         except asyncio.TimeoutError as e:
             error_msg = f"MCP server timeout (>{timeout_seconds}s) - server at {self.mcp_url} may be unreachable or overloaded"
@@ -584,6 +598,28 @@ class MCPDatabaseTool:
                 logger.debug(f"Error logging scout mode operation: {e}")
         
         return result
+
+    async def search_views(
+        self,
+        keyword: str,
+        page: int = 1,
+        page_size: int = 10,
+        include_empty: bool = False
+    ) -> List[Dict[str, Any]]:
+        """
+        Search and rank views by relevance (catalog-backed, views-first).
+        """
+        tool_params = {
+            "query": keyword,
+            "page": page,
+            "page_size": page_size,
+            "include_empty": include_empty
+        }
+        return await self.call_tool("search_views", tool_params)
+
+    async def get_view_dependencies(self, view_name: str) -> List[Dict[str, Any]]:
+        """Fetch view dependencies from MCP server."""
+        return await self.call_tool("get_view_dependencies", {"view_name": view_name})
     
     async def describe_table(
         self, 
@@ -628,6 +664,45 @@ class MCPDatabaseTool:
             except Exception as e:
                 logger.debug(f"Error logging schema discovery: {e}")
         
+        return result
+
+    async def describe_view(
+        self,
+        view_name: str,
+        include_sample: bool = False
+    ) -> List[Dict[str, Any]]:
+        """
+        Get detailed view information (Phase 4 discovery tool).
+        Mirrors describe_table but targets views and server's describe_view tool.
+        """
+        result = await self.call_tool("describe_view", {
+            "view_name": view_name,
+            "include_sample": include_sample
+        })
+
+        # Log schema discovery (views)
+        if debug_logger and result:
+            try:
+                if result and len(result) > 0:
+                    result_text = result[0].get("text", "")
+                    import json as json_lib
+                    try:
+                        result_data = json_lib.loads(result_text) if isinstance(result_text, str) else result_text
+                        if isinstance(result_data, dict):
+                            data = result_data.get("data", {}) if isinstance(result_data.get("data"), dict) else {}
+                            columns = data.get("columns", [])
+                            row_count = data.get("estimated_rows")
+                            debug_logger.schema_discovered(
+                                view_name,
+                                columns[:5] if len(columns) > 5 else columns,
+                                row_count=row_count,
+                                relationships=data.get("foreign_keys", [])
+                            )
+                    except:
+                        logger.debug(f"Could not parse describe_view result for logging")
+            except Exception as e:
+                logger.debug(f"Error logging schema discovery (view): {e}")
+
         return result
     
     async def list_relations(
@@ -728,6 +803,37 @@ class MCPDatabaseTool:
                     await asyncio.sleep(1 * (attempt + 1))  # Exponential backoff
         
         raise ValueError(f"Tool call failed after {max_retries} attempts: {str(last_error)}")
+
+
+# Shared MCP tool instance for reuse across agents to avoid session leaks
+_shared_mcp_tool: Optional[MCPDatabaseTool] = None
+
+def get_shared_mcp_tool() -> MCPDatabaseTool:
+    """Return a shared MCPDatabaseTool instance (singleton within process)."""
+    global _shared_mcp_tool
+    if _shared_mcp_tool is None:
+        _shared_mcp_tool = MCPDatabaseTool()
+    return _shared_mcp_tool
+
+
+async def _close_shared_mcp_async():
+    try:
+        tool = get_shared_mcp_tool()
+        await tool.close()
+    except Exception:
+        pass
+
+
+def _close_shared_mcp_sync():
+    try:
+        # Create a short-lived loop to close the session on exit
+        asyncio.run(_close_shared_mcp_async())
+    except Exception:
+        pass
+
+
+# Ensure HTTP session/connector are closed at interpreter exit
+atexit.register(_close_shared_mcp_sync)
 
 
 # Utility functions for easier usage
@@ -1378,7 +1484,7 @@ async def get_column_index_mcp(table_names: List[str]) -> Dict[str, List[str]]:
     """
     logger.info(f"📋 Fetching column index for tables: {table_names}")
     
-    tool = MCPDatabaseTool()
+    tool = get_shared_mcp_tool()
     
     try:
         result = await tool.call_tool("get_column_index", {"table_names": table_names})

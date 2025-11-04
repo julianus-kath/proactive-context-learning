@@ -36,7 +36,7 @@ from langgraph_integration.agents.discovery.agent import DiscoveryAgent
 from langgraph_integration.agents.join_sql.agent import JoinPlanAndSQLAgent
 from langgraph_integration.agents.exec_recovery.agent import ExecAndRecoveryAgent
 from langgraph_integration.agents.answer.agent import AnswerAgent
-from langgraph_integration.mcp_client import MCPDatabaseTool
+from langgraph_integration.mcp_client import get_shared_mcp_tool
 from langgraph_integration.debug_logger import get_debug_logger
 
 # Scout Mode is handled by MCP server, not accessed directly from LangGraph
@@ -89,7 +89,7 @@ class QueryOrchestrator:
             query_timeout_seconds: Query timeout in seconds
         """
         self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)
-        self.mcp = MCPDatabaseTool()
+        self.mcp = get_shared_mcp_tool()
 
         # Initialize specialized agents
         logger.info("🚀 Initializing multi-agent orchestrator (Phase 9)...")
@@ -123,8 +123,8 @@ class QueryOrchestrator:
         logger.info("✅ AnswerAgent initialized (Result formatting)")
 
         # Phase 4: MCP client lifecycle management
-        self.mcp_client = MCPDatabaseTool()
-        logger.info("✅ MCP Client initialized (Connection pooling)")
+        self.mcp_client = get_shared_mcp_tool()
+        logger.info("✅ MCP Client initialized (Shared connection pool)")
 
         self.graph = self._build_graph()
 
@@ -134,11 +134,8 @@ class QueryOrchestrator:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit - cleanup connections."""
-        try:
-            await self.mcp_client.close()
-            logger.info("✅ MCP client connections closed")
-        except Exception as e:
-            logger.warning(f"Error closing MCP client: {e}")
+        # Shared MCP client is closed via process-level atexit in mcp_client
+        return
 
     async def close(self):
         """Explicit cleanup method."""
@@ -306,6 +303,12 @@ class QueryOrchestrator:
                 return result_state
 
             logger.info("📚 [INDEX_DATABASE] ✅ Database indexed, MCP available")
+            # Preflight warm-up: make a tiny list_tables call to stabilize /mcp endpoint
+            try:
+                logger.info("📚 [INDEX_DATABASE] Preflight: list_tables(page=1,page_size=1)")
+                await self.mcp_client.list_tables(page=1, page_size=1)
+            except Exception as warm_err:
+                logger.warning(f"📚 [INDEX_DATABASE] Preflight warm-up failed (will continue): {warm_err}")
             debug_logger.agent_exit("index_database", before_state, dict(state))
             return state
 
@@ -1223,6 +1226,61 @@ class QueryOrchestrator:
             # Step 4: Format and return results
             if error_info:
                 return f"I encountered an error executing the query: {error_info.get('message', 'Unknown error')}"
+
+            # If success but empty, try next candidates up to 2 more times
+            tried = set()
+            if join_plan and isinstance(join_plan, dict):
+                pt = join_plan.get("primary_table")
+                if pt:
+                    tried.add(pt)
+
+            attempts = 0
+            while (execution_result and execution_result.get("ok") and execution_result.get("row_count", 0) == 0 
+                   and attempts < 2 and relevant_tables):
+                # Remove already tried primary from candidates
+                filtered = []
+                for t in relevant_tables:
+                    tname = t if isinstance(t, str) else (t.get("full_name") or t.get("name", ""))
+                    if tname and tname not in tried:
+                        filtered.append(t)
+                if not filtered:
+                    break
+                relevant_tables = filtered
+
+                # Regenerate SQL with remaining candidates
+                join_sql_input = BaseState(
+                    user_input=user_input,
+                    intent=intent,
+                    relevant_tables=relevant_tables,
+                    candidate_views=candidate_views,
+                    messages=[],
+                    session_described_tables={}
+                )
+                join_sql_result = await self._join_sql_node(join_sql_input)
+                sql_query = join_sql_result.get("sql_query", "")
+                join_plan = join_sql_result.get("join_plan", {})
+                if join_plan and join_plan.get("primary_table"):
+                    tried.add(join_plan.get("primary_table"))
+
+                if not sql_query:
+                    break
+
+                exec_input = BaseState(
+                    user_input=user_input,
+                    intent=intent,
+                    relevant_tables=relevant_tables,
+                    candidate_views=candidate_views,
+                    sql_query=sql_query,
+                    join_plan=join_plan,
+                    messages=[],
+                    session_described_tables={}
+                )
+                exec_result = await self._exec_recovery_node(exec_input)
+                execution_result = exec_result.get("exec_result")
+                error_info = exec_result.get("error_info")
+                attempts += 1
+                if error_info:
+                    break
 
             if execution_result and execution_result.get("ok"):
                 # Format the actual data results
