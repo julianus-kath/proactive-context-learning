@@ -616,7 +616,11 @@ class QueryOrchestrator:
 
         table_info = None
         for table in relevant_tables:
-            if table.get("full_name") == primary_table or table.get("name") == primary_table:
+            if isinstance(table, str):
+                table_name = table
+            else:
+                table_name = table.get("full_name") or table.get("name", "")
+            if table_name == primary_table:
                 table_info = table
                 break
 
@@ -737,6 +741,7 @@ class QueryOrchestrator:
         # Handle both list of dicts and list of strings
         scored_tables = []
         for table in tables:
+            reasons = []  # collect selection reasons for debugging
             if isinstance(table, dict):
                 table_name = table.get("full_name", table.get("name", ""))
                 base_score = table.get("relevance_score", 0)
@@ -747,6 +752,7 @@ class QueryOrchestrator:
                 continue
 
             score = base_score
+            safe_table = table if isinstance(table, dict) else {}
 
             # Bonus for tables that match entity keywords
             table_lower = table_name.lower()
@@ -768,7 +774,7 @@ class QueryOrchestrator:
                     score += 0.8
                     reasons.append("Transaction-related table name")
                 # Fallback to metadata if available
-                elif table.get("fk_count", 0) >= 2:
+                elif safe_table.get("fk_count", 0) >= 2:
                     score += 0.6
                     reasons.append("Transaction-like metadata (multiple FKs)")
 
@@ -779,7 +785,7 @@ class QueryOrchestrator:
                     score += 0.7
                     reasons.append("Product-related table name")
                 # Fallback to metadata if available
-                elif table.get("column_count", 0) >= 5:
+                elif safe_table.get("column_count", 0) >= 5:
                     score += 0.5
                     reasons.append("Product-like metadata (multiple columns)")
 
@@ -1137,26 +1143,26 @@ class QueryOrchestrator:
         logger.info(f"📝 PROCESS_QUERY CALLED: {user_input[:100]}...")
         logger.info("📝 Starting graph execution...")
 
-        # TEMPORARY FIX: Use IntentParserAgent directly until graph issues are resolved
-        logger.info("🔧 TEMPORARY: Using IntentParserAgent directly (bypassing graph)")
+        # 🎯 COMPLETE AGENT PIPELINE: Intent → Discovery → SQL → Execution
+        logger.info("🎯 [PIPELINE] Starting complete agent workflow")
+
+        # Step 0: Parse intent
+        intent_subgraph = self.intent_parser.build_subgraph()
+        intent_result = await intent_subgraph.ainvoke(BaseState(user_input=user_input))
+        intent = intent_result.get("intent", {})
+        logger.info(f"🎯 [PIPELINE] Intent parsed: {intent}")
+
+        # Check for clarification
+        if intent.get("needs_clarification", False):
+            clarification_question = intent.get("clarification_question", "Could you please clarify your request?")
+            return f"I need more information: {clarification_question}"
 
         try:
-            # Direct call to IntentParserAgent
-            intent_subgraph = self.intent_parser.build_subgraph()
-            intent_result = await intent_subgraph.ainvoke(BaseState(user_input=user_input))
+            # 🎯 FULL PIPELINE: Discovery → SQL Generation → Execution
+            logger.info("🎯 [FULL_PIPELINE] Starting complete agent workflow")
 
-            intent = intent_result.get("intent", {})
-            logger.info(f"🔧 Intent parsed: {intent}")
-
-            # Simple logic: if clarification needed, return clarification
-            if intent.get("needs_clarification", False):
-                clarification_question = intent.get("clarification_question", "Could you please clarify your request?")
-                return f"I need more information: {clarification_question}"
-
-            # Use full discovery pipeline with semantic search
-            logger.info(f"🔧 Using full discovery pipeline with intent: {intent}")
-
-            # Call the discovery node directly
+            # Step 1: Discovery - Find relevant tables
+            logger.info("🎯 [FULL_PIPELINE] Step 1: Discovery")
             discovery_input = BaseState(
                 user_input=user_input,
                 intent=intent,
@@ -1164,65 +1170,134 @@ class QueryOrchestrator:
                 session_described_tables={}
             )
 
-            try:
-                # WORKAROUND: Perform semantic search locally since MCP server has outdated code
-                logger.info(f"🔧 Using local semantic search with TableRanker")
+            discovery_result = await self._discovery_node(discovery_input)
+            relevant_tables = discovery_result.get("relevant_tables", [])
+            candidate_views = discovery_result.get("candidate_views", [])
 
-                # Get catalog data directly from MCP (bypass the search function)
-                catalog_data = await self._get_catalog_from_mcp()
-                if catalog_data:
-                    # Perform semantic search locally
-                    search_result = await self._perform_local_semantic_search(catalog_data, intent)
+            logger.info(f"🎯 [FULL_PIPELINE] Discovery found {len(relevant_tables)} tables, {len(candidate_views)} views")
 
-                    if search_result and len(search_result) > 0:
-                        # Show top results with ranking info
-                        top_tables = search_result[:5]  # Show top 5
-                        table_info = []
-                        for i, table in enumerate(top_tables, 1):
-                            name = table.get('name', 'unknown')
-                            score = table.get('score', 0)
-                            reasons = table.get('reasons', [])
-                            table_info.append(f"{i}. {name} (score: {score:.2f})")
+            if not relevant_tables:
+                return f"I couldn't find any relevant tables for your query '{user_input}'. This might be because the database uses different terminology than expected."
 
-                        response = f"I found these relevant tables for your query:\n" + "\n".join(table_info)
+            # Step 2: SQL Generation - Create queries from discovered tables
+            logger.info("🎯 [FULL_PIPELINE] Step 2: SQL Generation")
+            join_sql_input = BaseState(
+                user_input=user_input,
+                intent=intent,
+                relevant_tables=relevant_tables,
+                candidate_views=candidate_views,
+                messages=[],
+                session_described_tables={}
+            )
 
-                        # If we have high-confidence matches, suggest next steps
-                        high_confidence = [t for t in top_tables if t.get('score', 0) > 0.7]
-                        if high_confidence:
-                            response += f"\n\nI have {len(high_confidence)} high-confidence matches. I can now generate SQL queries for these tables."
+            join_sql_result = await self._join_sql_node(join_sql_input)
+            sql_query = join_sql_result.get("sql_query", "")
+            join_plan = join_sql_result.get("join_plan", {})
 
-                        return response
+            logger.info(f"🎯 [FULL_PIPELINE] SQL generated: {len(sql_query)} chars")
+            logger.info(f"🎯 [FULL_PIPELINE] Join plan: {join_plan}")
 
-                # Fallback to MCP search if local search fails
-                logger.info("🔧 Local search failed, falling back to MCP search")
-                keywords = intent.get("keywords_for_discovery", [])
-                if not keywords:
-                    keywords = [user_input.split()[0]]  # fallback to first word
+            if not sql_query:
+                return f"I found relevant tables but couldn't generate a SQL query for '{user_input}'. The table structure might be too complex for automatic SQL generation."
 
-                search_result = await self.mcp.search_tables(
-                    keyword=keywords[0],
-                    page=1,
-                    page_size=10
-                )
+            # Step 3: Execution - Run the SQL and get results
+            logger.info("🎯 [FULL_PIPELINE] Step 3: SQL Execution")
+            exec_input = BaseState(
+                user_input=user_input,
+                intent=intent,
+                relevant_tables=relevant_tables,
+                candidate_views=candidate_views,
+                sql_query=sql_query,
+                join_plan=join_plan,
+                messages=[],
+                session_described_tables={}
+            )
 
-                if search_result and len(search_result) > 0:
-                    return f"I found {len(search_result)} potential tables using basic search. The semantic search will work better once the MCP server is updated."
+            exec_result = await self._exec_recovery_node(exec_input)
+            execution_result = exec_result.get("exec_result")
+            error_info = exec_result.get("error_info")
 
-                return f"I couldn't find relevant tables for '{user_input}'. The database might not contain data matching your query terms."
+            logger.info(f"🎯 [FULL_PIPELINE] Execution completed: {execution_result}")
+            logger.info(f"🎯 [FULL_PIPELINE] Errors: {error_info}")
 
-            except Exception as e:
-                logger.error(f"🔧 Semantic search failed: {e}")
-                import traceback
-                logger.error(f"🔧 Traceback: {traceback.format_exc()}")
-                return f"I encountered an error while searching for tables: {str(e)}"
+            # Step 4: Format and return results
+            if error_info:
+                return f"I encountered an error executing the query: {error_info.get('message', 'Unknown error')}"
 
-            return f"I understood your query about {intent.get('primary_entities', ['something'])[0]}, but I'm still learning how to process it. Please try a more specific question."
+            if execution_result and execution_result.get("ok"):
+                # Format the actual data results
+                return await self._format_execution_results(execution_result, intent, user_input)
+            else:
+                return f"The query executed but returned no results for '{user_input}'."
 
         except Exception as e:
-            logger.error(f"🔧 Intent parsing failed: {e}")
+            logger.error(f"🎯 [FULL_PIPELINE] Pipeline failed: {e}")
             import traceback
-            logger.error(f"🔧 Traceback:\n{traceback.format_exc()}")
-            return "I'm having trouble understanding your query right now. Please try again."
+            logger.error(f"🎯 [FULL_PIPELINE] Traceback: {traceback.format_exc()}")
+            return f"I encountered an error processing your query '{user_input}': {str(e)}"
+
+    async def _format_execution_results(self, execution_result: Dict[str, Any], intent: Dict[str, Any], user_input: str) -> str:
+        """Format execution results into user-friendly response."""
+        try:
+            data = execution_result.get("data", [])
+            row_count = execution_result.get("row_count", 0)
+            execution_time = execution_result.get("execution_time_ms", 0)
+
+            # Handle different query types
+            query_operation = intent.get("operation", "query")
+            primary_entities = intent.get("primary_entities", [])
+            metrics = intent.get("metrics", [])
+
+            if not data:
+                return f"Your query '{user_input}' executed successfully but returned no data. This might mean there are no matching records in the database."
+
+            # Format based on query type
+            if query_operation == "query" and "count" in metrics:
+                # COUNT query - return the number
+                if data and len(data) > 0 and len(data[0]) > 0:
+                    count_value = list(data[0].values())[0]
+                    entity_name = primary_entities[0] if primary_entities else "items"
+                    return f"There are {count_value} {entity_name} in the database."
+
+            elif query_operation == "query" and metrics:
+                # Aggregation query (SUM, AVG, etc.)
+                if data and len(data) > 0:
+                    result_values = []
+                    for row in data[:5]:  # Show first 5 results
+                        for key, value in row.items():
+                            if key and value is not None:
+                                result_values.append(f"{key}: {value}")
+                    result_str = ", ".join(result_values)
+                    return f"Query results: {result_str}"
+
+            else:
+                # Regular SELECT query
+                if row_count == 1:
+                    # Single row result
+                    row = data[0]
+                    formatted_data = []
+                    for key, value in row.items():
+                        if value is not None:
+                            formatted_data.append(f"{key}: {value}")
+                    return f"Found 1 result: {', '.join(formatted_data)}"
+                elif row_count <= 10:
+                    # Small result set - show all
+                    response = f"Found {row_count} results:\n"
+                    for i, row in enumerate(data, 1):
+                        row_values = []
+                        for key, value in row.items():
+                            if value is not None:
+                                row_values.append(f"{key}: {value}")
+                        response += f"{i}. {', '.join(row_values)}\n"
+                    return response.rstrip()
+                else:
+                    # Large result set - summarize
+                    columns = list(data[0].keys()) if data else []
+                    return f"Found {row_count} results with columns: {', '.join(columns)}. Use a more specific query to see the actual data."
+
+        except Exception as e:
+            logger.error(f"Error formatting execution results: {e}")
+            return f"The query executed successfully and returned {execution_result.get('row_count', 'unknown')} results, but I had trouble formatting them for display."
 
     async def _get_catalog_from_mcp(self) -> Optional[Dict[str, Any]]:
         """Get catalog data directly from MCP server."""

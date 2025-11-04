@@ -112,6 +112,10 @@ async def _search_tables_from_catalog(catalog: Dict[str, Any], query: str, page:
         if not entities:
             entities = [query]
 
+        # 🔧 USE SCOUT CATALOG SEMANTIC INFORMATION
+        # The TableRanker will use fuzzy matching against actual German table/column names
+        # No hard-coded translations - rely on semantic matching in TableRanker
+
         logger.info(f"🔍 Semantic search - Entities: {entities}, Operations: {operations}")
 
         # Use TableRanker for semantic ranking

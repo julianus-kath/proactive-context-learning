@@ -31,9 +31,20 @@ def _run_async(coro):
     try:
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                future = pool.submit(asyncio.run, coro)
-                return future.result()
+            # Create a task in the current running loop
+            import concurrent.futures
+            future = concurrent.futures.Future()
+
+            async def run_and_set():
+                try:
+                    result = await coro
+                    future.set_result(result)
+                except Exception as e:
+                    future.set_exception(e)
+
+            # Schedule the task
+            asyncio.create_task(run_and_set())
+            return future.result()  # This will block until the task completes
         else:
             return loop.run_until_complete(coro)
     except RuntimeError:
@@ -82,14 +93,14 @@ class DiscoveryAgent:
         graph = StateGraph(BaseState)
         
         # Define nodes (wrap async nodes for sync .invoke() compatibility)
-        graph.add_node("search_candidates", lambda state: _run_async(self._search_candidates_node(state)))
-        graph.add_node("rank_candidates", lambda state: _run_async(self._rank_candidates_node(state)))
-        graph.add_node("filter_to_limit", lambda state: _run_async(self._filter_to_limit_node(state)))
-        graph.add_node("describe_selected", lambda state: _run_async(self._describe_selected_node(state)))
-        graph.add_node("explore_date_columns", lambda state: _run_async(self._explore_date_columns_node(state)))
-        graph.add_node("build_schema_snippet", lambda state: _run_async(self._build_schema_snippet_node(state)))
+        graph.add_node("search_candidates", self._search_candidates_node)
+        graph.add_node("rank_candidates", self._rank_candidates_node)
+        graph.add_node("filter_to_limit", self._filter_to_limit_node)
+        graph.add_node("describe_selected", self._describe_selected_node)
+        graph.add_node("explore_date_columns", self._explore_date_columns_node)
+        graph.add_node("build_schema_snippet", self._build_schema_snippet_node)
         # 🆕 PHASE 7.2: Fetch indexed columns from Scout Catalog to prevent hallucination
-        graph.add_node("fetch_column_index", lambda state: _run_async(self._fetch_column_index_node(state)))
+        graph.add_node("fetch_column_index", self._fetch_column_index_node)
         
         # Define edges
         graph.add_edge("search_candidates", "rank_candidates")
@@ -158,7 +169,7 @@ class DiscoveryAgent:
             query_str = " ".join(keywords)
             logger.debug(f"  Searching with joined keywords: '{query_str}'")
             try:
-                result = await self.mcp.search_tables(query_str, page=1, page_size=10)
+                result = await self.mcp.search_tables(query_str, page=1, page_size=10, intent_data=intent)
                 parsed = self._parse_search_result(result)
                 candidates.extend(parsed)
             except Exception as e:
@@ -169,7 +180,7 @@ class DiscoveryAgent:
                 for keyword in keywords:
                     logger.debug(f"  Fallback search for: '{keyword}'")
                     try:
-                        result = await self.mcp.search_tables(keyword, page=1, page_size=10)
+                        result = await self.mcp.search_tables(keyword, page=1, page_size=10, intent_data=intent)
                         parsed = self._parse_search_result(result)
                         candidates.extend(parsed)
                     except Exception as e:
@@ -188,7 +199,9 @@ class DiscoveryAgent:
             # Only try fallback discovery if we have insufficient good candidates
             # Check if we have at least 3 candidates with relevance score > 0.3
             good_candidates = [c for c in unique_candidates if c.get("relevance_score", 0) > 0.3]
-            needs_fallback = len(good_candidates) < 3 or len(unique_candidates) < 5
+            # Check if top candidates have meaningful semantic relevance (not just size bonus)
+            top_candidates_semantic = [c for c in unique_candidates[:3] if c.get("relevance_score", 0) > 0.05]
+            needs_fallback = len(good_candidates) < 3 or len(unique_candidates) < 5 or len(top_candidates_semantic) == 0
 
             if needs_fallback:
                 logger.info(f"🔄 Primary search found {len(unique_candidates)} candidates ({len(good_candidates)} good), trying fallback...")
@@ -209,9 +222,14 @@ class DiscoveryAgent:
             else:
                 logger.info(f"✅ Primary search sufficient: {len(unique_candidates)} candidates ({len(good_candidates)} good), skipping fallback")
 
-            if not unique_candidates:
-                logger.warning(f"⚠️  No tables/views found for keywords: {', '.join(keywords)}")
-                # Soft outcome: continue with empty candidates to allow potential fast paths downstream
+            # Check if we have meaningful semantic matches (not just size-based ranking)
+            semantic_candidates = [c for c in unique_candidates if c.get("relevance_score", 0) > 0.05]
+            has_meaningful_matches = len(semantic_candidates) > 0
+
+            if not unique_candidates or not has_meaningful_matches:
+                logger.warning(f"⚠️  No semantically relevant tables/views found for keywords: {', '.join(keywords)}")
+                logger.info(f"   Found {len(unique_candidates)} candidates, but none with semantic relevance > 0.05")
+                # Trigger clarification by returning empty candidates
                 state["candidate_views"] = []
                 return state
             
@@ -426,6 +444,7 @@ class DiscoveryAgent:
             return state
         
         try:
+            described = []
             # Phase 4: Parallel processing for independent describe operations
             describe_tasks = []
             uncached_candidates = []
@@ -582,7 +601,8 @@ class DiscoveryAgent:
         
         try:
             schema_lines = []
-            relevant_tables = []
+            relevant_tables: List[str] = []
+            relevant_table_details = []
             
             # Build a quick lookup for date columns
             date_cols_by_table = {}
@@ -593,11 +613,13 @@ class DiscoveryAgent:
             for cand in candidates:
                 table_name = cand.get("table_name") or cand.get("name") or cand.get("full_name", "")
                 columns = cand.get("columns", [])
-                
+
                 if not table_name:
                     continue
-                
+
+                # Store both string name list and detailed metadata
                 relevant_tables.append(table_name)
+                relevant_table_details.append(cand)
                 
                 # Build column list: name (type) [role hints]
                 col_strs = []
@@ -633,6 +655,7 @@ class DiscoveryAgent:
             logger.debug(f"Schema:\n{schema_snippet}")
             
             state["relevant_tables"] = relevant_tables
+            state["relevant_table_details"] = relevant_table_details
             state["schema_snippet"] = schema_snippet
             return state
             
@@ -790,12 +813,24 @@ class DiscoveryAgent:
             normalized: List[Dict[str, Any]] = []
             for t in tables:
                 if isinstance(t, dict):
+                    full_name = t.get("full_name", "")
+                    name = t.get("table_name") or t.get("name") or full_name
+                    # Prefer MCP's relevance_score (0.0-1.0); fallback to score/relevance if present
+                    relevance = t.get("relevance_score", t.get("score", t.get("relevance", 0.0)))
+                    # Derive booleans from MCP payload
+                    derived_is_view = (t.get("type") == "VIEW") if t.get("type") else t.get("is_view", False)
+                    estimated_rows = t.get("estimated_rows", None)
+                    derived_has_rows = (estimated_rows is not None and estimated_rows > 0) if estimated_rows is not None else t.get("has_rows", True)
+
                     normalized.append({
-                        "table_name": t.get("table_name") or t.get("name") or t.get("full_name", ""),
-                        "score": float(t.get("score", t.get("relevance", 0))),
-                        "is_view": t.get("is_view", False),
+                        "table_name": name,
+                        "full_name": full_name or name,
+                        "relevance_score": float(relevance),
+                        "is_view": bool(derived_is_view),
                         "role_coverage": float(t.get("role_coverage", 0)),
-                        "has_rows": t.get("has_rows", True)
+                        "has_rows": bool(derived_has_rows),
+                        "estimated_rows": estimated_rows if isinstance(estimated_rows, (int, float)) else 0,
+                        "column_count": t.get("column_count", 0)
                     })
 
             return normalized
@@ -836,7 +871,8 @@ class DiscoveryAgent:
         
         score = 0.45*text_sim + 0.25*role_coverage + 0.15*subject_match + 0.10*has_rows + 0.05*is_view
         """
-        text_sim = float(candidate.get("score", 0)) / 100.0  # Normalize to [0,1]
+        # Use MCP-provided relevance_score in [0.0, 1.0]; fallback to score if present
+        text_sim = float(candidate.get("relevance_score", candidate.get("score", 0.0)))
         role_coverage = float(candidate.get("role_coverage", 0))
         
         # Views-first bonus

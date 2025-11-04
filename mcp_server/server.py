@@ -215,6 +215,16 @@ async def mcp_endpoint(
                 result = await MCPTools._query(tool_args, db_manager)
             elif tool_name == "query_bounded":
                 result = await MCPTools._query_bounded(tool_args, db_manager)
+            elif tool_name == "get_column_index":
+                result = await MCPTools._get_column_index(tool_args, db_manager)
+            elif tool_name == "list_relations":
+                result = await MCPTools._list_relations(tool_args, db_manager)
+            elif tool_name == "list_views":
+                result = await MCPTools._list_views(tool_args, db_manager)
+            elif tool_name == "search_views":
+                result = await MCPTools._search_views(tool_args, db_manager)
+            elif tool_name == "describe_view":
+                result = await MCPTools._describe_view(tool_args, db_manager)
             else:
                 raise HTTPException(status_code=404, detail=f"Unknown tool: {tool_name}")
 
@@ -223,6 +233,10 @@ async def mcp_endpoint(
         else:
             raise HTTPException(status_code=400, detail=f"Unknown method: {method}")
 
+    except HTTPException as he:
+        # Preserve specific HTTP error codes like 404
+        logger.error(f"MCP endpoint error: {he.detail}")
+        raise he
     except Exception as e:
         logger.error(f"MCP endpoint error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

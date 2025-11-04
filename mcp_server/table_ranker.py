@@ -68,6 +68,35 @@ class TableRanker:
         """
         ranked_tables = []
 
+        # Expand entities with simple EN↔DE synonyms to improve cross-language matching
+        synonyms_map = {
+            "customer": ["kunde", "kunden", "adress", "adressen", "client"],
+            "product": ["artikel", "produkt", "produkte"],
+            "order": ["auftrag", "bestellung", "beleg", "belege"],
+            "sale": ["verkauf", "umsatz", "sales"],
+            "revenue": ["umsatz"],
+            "inventory": ["bestand", "bestände", "lager", "lagerbestand", "stock"],
+            "transaction": ["buchung", "transaktion"],
+        }
+        # Build bidirectional synonym index
+        reverse_map: Dict[str, List[str]] = {}
+        for k, vals in synonyms_map.items():
+            for v in vals:
+                reverse_map.setdefault(v, []).append(k)
+        expanded_entities: List[str] = []
+        for e in entities or []:
+            e_lower = (e or "").lower()
+            expanded_entities.append(e_lower)
+            # Forward
+            for s in synonyms_map.get(e_lower, []):
+                expanded_entities.append(s)
+            # Reverse
+            for s in reverse_map.get(e_lower, []):
+                expanded_entities.append(s)
+        # Deduplicate
+        if expanded_entities:
+            entities = list(dict.fromkeys(expanded_entities))
+
         for table in tables:
             score = 0.0
             reasons = []
@@ -78,14 +107,23 @@ class TableRanker:
             full_name = table.get('full_name', f"{schema}.{name}")
             estimated_rows = table.get('estimated_rows', 0)
             column_count = table.get('column_count', 0)
+            t_type = str(table.get('type', '')).lower()
+            name_lower = (name or '').lower()
+            full_name_lower = (full_name or '').lower()
 
-            # 1. Entity matching (highest weight)
+            # 1. Entity matching on table names (highest weight)
             entity_score = self._score_entity_match(name, full_name, entities)
             if entity_score > 0:
                 score += entity_score * self.weights['entity_match']
-                reasons.append(f"Entity match: {entity_score:.2f}")
+                reasons.append(f"Table name match: {entity_score:.2f}")
 
-            # 2. Fuzzy matching for partial matches
+            # 2. Entity matching on column names (very high weight)
+            column_score = self._score_column_match(table, entities)
+            if column_score > 0:
+                score += column_score * (self.weights['entity_match'] * 1.2)  # Higher weight for column matches
+                reasons.append(f"Column name match: {column_score:.2f}")
+
+            # 3. Fuzzy matching for partial matches
             fuzzy_score = self._score_fuzzy_match(name, full_name, entities)
             if fuzzy_score > 0:
                 score += fuzzy_score * self.weights['fuzzy_match']
@@ -110,11 +148,31 @@ class TableRanker:
                 score += fk_score * self.weights['fk_bonus']
                 reasons.append(f"FK connectivity: {fk_score:.2f}")
 
+            # Views-first slight preference
+            if t_type == 'view':
+                score += 0.05
+                reasons.append("View preference")
+
+            # Penalize archive/archiv tables (likely historical, not primary business tables)
+            if 'archiv' in name_lower or 'archiv' in full_name_lower or 'archive' in name_lower:
+                score = max(0.0, score - 0.3)
+                reasons.append("Archive penalty")
+
             # Cap score at 1.0
             score = min(score, 1.0)
 
-            # Only include tables with meaningful scores
-            if score > 0.0:
+            # Only include tables with meaningful semantic relevance
+            # Require at least some semantic match, not just size bonuses
+            has_semantic_match = (
+                entity_score > 0 or
+                column_score > 0 or
+                fuzzy_score >= 0.3  # Require meaningful fuzzy match
+            )
+
+            # For query operations, require semantic relevance over pure size
+            min_required_score = 0.05 if has_semantic_match else 0.3
+
+            if score >= min_required_score:
                 ranked_table = RankedTable(
                     schema=schema,
                     name=name,
@@ -152,7 +210,7 @@ class TableRanker:
         return max_score
 
     def _score_fuzzy_match(self, name: str, full_name: str, entities: List[str]) -> float:
-        """Score based on fuzzy/partial matches."""
+        """Enhanced fuzzy matching for cross-language table discovery."""
         if not entities:
             return 0.0
 
@@ -162,15 +220,72 @@ class TableRanker:
         max_score = 0.0
         for entity in entities:
             entity_lower = entity.lower()
-            # Simple fuzzy matching - could be enhanced with proper fuzzy libraries
-            if len(entity_lower) > 3:  # Only for meaningful entities
-                # Check for substring matches with some tolerance
-                if entity_lower in name_lower:
-                    max_score = max(max_score, 0.6)
-                elif any(entity_lower.startswith(name_lower[:i]) for i in range(3, len(name_lower))):
-                    max_score = max(max_score, 0.3)
+            if len(entity_lower) < 3:  # Skip very short entities
+                continue
 
-        return max_score
+            # 1. Exact substring match (highest score)
+            if entity_lower in name_lower:
+                max_score = max(max_score, 0.8)
+
+            # 2. Partial matches with different thresholds
+            elif len(entity_lower) >= 4:
+                # Check if entity appears as prefix of any word in table name
+                name_words = name_lower.replace('_', ' ').split()
+                for word in name_words:
+                    if word.startswith(entity_lower[:4]):  # First 4 chars match
+                        max_score = max(max_score, 0.5)
+                    elif entity_lower[:3] in word:  # First 3 chars appear anywhere
+                        max_score = max(max_score, 0.3)
+
+                # Check reverse: table name words in entity
+                for word in name_words:
+                    if word in entity_lower:
+                        max_score = max(max_score, 0.4)
+
+            # 3. Use Scout catalog column information for enhanced matching
+            # Column matching is handled separately with higher weight
+
+        return min(max_score, 1.0)  # Cap at 1.0
+
+    def _score_column_match(self, table: Dict[str, Any], entities: List[str]) -> float:
+        """Score based on matches against column names from Scout catalog."""
+        if not entities:
+            return 0.0
+
+        columns = table.get('columns', [])
+        if not columns:
+            return 0.0
+
+        max_score = 0.0
+        matched_columns = []
+
+        for entity in entities:
+            entity_lower = entity.lower()
+            if len(entity_lower) < 3:  # Skip very short entities
+                continue
+
+            for col in columns:
+                col_name = col.get('name', '').lower()
+
+                # Exact match on column name
+                if entity_lower == col_name:
+                    max_score = max(max_score, 1.0)
+                    matched_columns.append(col_name)
+                # Substring match
+                elif entity_lower in col_name:
+                    max_score = max(max_score, 0.8)
+                    matched_columns.append(col_name)
+                # Partial match (first 4 chars)
+                elif len(entity_lower) >= 4 and col_name.startswith(entity_lower[:4]):
+                    max_score = max(max_score, 0.6)
+                    matched_columns.append(col_name)
+                # Reverse: column name in entity
+                elif col_name in entity_lower:
+                    max_score = max(max_score, 0.5)
+                    matched_columns.append(col_name)
+
+        return min(max_score, 1.0)
+
 
     def _score_type_compatibility(self, table: Dict[str, Any], operations: List[str]) -> float:
         """Score based on table's compatibility with query operations."""
