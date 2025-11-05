@@ -9,10 +9,10 @@ from dataclasses import dataclass
 from typing import Optional, Literal
 from dotenv import load_dotenv
 
-# Load environment variables from mcp_server/.env
-# This ensures we load the correct .env file even when running from project root
-env_path = Path(__file__).parent / ".env"
-load_dotenv(dotenv_path=env_path)
+# Load environment variables from project root first, then mcp_server/.env to allow local overrides
+project_root = Path(__file__).parent.parent
+load_dotenv(dotenv_path=project_root / ".env")
+load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
 DatabaseDialect = Literal["postgres", "mssql"]
 
@@ -22,7 +22,7 @@ class MCPServerConfig:
     """Configuration for the MCP server."""
     
     # Database dialect selection
-    db_dialect: DatabaseDialect = os.getenv("DB_DIALECT", "postgres")  # postgres | mssql
+    db_dialect: DatabaseDialect = os.getenv("DB_DIALECT", "mssql")  # postgres | mssql
     
     # PostgreSQL configuration (dev mode)
     postgres_host: str = os.getenv("POSTGRES_HOST", "localhost")

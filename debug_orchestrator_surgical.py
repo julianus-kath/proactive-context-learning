@@ -36,8 +36,10 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# Import the orchestrator
-sys.path.insert(0, '/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code')
+# Import the orchestrator from this repo (ensure project root is on sys.path)
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 from langgraph_integration.orchestrator import QueryOrchestrator
 from langgraph_integration.contracts.state import BaseState

@@ -18,7 +18,9 @@ from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
 import atexit
 
-# Load environment variables
+# Load environment variables (project root first, then module-local .env)
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(REPO_ROOT, ".env"))
 load_dotenv()
 
 # Configuration
@@ -264,8 +266,6 @@ class MCPDatabaseTool:
         
         try:
             # Phase 4: Use pooled session instead of creating new one each time
-            session = await self._get_session()
-
             # Use longer timeout for schema operations (they can be slow on first run)
             # Default 30s, but 120s for get_schema (expensive operation)
             timeout_seconds = 120 if tool_name == "get_schema" else 30
@@ -275,11 +275,16 @@ class MCPDatabaseTool:
             while attempts < 2:
                 attempts += 1
                 try:
-                    async with session.post(
-                        f"{self.mcp_url}/mcp",
-                        json=payload,
-                        timeout=aiohttp.ClientTimeout(total=timeout_seconds)
-                    ) as response:
+                    # Create a fresh ephemeral session per attempt to avoid event-loop coupling issues in tests
+                    async with aiohttp.ClientSession(headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json"
+                    }) as session:
+                        response = await session.post(
+                            f"{self.mcp_url}/mcp",
+                            json=payload,
+                            timeout=aiohttp.ClientTimeout(total=timeout_seconds)
+                        )
                         # Set proper content-type check
                         content_type = response.headers.get('Content-Type', '')
                         if 'application/json' not in content_type:
@@ -319,31 +324,40 @@ class MCPDatabaseTool:
                                 debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
                             raise ValueError(f"MCP server error: {error_msg}")
 
-                        # Return the content from the result - handle both formats
-                        result = data.get("result", {})
-
-                        # If result is empty or None, this is likely an error state
-                        if not result:
-                            logger.warning("MCP result is empty, checking for alternative response format")
-                            if "data" in data:
-                                # Alternative format support
-                                result = {"content": [{"type": "text", "text": json.dumps(data["data"])}]}
-                            else:
-                                error_msg = "MCP response has empty result and no alternative data format"
-                                if debug_logger:
-                                    debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
-                                raise ValueError(error_msg)
-
-                        # Handle case where result is already a list (MCP server returns content directly)
-                        if isinstance(result, list):
-                            logger.info("MCP result is already a list, using directly")
-                            content = result
+                        # Return content handling multiple envelope variants
+                        if isinstance(data, list):
+                            # Some servers return content directly as a list
+                            content = data
                         else:
-                            # Ensure content is a list
-                            content = result.get("content", [])
-                            if not isinstance(content, list):
-                                logger.warning(f"Content is not a list, converting: {type(content)}")
-                                content = [{"type": "text", "text": str(content)}]
+                            # Standard JSON-RPC result envelope or alternative shapes
+                            result = data.get("result", data.get("content", {}))
+
+                            # If result missing, but data has 'data', convert to a single text block
+                            if not result:
+                                logger.warning("MCP result is empty, checking for alternative response format")
+                                if "data" in data:
+                                    result = {"content": [{"type": "text", "text": json.dumps(data["data"])}]}
+                                else:
+                                    error_msg = "MCP response has empty result and no alternative data format"
+                                    if debug_logger:
+                                        debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
+                                    raise ValueError(error_msg)
+
+                            # Normalize content robustly regardless of result shape
+                            try:
+                                if isinstance(result, list):
+                                    logger.info("MCP result is already a list, using directly")
+                                    content = result
+                                else:
+                                    # Ensure content is a list
+                                    content = result.get("content", []) if isinstance(result, dict) else []
+                                    if not isinstance(content, list):
+                                        logger.warning(f"Content is not a list, converting: {type(content)}")
+                                        content = [{"type": "text", "text": str(result)}]
+                            except Exception:
+                                # Fallback: wrap entire result as text
+                                logger.warning("Result normalization failed; wrapping as text content")
+                                content = [{"type": "text", "text": json.dumps(result)}]
 
                         duration_ms = (time.time() - start_time) * 1000
                         logger.info(f"✅ MCP tool call successful, received {len(content)} content items")
@@ -421,6 +435,36 @@ class MCPDatabaseTool:
             Table information from the MCP server
         """
         return await self.call_tool("get_table_info", {"table_name": table_name})
+
+    async def get_column_index(self, table_name: str) -> List[str]:
+        """
+        Fetch column names for a single table/view via MCP get_column_index.
+
+        Returns a simple list of column names, or [] on failure.
+        """
+        try:
+            content = await self.call_tool("get_column_index", {"table_names": [table_name]})
+            # Content is a list with a text field containing JSON
+            if isinstance(content, list) and content and isinstance(content[0], dict):
+                text = content[0].get("text", "")
+                try:
+                    payload = _extract_json_from_text(text)
+                except Exception:
+                    import json as _json
+                    payload = _json.loads(text) if isinstance(text, str) else {}
+                if isinstance(payload, dict) and payload.get("ok"):
+                    data = payload.get("data", {}) or {}
+                    # Expect mapping: { table_name: [col, ...] }
+                    cols = data.get(table_name) or []
+                    if isinstance(cols, list):
+                        return [str(c) for c in cols if c]
+                    # Some servers return list of objects {name:..., type:...}
+                    if isinstance(cols, dict):
+                        arr = cols.get("columns") or []
+                        return [str(c) for c in arr if c]
+        except Exception:
+            return []
+        return []
     
     async def get_sample_data(self, table_name: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
@@ -569,6 +613,15 @@ class MCPDatabaseTool:
 
         result = await self.call_tool("search_tables", tool_params)
 
+        # Normalize to plain JSON content for tests/consumers expecting pure JSON
+        try:
+            if result and len(result) > 0:
+                result_text = result[0].get("text", "")
+                payload = _extract_json_from_text(result_text) if isinstance(result_text, str) else result_text
+                return [{"type": "text", "text": json.dumps(payload)}]
+        except Exception:
+            pass
+
         # Log scout mode operation
         if debug_logger and result:
             try:
@@ -615,7 +668,16 @@ class MCPDatabaseTool:
             "page_size": page_size,
             "include_empty": include_empty
         }
-        return await self.call_tool("search_views", tool_params)
+        result = await self.call_tool("search_views", tool_params)
+        # Normalize to plain JSON content
+        try:
+            if result and len(result) > 0:
+                result_text = result[0].get("text", "")
+                payload = _extract_json_from_text(result_text) if isinstance(result_text, str) else result_text
+                return [{"type": "text", "text": json.dumps(payload)}]
+        except Exception:
+            pass
+        return result
 
     async def get_view_dependencies(self, view_name: str) -> List[Dict[str, Any]]:
         """Fetch view dependencies from MCP server."""
@@ -664,6 +726,13 @@ class MCPDatabaseTool:
             except Exception as e:
                 logger.debug(f"Error logging schema discovery: {e}")
         
+        try:
+            if result and len(result) > 0:
+                result_text = result[0].get("text", "")
+                payload = _extract_json_from_text(result_text) if isinstance(result_text, str) else result_text
+                return [{"type": "text", "text": json.dumps(payload)}]
+        except Exception:
+            pass
         return result
 
     async def describe_view(

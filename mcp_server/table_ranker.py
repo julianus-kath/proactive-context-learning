@@ -159,6 +159,25 @@ class TableRanker:
                 score = max(0.0, score - 0.3)
                 reasons.append("Archive penalty")
 
+            # Revenue intent heuristics (boost sales-like, penalize address-only)
+            try:
+                tokens = (entities or [])
+                revenue_like = any(tok in ['umsatz','revenue','verkauf','vk','rechnung','invoice','order','position','positions','beleg','belege','faktura'] for tok in [str(t).lower() for t in tokens])
+                if revenue_like:
+                    sales_like = any(tok in name_lower for tok in ['vk','verkauf','rechnung','rechnungs','beleg','belege','position','positionen','umsatz','invoice','order','faktura'])
+                    addr_like = any(tok in name_lower for tok in ['adresse','adressen','address','kontakt','contacts','khkadressen'])
+                    if sales_like:
+                        score = min(1.0, score + 0.3)
+                        reasons.append("Sales/revenue boost")
+                    if addr_like and not sales_like:
+                        score = max(0.0, score - 0.3)
+                        reasons.append("Address-only penalty for revenue intent")
+                    # Small bonus for non-empty candidates
+                    if (estimated_rows or 0) > 0:
+                        score = min(1.0, score + 0.05)
+            except Exception:
+                pass
+
             # Cap score at 1.0
             score = min(score, 1.0)
 

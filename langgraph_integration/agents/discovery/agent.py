@@ -184,24 +184,7 @@ class DiscoveryAgent:
             except Exception as e:
                 logger.warning(f"  Joined search (views) failed: {e}")
 
-            # Fallback: per-keyword search if joined returned nothing
-            if not candidates:
-                for keyword in keywords:
-                    logger.debug(f"  Fallback search for: '{keyword}'")
-                    try:
-                        result = await self.mcp.search_tables(keyword, page=1, page_size=10, intent_data=intent)
-                        parsed = self._parse_search_result(result)
-                        candidates.extend(parsed)
-                    except Exception as e:
-                        logger.warning(f"  Search tables for '{keyword}' failed: {e}")
-                    try:
-                        vres = await self.mcp.search_views(keyword, page=1, page_size=10, include_empty=False)
-                        vparsed = self._parse_search_result(vres)
-                        for v in vparsed:
-                            v["is_view"] = True
-                        candidates.extend(vparsed)
-                    except Exception as e:
-                        logger.warning(f"  Search views for '{keyword}' failed: {e}")
+            # Fallback per-keyword searches DISABLED to prevent search spam
             
             # Deduplicate by table name
             seen = set()
@@ -212,31 +195,30 @@ class DiscoveryAgent:
                     seen.add(table_name)
                     unique_candidates.append(c)
             
-            # Only try fallback discovery if we have insufficient good candidates
-            # Check if we have at least 3 candidates with relevance score > 0.3
-            good_candidates = [c for c in unique_candidates if c.get("relevance_score", 0) > 0.3]
-            # Check if top candidates have meaningful semantic relevance (not just size bonus)
-            top_candidates_semantic = [c for c in unique_candidates[:3] if c.get("relevance_score", 0) > 0.05]
-            needs_fallback = len(good_candidates) < 3 or len(unique_candidates) < 5 or len(top_candidates_semantic) == 0
+            # Minimal targeted enrichment: ensure customer master candidate is present for customer + sum intents
+            try:
+                entities = [e.lower() for e in (intent.get("primary_entities") or [])]
+                metrics = [m.lower() for m in (intent.get("metrics") or [])]
+                wants_sum = any(m in ["sum", "total"] for m in metrics)
+                wants_customers = any(e in ["customer", "customers", "kunde", "kunden"] for e in entities)
+                if wants_sum and wants_customers:
+                    if all("khkadressen" not in (c.get("table_name","") or "").lower() for c in unique_candidates):
+                        logger.debug("  Enriching candidates with explicit 'KHKAdressen' lookup")
+                        try:
+                            enr = await self.mcp.search_tables("KHKAdressen", page=1, page_size=3, intent_data=intent)
+                            eparsed = self._parse_search_result(enr)
+                            for ec in eparsed:
+                                tname = ec.get("table_name") or ec.get("name")
+                                if tname and tname not in seen:
+                                    seen.add(tname)
+                                    unique_candidates.append(ec)
+                        except Exception as ee:
+                            logger.debug(f"  KHKAdressen enrichment failed: {ee}")
+            except Exception:
+                pass
 
-            if needs_fallback:
-                logger.info(f"🔄 Primary search found {len(unique_candidates)} candidates ({len(good_candidates)} good), trying fallback...")
-                fallback_candidates = await self._fallback_business_table_discovery()
-                logger.info(f"🔄 Fallback returned {len(fallback_candidates) if fallback_candidates else 0} candidates")
-                if fallback_candidates:
-                    # Merge with existing candidates
-                    all_candidates = unique_candidates + fallback_candidates
-                    # Deduplicate
-                    seen = set()
-                    unique_candidates = []
-                    for c in all_candidates:
-                        table_name = c.get("table_name") or c.get("name") or c.get("full_name", "")
-                        if table_name not in seen and table_name:
-                            seen.add(table_name)
-                            unique_candidates.append(c)
-                    logger.info(f"✅ Fallback added {len(fallback_candidates)} business tables, total: {len(unique_candidates)}")
-            else:
-                logger.info(f"✅ Primary search sufficient: {len(unique_candidates)} candidates ({len(good_candidates)} good), skipping fallback")
+            # Business-pattern fallback DISABLED; rely on primary joined search only
+            logger.info(f"✅ Using primary joined search only: {len(unique_candidates)} candidate(s)")
 
             # Check if we have meaningful semantic matches (not just size-based ranking)
             semantic_candidates = [c for c in unique_candidates if c.get("relevance_score", 0) > 0.05]
@@ -271,7 +253,7 @@ class DiscoveryAgent:
         return all(c.get("relevance_score", 0) < 0.4 for c in candidates)
 
     async def _fallback_business_table_discovery(self) -> List[Dict[str, Any]]:
-        """Intelligent fallback discovery for business-relevant tables when semantic search fails."""
+        """Intelligent, intent-aware fallback discovery for business-relevant tables when semantic search fails."""
         logger.info("🔍 Trying intelligent fallback: searching for tables with relevant data patterns...")
 
         # Test if MCP search is working at all first
@@ -283,16 +265,54 @@ class DiscoveryAgent:
         except Exception as e:
             logger.warning(f"🔍 MCP search test failed: {e}")
 
-        # Generic fallback: search for common business entity patterns
-        # These work across different databases and languages
-        generic_patterns = [
-            # Common business entities (language-agnostic)
-            "customer", "product", "order", "transaction", "invoice",
-            "item", "supplier", "payment", "sale", "purchase"
+        # Intent-aware patterns (prefer entity-focused synonyms if present)
+        intent = getattr(self, "_last_intent", None)
+        product_synonyms = [
+            # German
+            "artikel", "artikelstamm", "artikelstammdaten", "artikelliste", "artikelnummer",
+            # English
+            "product", "products", "item", "items", "material", "inventory"
         ]
+        customer_synonyms = [
+            "kunde", "kunden", "khkadressen", "customer", "customers", "address"
+        ]
+        revenue_synonyms = [
+            # German sales/revenue domain
+            "umsatz", "verkauf", "vk", "vkbeleg", "vkbelege", "vkposition", "vkpositionen",
+            "rechnung", "rechnungen", "rechnungsposition", "rechnungspositionen", "beleg", "belege",
+            # English
+            "revenue", "sales", "invoice", "invoices", "order", "orders", "orderline", "orderlines"
+        ]
+        project_synonyms = [
+            # German/English projects
+            "projekt", "projekte", "projekten", "projektliste", "projektstamm", "projects", "project"
+        ]
+        generic_patterns = []
+        # Always seed with core product synonyms to avoid missing German article masters
+        seed_patterns = ["artikel", "artikelstamm", "product", "products"]
+        generic_patterns.extend(seed_patterns)
+        if intent and any(ent.lower().startswith("product") or ent.lower().startswith("artikel") for ent in intent.get("primary_entities", [])):
+            generic_patterns.extend([p for p in product_synonyms if p not in generic_patterns])
+        elif intent and any(ent.lower().startswith("customer") or ent.lower().startswith("kunde") for ent in intent.get("primary_entities", [])):
+            generic_patterns.extend([p for p in customer_synonyms if p not in generic_patterns])
+            # If metrics indicate revenue/sum, prepend revenue patterns to bias towards sales data sources
+            metrics = [m.lower() for m in (intent.get("metrics") or [])]
+            if any(m in ["sum", "total"] for m in metrics) or any(k in (intent.get("keywords_for_discovery") or []) for k in ["revenue", "sales", "umsatz"]):
+                generic_patterns = [p for p in revenue_synonyms if p not in generic_patterns] + generic_patterns
+        elif intent and any(ent.lower().startswith("project") or ent.lower().startswith("projekt") for ent in intent.get("primary_entities", [])):
+            generic_patterns.extend([p for p in project_synonyms if p not in generic_patterns])
+        else:
+            # Fallback to broad business entities
+            generic_patterns.extend(["customer", "order", "transaction", "invoice", "item"]) 
+
+        try:
+            logger.debug(f"🔍 Fallback discovery intent: entities={intent.get('primary_entities') if intent else None}, metrics={intent.get('metrics') if intent else None}")
+            logger.debug(f"🔍 Fallback discovery patterns: {generic_patterns}")
+        except Exception:
+            pass
 
         candidates = []
-        for pattern in generic_patterns[:6]:  # Limit searches to avoid overload
+        for pattern in generic_patterns[:8]:  # Limit searches to avoid overload but broaden slightly
             try:
                 logger.debug(f"🔍 Searching for generic pattern: '{pattern}'")
                 result = await self.mcp.search_tables(pattern, page=1, page_size=10)
@@ -326,8 +346,24 @@ class DiscoveryAgent:
 
                 # Penalty for empty tables
                 empty_penalty = -0.5 if c.get("estimated_rows", 0) == 0 else 0
-
-                c["relevance_score"] = base_score + data_bonus + column_bonus + fk_bonus + empty_penalty
+                
+                # Intent-aware name bonus/penalty
+                name = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
+                keyword_bonus = 0.0
+                if generic_patterns == product_synonyms:
+                    if any(k in name for k in product_synonyms):
+                        keyword_bonus += 0.6
+                    # De-emphasize obviously unrelated domains
+                    if any(x in name for x in ["projekt", "project", "crm", "archiv", "archive"]):
+                        keyword_bonus -= 0.4
+                elif generic_patterns == customer_synonyms:
+                    if any(k in name for k in customer_synonyms + ["adresse", "adressen"]):
+                        keyword_bonus += 0.6
+                elif generic_patterns == project_synonyms:
+                    if any(k in name for k in project_synonyms + ["projektstamm", "projektliste", "projectlist"]):
+                        keyword_bonus += 0.6
+                
+                c["relevance_score"] = base_score + data_bonus + column_bonus + fk_bonus + empty_penalty + keyword_bonus
                 c["fallback_discovered"] = True
                 unique_candidates.append(c)
 
@@ -336,6 +372,32 @@ class DiscoveryAgent:
 
         # Filter out very low scoring tables
         good_candidates = [c for c in unique_candidates if c.get("relevance_score", 0) > 0.1]
+
+        # Intent-specific pruning: for product counts, drop project/archive/CRM lists outright
+        try:
+            if intent and any(ent.lower().startswith(("product", "artikel")) for ent in intent.get("primary_entities", [])):
+                filtered = []
+                for c in good_candidates:
+                    n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
+                    if any(b in n for b in ["projekt", "projektliste", "project", "crm", "archiv", "archive"]):
+                        continue
+                    filtered.append(c)
+                good_candidates = filtered
+            # For revenue/sum intents, strongly down-rank archive tables/views
+            metrics = [m.lower() for m in (intent.get("metrics") or [])]
+            if any(m in ["sum", "total"] for m in metrics) or any(k in (intent.get("keywords_for_discovery") or []) for k in ["revenue", "sales", "umsatz"]):
+                filtered = []
+                archives = []
+                for c in good_candidates:
+                    n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
+                    if "archiv" in n or "archive" in n:
+                        archives.append(c)
+                    else:
+                        filtered.append(c)
+                # Keep archives only if nothing else remains
+                good_candidates = filtered or archives
+        except Exception:
+            pass
 
         logger.info(f"📊 Intelligent fallback found {len(good_candidates)} relevant tables:")
         for i, c in enumerate(good_candidates[:8]):
@@ -418,8 +480,34 @@ class DiscoveryAgent:
                     "context": {"top_candidate": candidates[0] if candidates else None}
                 }
                 logger.warning(f"⚠️  {error['message']}")
-                # Still use the best candidate even if below threshold
-                filtered = candidates[:1]
+                # Targeted fallback: try business-pattern discovery and merge, then re-rank
+                try:
+                    # Make intent available to fallback discovery
+                    try:
+                        self._last_intent = intent
+                    except Exception:
+                        pass
+                    alt = await self._fallback_business_table_discovery()
+                    if alt:
+                        logger.info(f"🔄 Merging {len(alt)} fallback candidate(s) and re-ranking")
+                        merged = candidates + alt
+                        # Re-score merged
+                        re_scored = []
+                        for cand in merged:
+                            s = self._score_candidate(cand, intent)
+                            cand2 = dict(cand)
+                            cand2["score"] = s
+                            re_scored.append(cand2)
+                        # Replace candidates and use threshold
+                        candidates = re_scored
+                        filtered = [c for c in candidates if c.get("score", 0) >= MIN_SCORE]
+                        if not filtered:
+                            filtered = sorted(candidates, key=lambda x: x.get("score", 0), reverse=True)[:1]
+                    else:
+                        # Still use the best candidate even if below threshold
+                        filtered = candidates[:1]
+                except Exception:
+                    filtered = candidates[:1]
             
             # Prefer non-empty entities and higher estimated_rows, then by score
             def rank_key(c):
@@ -429,10 +517,91 @@ class DiscoveryAgent:
                     float(c.get("score", 0.0))
                 )
 
+            # Intent-specific hard filters before final sort
+            try:
+                intent = state.get("intent", {}) or {}
+                metrics = [m.lower() for m in (intent.get("metrics") or [])]
+                entities = [e.lower() for e in (intent.get("primary_entities") or [])]
+                if ("count" in metrics) and any(e in ["product", "products", "produkt", "produkte", "artikel"] for e in entities):
+                    def is_project_list(c):
+                        n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
+                        return any(tok in n for tok in ["projektliste", "projekt_liste", "projectlist"]) 
+                    proj_dropped = [c for c in filtered if is_project_list(c)]
+                    filtered = [c for c in filtered if not is_project_list(c)] or filtered
+                    if proj_dropped:
+                        logger.info(f"🧹 Dropped {len(proj_dropped)} project-list candidates for product count intent")
+                # For revenue/sum intents: drop archive tables/views when possible
+                if any(m in ["sum", "total"] for m in metrics) or any(k in ["revenue", "sales", "umsatz"] for k in (intent.get("keywords_for_discovery") or [])):
+                    def is_archive(c):
+                        n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
+                        return ("archiv" in n) or ("archive" in n)
+                    arch_dropped = [c for c in filtered if is_archive(c)]
+                    filtered = [c for c in filtered if not is_archive(c)] or filtered
+                    if arch_dropped:
+                        logger.info(f"🧹 Dropped {len(arch_dropped)} archive candidates for revenue intent")
+                    # Prefer sales-like sources if any exist among remaining candidates
+                    def looks_sales(c):
+                        n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
+                        return any(tok in n for tok in [
+                            "vk", "verkauf", "rechnung", "rechnungs", "beleg", "belege",
+                            "position", "positionen", "umsatz", "invoice", "order", "faktura"
+                        ]) and not any(ex in n for ex in ["archiv", "archive", "projekt", "crm", "ek"])
+                    sales_only = [c for c in filtered if looks_sales(c)]
+                    if sales_only:
+                        logger.info(f"🎯 Sales-like candidates available; restricting to {len(sales_only)} items for revenue intent")
+                        filtered = sales_only
+            except Exception:
+                pass
+
             filtered.sort(key=rank_key, reverse=True)
 
-            # Limit to ≤3
-            selected = filtered[:self.max_candidates_to_describe]
+            # Limit count (increase for revenue intents to widen search space)
+            sel_limit = self.max_candidates_to_describe
+            try:
+                intent = state.get("intent", {}) or {}
+                metrics = [m.lower() for m in (intent.get("metrics") or [])]
+                required_action = (intent.get("required_action") or "").lower()
+                if ("sum" in metrics) or (required_action == "topk_sum_by_customer"):
+                    sel_limit = max(sel_limit, 6)
+            except Exception:
+                pass
+            selected = filtered[:sel_limit]
+
+            # Intent-specific post-prune ordering tweaks
+            try:
+                intent = state.get("intent", {}) or {}
+                metrics = [m.lower() for m in (intent.get("metrics") or [])]
+                entities = [e.lower() for e in (intent.get("primary_entities") or [])]
+                required_action = (intent.get("required_action") or "").lower()
+                # For customer count, bubble up KHKAdressen/Adressen masters
+                if ("count" in metrics) and any(e in ["customer", "customers", "kunde", "kunden"] for e in entities):
+                    def cust_key(c):
+                        n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
+                        return (
+                            1 if any(tok in n for tok in ["khkadressen", "adressen", "adresse"]) else 0,
+                            0 if any(tok in n for tok in ["projekt", "projektliste"]) else 1
+                        )
+                    selected = sorted(selected, key=cust_key, reverse=True)
+                # For product count, bubble up Artikel/Artikelstamm and downrank Projektliste
+                if ("count" in metrics) and any(e in ["product", "products", "produkt", "produkte", "artikel"] for e in entities):
+                    def prod_key(c):
+                        n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
+                        return (
+                            1 if any(tok in n for tok in ["artikelstamm", "artikel", "product", "products"]) else 0,
+                            0 if any(tok in n for tok in ["projekt", "projektliste"]) else 1
+                        )
+                    selected = sorted(selected, key=prod_key, reverse=True)
+                # For Top-K SUM by customer, prefer sales position/invoice sources and de-emphasize cockpit/aggregate views
+                if required_action == "topk_sum_by_customer" or (("sum" in metrics) and any(e in ["customer", "customers", "kunde", "kunden"] for e in entities)):
+                    def rev_key(c):
+                        n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
+                        return (
+                            1 if any(tok in n for tok in ["position", "positionen", "rechnung", "rechnungs", "beleg", "belege", "vk", "verkauf"]) else 0,
+                            0 if any(tok in n for tok in ["cockpit", "auftragscockpit", "belegegesamt"]) else 1
+                        )
+                    selected = sorted(selected, key=rev_key, reverse=True)
+            except Exception:
+                pass
             
             logger.info(f"✅ Selected {len(selected)} candidate(s) for description")
             for i, c in enumerate(selected):
@@ -535,7 +704,49 @@ class DiscoveryAgent:
 
             logger.info(f"✅ Described {len(described)} table(s) ({len(uncached_candidates)} parallel)")
             
-            state["candidate_views"] = described
+            # Filter out invalid/empty describes (e.g., missing view, zero columns)
+            valid_described = []
+            for d in described:
+                try:
+                    columns = d.get("columns") if isinstance(d, dict) else None
+                    if isinstance(columns, list) and len(columns) > 0:
+                        valid_described.append(d)
+                    else:
+                        name = (d.get("table_name") or d.get("name") or d.get("full_name") or "") if isinstance(d, dict) else str(d)
+                        logger.debug(f"  Skipping invalid/empty describe for {name}")
+                except Exception:
+                    continue
+
+            # If all describes invalid, attempt an intent-aware fallback to find better candidates
+            if not valid_described:
+                try:
+                    logger.info("🔁 No valid describes; invoking intent-aware fallback discovery for alternates")
+                    alt = await self._fallback_business_table_discovery()
+                    if alt:
+                        # Describe top 3 alternates quickly
+                        alt = alt[:3]
+                        alt_described = []
+                        for a in alt:
+                            tname = a.get("table_name") or a.get("name") or a.get("full_name", "")
+                            if not tname:
+                                continue
+                            try:
+                                if a.get("is_view", False):
+                                    r = await self.mcp.describe_view(tname, include_sample=False)
+                                else:
+                                    r = await self.mcp.describe_table(tname, include_sample=False)
+                                parsed = self._parse_describe_result(r, tname)
+                                if isinstance(parsed.get("columns"), list) and parsed.get("columns"):
+                                    alt_described.append(parsed)
+                            except Exception:
+                                continue
+                        if alt_described:
+                            valid_described = alt_described
+                except Exception:
+                    pass
+
+            # Finalize candidates for downstream nodes
+            state["candidate_views"] = valid_described if valid_described else described
             state["session_described_tables"] = session_cache
             return state
             
@@ -695,6 +906,65 @@ class DiscoveryAgent:
             logger.info(f"✅ Built schema snippet with {len(relevant_tables)} table(s)")
             logger.debug(f"Schema:\n{schema_snippet}")
             
+            # Targeted enrichment: ensure a customer dimension table is present for SUM-over-customers intents
+            try:
+                intent = state.get("intent", {}) or {}
+                metrics = [m.lower() for m in (intent.get("metrics") or [])]
+                entities = [e.lower() for e in (intent.get("primary_entities") or [])]
+                needs_customer_dim = (any(m in ["sum", "total"] for m in metrics) and any(e in ["customer", "customers", "kunde", "kunden"] for e in entities))
+                has_customer_dim = any(any(tok in (t or "").lower() for tok in ["khkadressen", "adressen", "adresse", "kunde", "kunden", "customer"]) for t in relevant_tables)
+                if needs_customer_dim and not has_customer_dim:
+                    logger.info("🎯 Enriching with customer dimension candidate (KHKAdressen)...")
+                    try:
+                        search_terms = ["khkadressen", "adressen", "kunde", "customer"]
+                        best_name = None
+                        best_score = -1
+                        for term in search_terms:
+                            res = await self.mcp.search_tables(term, page=1, page_size=10)
+                            parsed = self._parse_search_result(res)
+                            for r in parsed:
+                                name = r.get("full_name") or r.get("name") or r.get("table_name")
+                                if not name:
+                                    continue
+                                n = name.lower()
+                                score = 0
+                                if "khkadressen" in n: score += 3
+                                if any(tok in n for tok in ["adresse", "adressen", "address"]): score += 2
+                                if any(tok in n for tok in ["kunde", "kunden", "customer"]): score += 1
+                                est = int(r.get("estimated_rows") or 0)
+                                if est > 0: score += 1
+                                if score > best_score:
+                                    best_score = score
+                                    best_name = name
+                        if best_name and best_name not in relevant_tables:
+                            relevant_tables.append(best_name)
+                            relevant_table_details.append({"table_name": best_name, "columns": [], "is_view": False})
+                            logger.info(f"✅ Added customer dimension candidate: {best_name}")
+                    except Exception as _:
+                        pass
+                # For pure customer count intents, also ensure a customer master table is present
+                needs_customer_count = (any(m in ["count"] for m in metrics) and any(e in ["customer", "customers", "kunde", "kunden"] for e in entities))
+                has_customer_master = any(any(tok in (t or "").lower() for tok in ["khkadressen", "adressen", "adresse"]) for t in relevant_tables)
+                if needs_customer_count and not has_customer_master:
+                    try:
+                        logger.info("🎯 Enriching with customer master for COUNT intent (KHKAdressen/Adressen)...")
+                        res = await self.mcp.search_tables("KHKAdressen", page=1, page_size=5)
+                        parsed = self._parse_search_result(res)
+                        best = None
+                        for r in parsed:
+                            nm = (r.get("full_name") or r.get("name") or r.get("table_name") or "").lower()
+                            if any(tok in nm for tok in ["khkadressen", "adressen", "adresse"]):
+                                best = r.get("full_name") or r.get("name") or r.get("table_name")
+                                break
+                        if best and best not in relevant_tables:
+                            relevant_tables.insert(0, best)
+                            relevant_table_details.insert(0, {"table_name": best, "columns": [], "is_view": False})
+                            logger.info(f"✅ Prefixed customer master table for COUNT: {best}")
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
             state["relevant_tables"] = relevant_tables
             state["relevant_table_details"] = relevant_table_details
             state["schema_snippet"] = schema_snippet
@@ -766,40 +1036,34 @@ class DiscoveryAgent:
     
     def _extract_keywords(self, user_input: str, intent: Dict[str, Any]) -> List[str]:
         """
-        Extract search keywords from ParsedIntent (Phase 9).
-        
-        🆕 CRITICAL FIX (Phase 9):
-        - BEFORE: Re-extracted from both intent.entities AND user_input → double extraction, spam
-        - AFTER: Uses ONLY intent.keywords_for_discovery (pre-cleaned by IntentParserAgent)
-        
-        This prevents the "per-word discovery spam" problem where:
-        Query "Which products have inventory below 100?" → Used to search: "Which", "products", "inventory", "below"
-        Now: Uses only ["products", "inventory"] from intent parser's semantic analysis
-        
-        Args:
-            user_input: Original query (NOT re-parsed, kept for reference only)
-            intent: ParsedIntent with keywords_for_discovery (clean, semantic)
-            
-        Returns:
-            List of clean keywords for discovery (no function words)
+        Extract search keywords strictly from the IntentParser output.
+        No fallback, no augmentation, no trimming.
         """
-        
-        # 🆕 Phase 9: Use ONLY the clean keywords from ParsedIntent
-        # The IntentParserAgent already did semantic analysis and filtering
-        # DO NOT re-extract from user_input (that causes double extraction)
-        
-        keywords = intent.get("keywords_for_discovery", [])
-        
-        if not keywords:
-            # Fallback: if intent parser failed to provide keywords, do minimal fallback
-            logger.warning(f"⚠️  No keywords in intent, using fallback extraction")
-            keywords = self._fallback_keyword_extraction(user_input)
-        
-        # Ensure we have valid keywords
-        keywords = [k for k in keywords if k and len(k) > 1]
-        
-        logger.info(f"📌 Using keywords from ParsedIntent: {keywords}")
-        return keywords[:5]  # Limit to 5 keywords
+        base = intent.get("keywords_for_discovery", [])
+        logger.info(f"📌 Using intent keywords (exact): {base}")
+
+        # Minimal, intent-driven synonym expansion (single joined query string)
+        # This keeps dependency on intent while improving cross-language recall.
+        entities = [e.lower() for e in (intent.get("primary_entities") or [])]
+        metrics = [m.lower() for m in (intent.get("metrics") or [])]
+
+        extra: List[str] = []
+        if any(e in ["customer", "customers", "kunde", "kunden"] for e in entities + base):
+            extra += ["kunde", "kunden", "adresse", "adressen", "khkadressen", "customer", "customers"]
+        if any(e in ["product", "products", "produkt", "produkte", "artikel", "artikelstamm"] for e in entities + base):
+            extra += ["produkt", "produkte", "artikel", "artikelstamm", "artikelnummer", "product", "products"]
+        if any(m in ["sum", "total"] for m in metrics) or any(k.lower() in ["umsatz", "revenue", "sales"] for k in base):
+            # Revenue/sales domain terms (DE/EN) to help recall sales facts/views
+            extra += [
+                "umsatz", "betrag", "erloes", "erlös", "revenue", "sales",
+                "vk", "verkauf", "rechnung", "rechnungs", "beleg", "belege",
+                "position", "positionen", "vkbeleg", "vkbelege", "vkposition", "vkpositionen",
+                "auftrag", "auftrags", "faktura"
+            ]
+
+        # Build one joined query string to respect the single-call constraint
+        joined = " ".join(dict.fromkeys([*(k for k in base if k), *extra]))
+        return [joined] if joined else base
     
     def _fallback_keyword_extraction(self, user_input: str) -> List[str]:
         """
@@ -932,8 +1196,72 @@ class DiscoveryAgent:
             + 0.10 * has_rows
             + 0.05 * is_view
         )
-        
-        return min(1.0, score)  # Clamp to [0, 1]
+
+        # Entity-aware adjustments: prefer appropriate sources for the intent
+        try:
+            name = (candidate.get("table_name") or candidate.get("full_name") or "").lower()
+            metrics = [m.lower() for m in (intent.get("metrics") or [])]
+            keywords = [k.lower() for k in (intent.get("keywords_for_discovery") or [])]
+            entities = [e.lower() for e in (intent.get("primary_entities") or [])]
+
+            is_table = not candidate.get("is_view", False)
+            est_rows = candidate.get("estimated_rows")
+            col_count = candidate.get("column_count", 0)
+
+            # Penalize obviously empty/unknown structures
+            if est_rows == 0:
+                score -= 0.08
+            if col_count == 0:
+                score -= 0.05
+
+            # Customer-centric counts: prefer base address/customer tables
+            if ("count" in metrics or "wie viele" in " ".join(keywords)) and any(e in ["customer", "customers", "kunde", "kunden"] for e in entities + keywords):
+                if any(token in name for token in ["adresse", "adressen", "khkadressen", "kunde", "kunden"]):
+                    if is_table:
+                        score += 0.15  # TABLE bonus for canonical master data
+                    else:
+                        score += 0.05  # small bonus if a high-quality view matches
+                # Slight penalty for cockpit/analytics views for pure counts
+                if any(token in name for token in ["cockpit", "auftragscockpit", "dashboard", "report"]):
+                    score -= 0.08
+                # Strongly de-emphasize project-centric sources for customer counts
+                if any(token in name for token in ["projekt", "projektliste", "pps", "ppsmaterial", "project"]):
+                    score -= 0.12
+
+            # Revenue/sales aggregates: prefer sales/invoice/position sources; penalize cockpit/aggregate views
+            if any(m in metrics for m in ["sum", "total"]) or any(k in keywords for k in ["umsatz", "revenue", "sales"]):
+                if any(token in name for token in ["vk", "verkauf", "rechnung", "rechnungs", "beleg", "belege", "auftrag", "position", "positionen", "umsatz", "invoice", "order", "faktura"]):
+                    score += 0.30
+                if any(token in name for token in ["cockpit", "auftragscockpit", "belegegesamt", "dashboard"]):
+                    score -= 0.12
+                # De-emphasize address/contact-only sources for revenue aggregation
+                addr_like = any(token in name for token in ["adresse", "adressen", "kontakt", "contacts", "khkadressen", "address"])
+                sales_like = any(token in name for token in ["vk", "verkauf", "rechnung", "rechnungs", "beleg", "belege", "auftrag", "position", "positionen", "umsatz"])
+                if addr_like and not sales_like:
+                    score -= 0.30
+
+            # Product-centric counts: prefer product/article master tables, avoid project listings
+            if ("count" in metrics) and any(e in ["product", "products", "produkt", "produkte", "artikel"] for e in entities + keywords):
+                if any(token in name for token in ["artikelstamm", "artikel", "products", "product", "artikelnummer", "artikel_liste", "produkt"]):
+                    score += (0.15 if is_table else 0.06)
+                if any(token in name for token in ["projekt", "projektliste", "crm", "pm"]):
+                    score -= 0.10
+                # Small table preference for counts
+                if is_table:
+                    score += 0.04
+
+            # Project-centric queries: boost project/projekte tables
+            if any(e in ["project", "projects", "projekt", "projekte"] for e in entities + keywords):
+                if any(token in name for token in ["projekt", "projekte", "projektstamm", "projektliste", "project"]):
+                    score += (0.14 if is_table else 0.06)
+                # de-emphasize archive/crm for core project questions
+                if any(token in name for token in ["archiv", "archive", "crm"]):
+                    score -= 0.06
+
+            # Clamp and return
+            return max(0.0, min(1.0, score))
+        except Exception:
+            return min(1.0, score)
 
 
 # Exported function to create and run the agent

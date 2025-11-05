@@ -512,10 +512,17 @@ class DiscoveryTools:
                 query_terms = query.lower().split()
                 query_entities = [t.strip(',.!?;:') for t in query_terms if len(t.strip(',.!?;:')) > 2]
                 
+                # Heuristic ops from query for better ranking (sum/revenue detection)
+                ops: List[str] = []
+                if any(tok in query_entities for tok in [
+                    'umsatz','revenue','verkauf','vk','rechnung','invoice','order','position','beleg','faktura','sum'
+                ]):
+                    ops.append('sum')
+                
                 ranked_tables = ranker.rank_tables(
                     tables=all_tables,
                     entities=query_entities,  # Simple tokenization, NO semantic parsing
-                    intent_operations=[],  # No operation inference at MCP layer
+                    intent_operations=ops,  # Minimal op hinting to improve ranking
                     catalog_adapter=catalog
                 )
                 
@@ -546,6 +553,29 @@ class DiscoveryTools:
                     }
                     results.append(summary)
                 
+                # Post-filter/reorder for revenue-like queries: prefer sales-like, avoid archives/address-only
+                if 'sum' in ops or any(tok in query_entities for tok in ['umsatz','revenue','verkauf','vk','rechnung','invoice','order','position','beleg','faktura']):
+                    def looks_sales(x: Dict[str, Any]) -> bool:
+                        n = (x.get('full_name') or x.get('name') or '').lower()
+                        return any(t in n for t in ['vk','verkauf','rechnung','rechnungs','beleg','belege','position','positionen','umsatz','invoice','order','faktura'])
+                    def is_archive(x: Dict[str, Any]) -> bool:
+                        n = (x.get('full_name') or x.get('name') or '').lower()
+                        return ('archiv' in n) or ('archive' in n)
+                    def is_address_only(x: Dict[str, Any]) -> bool:
+                        n = (x.get('full_name') or x.get('name') or '').lower()
+                        return any(t in n for t in ['adresse','adressen','address','kontakt','contacts','khkadressen']) and not looks_sales(x)
+                    sales = [r for r in results if looks_sales(r)]
+                    non_sales = [r for r in results if not looks_sales(r)]
+                    # Drop archives first
+                    non_archive_sales = [r for r in sales if not is_archive(r)] or sales
+                    non_archive_rest = [r for r in non_sales if not is_archive(r)] or non_sales
+                    # Push address-only to the end
+                    non_address_rest = [r for r in non_archive_rest if not is_address_only(r)]
+                    address_only = [r for r in non_archive_rest if is_address_only(r)]
+                    # Prefer non-empty first
+                    def rank_block(block: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+                        return sorted(block, key=lambda r: ((r.get('estimated_rows') or 0) > 0, r.get('relevance_score', 0.0)), reverse=True)
+                    results = rank_block(non_archive_sales) + rank_block(non_address_rest) + rank_block(address_only)
             except Exception as ranking_error:
                 logger.warning(f"Phase 2 ranking failed, falling back to basic search: {ranking_error}")
                 
@@ -1061,7 +1091,8 @@ class DiscoveryTools:
     # Tier 1 Enhancement Tools
     # =====================================================
     
-    @staticmethod
+    @staticmet
+    hod
     async def get_view_dependencies(
         db_adapter,
         view_name: str

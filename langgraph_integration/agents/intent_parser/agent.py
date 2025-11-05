@@ -360,6 +360,10 @@ Respond ONLY with JSON.
                 "extraction_confidence": extracted.get("confidence", 0.5)
             })
 
+            # Derived action hints for downstream agents (discovery/planning/execution)
+            derived = self._derive_action_hints(state.get("user_input", ""), intent)
+            intent.update(derived)
+
             logger.info(f"🧠 [EXTRACT] Entities: {intent['primary_entities']}, Keywords: {intent['keywords_for_discovery']}")
             return {**state, "intent": intent}
 
@@ -368,6 +372,9 @@ Respond ONLY with JSON.
             # Fallback extraction
             fallback = self._fallback_entity_extraction(user_input)
             intent.update(fallback)
+            # Also derive action hints on fallback
+            derived = self._derive_action_hints(user_input, intent)
+            intent.update(derived)
             return {**state, "intent": intent}
 
     async def _validate_intent_node(self, state: BaseState) -> BaseState:
@@ -506,6 +513,69 @@ Keep the question clear and actionable.
             "time_window": None,
             "keywords_for_discovery": keywords,
             "extraction_confidence": 0.3
+        }
+
+    def _derive_action_hints(self, user_input: str, intent: dict) -> dict:
+        """Derive structured action hints from user input and extracted intent.
+
+        Produces fields to guide discovery and planning:
+        - required_action: one of ["count", "topk_sum_by_customer", "trend_series", "month_count", "interpret_previous"]
+        - group_by: e.g., "customer"
+        - top_k: integer if applicable
+        - time_granularity: "year"|"month" for trends
+        """
+        text = (user_input or "").lower()
+        entities = [e.lower() for e in (intent.get("primary_entities") or [])]
+        metrics = [m.lower() for m in (intent.get("metrics") or [])]
+
+        # top_k detection
+        top_k = None
+        try:
+            m = re.search(r"top\s+(\d{1,3})", text)
+            if m:
+                top_k = int(m.group(1))
+        except Exception:
+            top_k = None
+
+        # group_by detection for customers
+        group_by = None
+        if any(e in ["customer", "customers", "kunde", "kunden"] for e in entities):
+            group_by = "customer"
+
+        # time granularity
+        time_granularity = None
+        if any(kw in text for kw in ["per year", "yearly", "years", "letzten jahren", "jahre"]):
+            time_granularity = "year"
+        if any(kw in text for kw in ["per month", "monthly", "months", "monat", "monate"]):
+            time_granularity = time_granularity or "month"
+
+        # action classification
+        required_action = None
+        # Follow-up interpretation on prior results (no new DB query)
+        if any(p in text for p in [
+            "these results", "those results", "previous results", "previous answer", "last answer",
+            "that table", "above table", "from that list", "in that list", "in those rows",
+            "sort them", "filter them", "group them", "format them", "explain these"
+        ]):
+            required_action = "interpret_previous"
+        if ("sum" in metrics or "total" in metrics or "umsatz" in text) and (group_by == "customer"):
+            required_action = "topk_sum_by_customer" if ("top" in text or top_k) else "sum_by_customer"
+        elif ("count" in metrics) and any(m in text for m in ["october", "oktober", "january", "februar", "march", "april", "mai", "juni", "juli", "august", "september", "november", "dezember"]):
+            required_action = "month_count"
+        elif any(kw in text for kw in ["over the last", "last \d+ years", "last \d+ months", "entwickel", "trend"]):
+            required_action = "trend_series"
+        elif "count" in metrics or "how many" in text or "wie viele" in text:
+            required_action = "count"
+
+        # Default top_k
+        if required_action in ["topk_sum_by_customer"] and top_k is None and "top" in text:
+            top_k = 5
+
+        return {
+            "required_action": required_action,
+            "group_by": group_by,
+            "top_k": top_k,
+            "time_granularity": time_granularity
         }
 
     def _is_schema_query(self, user_lower: str) -> bool:

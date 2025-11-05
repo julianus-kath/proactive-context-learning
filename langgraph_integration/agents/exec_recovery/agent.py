@@ -19,7 +19,7 @@ import logging
 import asyncio
 import concurrent.futures
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Literal
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
@@ -123,7 +123,6 @@ class ExecAndRecoveryAgent:
         graph.add_node("prepare_error", self._prepare_error_node)
 
         # Define edges with conditional routing
-        from typing import Literal
         
         graph.add_edge("execute_query", "check_result")
 
@@ -273,33 +272,192 @@ class ExecAndRecoveryAgent:
 
                 # Plan-level lightweight fallback: if zero rows, try COUNT(*) on primary table when available
                 try:
-                    if parsed.get("row_count", 0) == 0:
+                    # Fallbacks when the result is empty or COUNT==0
+                    zero_rows = parsed.get("row_count", 0) == 0
+                    zero_count = False
+                    try:
+                        if not zero_rows:
+                            rows = parsed.get("rows") or []
+                            if len(rows) == 1 and isinstance(rows[0], dict):
+                                vals = [v for v in rows[0].values() if isinstance(v, (int, float))]
+                                zero_count = (len(vals) == 1 and int(vals[0]) == 0)
+                    except Exception:
+                        zero_count = False
+
+                    if zero_rows or zero_count:
                         join_plan = state.get("join_plan", {}) or {}
                         primary_table = join_plan.get("primary_table")
-                        if primary_table:
+
+                        # 1) Probe primary table COUNT(*) if not already a COUNT result
+                        if primary_table and (zero_rows or zero_count):
                             logger.info(f"🔍 Zero rows: probing primary table count for {primary_table}")
                             probe_sql = f"SELECT COUNT(*) AS total_count FROM {primary_table}"
-                            probe_result = await self.mcp.query_bounded(
-                                probe_sql,
-                                max_rows=1,
-                                timeout_ms=int(timeout_ms)
-                            )
+                            probe_result = await self.mcp.query_bounded(probe_sql, max_rows=1, timeout_ms=int(timeout_ms))
                             probe_parsed = self._parse_query_result(probe_result)
                             if probe_parsed.get("ok"):
-                                # Prefer non-zero count if available
-                                rows = probe_parsed.get("rows") or probe_parsed.get("data") or []
-                                if rows:
-                                    first = rows[0]
-                                    # If count > 0, adopt probe result
-                                    count_val = None
-                                    if isinstance(first, dict):
-                                        count_val = next((int(v) for k, v in first.items() if isinstance(v, (int, float))), None)
-                                    if isinstance(first, list) and first:
-                                        count_val = int(first[0]) if isinstance(first[0], (int, float)) else None
-                                    if count_val is not None and count_val > 0:
-                                        logger.info(f"🔁 Replacing zero-row result with primary-table COUNT(*)={count_val}")
+                                rows = probe_parsed.get("rows") or []
+                                if rows and isinstance(rows[0], dict):
+                                    val = next((int(v) for v in rows[0].values() if isinstance(v, (int, float))), None)
+                                    if val and val > 0:
+                                        logger.info(f"🔁 Switched to primary-table COUNT(*)={val}")
                                         state["exec_result"] = probe_parsed
-                except Exception as _:
+                                        return state
+
+                        # 2) Probe alternate candidates (tables/views) via COUNT(*) and adopt first non-zero
+                        #    Only for explicit product COUNT intents to avoid cross-domain hijacks
+                        intent = state.get("intent", {}) or {}
+                        metrics_lc = [m.lower() for m in (intent.get("metrics") or [])]
+                        entities_lc = [e.lower() for e in (intent.get("primary_entities") or [])]
+                        is_product_count_intent = ("count" in metrics_lc) and any(e in ["product", "products", "artikel", "item", "items"] for e in entities_lc)
+
+                        if is_product_count_intent:
+                            #    a) From relevant_tables (strings)
+                            candidates = state.get("relevant_tables", []) or []
+                            probed = set([primary_table] if primary_table else [])
+                            for cand in candidates:
+                                if not isinstance(cand, str):
+                                    continue
+                                if cand in probed:
+                                    continue
+                                probed.add(cand)
+                                try:
+                                    logger.info(f"🔍 Probing alternate candidate count: {cand}")
+                                    alt_sql = f"SELECT COUNT(*) AS total_count FROM {cand}"
+                                    alt_result = await self.mcp.query_bounded(alt_sql, max_rows=1, timeout_ms=int(timeout_ms))
+                                    alt_parsed = self._parse_query_result(alt_result)
+                                    if alt_parsed.get("ok"):
+                                        rows = alt_parsed.get("rows") or []
+                                        if rows and isinstance(rows[0], dict):
+                                            val = next((int(v) for v in rows[0].values() if isinstance(v, (int, float))), None)
+                                            if val and val > 0:
+                                                logger.info(f"🔁 Switching to candidate {cand} COUNT(*)={val}")
+                                                state["sql_query"] = alt_sql
+                                                state["exec_result"] = alt_parsed
+                                                # Update join_plan primary to reflect chosen source
+                                                jp = dict(join_plan)
+                                                jp["primary_table"] = cand
+                                                state["join_plan"] = jp
+                                                return state
+                                except Exception:
+                                    continue
+
+                            #    b) From candidate_views (objects)
+                            cand_objs = state.get("candidate_views", []) or []
+                            # Heuristic ordering: prefer product/article-like names and non-empty estimates
+                            def _cand_rank(obj):
+                                try:
+                                    name = (obj.get("table_name") or obj.get("name") or obj.get("full_name") or "").lower()
+                                    est = int(obj.get("estimated_rows") or 0)
+                                    cols = int(obj.get("column_count") or 0)
+                                    product_like = 1 if any(k in name for k in ["artikel", "product", "products"]) else 0
+                                    bad_like = -1 if any(k in name for k in ["projekt", "archive", "archiv"]) else 0
+                                    return (product_like, 1 if est > 0 else 0, cols, -bad_like)
+                                except Exception:
+                                    return (0, 0, 0, 0)
+
+                            sorted_objs = sorted(cand_objs, key=_cand_rank, reverse=True)
+                            for obj in sorted_objs[:6]:
+                                try:
+                                    cand_name = obj.get("table_name") or obj.get("name") or obj.get("full_name")
+                                    if not cand_name or cand_name in probed:
+                                        continue
+                                    probed.add(cand_name)
+                                    logger.info(f"🔍 Probing fallback candidate_views count: {cand_name}")
+                                    alt_sql = f"SELECT COUNT(*) AS total_count FROM {cand_name}"
+                                    alt_result = await self.mcp.query_bounded(alt_sql, max_rows=1, timeout_ms=int(timeout_ms))
+                                    alt_parsed = self._parse_query_result(alt_result)
+                                    if alt_parsed.get("ok"):
+                                        rows = alt_parsed.get("rows") or []
+                                        if rows and isinstance(rows[0], dict):
+                                            val = next((int(v) for v in rows[0].values() if isinstance(v, (int, float))), None)
+                                            if val and val > 0:
+                                                logger.info(f"🔁 Switching to candidate {cand_name} COUNT(*)={val}")
+                                                state["sql_query"] = alt_sql
+                                                state["exec_result"] = alt_parsed
+                                                jp = dict(join_plan)
+                                                jp["primary_table"] = cand_name
+                                                state["join_plan"] = jp
+                                                return state
+                                except Exception:
+                                    continue
+
+                            #    c) As a last resort, semantic search for product/article masters and probe top hits
+                            try:
+                                # Use intent-driven keywords with lightweight synonyms (no table names)
+                                intent = state.get("intent", {}) or {}
+                                base_kws = (intent.get("keywords_for_discovery") or intent.get("primary_entities") or [])
+                                ui = (state.get("user_input") or "").strip()
+                                if not base_kws and ui:
+                                    base_kws = [ui]
+                                # Expand product-like synonyms if product intent detected
+                                expanded = []
+                                bl = " ".join(base_kws).lower()
+                                if any(tok in bl for tok in ["product", "products", "artikel", "item", "items"]):
+                                    expanded = ["product", "products", "artikel", "artikelstamm", "item", "items"]
+                                else:
+                                    expanded = base_kws[:]
+                                # Deduplicate and limit
+                                seen = set()
+                                kw_candidates = []
+                                for k in expanded:
+                                    kl = (k or "").strip().lower()
+                                    if kl and kl not in seen:
+                                        seen.add(kl)
+                                        kw_candidates.append(kl)
+                                for kw in kw_candidates[:6]:
+                                    try:
+                                        logger.info(f"🔎 Semantic search fallback for '{kw}'")
+                                        sres = await self.mcp.search_tables(kw, page=1, page_size=10)
+                                        # Extract JSON block from text
+                                        s_text = sres[0].get("text", "") if sres and isinstance(sres[0], dict) else ""
+                                        data = None
+                                        if isinstance(s_text, str):
+                                            last_brace = s_text.rfind('{')
+                                            if last_brace >= 0:
+                                                try:
+                                                    data = json.loads(s_text[last_brace:])
+                                                except Exception:
+                                                    data = None
+                                        if not isinstance(data, dict):
+                                            continue
+                                        results = data.get("data", {}).get("results", [])
+                                        # Rank by estimated_rows and token overlap with keyword
+                                        def _rank(r):
+                                            try:
+                                                name = (r.get("full_name") or r.get("name") or "").lower()
+                                                est = int(r.get("estimated_rows") or 0)
+                                                overlap = 1 if kw in name else 0
+                                                is_table = 1 if (r.get("type") or "").upper() == "TABLE" else 0
+                                                return (overlap, is_table, est)
+                                            except Exception:
+                                                return (0, 0, 0)
+                                        results.sort(key=_rank, reverse=True)
+                                        for r in results[:6]:
+                                            cand_name = r.get("full_name") or r.get("name")
+                                            if not cand_name or cand_name in probed:
+                                                continue
+                                            probed.add(cand_name)
+                                            logger.info(f"🔍 Probing semantic candidate count: {cand_name}")
+                                            alt_sql = f"SELECT COUNT(*) AS total_count FROM {cand_name}"
+                                            alt_result = await self.mcp.query_bounded(alt_sql, max_rows=1, timeout_ms=int(timeout_ms))
+                                            alt_parsed = self._parse_query_result(alt_result)
+                                            if alt_parsed.get("ok"):
+                                                rows = alt_parsed.get("rows") or []
+                                                if rows and isinstance(rows[0], dict):
+                                                    val = next((int(v) for v in rows[0].values() if isinstance(v, (int, float))), None)
+                                                    if val and val > 0:
+                                                        logger.info(f"🔁 Switching to candidate {cand_name} COUNT(*)={val}")
+                                                        state["sql_query"] = alt_sql
+                                                        state["exec_result"] = alt_parsed
+                                                        jp = dict(join_plan)
+                                                        jp["primary_table"] = cand_name
+                                                        state["join_plan"] = jp
+                                                        return state
+                                    except Exception:
+                                        continue
+                            except Exception:
+                                pass
+                except Exception:
                     # Do not fail the flow on probe errors
                     pass
             else:
@@ -338,6 +496,265 @@ class ExecAndRecoveryAgent:
 
     async def _check_result_node(self, state: BaseState) -> BaseState:
         """Check if query was successful."""
+        # If the query succeeded but intent implies a TOP-K SUM, and SQL is exploratory (SELECT *),
+        # synthesize an aggregate query and replace the result when possible.
+        try:
+            exec_result = state.get("exec_result", {}) or {}
+            if isinstance(exec_result, dict) and exec_result.get("ok"):
+                sql = state.get("sql_query", "") or ""
+                intent = state.get("intent", {}) or {}
+                user_text = (state.get("user_input") or "").lower()
+                metrics = [m.lower() for m in (intent.get("metrics") or [])]
+                wants_sum = ("sum" in metrics) or ("total" in metrics) or ("top" in user_text)
+
+                # Detect exploratory SELECT * pattern
+                sql_upper = sql.upper()
+                is_exploratory = sql_upper.startswith("SELECT TOP ") and ("* FROM" in sql_upper) and ("SUM(" not in sql_upper)
+
+                if wants_sum and is_exploratory:
+                    import re, json as _json
+                    # Parse TOP-K
+                    m = re.search(r"top\s+(\d{1,3})", user_text, flags=re.IGNORECASE)
+                    try:
+                        top_k = int(m.group(1)) if m else (5 if "top" in user_text else 5)
+                    except Exception:
+                        top_k = 5
+
+                    # Extract table after FROM
+                    m2 = re.search(r"FROM\s+([\w\[\]\.]+)", sql_upper)
+                    table_name = m2.group(1) if m2 else None
+
+                    if table_name:
+                        # Probe columns
+                        probe_sql = f"SELECT TOP 1 * FROM {table_name}"
+                        col_result = await self.mcp.query_bounded(probe_sql, max_rows=1, timeout_ms=5000)
+                        cols = []
+                        try:
+                            # Parse JSON block from text
+                            text = col_result[0].get("text", "") if col_result and isinstance(col_result[0], dict) else ""
+                            brace_idx = text.rfind('{')
+                            if brace_idx >= 0:
+                                data = _json.loads(text[brace_idx:])
+                                cols = data.get("columns") or []
+                                if not cols:
+                                    rows = data.get("rows") or []
+                                    if rows and isinstance(rows[0], dict):
+                                        cols = list(rows[0].keys())
+                        except Exception:
+                            cols = []
+
+                        # Pick sum and group-by columns
+                        def pick_sum_column(columns):
+                            tokens = ["umsatz", "betrag", "amount", "total", "summe", "value", "preis", "gesamtpreis", "netto", "brutto", "warenwert"]
+                            lc = [c.lower() for c in columns]
+                            for t in tokens:
+                                for i, name in enumerate(lc):
+                                    if t in name:
+                                        return columns[i]
+                            return None
+
+                        def pick_group_column(columns):
+                            tokens = ["kunde", "kundennr", "kundennummer", "debitor", "debitorennummer", "adress", "customer", "matchcode", "name"]
+                            lc = [c.lower() for c in columns]
+                            for t in tokens:
+                                for i, name in enumerate(lc):
+                                    if t in name:
+                                        return columns[i]
+                            return None
+
+                        sum_col = pick_sum_column(cols)
+                        group_col = pick_group_column(cols)
+
+                        if sum_col and group_col:
+                            agg_sql = (
+                                f"SELECT TOP {max(1, top_k)} {group_col} AS customer, SUM({sum_col}) AS total_value "
+                                f"FROM {table_name} GROUP BY {group_col} ORDER BY total_value DESC"
+                            )
+                            try:
+                                timeout_ms = self.query_timeout_seconds * 1000
+                                agg_res = await self.mcp.query_bounded(agg_sql, max_rows=self.row_limit, timeout_ms=int(timeout_ms))
+                                agg_parsed = self._parse_query_result(agg_res)
+                                if agg_parsed.get("ok") and agg_parsed.get("row_count", 0) > 0:
+                                    logger.info("🔁 Replaced exploratory SELECT * with aggregated TOP-K SUM result")
+                                    state["sql_query"] = agg_sql
+                                    state["exec_result"] = agg_parsed
+                            except Exception:
+                                pass
+                        elif sum_col:
+                            # Try heuristic join with a customer dimension if present in relevant_tables
+                            try:
+                                rel_tabs = state.get("relevant_tables", []) or []
+                                # Pick likely customer table
+                                cust_table = None
+                                for rt in rel_tabs:
+                                    n = (rt or "").lower()
+                                    if any(tok in n for tok in ["khkadressen", "adressen", "adresse", "customer", "kunde", "kunden"]):
+                                        cust_table = rt
+                                        break
+                                if cust_table and cust_table != table_name:
+                                    # Probe customer columns
+                                    c_res = await self.mcp.query_bounded(f"SELECT TOP 1 * FROM {cust_table}", max_rows=1, timeout_ms=5000)
+                                    c_cols = []
+                                    try:
+                                        c_text = c_res[0].get("text", "") if c_res and isinstance(c_res[0], dict) else ""
+                                        bi = c_text.rfind('{')
+                                        if bi >= 0:
+                                            c_data = _json.loads(c_text[bi:])
+                                            c_cols = c_data.get("columns") or []
+                                            if not c_cols:
+                                                c_rows = c_data.get("rows") or []
+                                                if c_rows and isinstance(c_rows[0], dict):
+                                                    c_cols = list(c_rows[0].keys())
+                                    except Exception:
+                                        c_cols = []
+
+                                    def pick_key(columns):
+                                        lc = [c.lower() for c in columns]
+                                        # Generic key-like: endswith/id, contains 'id' or 'nr' or 'number'
+                                        for i, name in enumerate(lc):
+                                            if name == 'id' or name.endswith('_id') or name.endswith('id'):
+                                                return columns[i]
+                                        for i, name in enumerate(lc):
+                                            if 'nr' in name or 'number' in name:
+                                                return columns[i]
+                                        # fallback to first integer-like column is too heavy here; return None
+                                        return None
+
+                                    p_key = pick_key(cols)
+                                    c_key = pick_key(c_cols)
+
+                                    def pick_name(columns):
+                                        lc = [c.lower() for c in columns]
+                                        for i, name in enumerate(lc):
+                                            if 'name' in name or 'label' in name or 'title' in name:
+                                                return columns[i]
+                                        # fallback to the key itself
+                                        return pick_key(columns) or (columns[0] if columns else None)
+
+                                    c_name = pick_name(c_cols)
+
+                                    if p_key and c_key and c_name:
+                                        j_sql = (
+                                            f"SELECT TOP {max(1, top_k)} c.{c_name} AS customer, SUM(p.{sum_col}) AS total_value "
+                                            f"FROM {table_name} p INNER JOIN {cust_table} c ON p.{p_key} = c.{c_key} "
+                                            f"GROUP BY c.{c_name} ORDER BY total_value DESC"
+                                        )
+                                        try:
+                                            timeout_ms = self.query_timeout_seconds * 1000
+                                            j_res = await self.mcp.query_bounded(j_sql, max_rows=self.row_limit, timeout_ms=int(timeout_ms))
+                                            j_parsed = self._parse_query_result(j_res)
+                                            if j_parsed.get("ok") and j_parsed.get("row_count", 0) > 0:
+                                                logger.info("🔁 Replaced exploratory SELECT * with aggregated TOP-K SUM via heuristic customer join")
+                                                state["sql_query"] = j_sql
+                                                state["exec_result"] = j_parsed
+                                        except Exception:
+                                            pass
+                            except Exception:
+                                pass
+
+        except Exception:
+            pass
+
+        # If the query succeeded but did not aggregate (no SUM/GROUP BY) for a SUM intent, try to synthesize an aggregate strictly from discovered sources
+        try:
+            exec_result = state.get("exec_result", {}) or {}
+            if isinstance(exec_result, dict) and exec_result.get("ok"):
+                sql = state.get("sql_query", "") or ""
+                intent = state.get("intent", {}) or {}
+                metrics = [m.lower() for m in (intent.get("metrics") or [])]
+                wants_sum = ("sum" in metrics) or ("total" in metrics) or ((intent.get("required_action") or "").lower() == "topk_sum_by_customer")
+                up = sql.upper()
+                lacks_agg = ("SUM(" not in up) or ("GROUP BY" not in up)
+                if wants_sum and lacks_agg:
+                    # Build candidate pool from discovery
+                    pool = []
+                    for c in (state.get("relevant_tables") or []):
+                        if isinstance(c, str):
+                            pool.append(c)
+                    for cv in (state.get("candidate_views") or []):
+                        if isinstance(cv, str):
+                            pool.append(cv)
+                        elif isinstance(cv, dict):
+                            nm = cv.get("table_name") or cv.get("name") or cv.get("full_name")
+                            if nm:
+                                pool.append(nm)
+                    # Probe for sales-like with amount columns
+                    def looks_salesy(name: str) -> bool:
+                        n = (name or "").lower()
+                        return any(t in n for t in ["vk","verkauf","rechnung","beleg","position","umsatz","invoice","order"]) and not any(a in n for a in ["archiv","archive","ek","projekt"])
+                    chosen = None
+                    col_index = {}
+                    for name in pool:
+                        if not looks_salesy(name):
+                            continue
+                        # get columns
+                        try:
+                            cols_res = await self.mcp.get_column_index(name)  # may return list
+                            if isinstance(cols_res, list) and cols_res:
+                                cols = [str(x) for x in cols_res if x]
+                            else:
+                                # fallback probe
+                                probe = await self.mcp.query_bounded(f"SELECT TOP 1 * FROM {name}", max_rows=1, timeout_ms=5000)
+                                cols = []
+                                if probe and isinstance(probe[0], dict):
+                                    import json as _json
+                                    text = probe[0].get("text", "")
+                                    bi = text.rfind('{')
+                                    if bi >= 0:
+                                        data = _json.loads(text[bi:])
+                                        cols = data.get("columns") or (list((data.get("rows") or [{}])[0].keys()) if data.get("rows") else [])
+                        except Exception:
+                            cols = []
+                        col_index[name] = cols
+                        # detect amount-like
+                        lc = [c.lower() for c in (cols or [])]
+                        if any(t in nm for nm in lc for t in ["umsatz","betrag","amount","total","summe","preis","gesamtpreis","wert","vkpreis","verkaufspreis","vkwert","verkaufswert"]):
+                            chosen = name
+                            break
+                    if chosen:
+                        cols = col_index.get(chosen, [])
+                        lc = [c.lower() for c in (cols or [])]
+                        # pick sum and group candidates
+                        sumc = None
+                        for t in ["umsatz","betrag","amount","total","summe","preis","gesamtpreis","wert","vkpreis","verkaufspreis","vkwert","verkaufswert"]:
+                            for i, nm in enumerate(lc):
+                                if t in nm:
+                                    sumc = cols[i]
+                                    break
+                            if sumc:
+                                break
+                        group = None
+                        for t in ["kunde","kunden","customer","matchcode","name","firma","company","kundennr","kdnr","debitor","debitornr","adressid","kundenid","customerid"]:
+                            for i, nm in enumerate(lc):
+                                if t in nm:
+                                    group = cols[i]
+                                    break
+                            if group:
+                                break
+                        top_k = int(intent.get("top_k") or 5)
+                        agg_sql = f"SELECT TOP {max(1, top_k)} "
+                        if group:
+                            agg_sql += f"{group} AS customer, "
+                        if sumc:
+                            agg_sql += f"SUM({chosen}.{sumc}) AS total_value FROM {chosen}"
+                        else:
+                            agg_sql += f"COUNT(*) AS total_value FROM {chosen}"
+                        if group:
+                            agg_sql += f" GROUP BY {group} ORDER BY total_value DESC"
+                        else:
+                            agg_sql += " ORDER BY (SELECT NULL)"
+                        try:
+                            timeout_ms = self.query_timeout_seconds * 1000
+                            ares = await self.mcp.query_bounded(agg_sql, max_rows=self.row_limit, timeout_ms=int(timeout_ms))
+                            aparsed = self._parse_query_result(ares)
+                            if aparsed.get("ok") and aparsed.get("row_count", 0) > 0:
+                                state["sql_query"] = agg_sql
+                                state["exec_result"] = aparsed
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
         # Routing happens in graph edges
         return state
 
@@ -628,73 +1045,75 @@ class ExecAndRecoveryAgent:
                         "warnings": warnings,
                         "error": error
                     }
+                # If JSON not detected, fall through to parse as text below
             except Exception:
                 # Not JSON or failed to extract JSON - handle as text-table format
                 logger.info("Received text table response from unbounded query, parsing manually...")
 
-                if not content or "Query execution failed" in content:
-                    return {"ok": False, "error": content or "Query execution failed"}
+            # Fallback: parse as text-table format (also used when JSON not detected without exception)
+            if not content or "Query execution failed" in content:
+                return {"ok": False, "error": content or "Query execution failed"}
 
-                # Parse the text table format
-                lines = content.strip().split('\n')
-                if len(lines) < 3:
-                    return {"ok": False, "error": "Invalid table format"}
+            # Parse the text table format
+            lines = content.strip().split('\n')
+            if len(lines) < 3:
+                return {"ok": False, "error": "Invalid table format"}
 
-                # Extract row count from header
-                header_match = re.search(r'Query Results \((\d+) rows\)', lines[0])
-                if not header_match:
-                    return {"ok": False, "error": "Could not parse row count"}
+            # Extract row count from header
+            header_match = re.search(r'Query Results \((\d+) rows\)', lines[0])
+            if not header_match:
+                return {"ok": False, "error": "Could not parse row count"}
 
-                row_count = int(header_match.group(1))
+            row_count = int(header_match.group(1))
 
-                if row_count == 0:
-                    return {
-                        "ok": True,
-                        "rows": [],
-                        "row_count": 0,
-                        "execution_time_ms": 0,
-                        "truncated": False,
-                        "warnings": [],
-                        "error": None
-                    }
-
-                # Find data rows (skip header and separator)
-                data_start = 2  # Skip "Query Results (X rows):" and blank line
-                if data_start >= len(lines):
-                    return {"ok": False, "error": "No data rows found"}
-
-                # Extract column headers
-                header_line = lines[data_start]
-                columns = [col.strip() for col in header_line.split('|')]
-
-                # Extract data rows
-                rows = []
-                for line in lines[data_start + 2:]:  # Skip headers and separator
-                    if line.strip():
-                        values = [val.strip() for val in line.split('|')]
-                        if len(values) == len(columns):
-                            row_dict = {}
-                            for col, val in zip(columns, values):
-                                # Try to convert to number
-                                try:
-                                    # Check if it's an integer
-                                    if '.' not in val:
-                                        row_dict[col] = int(val)
-                                    else:
-                                        row_dict[col] = float(val)
-                                except ValueError:
-                                    row_dict[col] = val
-                            rows.append(row_dict)
-
+            if row_count == 0:
                 return {
                     "ok": True,
-                    "rows": rows,
-                    "row_count": len(rows),
-                    "execution_time_ms": 0,  # Not provided in text format
+                    "rows": [],
+                    "row_count": 0,
+                    "execution_time_ms": 0,
                     "truncated": False,
                     "warnings": [],
                     "error": None
                 }
+
+            # Find data rows (skip header and separator)
+            data_start = 2  # Skip "Query Results (X rows):" and blank line
+            if data_start >= len(lines):
+                return {"ok": False, "error": "No data rows found"}
+
+            # Extract column headers
+            header_line = lines[data_start]
+            columns = [col.strip() for col in header_line.split('|')]
+
+            # Extract data rows
+            rows = []
+            for line in lines[data_start + 2:]:  # Skip headers and separator
+                if line.strip():
+                    values = [val.strip() for val in line.split('|')]
+                    if len(values) == len(columns):
+                        row_dict = {}
+                        for col, val in zip(columns, values):
+                            # Try to convert to number
+                            try:
+                                # Check if it's an integer
+                                if '.' not in val:
+                                    row_dict[col] = int(val)
+                                else:
+                                    row_dict[col] = float(val)
+                            except ValueError:
+                                row_dict[col] = val
+                        rows.append(row_dict)
+
+            return {
+                "ok": True,
+                "rows": rows,
+                "row_count": len(rows),
+                "execution_time_ms": 0,  # Not provided in text format
+                "truncated": False,
+                "warnings": [],
+                "error": None
+            }
 
         except Exception as e:
             logger.warning(f"Failed to parse query result: {e}")

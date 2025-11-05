@@ -36,6 +36,7 @@ from langgraph_integration.agents.discovery.agent import DiscoveryAgent
 from langgraph_integration.agents.join_sql.agent import JoinPlanAndSQLAgent
 from langgraph_integration.agents.exec_recovery.agent import ExecAndRecoveryAgent
 from langgraph_integration.agents.answer.agent import AnswerAgent
+from langgraph_integration.agents.interpretation.agent import InterpretationAgent
 from langgraph_integration.mcp_client import get_shared_mcp_tool
 from langgraph_integration.debug_logger import get_debug_logger
 
@@ -121,6 +122,8 @@ class QueryOrchestrator:
         
         self.answer_agent = AnswerAgent(llm_model=llm_model, llm_temp=llm_temp)
         logger.info("✅ AnswerAgent initialized (Result formatting)")
+        self.interpret_agent = InterpretationAgent(llm_model=llm_model, llm_temp=llm_temp)
+        logger.info("✅ InterpretationAgent initialized (Follow-up over prior results)")
 
         # Phase 4: MCP client lifecycle management
         self.mcp_client = get_shared_mcp_tool()
@@ -164,11 +167,14 @@ class QueryOrchestrator:
         graph.add_node("join_sql", self._join_sql_node)
         graph.add_node("exec_recovery", self._exec_recovery_node)
         graph.add_node("answer", self._answer_node)
+        # interpretation node is added once above
 
         # Special operation nodes - register async implementations directly
         graph.add_node("answer_schema", self._answer_schema_node)
         graph.add_node("answer_health", self._answer_health_node)
         graph.add_node("answer_error", self._answer_error_node)
+        # Interpretation node implementation
+        graph.add_node("interpret", self._interpret_node)
 
         # ============= Define edges =============
         # Initial path: index → parse → route
@@ -217,6 +223,14 @@ class QueryOrchestrator:
 
             # THIRD PRIORITY: Route by operation type
             result = None
+            # Follow-up interpretation path
+            try:
+                required_action = intent.get("required_action")
+                if required_action == "interpret_previous" and (state.get("previous_exec_result") or state.get("exec_result")):
+                    logger.info("🚦 [ROUTE_TO_OPERATION] 🎯 Follow-up interpretation detected → interpret")
+                    return "interpret"
+            except Exception:
+                pass
             if operation == "clarify":
                 result = "answer"
             elif operation == "schema_query":
@@ -245,6 +259,7 @@ class QueryOrchestrator:
                 "exec_recovery": "exec_recovery",
                 "answer_error": "answer_error",
                 "discovery": "discovery",
+                "interpret": "interpret",
             }
         )
 
@@ -253,6 +268,8 @@ class QueryOrchestrator:
         graph.add_edge("discovery", "join_sql")
         graph.add_edge("join_sql", "exec_recovery")
         graph.add_edge("exec_recovery", "answer")
+        # Interpretation path is terminal
+        graph.add_edge("interpret", END)
 
         # ============= SCHEMA QUERY PIPELINE =============
         # Schema discovery flow: discovery_for_schema → answer_schema
@@ -271,6 +288,34 @@ class QueryOrchestrator:
         logger.info(f"   Graph nodes: {list(compiled.nodes.keys())}")
         logger.info(f"   Start → route_operation (conditional) → multiple paths → END")
         return compiled
+
+    # Legacy-simple intent parser for tests and quick routes
+    def _simple_intent_parser(self, text: str) -> Dict[str, Any]:
+        t = (text or "").lower()
+        intent: Dict[str, Any] = {"operation": "query", "primary_entities": [], "entities": [], "metrics": [], "filters": []}
+        # Health
+        if any(k in t for k in ["health", "working", "status"]):
+            intent["operation"] = "health_check"
+            return intent
+        # Schema
+        if any(k in t for k in ["tables", "schema", "views"]):
+            intent["operation"] = "schema_query"
+        # Count
+        if any(k in t for k in ["how many", "count", "anzahl", "wie viele"]):
+            intent.setdefault("metrics", []).append("count")
+        # Naive entities
+        for word in ["customers", "customer", "products", "product", "orders", "sales"]:
+            if word in t:
+                intent.setdefault("primary_entities", []).append(word)
+                intent.setdefault("entities", []).append(word)
+        # Discovery keywords (used by DiscoveryAgent)
+        kws = []
+        for w in ["customers", "products", "orders", "sales"]:
+            if w in t:
+                kws.append(w)
+        if kws:
+            intent["keywords_for_discovery"] = list(dict.fromkeys(kws))
+        return intent
 
     # ============= Core node implementations =============
 
@@ -303,6 +348,18 @@ class QueryOrchestrator:
                 return result_state
 
             logger.info("📚 [INDEX_DATABASE] ✅ Database indexed, MCP available")
+            # Load last execution result for interpretation follow-ups (persisted on disk)
+            try:
+                cache_path = os.path.join("data", "last_exec_result.json")
+                if os.path.exists(cache_path):
+                    with open(cache_path, "r", encoding="utf-8") as f:
+                        payload = json.load(f)
+                    state["previous_exec_result"] = payload.get("exec_result")
+                    state["previous_sql"] = payload.get("sql_query")
+                    state["previous_sources"] = payload.get("sources") or []
+                    logger.info("📚 [INDEX_DATABASE] Loaded previous_exec_result for interpretation follow-ups")
+            except Exception as e:
+                logger.warning(f"📚 [INDEX_DATABASE] Could not load last_exec_result cache: {e}")
             # Preflight warm-up: make a tiny list_tables call to stabilize /mcp endpoint
             try:
                 logger.info("📚 [INDEX_DATABASE] Preflight: list_tables(page=1,page_size=1)")
@@ -340,6 +397,11 @@ class QueryOrchestrator:
 
         Returns: Updated state with intent, confidence, and clarification flags
         """
+        # Short-circuit if prior error exists (e.g., MCP unavailable)
+        if state.get("error_info"):
+            logger.warning("🧠 [PARSE_INTENT] Skipping intent parsing due to prior error_info")
+            return state
+
         logger.info("🧠 [PARSE_INTENT] 🚀 NODE CALLED - Starting intent parsing")
         debug_logger.agent_entry("parse_intent", dict(state))
         before_state = dict(state)
@@ -595,59 +657,34 @@ class QueryOrchestrator:
             debug_logger.agent_exit("join_sql", before_state, dict(state))
             return state
 
-        # Phase 3: Select the most appropriate table OR view using views-first approach
-        # Phase 5: Add join planner fallback for complex multi-table queries
-        candidate_views = state.get("candidate_views", [])
-        primary_table = await asyncio.get_event_loop().run_in_executor(
-            None, self._select_best_table_or_view_for_query, relevant_tables, candidate_views, intent
-        )
-
-        # Phase 5: If no suitable view/table found, try join planning
-        if not primary_table:
-            join_plan = await self._try_join_planning(relevant_tables, intent)
-            if join_plan:
-                primary_table = "join_plan"  # Special marker for join-based queries
-                state["join_plan"] = join_plan
-                logger.info(f"🔗 [JOIN_SQL] Using join plan with {len(join_plan.get('tables', []))} tables")
-        metrics = intent.get("metrics", [])
-        time_window = intent.get("time_window")
-
-        logger.info(f"🔗 [JOIN_SQL] Selected table: {primary_table} for query with metrics: {metrics}")
-
-        # Generate SQL based on table characteristics and query intent
-        # This is generic and works with any database schema
-
-        table_info = None
-        for table in relevant_tables:
-            if isinstance(table, str):
-                table_name = table
+        # Delegate to JoinPlanAndSQLAgent subgraph for robust planning and SQL generation
+        try:
+            join_graph = self.join_sql_agent.build_subgraph()
+            join_result = await join_graph.ainvoke(state)
+            sql_query = join_result.get("sql_query", "")
+            join_plan = join_result.get("join_plan", {})
+            if not sql_query:
+                raise ValueError("Join SQL agent returned no SQL")
+            state["sql_query"] = sql_query
+            state["join_plan"] = join_plan
+            logger.info(f"🔗 [JOIN_SQL] Generated SQL (agent): {sql_query}")
+        except Exception as e:
+            logger.warning(f"🔗 [JOIN_SQL] Join SQL agent failed ({e}); falling back to simple selection")
+            # Fallback to simple generator
+            candidate_views = state.get("candidate_views", [])
+            primary_table = await asyncio.get_event_loop().run_in_executor(
+                None, self._select_best_table_or_view_for_query, relevant_tables, candidate_views, intent
+            )
+            metrics = intent.get("metrics", [])
+            if not primary_table:
+                state["sql_query"] = ""
+                state["join_plan"] = {}
             else:
-                table_name = table.get("full_name") or table.get("name", "")
-            if table_name == primary_table:
-                table_info = table
-                break
-
-        # Phase 5: Handle join plans vs single table queries
-        if primary_table == "join_plan":
-            # Use join planner to generate SQL
-            join_plan = state.get("join_plan", {})
-            sql_query = await self._generate_sql_from_join_plan(join_plan, intent)
-        else:
-            # Generate appropriate SQL based on query intent for single table
-            # COUNT queries are safe on any table and provide meaningful results
-            if "count" in metrics or "total" in metrics or len(metrics) == 0:
-                sql_query = f"SELECT COUNT(*) AS total_count FROM {primary_table}"
-            else:
-                # For other queries, sample the data to understand structure
-                sql_query = f"SELECT TOP 10 * FROM {primary_table}"
-
-        # For now, skip time filtering since we don't know the date column names
-        # This would need schema analysis to identify date columns
-
-        logger.info(f"🔗 [JOIN_SQL] Generated SQL: {sql_query}")
-
-        state["join_plan"] = {"strategy": "direct", "primary_table": primary_table}
-        state["sql_query"] = sql_query
+                if "count" in metrics or "total" in metrics or len(metrics) == 0:
+                    state["sql_query"] = f"SELECT COUNT(*) AS total_count FROM {primary_table}"
+                else:
+                    state["sql_query"] = f"SELECT TOP 10 * FROM {primary_table}"
+                state["join_plan"] = {"strategy": "direct", "primary_table": primary_table}
 
         logger.info("🔗 [JOIN_SQL] SQL generation complete")
         debug_logger.agent_exit("join_sql", before_state, dict(state))
@@ -916,6 +953,32 @@ class QueryOrchestrator:
                 # Ensure downstream answer formatting does not take error/clarify paths
                 state["error_info"] = None
                 state.setdefault("intent", {})["operation"] = "query"
+                # Persist last successful result for interpretation follow-ups
+                try:
+                    os.makedirs("data", exist_ok=True)
+                    # Derive source tables from join_plan/SQL
+                    sources = []
+                    try:
+                        jp = state.get("join_plan", {}) or {}
+                        if isinstance(jp, dict):
+                            pt = jp.get("primary_table")
+                            if pt:
+                                sources.append(pt)
+                            for j in jp.get("joins", []) or []:
+                                if isinstance(j, dict) and j.get("table"):
+                                    sources.append(j.get("table"))
+                    except Exception:
+                        pass
+                    cache = {
+                        "exec_result": exec_result,
+                        "sql_query": state.get("sql_query", ""),
+                        "sources": list(dict.fromkeys([s for s in sources if s]))
+                    }
+                    with open(os.path.join("data", "last_exec_result.json"), "w", encoding="utf-8") as f:
+                        json.dump(cache, f, ensure_ascii=False)
+                    logger.info("⚡ [EXEC_RECOVERY] Cached last_exec_result for interpretation agent")
+                except Exception as e:
+                    logger.warning(f"⚡ [EXEC_RECOVERY] Failed to cache last_exec_result: {e}")
             else:
                 logger.warning(f"⚡ [EXEC_RECOVERY] ❌ Execution failed, error_info set for answer agent")
 
@@ -986,8 +1049,22 @@ class QueryOrchestrator:
                 debug_logger.agent_exit("answer", before_state, dict(state))
                 return state
 
-            # Fast return: if we have a successful exec_result, synthesize a concise answer
+            # Fast return: if we have a successful exec_result, optionally synthesize a concise count answer
             if isinstance(exec_result, dict) and exec_result.get("ok", False):
+                intent = state.get("intent", {})
+                metrics = [m.lower() for m in (intent.get("metrics") or [])]
+                wants_count = "count" in metrics
+
+                if not wants_count:
+                    logger.info("✨ [ANSWER] Skipping count extraction (intent is not COUNT); delegating to AnswerAgent")
+                    # Fall back to AnswerAgent subgraph for non-count queries
+                    answer_graph = self.answer_agent.build_subgraph()
+                    result = await answer_graph.ainvoke(state)
+                    state["final_response"] = result.get("final_response", "No response generated")
+                    logger.info("✅ Answer formatted by AnswerAgent")
+                    debug_logger.agent_exit("answer", before_state, dict(state))
+                    return state
+
                 logger.info("✨ [ANSWER] ✅ exec_result is successful, trying to extract count...")
 
                 # Try to extract a scalar count if present in rows
@@ -1088,13 +1165,25 @@ class QueryOrchestrator:
 
                     # Generate appropriate response based on query type and table
                     if query_type == "sales":
-                        state["final_response"] = f"I analyzed the {table_used} table and found {count_value:,} records. For sales data, you might need to look at transaction or order tables."
+                        base_text = f"I analyzed the {table_used} table and found {count_value:,} records. For sales data, you might need to look at transaction or order tables."
                     elif query_type == "customer":
-                        state["final_response"] = f"There are {count_value:,} customer records in the database."
+                        base_text = f"There are {count_value:,} customer records in the database."
                     elif query_type == "product":
-                        state["final_response"] = f"The {table_used} table contains {count_value:,} product/item records."
+                        base_text = f"The {table_used} table contains {count_value:,} product/item records."
                     else:
-                        state["final_response"] = f"The {table_used} table contains {count_value:,} records."
+                        base_text = f"The {table_used} table contains {count_value:,} records."
+
+                    # Append compact rows appendix (first 5) for transparency
+                    appendix = ""
+                    try:
+                        preview_rows = rows[:5] if isinstance(rows, list) else []
+                        if preview_rows:
+                            import json as _json
+                            appendix = "\n\n" + f"Tables: {table_used}\n" + "```json\n" + _json.dumps(preview_rows) + "\n```"
+                    except Exception:
+                        appendix = ""
+
+                    state["final_response"] = base_text + appendix
 
                     logger.info(f"✨ [ANSWER] ✅ Answer synthesized: '{state['final_response']}'")
                     debug_logger.agent_exit("answer", before_state, dict(state))
@@ -1169,6 +1258,20 @@ class QueryOrchestrator:
 
         # Run answer agent
         return await self._answer_node(state)
+
+    async def _interpret_node(self, state: BaseState) -> BaseState:
+        """Route to InterpretationAgent for follow-up over prior results."""
+        logger.info("🧩 Running InterpretationAgent (follow-up over previous results)...")
+        try:
+            interpret_graph = self.interpret_agent.build_subgraph()
+            result = await interpret_graph.ainvoke(state)
+            state["final_response"] = result.get("final_response", "No response generated")
+            logger.info("✅ Interpretation complete")
+            return state
+        except Exception as e:
+            logger.error(f"Interpretation failed: {e}")
+            state["final_response"] = "I couldn't interpret the previous results due to an internal error."
+            return state
 
     # ============= Helper methods =============
 
@@ -1269,7 +1372,12 @@ class QueryOrchestrator:
 
             # Step 4: Format and return results
             if error_info:
-                return f"I encountered an error executing the query: {error_info.get('message', 'Unknown error')}"
+                # Be robust to non-dict error_info
+                if isinstance(error_info, dict):
+                    msg = error_info.get('message', error_info.get('error', 'Unknown error'))
+                else:
+                    msg = str(error_info)
+                return f"I encountered an error executing the query: {msg}"
 
             # If success but empty, try next candidates up to 2 more times
             tried = set()

@@ -15,7 +15,7 @@ import json
 import logging
 import asyncio
 import concurrent.futures
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
@@ -138,6 +138,12 @@ class JoinPlanAndSQLAgent:
         logger.info(f"👁️  [VIEW_CHECK] relevant_tables: {relevant_tables}")
         logger.info(f"👁️  [VIEW_CHECK] session_cache keys: {list(session_cache.keys())}")
 
+        # Avoid view-first for customer revenue ranking (needs joins)
+        intent = state.get("intent", {})
+        metrics = [m.lower() for m in (intent.get("metrics") or [])]
+        entities = [e.lower() for e in (intent.get("primary_entities") or [])]
+        sum_customer_request = (any(m in ["sum", "total"] for m in metrics) and any(e in ["customer", "customers", "kunde", "kunden"] for e in entities))
+
         for table_name in relevant_tables:
             # Check cache
             if table_name in session_cache:
@@ -145,7 +151,7 @@ class JoinPlanAndSQLAgent:
                 is_view = table_info.get("is_view", False)
                 role_coverage = table_info.get("role_coverage", 0)
 
-                if is_view and role_coverage >= self.view_role_coverage_threshold:
+                if is_view and role_coverage >= self.view_role_coverage_threshold and not sum_customer_request:
                     logger.info(
                         f"✅ Found high-coverage view: {table_name} (role_coverage={role_coverage:.2f})"
                     )
@@ -238,10 +244,87 @@ class JoinPlanAndSQLAgent:
             return {**state, "error_info": error}
 
         try:
-            # Simple join plan: fact table (first) + dimensions (rest)
+            # Classify tables by role from names (light heuristic)
+            def is_customer(name: str) -> bool:
+                n = (name or "").lower()
+                return any(t in n for t in ["khkadressen", "adressen", "adresse", "kunde", "kunden", "customer", "crmadr", "adress"])
+
+            def is_sales(name: str) -> bool:
+                n = (name or "").lower()
+                return any(t in n for t in [
+                    "vk", "verkauf", "rechnung", "rechnungs", "beleg", "belege",
+                    "auftrags", "auftrag", "pos", "position", "positionen",
+                    "invoice", "invoices", "order", "orders", "umsatz"
+                ])
+
+            def is_product(name: str) -> bool:
+                n = (name or "").lower()
+                return any(t in n for t in ["artikel", "artikelstamm", "product", "products", "material"])
+
+            metrics = [m.lower() for m in (intent.get("metrics") or [])]
+            wants_sum = any(m in ["sum", "total"] for m in metrics)
+            entities = [e.lower() for e in (intent.get("primary_entities") or [])]
+
+            # Choose primary: for SUM/revenue, prefer sales-like; otherwise first
+            primary = None
+            if wants_sum:
+                for t in relevant_tables:
+                    if is_sales(t):
+                        primary = t
+                        break
+                # Consider candidate views if no sales-like table found
+                if not primary:
+                    cand_views = state.get("candidate_views", []) or []
+                    for c in cand_views:
+                        name = c if isinstance(c, str) else (c.get("table_name") or c.get("name") or c.get("full_name") or "")
+                        if name and is_sales(name):
+                            primary = name
+                            # Ensure it is present in relevant_tables pool for downstream processing
+                            if name not in relevant_tables:
+                                relevant_tables = [name] + list(relevant_tables)
+                            break
+                # Do not search beyond discovery outputs (planner must not expand the set of sources)
+                # If no sales-like candidate is present in discovery outputs, we keep the current primary and rely on discovery tuning
+            # Count of products: prefer product/article master tables
+            if (not wants_sum) and ("count" in metrics or not metrics) and any(e.startswith("product") or e.startswith("artikel") for e in entities):
+                # Search both in relevant_tables and candidate_views for product-like sources
+                for t in relevant_tables:
+                    if is_product(t):
+                        primary = t
+                        break
+                if not primary:
+                    cand_views = state.get("candidate_views", []) or []
+                    # Prefer non-view tables with product-like names and non-zero estimated_rows if available
+                    def _rank(c):
+                        try:
+                            name = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
+                            est = int(c.get("estimated_rows") or 0)
+                            is_view = 1 if c.get("is_view", False) else 0
+                            return (
+                                1 if is_product(name) else 0,
+                                1 if est > 0 else 0,
+                                0 if is_view else 1,  # prefer tables
+                                int(c.get("column_count") or 0)
+                            )
+                        except Exception:
+                            return (0, 0, 0, 0)
+                    cand_sorted = sorted(cand_views, key=_rank, reverse=True)
+                    for c in cand_sorted:
+                        name = c.get("table_name") or c.get("name") or c.get("full_name")
+                        if name and is_product(name):
+                            primary = name
+                            # Prepend to relevant_tables if missing
+                            if name not in relevant_tables:
+                                relevant_tables = [name] + list(relevant_tables)
+                            break
+
+            if not primary:
+                primary = relevant_tables[0]
+
+            # Build base plan
             join_plan = {
                 "strategy": "joins",
-                "primary_table": relevant_tables[0],
+                "primary_table": primary,
                 "joins": [],
                 "fk_hints": fk_hints,
                 "where_filters": intent.get("filters", []),
@@ -251,31 +334,52 @@ class JoinPlanAndSQLAgent:
                 "reason": f"Using {len(relevant_tables)} table(s) with joins"
             }
 
-            # Add dimensions as joins
-            for i, table in enumerate(relevant_tables[1:]):
-                if i >= self.max_joins - 1:  # Limit to max_joins - 1 (since we have primary)
+            # Add customer dimension if present and not already primary
+            customer_dim = None
+            for t in relevant_tables:
+                if t != primary and is_customer(t):
+                    customer_dim = t
                     break
 
-                # Find FK relationship if available
-                fk_hint = None
+            def find_fk_condition(from_table: str, to_table: str) -> Optional[str]:
                 for hint in fk_hints:
-                    if hint.get("from_table") == relevant_tables[0] and hint.get("to_table") == table:
-                        fk_hint = hint
-                        break
+                    if hint.get("from_table") == from_table and hint.get("to_table") == to_table and hint.get("join_condition"):
+                        return hint["join_condition"]
+                return None
 
-                join_condition = (
-                    fk_hint.get("join_condition", "")
-                    if fk_hint
-                    else f"{relevant_tables[0]}.id = {table}.id"
-                )
+            if customer_dim:
+                join_condition = find_fk_condition(primary, customer_dim)
+                if not join_condition:
+                    # Try reverse direction
+                    jc_rev = find_fk_condition(customer_dim, primary)
+                    if jc_rev:
+                        join_condition = jc_rev
+                if join_condition:
+                    join_plan["joins"].append({
+                        "table": customer_dim,
+                        "on": join_condition,
+                        "type": "INNER"
+                    })
+                else:
+                    logger.warning(f"No FK hint for join between {primary} and {customer_dim}; skipping join to avoid cartesian product")
 
-                join_plan["joins"].append({
-                    "table": table,
-                    "on": join_condition,
-                    "type": "INNER"
-                })
+            # Optionally add up to remaining dimension tables (safe joins with FK only)
+            for t in relevant_tables:
+                if t in [primary, customer_dim]:
+                    continue
+                if len(join_plan["joins"]) >= self.max_joins - 1:
+                    break
+                jc = find_fk_condition(primary, t)
+                if not jc:
+                    jc = find_fk_condition(t, primary)
+                if jc:
+                    join_plan["joins"].append({
+                        "table": t,
+                        "on": jc,
+                        "type": "INNER"
+                    })
 
-            logger.info(f"✅ Built join plan: {len(join_plan['joins'])} join(s)")
+            logger.info(f"✅ Built join plan: primary={primary}, joins={len(join_plan['joins'])}")
 
             state["join_plan"] = join_plan
             return state
@@ -288,6 +392,77 @@ class JoinPlanAndSQLAgent:
             }
             logger.error(f"❌ {error['message']}")
             return {**state, "error_info": error}
+
+    async def _probe_columns(self, table_name: str) -> List[str]:
+        """Probe a table/view for its column names using a small SELECT TOP 1 *."""
+        try:
+            # Prefer MCP get_column_index (faster, structured)
+            try:
+                idx = await self.mcp.get_column_index(table_name)
+                if isinstance(idx, list) and idx:
+                    # Tool returns list of column names directly
+                    return [str(c) for c in idx if c]
+                if isinstance(idx, dict):
+                    cols = idx.get("columns") or idx.get("data") or []
+                    if isinstance(cols, list) and cols:
+                        return [str(c) for c in cols if c]
+            except Exception:
+                pass
+
+            # Fallback: issue a TOP 1 probe and parse columns from the MCP JSON envelope
+            probe_sql = f"SELECT TOP 1 * FROM {table_name}"
+            result = await self.mcp.query_bounded(probe_sql, max_rows=1, timeout_ms=5000)
+            if not result or not isinstance(result, list) or not isinstance(result[0], dict):
+                return []
+            text = result[0].get("text", "")
+            if not isinstance(text, str):
+                return []
+            brace_idx = text.rfind('{')
+            if brace_idx < 0:
+                # Try sys catalog as a final fallback (works for tables and views)
+                try:
+                    # Split schema and object
+                    full = (table_name or "").strip()
+                    schema = None; obj = None
+                    if '.' in full:
+                        parts = full.split('.')
+                        schema = parts[-2]; obj = parts[-1]
+                    else:
+                        schema = 'dbo'; obj = full
+                    sys_sql = (
+                        "SELECT c.name AS col_name "
+                        "FROM sys.columns c "
+                        "JOIN sys.objects o ON c.object_id = o.object_id "
+                        "JOIN sys.schemas s ON o.schema_id = s.schema_id "
+                        f"WHERE s.name = '{schema}' AND o.name = '{obj}'"
+                    )
+                    sres = await self.mcp.query_bounded(sys_sql, max_rows=500, timeout_ms=5000)
+                    if isinstance(sres, list) and sres and isinstance(sres[0], dict):
+                        stext = sres[0].get("text", "")
+                        if isinstance(stext, str):
+                            sb = stext.rfind('{')
+                            if sb >= 0:
+                                import json as _json
+                                pdata = _json.loads(stext[sb:])
+                                rows = pdata.get("rows") or []
+                                if isinstance(rows, list) and rows and isinstance(rows[0], dict):
+                                    cols = [r.get("col_name") for r in rows if r.get("col_name")]
+                                    if cols:
+                                        return cols
+                except Exception:
+                    pass
+                return []
+            import json
+            data = json.loads(text[brace_idx:])
+            cols = data.get("columns") or []
+            if cols:
+                return cols
+            rows = data.get("rows") or []
+            if rows and isinstance(rows[0], dict):
+                return list(rows[0].keys())
+            return []
+        except Exception:
+            return []
 
     async def _generate_sql_node(self, state: BaseState) -> BaseState:
         """
@@ -316,6 +491,9 @@ class JoinPlanAndSQLAgent:
             strategy = join_plan.get("strategy", "joins")
             intent = state.get("intent", {})
             metrics = intent.get("metrics", [])
+            required_action = intent.get("required_action")
+            parsed_top_k = intent.get("top_k")
+            group_by_hint = (intent.get("group_by") or "").lower()
             # Heuristic: treat "how many"/"wie viele" as COUNT if metrics empty
             user_text = (state.get("user_input") or "").lower()
             if (not metrics) and ("how many" in user_text or "wie viele" in user_text):
@@ -326,14 +504,485 @@ class JoinPlanAndSQLAgent:
             # Determine if this is an aggregation query
             has_aggregation = any(m.lower() in ["count", "sum", "total", "avg", "average", "max", "min", "most"] for m in metrics)
 
-            if strategy == "view":
+            # Force join strategy for customer Top-K SUM so we can attach a customer dimension
+            if required_action == "topk_sum_by_customer":
+                strategy = "joins"
+
+            # Extract TOP-K if present in user text
+            def _parse_top_k(text: str) -> Optional[int]:
+                import re
+                m = re.search(r"top\s+(\d{1,3})", text, flags=re.IGNORECASE)
+                try:
+                    return int(m.group(1)) if m else None
+                except Exception:
+                    return None
+
+            top_k = _parse_top_k(user_text)
+            if top_k is None and ("top" in user_text):
+                top_k = 5  # sensible default when user says "Top ..." without a number
+            if parsed_top_k and isinstance(parsed_top_k, int):
+                top_k = parsed_top_k
+            logger.info(f"🔨 [SQL_GEN] Parsed top_k from user_text='{user_text}': {top_k}")
+
+            # Detect time-series/trend requests (e.g., "over the last 3 years")
+            def _parse_last_n_units(text: str) -> Optional[Tuple[str, int]]:
+                import re
+                # e.g., "last 3 years", "last three years"
+                numerals = {
+                    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+                    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10
+                }
+                text = text.lower()
+                m = re.search(r"last\s+(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten)\s+(year|years|month|months)", text)
+                if not m:
+                    return None
+                n_raw = m.group(1)
+                unit = m.group(2)
+                try:
+                    n = int(n_raw)
+                except Exception:
+                    n = numerals.get(n_raw, None)
+                if not n:
+                    return None
+                return ("years" if "year" in unit else "months", n)
+
+            def _contains_month_name(text: str) -> Optional[int]:
+                months = {
+                    "january":1, "february":2, "march":3, "april":4, "may":5, "june":6,
+                    "july":7, "august":8, "september":9, "october":10, "november":11, "december":12,
+                    # German
+                    "januar":1, "februar":2, "märz":3, "maerz":3, "april":4, "mai":5, "juni":6,
+                    "juli":7, "august":8, "september":9, "oktober":10, "november":11, "dezember":12
+                }
+                for k, v in months.items():
+                    if k in text:
+                        return v
+                return None
+
+            entities = [e.lower() for e in (intent.get("primary_entities") or [])]
+            wants_count = any(m.lower() == "count" for m in metrics)
+            last_n = _parse_last_n_units(user_text)
+            month_literal = _contains_month_name(user_text)
+
+            # Helper to pick a date column when needed by time filters
+            async def _ensure_columns_for(table_name: str) -> List[str]:
+                cols = column_index.get(table_name) if isinstance(column_index, dict) else None
+                if cols:
+                    return cols
+                # Probe if missing
+                probed = await self._probe_columns(table_name)
+                if isinstance(column_index, dict):
+                    column_index[table_name] = probed
+                return probed
+
+            def _pick_date_column(columns: List[str]) -> Optional[str]:
+                tokens = ["datum", "date", "zeit", "time", "created", "erfass", "belegdatum", "posted", "buchung", "liefer", "rechn"]
+                lc = [c.lower() for c in columns]
+                for t in tokens:
+                    for i, name in enumerate(lc):
+                        if t in name:
+                            return columns[i]
+                return None
+
+            # Trend (time series) by year for last N years
+            if wants_count and last_n and strategy == "joins" or wants_count and last_n:
+                primary_table = join_plan.get("primary_table")
+                cols = await _ensure_columns_for(primary_table)
+                date_col = _pick_date_column(cols)
+                if date_col:
+                    unit, n = last_n
+                    if unit == "years":
+                        sql = (
+                            f"SELECT YEAR({date_col}) AS period_year, COUNT(*) AS total_count "
+                            f"FROM {primary_table} "
+                            f"WHERE {date_col} >= DATEADD(year, -{max(1,n)}, GETDATE()) "
+                            f"GROUP BY YEAR({date_col}) ORDER BY period_year"
+                        )
+                        state["sql_query"] = sql
+                        return state
+                    elif unit == "months":
+                        sql = (
+                            f"SELECT FORMAT({date_col}, 'yyyy-MM') AS period_month, COUNT(*) AS total_count "
+                            f"FROM {primary_table} "
+                            f"WHERE {date_col} >= DATEADD(month, -{max(1,n)}, GETDATE()) "
+                            f"GROUP BY FORMAT({date_col}, 'yyyy-MM') ORDER BY period_month"
+                        )
+                        state["sql_query"] = sql
+                        return state
+
+            # Specific month (e.g., "October"): default to current year
+            if wants_count and month_literal is not None:
+                primary_table = join_plan.get("primary_table")
+                cols = await _ensure_columns_for(primary_table)
+                date_col = _pick_date_column(cols)
+                if date_col:
+                    sql = (
+                        f"SELECT COUNT(*) AS total_count FROM {primary_table} "
+                        f"WHERE MONTH({date_col}) = {month_literal} AND YEAR({date_col}) = YEAR(GETDATE())"
+                    )
+                    state["sql_query"] = sql
+                    return state
+
+            # Normalize desire for SUM aggregation (sometimes not explicitly classified)
+            entities_lc = [e.lower() for e in (intent.get("primary_entities") or [])]
+            wants_sum = any((m or '').lower() in ["sum", "total"] for m in (metrics or []))
+            if (not wants_sum) and ("top" in user_text):
+                # Heuristic: Top-K implies an aggregate ranking; prefer SUM for sales/revenue style intents
+                wants_sum = True
+
+            if required_action == "topk_sum_by_customer":
+                # Force SUM + GROUP BY customer
+                metrics = list(set([*(metrics or []), "sum"]))
+                entities_lc = [e.lower() for e in (intent.get("primary_entities") or [])]
+                primary_table = join_plan.get("primary_table", "")
+                joins = join_plan.get("joins", [])
+
+                # Try to pick a better primary that has both customer key and amount column
+                try:
+                    candidates = (state.get("relevant_tables") or []) + (state.get("candidate_views") or [])
+                    def has_tokens(cols: List[str], tokens: List[str]) -> bool:
+                        lc = [c.lower() for c in cols or []]
+                        return any(any(t in name for t in tokens) for name in lc)
+
+                    sum_tokens = ["umsatz", "betrag", "amount", "total", "summe", "preis", "gesamtpreis", "netto", "brutto", "rechnungsbetrag"]
+                    cust_key_tokens = ["kunde", "kundennr", "kundennummer", "customer", "adress", "adressid"]
+                    label_tokens = ["name", "matchcode", "firma", "company"]
+
+                    best_primary = primary_table
+                    best_score = -1
+                    for c in candidates[:10]:
+                        name = c if isinstance(c, str) else (c.get("table_name") or c.get("name") or c.get("full_name") or "")
+                        if not name:
+                            continue
+                        cols = column_index.get(name) if isinstance(column_index, dict) else None
+                        if not cols:
+                            cols = await self._probe_columns(name)
+                            if isinstance(column_index, dict):
+                                column_index[name] = cols
+                        if not cols:
+                            continue
+                        has_amount = has_tokens(cols, sum_tokens)
+                        has_cust_key = has_tokens(cols, cust_key_tokens)
+                        has_label = has_tokens(cols, label_tokens)
+                        # Score: require amount; prefer also customer key or label
+                        score = (1 if has_amount else 0) + (1 if has_cust_key else 0) + (1 if has_label else 0)
+                        if score > best_score:
+                            best_score = score
+                            best_primary = name
+                        if best_score >= 3:
+                            break
+                    if best_primary and best_primary != primary_table and best_score > 0:
+                        primary_table = best_primary
+                        join_plan["primary_table"] = best_primary
+                except Exception:
+                    pass
+                # Safeguard: if chosen primary is not sales-like, force a sales-view primary from candidate_views
+                try:
+                    def _looks_sales(nm: str) -> bool:
+                        n = (nm or "").lower()
+                        return any(t in n for t in ["vk","verkauf","rechnung","beleg","umsatz","invoice","order"]) and not any(a in n for a in ["ek","archive","archiv","projekt"])
+                    if not _looks_sales(primary_table):
+                        cand_views = state.get("candidate_views", []) or []
+                        for cv in cand_views:
+                            nm = cv if isinstance(cv, str) else (cv.get("table_name") or cv.get("name") or cv.get("full_name") or "")
+                            if nm and _looks_sales(nm):
+                                primary_table = nm
+                                join_plan["primary_table"] = nm
+                                break
+                except Exception:
+                    pass
+                # Ensure a customer-like dimension is present via dynamic column intersection (no name hardcodes)
+                try:
+                    def candidate_keys(cols: List[str]) -> List[str]:
+                        keys = []
+                        lc = [c.lower() for c in (cols or [])]
+                        for i, nm in enumerate(lc):
+                            if nm == 'id' or nm.endswith('_id') or nm.endswith('id') or 'nr' in nm or 'number' in nm:
+                                keys.append((cols or [None])[i])
+                        return keys
+
+                    def has_label_column(cols: List[str]) -> bool:
+                        lc = [c.lower() for c in (cols or [])]
+                        return any(('name' in nm) or ('label' in nm) or ('title' in nm) for nm in lc)
+
+                    # Probe primary columns
+                    pcols = column_index.get(primary_table) if isinstance(column_index, dict) else None
+                    if not pcols:
+                        pcols = await self._probe_columns(primary_table)
+                        if isinstance(column_index, dict):
+                            column_index[primary_table] = pcols
+                    pkeys = set(candidate_keys(pcols))
+
+                    has_join = any(isinstance(j, dict) and j.get("table") and j.get("on") for j in (joins or []))
+                    if not has_join and pkeys:
+                        candidates = (state.get("candidate_views") or []) + (state.get("relevant_tables") or [])
+                        best_dim = None
+                        best_pair = None
+                        for c in candidates:
+                            name = c if isinstance(c, str) else (c.get("table_name") or c.get("name") or c.get("full_name") or "")
+                            if not name or name == primary_table:
+                                continue
+                            dcols = column_index.get(name) if isinstance(column_index, dict) else None
+                            if not dcols:
+                                dcols = await self._probe_columns(name)
+                                if isinstance(column_index, dict):
+                                    column_index[name] = dcols
+                            if not dcols or not has_label_column(dcols):
+                                continue
+                            dkeys = set(candidate_keys(dcols))
+                            # Prefer exact key-name intersections
+                            inter = [k for k in pkeys if k in dkeys]
+                            if inter:
+                                best_dim = name
+                                best_pair = (inter[0], inter[0])
+                                break
+                            # Otherwise try case-insensitive match without underscores
+                            def norm(s: str) -> str:
+                                return (s or '').lower().replace('_', '')
+                            inter2 = [(pk, dk) for pk in pkeys for dk in dkeys if norm(pk) == norm(dk)]
+                            if inter2:
+                                best_dim = name
+                                best_pair = inter2[0]
+                                break
+                        if best_dim and best_pair:
+                            pk, dk = best_pair
+                            joins = list(joins or [])
+                            joins.append({
+                                "table": best_dim,
+                                "on": f"{primary_table}.{pk} = {best_dim}.{dk}",
+                                "type": "LEFT"
+                            })
+                            join_plan["joins"] = joins
+                except Exception:
+                    pass
+                # Ensure columns for primary
+                cols = column_index.get(primary_table) if isinstance(column_index, dict) else None
+                if not cols:
+                    probed = await self._probe_columns(primary_table)
+                    column_index = dict(column_index or {})
+                    column_index[primary_table] = probed
+                try:
+                    sql = self._generate_topk_sum_sql(primary_table, joins, column_index, time_window, top_k or 5)
+                except AttributeError:
+                    # Minimal inline builder fallback
+                    pcols = column_index.get(primary_table, []) if isinstance(column_index, dict) else []
+                    def pick_sum(columns: List[str]) -> Optional[str]:
+                        toks = [
+                            "umsatz", "betrag", "amount", "total", "summe", "value", "preis",
+                            "gesamtpreis", "netto", "brutto", "rechnungsbetrag", "erloes", "erlös",
+                            "umsatzbetrag", "positionswert", "gesamtwert"
+                        ]
+                        lc = [c.lower() for c in (columns or [])]
+                        for t in toks:
+                            for i, nm in enumerate(lc):
+                                if t in nm:
+                                    return (columns or [None])[i]
+                        return None
+                    def pick_name(columns: List[str]) -> Optional[str]:
+                        lc = [c.lower() for c in (columns or [])]
+                        for i, nm in enumerate(lc):
+                            if ("name" in nm) or ("matchcode" in nm) or ("firma" in nm) or ("company" in nm):
+                                return (columns or [None])[i]
+                        return None
+                    sum_col = pick_sum(pcols)
+                    group_expr = None
+                    on_clauses = []
+                    for j in (joins or []):
+                        jt = j.get("table"); on = j.get("on");
+                        if jt and on:
+                            on_clauses.append((jt, on))
+                            jcols = column_index.get(jt, []) if isinstance(column_index, dict) else []
+                            if not group_expr:
+                                name_col = pick_name(jcols)
+                                if name_col:
+                                    group_expr = f"{jt}.{name_col}"
+                    if not sum_col:
+                        # last resort: count rows
+                        select_agg = "COUNT(*) AS total_value"
+                    else:
+                        select_agg = f"SUM({primary_table}.{sum_col}) AS total_value"
+                    sql = f"SELECT TOP {max(1, top_k or 5)} "
+                    if group_expr:
+                        sql += f"{group_expr} AS customer, "
+                    sql += f"{select_agg} FROM {primary_table}"
+                    for jt, on in on_clauses:
+                        sql += f" LEFT JOIN {jt} ON {on}"
+                    if group_expr:
+                        sql += f" GROUP BY {group_expr} ORDER BY total_value DESC"
+                    else:
+                        sql += " ORDER BY (SELECT NULL)"
+                # If SQL still lacks a SUM/GROUP BY, rebuild strictly from discovery-provided sources
+                try:
+                    up_sql = (sql or "").upper()
+                    wants_sum_now = "SUM(" in up_sql and "GROUP BY" in up_sql
+                    if not wants_sum_now:
+                        pool: List[str] = []
+                        for c in (state.get("relevant_tables") or []):
+                            if isinstance(c, str):
+                                pool.append(c)
+                        for cv in (state.get("candidate_views") or []):
+                            if isinstance(cv, str):
+                                pool.append(cv)
+                            elif isinstance(cv, dict):
+                                nm = cv.get("table_name") or cv.get("name") or cv.get("full_name")
+                                if nm:
+                                    pool.append(nm)
+                        def looks_salesy(name: str) -> bool:
+                            n = (name or "").lower()
+                            return any(t in n for t in ["vk","verkauf","rechnung","beleg","position","umsatz","invoice","order"]) and not any(a in n for a in ["archiv","archive","ek","projekt"])
+                        best = None
+                        for name in pool:
+                            if not looks_salesy(name):
+                                continue
+                            rc = column_index.get(name) if isinstance(column_index, dict) else None
+                            if not rc:
+                                rc = await self._probe_columns(name)
+                                if isinstance(column_index, dict):
+                                    column_index[name] = rc
+                            if any(t in (c or '').lower() for c in (rc or []) for t in ["umsatz","betrag","amount","total","summe","preis","gesamtpreis","wert","vkpreis","verkaufspreis","vkwert","verkaufswert"]):
+                                best = name
+                                break
+                        if best:
+                            primary_table = best
+                            # Build group-by
+                            def pick_group_any(columns: List[str]) -> Optional[str]:
+                                lc = [c.lower() for c in (columns or [])]
+                                label_tokens = ["kunde","kunden","customer","matchcode","name","firma","company"]
+                                key_tokens = ["kundennr","kunden_id","kundenid","adressid","customerid","kdnr","debitor","debitornr"]
+                                for t in label_tokens:
+                                    for i, nm in enumerate(lc):
+                                        if t in nm:
+                                            return (columns or [None])[i]
+                                for t in key_tokens:
+                                    for i, nm in enumerate(lc):
+                                        if t in nm:
+                                            return (columns or [None])[i]
+                                return None
+                            def pick_sum_any(columns: List[str]) -> Optional[str]:
+                                lc = [c.lower() for c in (columns or [])]
+                                for t in ["umsatz","betrag","amount","total","summe","preis","gesamtpreis","wert","vkpreis","verkaufspreis","vkwert","verkaufswert"]:
+                                    for i, nm in enumerate(lc):
+                                        if t in nm:
+                                            return (columns or [None])[i]
+                                return None
+                            rc = column_index.get(primary_table, []) if isinstance(column_index, dict) else []
+                            sumc = pick_sum_any(rc)
+                            gc_expr = None
+                            for j in (joins or []):
+                                jt = j.get("table"); jcols = column_index.get(jt, []) if isinstance(column_index, dict) else []
+                                if not jcols:
+                                    jcols = await self._probe_columns(jt)
+                                    if isinstance(column_index, dict):
+                                        column_index[jt] = jcols
+                                cand = pick_group_any(jcols)
+                                if cand:
+                                    gc_expr = f"{jt}.{cand}"
+                                    break
+                            if not gc_expr:
+                                cand = pick_group_any(rc)
+                                if cand:
+                                    gc_expr = f"{primary_table}.{cand}"
+                            sql = f"SELECT TOP {max(1, top_k or 5)} "
+                            if gc_expr:
+                                sql += f"{gc_expr} AS customer, "
+                            if sumc:
+                                sql += f"SUM({primary_table}.{sumc}) AS total_value FROM {primary_table}"
+                            else:
+                                sql += f"COUNT(*) AS total_value FROM {primary_table}"
+                            for j in (joins or []):
+                                jt = j.get("table"); on = j.get("on"); jt = jt or ""; on = on or ""
+                                if jt and on:
+                                    sql += f" LEFT JOIN {jt} ON {on}"
+                            if gc_expr:
+                                sql += f" GROUP BY {gc_expr} ORDER BY total_value DESC"
+                            else:
+                                sql += " ORDER BY (SELECT NULL)"
+                except Exception:
+                    pass
+
+                state["sql_query"] = sql
+                return state
+            elif required_action == "trend_series":
+                # Generate grouped trend series (year/month) using detected date columns
+                primary_table = join_plan.get("primary_table", "")
+                joins = join_plan.get("joins", [])
+                granularity = (intent.get("time_granularity") or "year").lower()
+                # Ensure columns available
+                cols = column_index.get(primary_table) if isinstance(column_index, dict) else None
+                if not cols:
+                    probed = await self._probe_columns(primary_table)
+                    column_index = dict(column_index or {})
+                    column_index[primary_table] = probed
+                sql = self._generate_trend_series_sql(primary_table, joins, column_index, time_window, granularity)
+                state["sql_query"] = sql
+                return state
+            elif required_action == "month_count":
+                # Month literal path already handled above; ensure COUNT fallback
+                primary_table = join_plan.get("primary_table", "")
+                # Ensure columns are available so date filters can be applied
+                try:
+                    cols = column_index.get(primary_table) if isinstance(column_index, dict) else None
+                    if not cols:
+                        probed = await self._probe_columns(primary_table)
+                        column_index = dict(column_index or {})
+                        column_index[primary_table] = probed
+                        cols = probed
+                except Exception:
+                    pass
+                # Prefer explicit BETWEEN using detected or fallback date column
+                start = end = None
+                if isinstance(time_window, dict):
+                    start = time_window.get("start")
+                    end = time_window.get("end")
+                def pick_date(columns: List[str]) -> Optional[str]:
+                    tokens = ["beleg", "datum", "date", "erfass", "buch", "liefer", "rechn"]
+                    lc = [c.lower() for c in (columns or [])]
+                    for t in tokens:
+                        for i, nm in enumerate(lc):
+                            if t in nm:
+                                return (columns or [None])[i]
+                    return None
+                date_col = pick_date(cols or [])
+                if (not date_col) and (start and end):
+                    for fb in ["Belegdatum", "Erfassungsdatum", "Buchungsdatum", "Liefertermin", "Rechnungsdatum"]:
+                        date_col = fb
+                        break
+                if start and end and date_col:
+                    sql = (
+                        f"SELECT COUNT(*) AS total_count FROM {primary_table} "
+                        f"WHERE {date_col} >= '{start}' AND {date_col} <= '{end}'"
+                    )
+                else:
+                    sql = self._generate_aggregation_sql_with_hints(primary_table, ["count"], time_window, column_index)
+                state["sql_query"] = sql
+                return state
+            elif strategy == "view":
                 # View-based query
                 primary_table = join_plan.get("primary_table", "")
                 filters = join_plan.get("where_filters", [])
 
-                if has_aggregation:
-                    # Generate aggregation SQL based on intent using column_index hints
-                    sql = self._generate_aggregation_sql_with_hints(primary_table, metrics, time_window, column_index)
+                if has_aggregation or wants_sum:
+                    # Prefer TOP-K SUM aggregated SQL for customer revenue intents even when using views
+                    entities = entities_lc
+                    if wants_sum and (top_k is not None) and any(e in ["customer", "customers", "kunde", "kunden"] for e in entities):
+                        # Ensure we have columns, probe if missing
+                        cols = column_index.get(primary_table) if isinstance(column_index, dict) else None
+                        if not cols:
+                            probed = await self._probe_columns(primary_table)
+                            column_index = dict(column_index or {})
+                            column_index[primary_table] = probed
+                        sql = self._generate_topk_sum_sql(primary_table, [], column_index, time_window, top_k)
+                    else:
+                        # Ensure date columns are available for time_window filters
+                        try:
+                            if time_window and (not (isinstance(column_index, dict) and column_index.get(primary_table))):
+                                probed = await self._probe_columns(primary_table)
+                                column_index = dict(column_index or {})
+                                column_index[primary_table] = probed
+                        except Exception:
+                            pass
+                        # Generate aggregation SQL based on intent using column_index hints
+                        sql = self._generate_aggregation_sql_with_hints(primary_table, metrics, time_window, column_index)
                 else:
                     # Regular SELECT * query
                     sql = f"SELECT TOP {self.row_limit} * FROM {primary_table}"
@@ -349,9 +998,25 @@ class JoinPlanAndSQLAgent:
                 joins = join_plan.get("joins", [])
                 filters = join_plan.get("where_filters", [])
 
-                if has_aggregation:
-                    # Try to produce a meaningful aggregate using column_index hints
-                    sql = self._generate_aggregation_sql_with_hints(primary_table, metrics, time_window, column_index)
+                if has_aggregation or wants_sum:
+                    # Try to produce a meaningful aggregate; ensure columns exist via probe if needed
+                    if wants_sum and (top_k is not None):
+                        cols = column_index.get(primary_table) if isinstance(column_index, dict) else None
+                        if not cols:
+                            probed = await self._probe_columns(primary_table)
+                            column_index = dict(column_index or {})
+                            column_index[primary_table] = probed
+                        sql = self._generate_topk_sum_sql(primary_table, joins, column_index, time_window, top_k)
+                    else:
+                        # Ensure columns are available to enable date-based filters
+                        try:
+                            if time_window and (not (isinstance(column_index, dict) and column_index.get(primary_table))):
+                                probed = await self._probe_columns(primary_table)
+                                column_index = dict(column_index or {})
+                                column_index[primary_table] = probed
+                        except Exception:
+                            pass
+                        sql = self._generate_aggregation_sql_with_hints(primary_table, metrics, time_window, column_index)
 
                     # Add JOINs if present
                     for join in joins:
@@ -384,6 +1049,19 @@ class JoinPlanAndSQLAgent:
                         where_conditions = self._build_where_conditions(filters)
                         if where_conditions:
                             sql += " WHERE " + " AND ".join(where_conditions)
+
+            # Fallback correction: if we intended TOP-K SUM but ended with SELECT * (exploratory), force aggregate
+            try:
+                sql_upper = (sql or "").upper()
+                if wants_sum and (top_k is not None):
+                    if sql_upper.startswith("SELECT TOP ") and "* FROM" in sql_upper:
+                        # Force regenerate using aggregate builder
+                        primary_table = join_plan.get("primary_table", "")
+                        joins = join_plan.get("joins", [])
+                        logger.info("🔨 [SQL_GEN] Overriding exploratory SELECT * with TOP-K SUM aggregate SQL")
+                        sql = self._generate_topk_sum_sql(primary_table, joins, column_index, time_window, top_k)
+            except Exception:
+                pass
 
             # 🔧 CRITICAL VALIDATION: Ensure SQL is valid before returning
             logger.info(f"🔨 [SQL_GEN] Generated SQL: '{sql}'")
@@ -588,7 +1266,17 @@ async def create_join_sql_agent(
     def _build_time_window_conditions(self, time_window: str) -> List[str]:
         """Build time-based WHERE conditions."""
         conditions = []
-        time_window_lower = time_window.lower()
+        if isinstance(time_window, dict):
+            start = time_window.get("start")
+            end = time_window.get("end")
+            # Caller must replace column name appropriately; here we default to a generic column
+            # Prefer consumers to use _generate_aggregation_sql_with_hints which substitutes date_col
+            if start and end:
+                conditions.append(f"order_date >= '{start}'")
+                conditions.append(f"order_date <= '{end}'")
+            return conditions
+
+        time_window_lower = (time_window or "").lower()
 
         if "last month" in time_window_lower:
             # Last month: from first day of previous month to last day of previous month
@@ -642,24 +1330,35 @@ async def create_join_sql_agent(
 
         where_conditions = []
         date_col = pick_date_column(cols)
+        if not date_col and (not cols) and time_window:
+            # Fallback: try common date columns seen in ERP views
+            for fallback_col in ["Belegdatum", "Liefertermin", "Erfassungsdatum"]:
+                date_col = fallback_col
+                break
         if time_window and date_col:
-            # Use MSSQL-safe expressions; replace generic order_date with date_col
+            # Support dictionary-based time windows (with explicit start/end) and string heuristics
             tw_conds = []
-            tw = (time_window or "").lower()
-            if "last month" in tw or "letzten monat" in tw:
-                tw_conds = [
-                    f"{date_col} >= DATEADD(month, -1, DATEADD(day, 1, EOMONTH(GETDATE(), -1)))",
-                    f"{date_col} <= EOMONTH(GETDATE(), -1)"
-                ]
-            elif "this month" in tw or "diesen monat" in tw:
-                tw_conds = [
-                    f"{date_col} >= DATEADD(day, 1, EOMONTH(GETDATE(), -1))",
-                    f"{date_col} <= EOMONTH(GETDATE())"
-                ]
-            elif "this year" in tw or "dieses jahr" in tw:
-                tw_conds = [f"YEAR({date_col}) = YEAR(GETDATE())"]
-            elif "last year" in tw or "letztes jahr" in tw:
-                tw_conds = [f"YEAR({date_col}) = YEAR(GETDATE()) - 1"]
+            if isinstance(time_window, dict):
+                start = time_window.get("start")
+                end = time_window.get("end")
+                if start and end:
+                    tw_conds = [f"{date_col} >= '{start}'", f"{date_col} <= '{end}'"]
+            else:
+                tw = (time_window or "").lower()
+                if "last month" in tw or "letzten monat" in tw:
+                    tw_conds = [
+                        f"{date_col} >= DATEADD(month, -1, DATEADD(day, 1, EOMONTH(GETDATE(), -1)))",
+                        f"{date_col} <= EOMONTH(GETDATE(), -1)"
+                    ]
+                elif "this month" in tw or "diesen monat" in tw:
+                    tw_conds = [
+                        f"{date_col} >= DATEADD(day, 1, EOMONTH(GETDATE(), -1))",
+                        f"{date_col} <= EOMONTH(GETDATE())"
+                    ]
+                elif "this year" in tw or "dieses jahr" in tw:
+                    tw_conds = [f"YEAR({date_col}) = YEAR(GETDATE())"]
+                elif "last year" in tw or "letztes jahr" in tw:
+                    tw_conds = [f"YEAR({date_col}) = YEAR(GETDATE()) - 1"]
             where_conditions.extend(tw_conds)
 
         if wants_sum:
@@ -680,6 +1379,141 @@ async def create_join_sql_agent(
 
         if where_conditions:
             sql += " WHERE " + " AND ".join(where_conditions)
+        return sql
+
+    def _generate_topk_sum_sql(
+        self,
+        primary_table: str,
+        joins: List[Dict[str, Any]],
+        column_index: Dict[str, List[str]],
+        time_window: Optional[str],
+        top_k: int
+    ) -> str:
+        """Generate TOP-K SUM aggregate SQL grouped by a customer-like column.
+
+        Heuristics:
+        - sum column tokens: umsatz, betrag, amount, total, summe, value, preis
+        - group-by tokens: kunde, kundennr, adress, customer, matchcode, name
+        - if no group column is found, fallback to ordering by sum and selecting TOP-K rows (no group)
+        """
+        cols_primary = column_index.get(primary_table, []) if isinstance(column_index, dict) else []
+
+        def pick_sum_column(columns: List[str]) -> Optional[str]:
+            tokens = [
+                "umsatz", "betrag", "amount", "total", "summe", "value", "preis",
+                "gesamtpreis", "netto", "brutto", "rechnungsbetrag", "erloes", "erlös",
+                "umsatzbetrag", "positionswert", "gesamtwert"
+            ]
+            lc = [c.lower() for c in columns]
+            for t in tokens:
+                for i, name in enumerate(lc):
+                    if t in name:
+                        return columns[i]
+            return None
+
+        def pick_group_column(all_columns: List[str]) -> Optional[str]:
+            tokens = [
+                "kunde", "kunden", "kundennr", "kundennummer", "customer",
+                "adress", "adresse", "adressen", "matchcode", "name", "firma", "company"
+            ]
+            lc = [c.lower() for c in all_columns]
+            for t in tokens:
+                for i, name in enumerate(lc):
+                    if t in name:
+                        return all_columns[i]
+            return None
+
+        # Collect columns from joined tables as well (if available)
+        all_cols: List[str] = list(cols_primary)
+        for j in joins or []:
+            jt = j.get("table")
+            if jt and isinstance(column_index, dict):
+                all_cols.extend(column_index.get(jt, []) or [])
+
+        sum_col = pick_sum_column(all_cols)
+        group_col = pick_group_column(all_cols)
+
+        # Base FROM with joins
+        sql = f"SELECT TOP {max(1, top_k)} "
+        if group_col:
+            sql += f"{group_col} AS customer, "
+        if sum_col:
+            sql += f"SUM({sum_col}) AS total_value "
+        else:
+            sql += "COUNT(*) AS total_value "  # Last-resort fallback
+        sql += f"FROM {primary_table}"
+
+        for join in joins or []:
+            join_type = join.get("type", "INNER")
+            join_table = join.get("table", "")
+            join_condition = join.get("on", "")
+            if join_table and join_condition:
+                sql += f" {join_type} JOIN {join_table} ON {join_condition}"
+
+        # Time window
+        where_conditions: List[str] = []
+        if time_window:
+            where_conditions.extend(self._build_time_window_conditions(time_window))
+        if where_conditions:
+            sql += " WHERE " + " AND ".join(where_conditions)
+
+        if group_col:
+            sql += f" GROUP BY {group_col} ORDER BY total_value DESC"
+        else:
+            # No group column found: order by sum/amount column if available
+            if sum_col:
+                sql += f" ORDER BY {sum_col} DESC"
+            else:
+                sql += " ORDER BY (SELECT NULL)"
+
+        return sql
+
+    def _generate_trend_series_sql(
+        self,
+        primary_table: str,
+        joins: List[Dict[str, Any]],
+        column_index: Dict[str, List[str]],
+        time_window: Optional[dict],
+        granularity: str = "year"
+    ) -> str:
+        """Generate a COUNT time series grouped by year or month using a detected date column."""
+        cols = column_index.get(primary_table, []) if isinstance(column_index, dict) else []
+
+        def pick_date_column(columns: List[str]) -> Optional[str]:
+            tokens = ["datum", "date", "zeit", "time", "created", "erfass", "belegdatum", "posted", "buchung", "liefer", "rechn"]
+            lc = [c.lower() for c in columns]
+            for t in tokens:
+                for i, name in enumerate(lc):
+                    if t in name:
+                        return columns[i]
+            return None
+
+        date_col = pick_date_column(cols)
+        if not date_col:
+            # Fallback to exploratory
+            return f"SELECT TOP 10 * FROM {primary_table} ORDER BY (SELECT NULL)"
+
+        where_conditions: List[str] = []
+        if isinstance(time_window, dict):
+            start = time_window.get("start")
+            end = time_window.get("end")
+            if start and end:
+                where_conditions.append(f"{date_col} >= '{start}'")
+                where_conditions.append(f"{date_col} <= '{end}'")
+
+        if granularity == "month":
+            select_part = f"FORMAT({date_col}, 'yyyy-MM') AS period"
+            group_part = f"FORMAT({date_col}, 'yyyy-MM')"
+            order_part = "period"
+        else:
+            select_part = f"YEAR({date_col}) AS period"
+            group_part = f"YEAR({date_col})"
+            order_part = "period"
+
+        sql = f"SELECT {select_part}, COUNT(*) AS total_count FROM {primary_table}"
+        if where_conditions:
+            sql += " WHERE " + " AND ".join(where_conditions)
+        sql += f" GROUP BY {group_part} ORDER BY {order_part}"
         return sql
 
 

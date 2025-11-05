@@ -20,8 +20,6 @@ env_path = os.path.join(project_root, '.env')
 load_dotenv(env_path)
 
 from mcp_server.config import config
-from mcp_server.db_postgres import PostgresConnector
-from mcp_server.db_mssql import MSSQLConnector
 from mcp_server.catalog import SchemaCatalog
 
 logger = logging.getLogger(__name__)
@@ -50,6 +48,8 @@ class DatabaseAdapter:
         self.dialect = config.db_dialect
         
         if self.dialect == "postgres":
+            # Lazy import to avoid requiring asyncpg unless actually used
+            from mcp_server.db_postgres import PostgresConnector
             self.connector = PostgresConnector(
                 host=config.postgres_host,
                 port=config.postgres_port,
@@ -64,6 +64,8 @@ class DatabaseAdapter:
             logger.info(f"✅ DatabaseAdapter initialized with PostgreSQL connector: {config.postgres_host}:{config.postgres_port}/{config.postgres_database}")
         
         elif self.dialect == "mssql":
+            # Lazy import to avoid importing pyodbc in postgres-only envs
+            from mcp_server.db_mssql import MSSQLConnector
             self.connector = MSSQLConnector(
                 server=config.mssql_server,
                 database=config.mssql_database,

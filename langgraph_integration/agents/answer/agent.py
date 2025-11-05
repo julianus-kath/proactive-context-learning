@@ -196,7 +196,33 @@ class AnswerAgent:
             logger.info(f"✅ Result formatted")
             logger.debug(f"  Response: {formatted[:100]}...")
 
-            state["final_response"] = formatted
+            # Append compact rows/table appendix for transparency
+            def _extract_from_tables(sql: str) -> list[str]:
+                try:
+                    import re
+                    s = (sql or "").strip()
+                    # Capture tokens after FROM and JOIN keywords
+                    tables = []
+                    for kw in [r"FROM\s+([\w\[\]\.]+)", r"JOIN\s+([\w\[\]\.]+)"]:
+                        for m in re.finditer(kw, s, flags=re.IGNORECASE):
+                            name = m.group(1)
+                            if name and name not in tables:
+                                tables.append(name)
+                    return tables[:3]
+                except Exception:
+                    return []
+
+            source_tables = _extract_from_tables(sql_query)
+            preview_rows = rows[:5] if isinstance(rows, list) else []
+            appendix = ""
+            try:
+                if preview_rows:
+                    tables_str = ", ".join(source_tables) if source_tables else "Unknown"
+                    appendix = "\n\n" + f"Tables: {tables_str}\n" + "```json\n" + json.dumps(preview_rows, default=str) + "\n```"
+            except Exception:
+                appendix = ""
+
+            state["final_response"] = formatted + appendix
             return state
 
         except Exception as e:
@@ -262,6 +288,8 @@ class AnswerAgent:
 
         user_input = state.get("user_input", "")
         error_info = state.get("error_info", {})
+        if not isinstance(error_info, dict):
+            error_info = {"type": "UNKNOWN", "message": str(error_info)}
 
         if not error_info:
             response = "An error occurred. Please try again."
@@ -270,7 +298,7 @@ class AnswerAgent:
 
         try:
             error_type = error_info.get("type", "UNKNOWN")
-            error_message = error_info.get("message", "Unknown error")
+            error_message = error_info.get("message", error_info.get("error", "Unknown error"))
             suggestion = error_info.get("suggestion", "")
 
             # Build prompt
