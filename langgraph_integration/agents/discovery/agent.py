@@ -540,6 +540,9 @@ class DiscoveryAgent:
                     # Log/audit tables
                     if any(tok in n for tok in ["log", "logs", "audit", "protokoll"]):
                         return True
+                    # UI/Grid/Template tables (NOT business data)
+                    if any(tok in n for tok in ["grid", "template", "kennzeichen", "druckbeleg", "erfassungstyp", "layout"]):
+                        return True
                     return False
                 
                 # For customer COUNT: drop ALL junk, prefer master address/customer tables

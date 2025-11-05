@@ -1241,90 +1241,6 @@ class JoinPlanAndSQLAgent:
             logger.warning(f"Failed to parse relations result: {e}")
             return []
 
-
-# Exported function to create the agent
-async def create_join_sql_agent(
-    llm_model: str = "gpt-4o",
-    max_joins: int = 3
-) -> JoinPlanAndSQLAgent:
-    """Factory function to create a JoinPlanAndSQLAgent instance."""
-    return JoinPlanAndSQLAgent(llm_model=llm_model, max_joins=max_joins)
-
-
-    def _generate_aggregation_sql(self, primary_table: str, metrics: List[str], filters: List[Dict], time_window: Optional[str]) -> str:
-        """Generate aggregation SQL for single table queries."""
-        select_parts = []
-        group_by_cols = []
-
-        # For now, generate exploratory SQL that shows data structure
-        # This is better than failing with hardcoded column names
-        sql = f"SELECT TOP 10 * FROM {primary_table}"
-
-        # Add time window filter if specified
-        where_conditions = []
-        if time_window:
-            where_conditions.extend(self._build_time_window_conditions(time_window))
-
-        if where_conditions:
-            sql += " WHERE " + " AND ".join(where_conditions)
-
-        sql += " ORDER BY (SELECT NULL)"  # Dummy ORDER BY to ensure query works
-
-        return sql
-
-
-    def _build_where_conditions(self, filters: List[Dict]) -> List[str]:
-        """Build WHERE conditions from filter list."""
-        where_conditions = []
-        for f in filters:
-            if isinstance(f, dict):
-                col = f.get("column", "")
-                op = f.get("operator", "=")
-                val = f.get("value", "")
-                # Only quote non-numeric values
-                val_str = str(val).strip()
-                try:
-                    # Try to parse as float; if successful, it's numeric
-                    float(val_str)
-                    condition = f"{col} {op} {val_str}"  # No quotes for numeric
-                except ValueError:
-                    # Not numeric, quote it
-                    condition = f"{col} {op} '{val_str}'"  # Quotes for string
-                where_conditions.append(condition)
-            else:
-                where_conditions.append(str(f))
-        return where_conditions
-
-    def _build_time_window_conditions(self, time_window: str) -> List[str]:
-        """Build time-based WHERE conditions."""
-        conditions = []
-        if isinstance(time_window, dict):
-            start = time_window.get("start")
-            end = time_window.get("end")
-            # Caller must replace column name appropriately; here we default to a generic column
-            # Prefer consumers to use _generate_aggregation_sql_with_hints which substitutes date_col
-            if start and end:
-                conditions.append(f"order_date >= '{start}'")
-                conditions.append(f"order_date <= '{end}'")
-            return conditions
-
-        time_window_lower = (time_window or "").lower()
-
-        if "last month" in time_window_lower:
-            # Last month: from first day of previous month to last day of previous month
-            conditions.append("order_date >= DATEADD(month, -1, DATEADD(day, 1, EOMONTH(GETDATE(), -1)))")
-            conditions.append("order_date <= EOMONTH(GETDATE(), -1)")
-        elif "this month" in time_window_lower:
-            conditions.append("order_date >= DATEADD(day, 1, EOMONTH(GETDATE(), -1))")
-            conditions.append("order_date <= EOMONTH(GETDATE())")
-        elif "this year" in time_window_lower:
-            conditions.append("YEAR(order_date) = YEAR(GETDATE())")
-        elif "last year" in time_window_lower:
-            conditions.append("YEAR(order_date) = YEAR(GETDATE()) - 1")
-
-        return conditions
-
-
     def _generate_aggregation_sql_with_hints(self, primary_table: str, metrics: List[str], time_window: Optional[str], column_index: Dict[str, List[str]]) -> str:
         """Heuristic aggregate SQL using column_index to pick columns."""
         cols = column_index.get(primary_table, []) if isinstance(column_index, dict) else []
@@ -1425,152 +1341,215 @@ async def create_join_sql_agent(
 
         Heuristics:
         - sum column tokens: umsatz, betrag, amount, total, summe, value, preis
-        - group-by tokens: kunde, kundennr, adress, customer, matchcode, name
-        - if no group column is found, fallback to ordering by sum and selecting TOP-K rows (no group)
+        - group column tokens: kunde, kunden, customer, matchcode, name, firma, company
+        - If joins exist, prefer label columns from joined customer dimensions
         """
-        cols_primary = column_index.get(primary_table, []) if isinstance(column_index, dict) else []
+        pcols = column_index.get(primary_table, []) if isinstance(column_index, dict) else []
 
-        def pick_sum_column(columns: List[str]) -> Optional[str]:
+        def pick_sum_col(columns: List[str]) -> Optional[str]:
             tokens = [
                 "umsatz", "betrag", "amount", "total", "summe", "value", "preis",
                 "gesamtpreis", "netto", "brutto", "rechnungsbetrag", "erloes", "erlös",
-                "umsatzbetrag", "positionswert", "gesamtwert"
+                "umsatzbetrag", "positionswert", "gesamtwert", "wert", "vkpreis", "vkwert",
+                "verkaufspreis", "verkaufswert"
             ]
-            lc = [c.lower() for c in columns]
+            lc = [c.lower() for c in (columns or [])]
             for t in tokens:
-                for i, name in enumerate(lc):
-                    if t in name:
-                        return columns[i]
+                for i, nm in enumerate(lc):
+                    if t in nm:
+                        return (columns or [None])[i]
             return None
 
-        def pick_group_column(all_columns: List[str]) -> Optional[str]:
-            tokens = [
-                "kunde", "kunden", "kundennr", "kundennummer", "customer",
-                "adress", "adresse", "adressen", "matchcode", "name", "firma", "company"
-            ]
-            lc = [c.lower() for c in all_columns]
+        def pick_group_rc(columns: List[str]) -> Optional[str]:
+            """Pick a label-like column for GROUP BY (name, matchcode, etc.)"""
+            tokens = ["kunde", "kunden", "customer", "matchcode", "name", "firma", "company"]
+            lc = [c.lower() for c in (columns or [])]
             for t in tokens:
-                for i, name in enumerate(lc):
-                    if t in name:
-                        return all_columns[i]
+                for i, nm in enumerate(lc):
+                    if t in nm:
+                        return (columns or [None])[i]
             return None
 
-        # Collect columns from joined tables as well (if available)
-        all_cols: List[str] = list(cols_primary)
-        for j in joins or []:
+        def pick_group_any(columns: List[str]) -> Optional[str]:
+            """Fallback: pick any ID-like or label-like column"""
+            lc = [c.lower() for c in (columns or [])]
+            # Prefer label-like first, else id/key-like
+            label_tokens = ["kunde", "kunden", "customer", "matchcode", "name", "firma", "company"]
+            key_tokens = [
+                "kundennr", "kunden_nr", "kundenid", "kunden_id", "adressid", "adresse_id",
+                "customerid", "customer_id", "kundenummer", "kundennummer", "kdnr", "debitor", "debitornr"
+            ]
+            for t in label_tokens:
+                for i, nm in enumerate(lc):
+                    if t in nm:
+                        return (columns or [None])[i]
+            for t in key_tokens:
+                for i, nm in enumerate(lc):
+                    if t in nm:
+                        return (columns or [None])[i]
+            return None
+
+        sum_col = pick_sum_col(pcols)
+        group_col = None
+
+        # Build FROM clause with JOINs
+        from_clause = primary_table
+        for j in (joins or []):
             jt = j.get("table")
-            if jt and isinstance(column_index, dict):
-                all_cols.extend(column_index.get(jt, []) or [])
+            on = j.get("on")
+            jtype = j.get("type", "LEFT")
+            if jt and on:
+                from_clause += f" {jtype} JOIN {jt} ON {on}"
+                # Try to find group column from joined table
+                jcols = column_index.get(jt, []) if isinstance(column_index, dict) else []
+                if jcols and not group_col:
+                    group_col = pick_group_rc(jcols)
+                    if group_col:
+                        group_col = f"{jt}.{group_col}"
 
-        sum_col = pick_sum_column(all_cols)
-        group_col = pick_group_column(all_cols)
-
-        # Base FROM with joins
-        sql = f"SELECT TOP {max(1, top_k)} "
-        if group_col:
-            sql += f"{group_col} AS customer, "
-        if sum_col:
-            sql += f"SUM({sum_col}) AS total_value "
-        else:
-            # Try composite amount when explicit amount is missing
-            def _pick_price(columns: List[str]) -> Optional[str]:
-                toks = ["preis", "price", "vkpreis", "verkaufspreis", "einzelpreis", "positionspreis"]
-                lc = [c.lower() for c in (columns or [])]
-                for t in toks:
-                    for i, nm in enumerate(lc):
-                        if t in nm:
-                            return (columns or [None])[i]
-                return None
-            def _pick_qty(columns: List[str]) -> Optional[str]:
-                toks = ["menge", "qty", "quantity", "anzahl", "stueck", "stück"]
-                lc = [c.lower() for c in (columns or [])]
-                for t in toks:
-                    for i, nm in enumerate(lc):
-                        if t in nm:
-                            return (columns or [None])[i]
-                return None
-            _price = _pick_price(all_cols)
-            _qty = _pick_qty(all_cols)
-            if _price and _qty:
-                sql += f"SUM({_price} * {_qty}) AS total_value "
-            elif _price:
-                sql += f"SUM({_price}) AS total_value "
+        # If no group column from joins, try primary table
+        if not group_col:
+            g = pick_group_rc(pcols)
+            if g:
+                group_col = f"{primary_table}.{g}"
             else:
-                sql += "COUNT(*) AS total_value "  # Last-resort fallback
-        sql += f"FROM {primary_table}"
+                # Ultimate fallback
+                g2 = pick_group_any(pcols)
+                if g2:
+                    group_col = f"{primary_table}.{g2}"
 
-        for join in joins or []:
-            join_type = join.get("type", "INNER")
-            join_table = join.get("table", "")
-            join_condition = join.get("on", "")
-            if join_table and join_condition:
-                sql += f" {join_type} JOIN {join_table} ON {join_condition}"
+        if not sum_col:
+            # No sum column found, return exploratory
+            return f"SELECT TOP {top_k} * FROM {from_clause}"
 
-        # Time window
-        where_conditions: List[str] = []
+        if not group_col:
+            # No group column, return simple SUM
+            return f"SELECT SUM({sum_col}) AS total_revenue FROM {from_clause}"
+
+        # Full TOP-K SUM GROUP BY
+        sql = f"SELECT TOP {top_k} {group_col}, SUM({sum_col}) AS total_revenue FROM {from_clause}"
+
+        # Add WHERE conditions for time_window if applicable
+        where_conditions = []
         if time_window:
-            where_conditions.extend(self._build_time_window_conditions(time_window))
+            # Try to find a date column
+            def pick_date(columns: List[str]) -> Optional[str]:
+                tokens = ["datum", "date", "zeit", "time", "created", "erfass", "belegdatum", "posted", "rechnung"]
+                lc = [c.lower() for c in (columns or [])]
+                for t in tokens:
+                    for i, nm in enumerate(lc):
+                        if t in nm:
+                            return (columns or [None])[i]
+                return None
+
+            date_col = pick_date(pcols)
+            if date_col:
+                date_col = f"{primary_table}.{date_col}"
+                tw = (time_window or "").lower()
+                if "last month" in tw or "letzten monat" in tw:
+                    where_conditions.extend([
+                        f"{date_col} >= DATEADD(month, -1, DATEADD(day, 1, EOMONTH(GETDATE(), -1)))",
+                        f"{date_col} <= EOMONTH(GETDATE(), -1)"
+                    ])
+                elif "this month" in tw or "diesen monat" in tw:
+                    where_conditions.extend([
+                        f"{date_col} >= DATEADD(day, 1, EOMONTH(GETDATE(), -1))",
+                        f"{date_col} <= EOMONTH(GETDATE())"
+                    ])
+                elif "this year" in tw or "dieses jahr" in tw:
+                    where_conditions.append(f"YEAR({date_col}) = YEAR(GETDATE())")
+                elif "last year" in tw or "letztes jahr" in tw:
+                    where_conditions.append(f"YEAR({date_col}) = YEAR(GETDATE()) - 1")
+
         if where_conditions:
             sql += " WHERE " + " AND ".join(where_conditions)
 
-        if group_col:
-            sql += f" GROUP BY {group_col} ORDER BY total_value DESC"
-        else:
-            # No group column found: order by sum/amount column if available
-            if sum_col:
-                sql += f" ORDER BY {sum_col} DESC"
-            else:
-                sql += " ORDER BY (SELECT NULL)"
+        sql += f" GROUP BY {group_col} ORDER BY total_revenue DESC"
+        return sql
+
+
+# Exported function to create the agent
+async def create_join_sql_agent(
+    llm_model: str = "gpt-4o",
+    max_joins: int = 3
+) -> JoinPlanAndSQLAgent:
+    """Factory function to create a JoinPlanAndSQLAgent instance."""
+    return JoinPlanAndSQLAgent(llm_model=llm_model, max_joins=max_joins)
+
+
+    def _generate_aggregation_sql(self, primary_table: str, metrics: List[str], filters: List[Dict], time_window: Optional[str]) -> str:
+        """Generate aggregation SQL for single table queries."""
+        select_parts = []
+        group_by_cols = []
+
+        # For now, generate exploratory SQL that shows data structure
+        # This is better than failing with hardcoded column names
+        sql = f"SELECT TOP 10 * FROM {primary_table}"
+
+        # Add time window filter if specified
+        where_conditions = []
+        if time_window:
+            where_conditions.extend(self._build_time_window_conditions(time_window))
+
+        if where_conditions:
+            sql += " WHERE " + " AND ".join(where_conditions)
+
+        sql += " ORDER BY (SELECT NULL)"  # Dummy ORDER BY to ensure query works
 
         return sql
 
-    def _generate_trend_series_sql(
-        self,
-        primary_table: str,
-        joins: List[Dict[str, Any]],
-        column_index: Dict[str, List[str]],
-        time_window: Optional[dict],
-        granularity: str = "year"
-    ) -> str:
-        """Generate a COUNT time series grouped by year or month using a detected date column."""
-        cols = column_index.get(primary_table, []) if isinstance(column_index, dict) else []
 
-        def pick_date_column(columns: List[str]) -> Optional[str]:
-            tokens = ["datum", "date", "zeit", "time", "created", "erfass", "belegdatum", "posted", "buchung", "liefer", "rechn"]
-            lc = [c.lower() for c in columns]
-            for t in tokens:
-                for i, name in enumerate(lc):
-                    if t in name:
-                        return columns[i]
-            return None
+    def _build_where_conditions(self, filters: List[Dict]) -> List[str]:
+        """Build WHERE conditions from filter list."""
+        where_conditions = []
+        for f in filters:
+            if isinstance(f, dict):
+                col = f.get("column", "")
+                op = f.get("operator", "=")
+                val = f.get("value", "")
+                # Only quote non-numeric values
+                val_str = str(val).strip()
+                try:
+                    # Try to parse as float; if successful, it's numeric
+                    float(val_str)
+                    condition = f"{col} {op} {val_str}"  # No quotes for numeric
+                except ValueError:
+                    # Not numeric, quote it
+                    condition = f"{col} {op} '{val_str}'"  # Quotes for string
+                where_conditions.append(condition)
+            else:
+                where_conditions.append(str(f))
+        return where_conditions
 
-        date_col = pick_date_column(cols)
-        if not date_col:
-            # Fallback to exploratory
-            return f"SELECT TOP 10 * FROM {primary_table} ORDER BY (SELECT NULL)"
-
-        where_conditions: List[str] = []
+    def _build_time_window_conditions(self, time_window: str) -> List[str]:
+        """Build time-based WHERE conditions."""
+        conditions = []
         if isinstance(time_window, dict):
             start = time_window.get("start")
             end = time_window.get("end")
+            # Caller must replace column name appropriately; here we default to a generic column
+            # Prefer consumers to use _generate_aggregation_sql_with_hints which substitutes date_col
             if start and end:
-                where_conditions.append(f"{date_col} >= '{start}'")
-                where_conditions.append(f"{date_col} <= '{end}'")
+                conditions.append(f"order_date >= '{start}'")
+                conditions.append(f"order_date <= '{end}'")
+            return conditions
 
-        if granularity == "month":
-            select_part = f"FORMAT({date_col}, 'yyyy-MM') AS period"
-            group_part = f"FORMAT({date_col}, 'yyyy-MM')"
-            order_part = "period"
-        else:
-            select_part = f"YEAR({date_col}) AS period"
-            group_part = f"YEAR({date_col})"
-            order_part = "period"
+        time_window_lower = (time_window or "").lower()
 
-        sql = f"SELECT {select_part}, COUNT(*) AS total_count FROM {primary_table}"
-        if where_conditions:
-            sql += " WHERE " + " AND ".join(where_conditions)
-        sql += f" GROUP BY {group_part} ORDER BY {order_part}"
-        return sql
+        if "last month" in time_window_lower:
+            # Last month: from first day of previous month to last day of previous month
+            conditions.append("order_date >= DATEADD(month, -1, DATEADD(day, 1, EOMONTH(GETDATE(), -1)))")
+            conditions.append("order_date <= EOMONTH(GETDATE(), -1)")
+        elif "this month" in time_window_lower:
+            conditions.append("order_date >= DATEADD(day, 1, EOMONTH(GETDATE(), -1))")
+            conditions.append("order_date <= EOMONTH(GETDATE())")
+        elif "this year" in time_window_lower:
+            conditions.append("YEAR(order_date) = YEAR(GETDATE())")
+        elif "last year" in time_window_lower:
+            conditions.append("YEAR(order_date) = YEAR(GETDATE()) - 1")
+
+        return conditions
+
 
 
 # Sync wrapper for LangGraph Studio

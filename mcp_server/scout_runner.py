@@ -429,11 +429,21 @@ class ScoutRunner:
                             score = min(1.0, score + 0.6)
                             reasons.append("Customer master boost")
                     
-                    # Revenue/sum intent: boost sales transaction tables
+                    # Revenue/sum intent: STRONG boost for sales transaction tables, penalize non-sales
                     elif any(op in ["sum", "total", "revenue"] for op in intent_operations):
-                        if any(tok in name_lower for tok in ["vkposition", "rechnungsposition", "position", "rechnung", "vkbeleg", "invoice", "order", "umsatz"]) and not is_junk:
-                            score = min(1.0, score + 0.5)
-                            reasons.append("Sales transaction boost")
+                        # STRONG boost for actual sales/invoice tables
+                        if any(tok in name_lower for tok in ["vkposition", "rechnungsposition", "position", "rechnung", "rechnungen", "vkbeleg", "vkbelege", "invoice", "invoices", "order", "orders", "umsatz", "faktura"]) and not is_junk:
+                            # Extra boost if "position" or "rechnung" (core sales tables)
+                            if any(tok in name_lower for tok in ["vkposition", "rechnungsposition", "rechnung", "rechnungen", "invoice"]):
+                                score = min(1.0, score + 0.8)
+                                reasons.append("CORE sales transaction boost")
+                            else:
+                                score = min(1.0, score + 0.5)
+                                reasons.append("Sales transaction boost")
+                        # PENALIZE dispatch/project/warehouse tables for revenue queries
+                        elif any(tok in name_lower for tok in ["dispo", "dispatch", "projekt", "project", "lager", "warehouse", "verursacher"]):
+                            score = max(0.0, score - 0.4)
+                            reasons.append("Non-sales table penalty")
                 
                 # 7. Row count bonus (non-empty tables preferred)
                 if estimated_rows and estimated_rows > 0:
