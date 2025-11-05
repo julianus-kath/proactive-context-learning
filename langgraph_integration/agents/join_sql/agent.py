@@ -182,7 +182,8 @@ class JoinPlanAndSQLAgent:
         try:
             fk_hints = []
 
-            for table_name in relevant_tables[:self.max_joins]:  # Limit to prevent explosion
+            # Probe relations for up to 10 candidate tables to broaden FK graph
+            for table_name in relevant_tables[:10]:  # widened scope but still bounded
                 try:
                     logger.debug(f"  Fetching relations for {table_name}...")
                     result = await self.mcp.list_relations(table_name)
@@ -244,6 +245,8 @@ class JoinPlanAndSQLAgent:
             return {**state, "error_info": error}
 
         try:
+            # Ensure column_index is available for column-based decisions
+            column_index = state.get("column_index", {}) or {}
             # Classify tables by role from names (light heuristic)
             def is_customer(name: str) -> bool:
                 n = (name or "").lower()
@@ -251,10 +254,13 @@ class JoinPlanAndSQLAgent:
 
             def is_sales(name: str) -> bool:
                 n = (name or "").lower()
+                # Exclude admin/permission/auth tables
+                if any(x in n for x in ["berecht", "permission", "rechte", "user", "role", "auth"]):
+                    return False
                 return any(t in n for t in [
                     "vk", "verkauf", "rechnung", "rechnungs", "beleg", "belege",
                     "auftrags", "auftrag", "pos", "position", "positionen",
-                    "invoice", "invoices", "order", "orders", "umsatz"
+                    "invoice", "invoices", "order", "orders", "umsatz", "faktura"
                 ])
 
             def is_product(name: str) -> bool:
@@ -270,19 +276,41 @@ class JoinPlanAndSQLAgent:
             if wants_sum:
                 for t in relevant_tables:
                     if is_sales(t):
-                        primary = t
-                        break
+                        # Ensure columns contain amount-like metrics; otherwise skip
+                        cols_t = column_index.get(t) if isinstance(column_index, dict) else None
+                        if not cols_t:
+                            try:
+                                cols_t = await self._probe_columns(t)
+                                if isinstance(column_index, dict):
+                                    column_index[t] = cols_t
+                            except Exception:
+                                cols_t = []
+                        lc = [c.lower() for c in (cols_t or [])]
+                        if any(tok in nm for nm in lc for tok in ["umsatz","betrag","amount","total","preis","wert","gesamtpreis","vkpreis","verkaufspreis"]):
+                            primary = t
+                            break
                 # Consider candidate views if no sales-like table found
                 if not primary:
                     cand_views = state.get("candidate_views", []) or []
                     for c in cand_views:
                         name = c if isinstance(c, str) else (c.get("table_name") or c.get("name") or c.get("full_name") or "")
                         if name and is_sales(name):
-                            primary = name
-                            # Ensure it is present in relevant_tables pool for downstream processing
-                            if name not in relevant_tables:
-                                relevant_tables = [name] + list(relevant_tables)
-                            break
+                            # Check amount-like columns
+                            cols_v = column_index.get(name) if isinstance(column_index, dict) else None
+                            if not cols_v:
+                                try:
+                                    cols_v = await self._probe_columns(name)
+                                    if isinstance(column_index, dict):
+                                        column_index[name] = cols_v
+                                except Exception:
+                                    cols_v = []
+                            lcv = [c.lower() for c in (cols_v or [])]
+                            if any(tok in nm for nm in lcv for tok in ["umsatz","betrag","amount","total","preis","wert","gesamtpreis","vkpreis","verkaufspreis"]):
+                                primary = name
+                                # Ensure it is present in relevant_tables pool for downstream processing
+                                if name not in relevant_tables:
+                                    relevant_tables = [name] + list(relevant_tables)
+                                break
                 # Do not search beyond discovery outputs (planner must not expand the set of sources)
                 # If no sales-like candidate is present in discovery outputs, we keep the current primary and rely on discovery tuning
             # Count of products: prefer product/article master tables
@@ -680,7 +708,9 @@ class JoinPlanAndSQLAgent:
                 try:
                     def _looks_sales(nm: str) -> bool:
                         n = (nm or "").lower()
-                        return any(t in n for t in ["vk","verkauf","rechnung","beleg","umsatz","invoice","order"]) and not any(a in n for a in ["ek","archive","archiv","projekt"])
+                        if any(x in n for x in ["berecht", "permission", "rechte", "user", "role", "auth"]):
+                            return False
+                        return any(t in n for t in ["vk","verkauf","rechnung","beleg","umsatz","invoice","order","position","umsatz","faktura"]) and not any(a in n for a in ["archiv","archive","ek","projekt"])
                     if not _looks_sales(primary_table):
                         cand_views = state.get("candidate_views", []) or []
                         for cv in cand_views:
@@ -829,7 +859,9 @@ class JoinPlanAndSQLAgent:
                                     pool.append(nm)
                         def looks_salesy(name: str) -> bool:
                             n = (name or "").lower()
-                            return any(t in n for t in ["vk","verkauf","rechnung","beleg","position","umsatz","invoice","order"]) and not any(a in n for a in ["archiv","archive","ek","projekt"])
+                            if any(x in n for x in ["berecht", "permission", "rechte", "user", "role", "auth"]):
+                                return False
+                            return any(t in n for t in ["vk","verkauf","rechnung","beleg","position","umsatz","invoice","order","position","umsatz","faktura"]) and not any(a in n for a in ["archiv","archive","ek","projekt"])
                         best = None
                         for name in pool:
                             if not looks_salesy(name):
@@ -1440,7 +1472,31 @@ async def create_join_sql_agent(
         if sum_col:
             sql += f"SUM({sum_col}) AS total_value "
         else:
-            sql += "COUNT(*) AS total_value "  # Last-resort fallback
+            # Try composite amount when explicit amount is missing
+            def _pick_price(columns: List[str]) -> Optional[str]:
+                toks = ["preis", "price", "vkpreis", "verkaufspreis", "einzelpreis", "positionspreis"]
+                lc = [c.lower() for c in (columns or [])]
+                for t in toks:
+                    for i, nm in enumerate(lc):
+                        if t in nm:
+                            return (columns or [None])[i]
+                return None
+            def _pick_qty(columns: List[str]) -> Optional[str]:
+                toks = ["menge", "qty", "quantity", "anzahl", "stueck", "stück"]
+                lc = [c.lower() for c in (columns or [])]
+                for t in toks:
+                    for i, nm in enumerate(lc):
+                        if t in nm:
+                            return (columns or [None])[i]
+                return None
+            _price = _pick_price(all_cols)
+            _qty = _pick_qty(all_cols)
+            if _price and _qty:
+                sql += f"SUM({_price} * {_qty}) AS total_value "
+            elif _price:
+                sql += f"SUM({_price}) AS total_value "
+            else:
+                sql += "COUNT(*) AS total_value "  # Last-resort fallback
         sql += f"FROM {primary_table}"
 
         for join in joins or []:

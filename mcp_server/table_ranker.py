@@ -154,27 +154,81 @@ class TableRanker:
                 score += 0.05
                 reasons.append("View preference")
 
-            # Penalize archive/archiv tables (likely historical, not primary business tables)
-            if 'archiv' in name_lower or 'archiv' in full_name_lower or 'archive' in name_lower:
-                score = max(0.0, score - 0.3)
-                reasons.append("Archive penalty")
+            # CRITICAL: Strongly penalize archive/admin/config/permission tables
+            # These are never primary business data sources for user queries
+            penalty_tokens = [
+                'archiv', 'archive',  # Historical archives
+                'berecht', 'berechtigung', 'permission', 'rechte', 'zugriff',  # Permissions/auth
+                'user', 'users', 'benutzer', 'rolle', 'role',  # User/role management
+                'config', 'konfiguration', 'einstellung', 'settings',  # Configuration
+                'belegart', 'belegnummer', 'nummernkreis',  # Document type config
+                'log', 'audit', 'protokoll',  # Logging/audit
+            ]
+            is_config_admin = any(tok in name_lower or tok in full_name_lower for tok in penalty_tokens)
+            if is_config_admin:
+                score = max(0.0, score - 0.7)  # Heavy penalty
+                reasons.append("Config/admin/archive penalty")
 
             # Revenue intent heuristics (boost sales-like, penalize address-only)
             try:
                 tokens = (entities or [])
-                revenue_like = any(tok in ['umsatz','revenue','verkauf','vk','rechnung','invoice','order','position','positions','beleg','belege','faktura'] for tok in [str(t).lower() for t in tokens])
+                revenue_like = any(tok in ['umsatz','revenue','verkauf','vk','rechnung','invoice','order','position','positions','beleg','belege','faktura','sale','sales'] for tok in [str(t).lower() for t in tokens])
                 if revenue_like:
-                    sales_like = any(tok in name_lower for tok in ['vk','verkauf','rechnung','rechnungs','beleg','belege','position','positionen','umsatz','invoice','order','faktura'])
-                    addr_like = any(tok in name_lower for tok in ['adresse','adressen','address','kontakt','contacts','khkadressen'])
-                    if sales_like:
-                        score = min(1.0, score + 0.3)
-                        reasons.append("Sales/revenue boost")
-                    if addr_like and not sales_like:
-                        score = max(0.0, score - 0.3)
-                        reasons.append("Address-only penalty for revenue intent")
+                    # Strong boost for transaction/position tables (actual sales data)
+                    sales_like = any(tok in name_lower for tok in ['vkposition','rechnungsposition','position','positionen','rechnungen','rechnung','vkbeleg','belege','auftrag','auftrags','invoice','invoices','order','orders','umsatz','faktura','verkauf'])
+                    # Weak relevance for dimension tables (customers/addresses)
+                    dim_like = any(tok in name_lower for tok in ['adresse','adressen','address','kontakt','contacts','khkadressen','kunde','kunden','customer'])
+                    # Irrelevant: cockpit/dashboard/aggregates
+                    cockpit_like = any(tok in name_lower for tok in ['cockpit','dashboard','report','summary','zusammenfassung','übersicht','uebersicht'])
+                    
+                    if sales_like and not cockpit_like:
+                        score = min(1.0, score + 0.5)  # Strong boost for transactional sources
+                        reasons.append("Sales transaction boost")
+                    elif dim_like and not sales_like:
+                        score = max(0.0, score - 0.2)  # Weak penalty for dimensions only
+                        reasons.append("Dimension-only penalty for revenue intent")
+                    elif cockpit_like:
+                        score = max(0.0, score - 0.4)  # Strong penalty for pre-aggregated views
+                        reasons.append("Cockpit/dashboard penalty")
+                    
                     # Small bonus for non-empty candidates
                     if (estimated_rows or 0) > 0:
                         score = min(1.0, score + 0.05)
+            except Exception:
+                pass
+            
+            # Customer count intent: boost master address/customer tables, penalize project/sales
+            try:
+                operations_str = ' '.join([str(op).lower() for op in (intent_operations or [])])
+                is_count = 'count' in operations_str
+                customer_like = any(tok in ['kunde','kunden','customer','customers','client','clients'] for tok in [str(t).lower() for t in (entities or [])])
+                if is_count and customer_like:
+                    # Boost canonical customer master tables
+                    if any(tok in name_lower for tok in ['khkadressen','adressen','kunden','kunde','customer']):
+                        if not any(tok in name_lower for tok in ['projekt','vk','verkauf','rechnung','beleg','cockpit','archive','archiv']):
+                            score = min(1.0, score + 0.6)  # Very strong boost
+                            reasons.append("Customer master table boost")
+                    # Penalize transactional/project tables for simple customer counts
+                    if any(tok in name_lower for tok in ['projekt','projektliste','vkbeleg','vkposition','rechnung','cockpit','auftrag']):
+                        score = max(0.0, score - 0.5)
+                        reasons.append("Transaction table penalty for customer count")
+            except Exception:
+                pass
+            
+            # Product count intent: boost article master tables, penalize project lists
+            try:
+                product_like = any(tok in ['produkt','produkte','product','products','artikel','article','articles'] for tok in [str(t).lower() for t in (entities or [])])
+                is_count = 'count' in ' '.join([str(op).lower() for op in (intent_operations or [])])
+                if is_count and product_like:
+                    # Boost article/product master tables
+                    if any(tok in name_lower for tok in ['artikel','artikelstamm','product','produkt']):
+                        if not any(tok in name_lower for tok in ['projekt','projektliste','vk','verkauf','lager','bestand']):
+                            score = min(1.0, score + 0.6)
+                            reasons.append("Product master table boost")
+                    # Penalize project/order line item tables
+                    if any(tok in name_lower for tok in ['projekt','projektliste','vkposition','auftragsposition']):
+                        score = max(0.0, score - 0.5)
+                        reasons.append("Project/position table penalty for product count")
             except Exception:
                 pass
 

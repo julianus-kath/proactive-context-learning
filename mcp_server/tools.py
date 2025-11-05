@@ -1169,18 +1169,37 @@ class MCPTools:
         intent_data = arguments.get("intent_data")  # Extract intent data for semantic ranking
 
         try:
-            # Phase 1: Try Scout catalog first for instant results
+            # Phase 1: Try Scout catalog first for instant results with NEW consolidated semantic search
             scout_runner = _get_scout_runner(db_manager)
             if scout_runner and scout_runner.is_ready():
-                logger.debug("Using Scout catalog for search_tables with semantic ranking")
+                logger.info(f"🔍 Using ScoutRunner.search() for '{query}' with intent-aware ranking")
 
-                # Get catalog data
-                catalog = scout_runner.get_catalog()
-                if catalog:
-                    # Perform catalog-based semantic search
-                    return await _search_tables_from_catalog(
-                        catalog, query, page, page_size, intent_data
+                # Use the NEW semantic search method from consolidated ScoutRunner
+                search_results = scout_runner.search(
+                    query=query,
+                    top_k=page_size,
+                    intent_data=intent_data
+                )
+                
+                if search_results:
+                    # Format results as MCP response
+                    formatted_text = f"🔍 Search Results for '{query}'\n\n"
+                    formatted_text += f"Total matches: {len(search_results)}\n\n"
+                    
+                    for i, result in enumerate(search_results, 1):
+                        formatted_text += f"{i}. {result['full_name']}\n"
+                        formatted_text += f"   Type: {result['type']}, Rows: {result['estimated_rows']}, Cols: {result['column_count']}\n"
+                        formatted_text += f"   Score: {result['relevance_score']:.3f}, Reasons: {', '.join(result['reasons'])}\n\n"
+                    
+                    # Return both human-readable and JSON
+                    formatted_text += f"\n📊 Full response (JSON):\n{json.dumps({'ok': True, 'data': {'results': search_results}, 'page_info': {'page': page, 'page_size': page_size, 'total_items': len(search_results)}, 'execution_time_ms': 0, 'cached': True, 'source': 'scout_runner'}, indent=2)}"
+                    
+                    return MCPToolResult(
+                        content=[{"type": "text", "text": formatted_text}],
+                        isError=False
                     )
+                else:
+                    logger.warning(f"ScoutRunner.search() returned no results for '{query}'")
 
             # Fallback to live database search
             logger.debug("Scout catalog not available, using live search")

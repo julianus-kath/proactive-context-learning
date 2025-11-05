@@ -363,6 +363,16 @@ Respond ONLY with JSON.
             # Derived action hints for downstream agents (discovery/planning/execution)
             derived = self._derive_action_hints(state.get("user_input", ""), intent)
             intent.update(derived)
+            # Merge derived extra keywords into discovery keywords (dedup + cap)
+            try:
+                if derived.get("extra_keywords"):
+                    merged_kw = (intent.get("keywords_for_discovery") or []) + list(derived.get("extra_keywords") or [])
+                    # deduplicate preserving order
+                    seen = set()
+                    merged_kw = [k for k in merged_kw if not (k in seen or seen.add(k))]
+                    intent["keywords_for_discovery"] = merged_kw[:10]
+            except Exception:
+                pass
 
             logger.info(f"🧠 [EXTRACT] Entities: {intent['primary_entities']}, Keywords: {intent['keywords_for_discovery']}")
             return {**state, "intent": intent}
@@ -375,6 +385,14 @@ Respond ONLY with JSON.
             # Also derive action hints on fallback
             derived = self._derive_action_hints(user_input, intent)
             intent.update(derived)
+            try:
+                if derived.get("extra_keywords"):
+                    merged_kw = (intent.get("keywords_for_discovery") or []) + list(derived.get("extra_keywords") or [])
+                    seen = set()
+                    merged_kw = [k for k in merged_kw if not (k in seen or seen.add(k))]
+                    intent["keywords_for_discovery"] = merged_kw[:10]
+            except Exception:
+                pass
             return {**state, "intent": intent}
 
     async def _validate_intent_node(self, state: BaseState) -> BaseState:
@@ -571,11 +589,24 @@ Keep the question clear and actionable.
         if required_action in ["topk_sum_by_customer"] and top_k is None and "top" in text:
             top_k = 5
 
+        # Enrich discovery keywords for specific actions (kept within intent parsing)
+        extra_keywords: list[str] = []
+        try:
+            if required_action in ["topk_sum_by_customer", "sum_by_customer"]:
+                extra_keywords = [
+                    # sales/revenue domain (DE/EN)
+                    "umsatz", "verkauf", "vk", "rechnung", "rechnungen", "rechnungsposition", "position", "positionen",
+                    "invoice", "invoices", "order", "orders", "faktura", "amount", "betrag", "preis", "wert"
+                ]
+        except Exception:
+            extra_keywords = []
+
         return {
             "required_action": required_action,
             "group_by": group_by,
             "top_k": top_k,
-            "time_granularity": time_granularity
+            "time_granularity": time_granularity,
+            "extra_keywords": extra_keywords
         }
 
     def _is_schema_query(self, user_lower: str) -> bool:

@@ -517,40 +517,93 @@ class DiscoveryAgent:
                     float(c.get("score", 0.0))
                 )
 
-            # Intent-specific hard filters before final sort
+            # CRITICAL: Intent-specific hard filters before final sort
+            # These are AGGRESSIVE filters to ensure archive/admin/config tables NEVER poison results
             try:
                 intent = state.get("intent", {}) or {}
                 metrics = [m.lower() for m in (intent.get("metrics") or [])]
                 entities = [e.lower() for e in (intent.get("primary_entities") or [])]
-                if ("count" in metrics) and any(e in ["product", "products", "produkt", "produkte", "artikel"] for e in entities):
+                keywords = [k.lower() for k in (intent.get("keywords_for_discovery") or [])]
+                
+                # Helper: is this table an archive/admin/config table?
+                def is_junk(c):
+                    n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
+                    # Archive tables
+                    if any(tok in n for tok in ["archiv", "archive"]):
+                        return True
+                    # Permission/auth/admin tables
+                    if any(tok in n for tok in ["berecht", "berechtigung", "permission", "rechte", "user", "users", "benutzer", "rolle", "role", "zugriff", "auth"]):
+                        return True
+                    # Config/setup tables
+                    if any(tok in n for tok in ["belegart", "belegnummer", "nummernkreis", "config", "konfiguration", "einstellung", "settings"]):
+                        return True
+                    # Log/audit tables
+                    if any(tok in n for tok in ["log", "logs", "audit", "protokoll"]):
+                        return True
+                    return False
+                
+                # For customer COUNT: drop ALL junk, prefer master address/customer tables
+                if ("count" in metrics) and any(e in ["customer", "customers", "kunde", "kunden"] for e in entities + keywords):
+                    logger.info("🎯 Filtering for customer COUNT intent")
+                    # Step 1: Drop ALL junk tables
+                    junk_dropped = [c for c in filtered if is_junk(c)]
+                    filtered = [c for c in filtered if not is_junk(c)] or junk_dropped[:1]  # Keep 1 junk ONLY if nothing else
+                    if junk_dropped:
+                        logger.info(f"🧹 Dropped {len(junk_dropped)} junk tables for customer count (kept {len(filtered)})")
+                    # Step 2: Prefer master customer tables
+                    def is_customer_master(c):
+                        n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
+                        return any(tok in n for tok in ["khkadressen", "adressen", "adresse", "kunde", "kunden", "customer"]) and not is_junk(c)
+                    masters = [c for c in filtered if is_customer_master(c)]
+                    if masters:
+                        filtered = masters
+                        logger.info(f"🎯 Restricting to {len(masters)} customer master table(s)")
+                
+                # For product COUNT: drop junk + project lists
+                elif ("count" in metrics) and any(e in ["product", "products", "produkt", "produkte", "artikel"] for e in entities + keywords):
+                    logger.info("🎯 Filtering for product COUNT intent")
+                    junk_dropped = [c for c in filtered if is_junk(c)]
+                    filtered = [c for c in filtered if not is_junk(c)] or junk_dropped[:1]
+                    if junk_dropped:
+                        logger.info(f"🧹 Dropped {len(junk_dropped)} junk tables for product count")
+                    # Also drop project lists
                     def is_project_list(c):
                         n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
-                        return any(tok in n for tok in ["projektliste", "projekt_liste", "projectlist"]) 
+                        return any(tok in n for tok in ["projektliste", "projekt_liste", "projectlist", "projekt"]) 
                     proj_dropped = [c for c in filtered if is_project_list(c)]
                     filtered = [c for c in filtered if not is_project_list(c)] or filtered
                     if proj_dropped:
-                        logger.info(f"🧹 Dropped {len(proj_dropped)} project-list candidates for product count intent")
-                # For revenue/sum intents: drop archive tables/views when possible
-                if any(m in ["sum", "total"] for m in metrics) or any(k in ["revenue", "sales", "umsatz"] for k in (intent.get("keywords_for_discovery") or [])):
-                    def is_archive(c):
+                        logger.info(f"🧹 Dropped {len(proj_dropped)} project-list candidates")
+                    # Prefer article master tables
+                    def is_product_master(c):
                         n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
-                        return ("archiv" in n) or ("archive" in n)
-                    arch_dropped = [c for c in filtered if is_archive(c)]
-                    filtered = [c for c in filtered if not is_archive(c)] or filtered
-                    if arch_dropped:
-                        logger.info(f"🧹 Dropped {len(arch_dropped)} archive candidates for revenue intent")
-                    # Prefer sales-like sources if any exist among remaining candidates
+                        return any(tok in n for tok in ["artikelstamm", "artikel", "product", "products"]) and not is_junk(c) and not is_project_list(c)
+                    masters = [c for c in filtered if is_product_master(c)]
+                    if masters:
+                        filtered = masters
+                        logger.info(f"🎯 Restricting to {len(masters)} product master table(s)")
+                
+                # For revenue/sum intents: drop junk, prefer sales transaction tables
+                elif any(m in ["sum", "total"] for m in metrics) or any(k in ["revenue", "sales", "umsatz"] for k in keywords):
+                    logger.info("🎯 Filtering for revenue/SUM intent")
+                    junk_dropped = [c for c in filtered if is_junk(c)]
+                    filtered = [c for c in filtered if not is_junk(c)] or junk_dropped[:1]
+                    if junk_dropped:
+                        logger.info(f"🧹 Dropped {len(junk_dropped)} junk tables for revenue intent")
+                    # Prefer sales transaction tables
                     def looks_sales(c):
                         n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
                         return any(tok in n for tok in [
-                            "vk", "verkauf", "rechnung", "rechnungs", "beleg", "belege",
-                            "position", "positionen", "umsatz", "invoice", "order", "faktura"
-                        ]) and not any(ex in n for ex in ["archiv", "archive", "projekt", "crm", "ek"])
+                            "vkposition", "rechnungsposition", "position", "positionen",
+                            "rechnung", "rechnungen", "vkbeleg", "belege",
+                            "auftrag", "auftrags", "invoice", "invoices", "order", "orders", "umsatz", "faktura", "verkauf"
+                        ]) and not is_junk(c) and not any(ex in n for tok in ["projekt", "crm", "ek"])
                     sales_only = [c for c in filtered if looks_sales(c)]
                     if sales_only:
-                        logger.info(f"🎯 Sales-like candidates available; restricting to {len(sales_only)} items for revenue intent")
+                        logger.info(f"🎯 Restricting to {len(sales_only)} sales transaction table(s)")
                         filtered = sales_only
-            except Exception:
+            except Exception as e:
+                logger.warning(f"⚠️  Intent filtering failed: {e}")
                 pass
 
             filtered.sort(key=rank_key, reverse=True)
@@ -591,14 +644,14 @@ class DiscoveryAgent:
                             0 if any(tok in n for tok in ["projekt", "projektliste"]) else 1
                         )
                     selected = sorted(selected, key=prod_key, reverse=True)
-                # For Top-K SUM by customer, prefer sales position/invoice sources and de-emphasize cockpit/aggregate views
+                # For Top-K SUM by customer, prefer sales position/invoice sources and de-emphasize cockpit/aggregate/config views
                 if required_action == "topk_sum_by_customer" or (("sum" in metrics) and any(e in ["customer", "customers", "kunde", "kunden"] for e in entities)):
                     def rev_key(c):
                         n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
-                        return (
-                            1 if any(tok in n for tok in ["position", "positionen", "rechnung", "rechnungs", "beleg", "belege", "vk", "verkauf"]) else 0,
-                            0 if any(tok in n for tok in ["cockpit", "auftragscockpit", "belegegesamt"]) else 1
-                        )
+                        sales_like = 1 if any(tok in n for tok in ["position", "positionen", "rechnung", "rechnungs", "beleg", "belege", "vk", "verkauf", "invoice", "order", "faktura"]) else 0
+                        bad_view = 0 if any(tok in n for tok in ["cockpit", "auftragscockpit", "belegegesamt"]) else 1
+                        cfg_pen = 0 if any(tok in n for tok in ["belegart", "berecht", "permission", "rechte", "user", "role", "auth"]) else 1
+                        return (sales_like, bad_view, cfg_pen)
                     selected = sorted(selected, key=rev_key, reverse=True)
             except Exception:
                 pass
