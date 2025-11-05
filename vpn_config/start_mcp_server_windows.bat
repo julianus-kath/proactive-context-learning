@@ -46,6 +46,29 @@ rem --- Optional: ensure uvicorn is present in THIS venv ---
   "%PYTHON_CMD%" -m pip install -q "uvicorn[standard]" fastapi
 )
 
+rem --- Force fresh catalog rebuild by deleting old catalog ---
+echo.
+echo ================================================
+echo   🔄 Forcing Fresh Catalog Rebuild
+echo ================================================
+echo.
+if exist "%PROJECT_ROOT%\data\catalog\catalog.json.gz" (
+  echo   📦 Found old catalog, deleting...
+  del /q "%PROJECT_ROOT%\data\catalog\catalog.json.gz" 2>nul
+  echo   ✅ Old catalog deleted - will rebuild with accurate row counts
+) else (
+  echo   ℹ️  No old catalog found - will build fresh catalog
+)
+echo.
+echo   Why force rebuild?
+echo     • Consolidated ScoutRunner with semantic search
+echo     • Accurate row counts from sys.dm_db_partition_stats
+echo     • Intent-aware ranking (customer/product/revenue)
+echo     • Archive table penalties + master table boosts
+echo.
+echo   ⏳ Catalog build will take 30-60 seconds on first startup...
+echo.
+
 rem --- Start the server from the project root (so mcp_server package is in sys.path) ---
 pushd "%PROJECT_ROOT%"
 echo.
@@ -53,10 +76,12 @@ echo ================================================
 echo   🚀 Starting MCP Server on 0.0.0.0:8000
 echo ================================================
 echo.
-echo   Features:
-echo     ✅ Scout Catalog (tables + views)
-echo     ✅ Discovery Tools (search, describe, list)
-echo     ✅ Hybrid Ranking (text + role coverage)
+echo   NEW Features (Consolidated Scout):
+echo     ✅ Scout Catalog with Semantic Search
+echo     ✅ Accurate Row Counts (not 0!)
+echo     ✅ Intent-Aware Ranking (archive penalties)
+echo     ✅ Customer Master Boost (KHKAdressen priority)
+echo     ✅ Fuzzy Matching (German compound words)
 echo     ✅ Safe Query Execution (read-only, timeouts)
 echo     ✅ Multi-Agent Ready (for macOS LangGraph)
 echo.
