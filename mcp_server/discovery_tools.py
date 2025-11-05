@@ -1091,8 +1091,7 @@ class DiscoveryTools:
     # Tier 1 Enhancement Tools
     # =====================================================
     
-    @staticmet
-    hod
+    @staticmethod
     async def get_view_dependencies(
         db_adapter,
         view_name: str
