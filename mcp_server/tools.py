@@ -1752,15 +1752,25 @@ class MCPTools:
             if not detail or str(detail.get('type','')).upper()!='VIEW':
                 return MCPToolResult(content=[{"type":"text","text":"View not found"}], isError=True)
             
+            # Build description payload with richer metadata if available
+            definition = detail.get('definition') or ""
+            deps = detail.get('dependencies') or detail.get('view_dependencies') or []
+            role_cov = detail.get('role_coverage') or {}
+            complexity = detail.get('complexity') or {}
             payload = {
                 "schema": detail['schema'],
                 "name": detail['name'],
                 "full_name": detail['full_name'],
                 "type": detail['type'],
                 "estimated_rows": detail.get('estimated_rows', 0),
+                "has_rows": detail.get('has_rows', None),
                 "columns": detail.get('columns', []),
                 "primary_keys": detail.get('primary_keys', []),
                 "foreign_keys": detail.get('foreign_keys', []),
+                "dependencies": deps,
+                "role_coverage": role_cov,
+                "complexity": complexity,
+                "definition_preview": definition[:500] if isinstance(definition, str) else None
             }
             # Optional sample is not recommended for views here; keep read-only safety
             return MCPToolResult(content=[{"type":"text","text": json.dumps({"ok": True, "data": payload}, cls=DecimalEncoder)}])

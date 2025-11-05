@@ -280,6 +280,14 @@ class QueryValidator:
         Returns:
             ValidationResult with modified query and metadata
         """
+        # Aggregate safety: do not cap pure aggregate-only queries
+        try:
+            if self._is_pure_aggregate_select(query):
+                logger.info("Skipping row cap for pure aggregate query")
+                return ValidationResult(valid=True, query=query, row_cap_applied=False)
+        except Exception:
+            # On parser errors, fall back to standard behavior
+            pass
         # Determine effective limit
         effective_limit = self.max_rows
         if requested_limit is not None:
@@ -295,6 +303,47 @@ class QueryValidator:
                 error_code=ValidationErrorCode.VALIDATION_FAILED,
                 error_message=f"Unsupported dialect: {self.dialect}"
             )
+
+    def _is_pure_aggregate_select(self, query: str) -> bool:
+        """
+        Heuristically detect if the SELECT is aggregate-only (no non-aggregated columns, no GROUP BY).
+        Safe to skip row caps in this case.
+        """
+        q = query.strip()
+        # Quick checks
+        if not re.match(r"^\s*SELECT\b", q, re.IGNORECASE):
+            return False
+        # If GROUP BY is present, it's not pure aggregate-only (risk of truncation changing counts)
+        if re.search(r"\bGROUP\s+BY\b", q, re.IGNORECASE):
+            return False
+        # Extract SELECT list up to FROM (best-effort, not full parser)
+        upper = q.upper()
+        if " FROM " not in upper:
+            return False
+        select_part = q[0: upper.index(" FROM ")]
+        # Remove SELECT and DISTINCT
+        select_list = re.sub(r"^\s*SELECT\s+", "", select_part, flags=re.IGNORECASE)
+        select_list = re.sub(r"^\s*DISTINCT\s+", "", select_list, flags=re.IGNORECASE)
+        # Remove whitespace
+        select_list_stripped = select_list.strip()
+        # Common aggregate-only patterns
+        agg_funcs = ["COUNT(", "SUM(", "MIN(", "MAX(", "AVG("]
+        # If select list contains only aggregates (possibly with aliases and commas)
+        # Tokenize by commas at top level (best-effort)
+        parts = [p.strip() for p in select_list_stripped.split(',') if p.strip()]
+        if not parts:
+            return False
+        for part in parts:
+            # Allow optional CAST/CONVERT wrappers around aggregates
+            part_upper = part.upper()
+            # Strip aliases using AS or space alias
+            part_upper = re.sub(r"\s+AS\s+\w+$", "", part_upper)
+            part_upper = re.sub(r"\s+\w+$", "", part_upper)
+            # Accept forms like COUNT(*), COUNT(1), SUM(col), AVG(CAST(col AS ...))
+            is_agg = any(func in part_upper for func in agg_funcs)
+            if not is_agg:
+                return False
+        return True
     
     def _inject_postgres_limit(self, query: str, limit: int) -> ValidationResult:
         """

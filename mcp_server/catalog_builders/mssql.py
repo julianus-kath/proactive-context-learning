@@ -86,19 +86,19 @@ class MSSQLCatalogBuilder:
         """
         logger.info("📊 Building table catalog...")
 
-        # Query for table metadata
+        # Query for table metadata with accurate row estimates using dm_db_partition_stats
+        # Use LEFT JOIN to include empty tables and SUM over row_count for heap/clustered indexes
         table_query = """
         SELECT
-            t.TABLE_SCHEMA,
-            t.TABLE_NAME,
-            t.TABLE_TYPE,
-            p.rows as estimated_rows
-        FROM INFORMATION_SCHEMA.TABLES t
-        LEFT JOIN sys.tables st ON t.TABLE_NAME = st.name
-        LEFT JOIN sys.schemas ss ON t.TABLE_SCHEMA = ss.name AND st.schema_id = ss.schema_id
-        LEFT JOIN sys.partitions p ON st.object_id = p.object_id AND p.index_id IN (0,1)
-        WHERE t.TABLE_TYPE = 'BASE TABLE'
-        ORDER BY t.TABLE_SCHEMA, t.TABLE_NAME
+            s.name AS TABLE_SCHEMA,
+            t.name AS TABLE_NAME,
+            'BASE TABLE' AS TABLE_TYPE,
+            ISNULL(SUM(CASE WHEN p.index_id IN (0,1) THEN p.row_count ELSE 0 END), 0) AS estimated_rows
+        FROM sys.tables t
+        INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
+        LEFT JOIN sys.dm_db_partition_stats p ON t.object_id = p.object_id
+        GROUP BY s.name, t.name
+        ORDER BY s.name, t.name
         """
 
         table_rows = await self.db_adapter.fetch(table_query)
@@ -141,22 +141,24 @@ class MSSQLCatalogBuilder:
         """
         logger.info("👁️ Building comprehensive view catalog...")
 
-        # Enhanced query for view metadata with more details
+        # Enhanced query for view metadata with more details and better row estimates for indexed views
         view_query = """
         SELECT
             v.TABLE_SCHEMA,
             v.TABLE_NAME,
-            m.definition as view_definition,
-            p.rows as estimated_rows,
+            m.definition AS view_definition,
+            ISNULL(SUM(CASE WHEN ps.index_id IN (0,1) THEN ps.row_count ELSE 0 END), 0) AS estimated_rows,
             sv.create_date,
             sv.modify_date,
-            CASE WHEN sv.is_replicated = 1 THEN 1 ELSE 0 END as is_replicated,
-            CASE WHEN sv.has_opaque_metadata = 1 THEN 1 ELSE 0 END as has_opaque_metadata
+            CASE WHEN sv.is_replicated = 1 THEN 1 ELSE 0 END AS is_replicated,
+            CASE WHEN sv.has_opaque_metadata = 1 THEN 1 ELSE 0 END AS has_opaque_metadata,
+            sv.object_id AS view_object_id
         FROM INFORMATION_SCHEMA.VIEWS v
         LEFT JOIN sys.views sv ON v.TABLE_NAME = sv.name
         LEFT JOIN sys.schemas ss ON v.TABLE_SCHEMA = ss.name AND sv.schema_id = ss.schema_id
         LEFT JOIN sys.sql_modules m ON sv.object_id = m.object_id
-        LEFT JOIN sys.partitions p ON sv.object_id = p.object_id AND p.index_id = 0
+        LEFT JOIN sys.dm_db_partition_stats ps ON sv.object_id = ps.object_id
+        GROUP BY v.TABLE_SCHEMA, v.TABLE_NAME, m.definition, sv.create_date, sv.modify_date, sv.is_replicated, sv.has_opaque_metadata, sv.object_id
         ORDER BY v.TABLE_SCHEMA, v.TABLE_NAME
         """
 
@@ -184,20 +186,35 @@ class MSSQLCatalogBuilder:
             # Calculate view complexity metrics
             complexity = self._calculate_view_complexity(definition, dependencies, columns)
 
+            # Determine has_rows with fallback micro-probe for non-indexed views
+            est_rows = int(row.get("estimated_rows") or 0)
+            has_rows_flag = est_rows > 0
+
+            if not has_rows_flag:
+                # Best-effort micro-probe using NOEXPAND to force view evaluation; tolerate errors
+                try:
+                    probe_sql = f"SELECT TOP 1 1 FROM [{schema_name}].[{view_name}] WITH (NOEXPAND)"
+                    # Use adapter's default timeout; we only fetch 1 row
+                    cols, probe_rows = await self.db_adapter.query(probe_sql, limit=1)
+                    has_rows_flag = bool(probe_rows)
+                except Exception:
+                    # Ignore probe errors; leave has_rows_flag as False
+                    pass
+
             view_metadata = {
                 "schema": schema_name,
                 "name": view_name,
                 "full_name": full_name,
                 "type": "view",
                 "definition": definition,
-                "estimated_rows": row.get("estimated_rows") or 0,
+                "estimated_rows": est_rows,
                 "column_count": len(columns),
                 "columns": columns,
                 "dependencies": dependencies,
                 "role_coverage": role_coverage,
                 "business_analysis": business_analysis,
                 "complexity": complexity,
-                "has_rows": (row.get("estimated_rows") or 0) > 0,
+                "has_rows": has_rows_flag,
                 "is_replicated": bool(row.get("is_replicated", 0)),
                 "has_opaque_metadata": bool(row.get("has_opaque_metadata", 0)),
                 "create_date": row.get("create_date").isoformat() if row.get("create_date") and hasattr(row.get("create_date"), 'isoformat') else row.get("create_date"),

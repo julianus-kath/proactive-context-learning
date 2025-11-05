@@ -1158,7 +1158,34 @@ class DiscoveryTools:
                 )
             
             # Extract view dependency info
-            dependencies = view_dict.get('view_dependencies', []) or []
+            # Accept both legacy and new builder shapes
+            raw_deps = view_dict.get('view_dependencies') or view_dict.get('dependencies') or []
+            dependencies = []
+            for d in raw_deps:
+                # New builder shape: {schema, name, type, ...}
+                if isinstance(d, dict):
+                    depends_on_schema = d.get('depends_on_schema') or d.get('schema') or 'dbo'
+                    depends_on_table = d.get('depends_on_table') or d.get('name') or d.get('entity_name')
+                    dep_type = d.get('dependency_type') or d.get('type')
+                    dependencies.append({
+                        'depends_on_schema': depends_on_schema,
+                        'depends_on_table': depends_on_table,
+                        'dependency_type': dep_type,
+                        'type': d.get('type')
+                    })
+                else:
+                    # String full_name fallback like 'dbo.Table'
+                    try:
+                        parts = str(d).split('.')
+                        depends_on_schema = parts[0] if len(parts) > 1 else 'dbo'
+                        depends_on_table = parts[1] if len(parts) > 1 else parts[0]
+                        dependencies.append({
+                            'depends_on_schema': depends_on_schema,
+                            'depends_on_table': depends_on_table,
+                            'dependency_type': 'table'
+                        })
+                    except Exception:
+                        continue
             is_materialized = view_dict.get('is_materialized_view', False)
             materialization_strategy = view_dict.get('view_materialization_strategy')
             

@@ -1013,6 +1013,50 @@ class QueryOrchestrator:
                                     logger.info(f"✨ [ANSWER] Found numeric value: {count_value}")
                                     break
 
+                # Zero-result UX: if no rows, provide structured explanation and next steps
+                if (exec_result.get("row_count") == 0) or (not rows):
+                    logger.info("✨ [ANSWER] Zero rows returned; preparing structured zero-result message")
+                    # Gather context
+                    intent = state.get("intent", {})
+                    time_window = intent.get("time_window")
+                    join_plan = state.get("join_plan", {})
+                    sql_query = state.get("sql_query", "")
+                    primary = join_plan.get("primary_table") or (intent.get("selected_table") if isinstance(intent, dict) else None)
+                    sources = []
+                    if join_plan:
+                        if join_plan.get("strategy") == "view":
+                            sources = [join_plan.get("view_name") or primary]
+                        elif join_plan.get("strategy") in ("joins", "direct"):
+                            sources = [primary] + [j.get("table") for j in join_plan.get("joins", []) if isinstance(j, dict) and j.get("table")]
+                    # Build message
+                    scope_bits = []
+                    if time_window:
+                        scope_bits.append(f"time window: {time_window}")
+                    scope_text = ", ".join(scope_bits) if scope_bits else "no explicit time window"
+                    plan_bits = []
+                    if sources:
+                        plan_bits.append("sources: " + ", ".join([s for s in sources if s]))
+                    if join_plan.get("joins"):
+                        keys = [j.get("on") for j in join_plan.get("joins", []) if isinstance(j, dict) and j.get("on")]
+                        if keys:
+                            plan_bits.append("join keys: " + "; ".join(keys))
+                    plan_text = "; ".join(plan_bits) if plan_bits else "single-source plan"
+                    suggestions = [
+                        "expand the time range (e.g., last quarter or 12 months)",
+                        "try an alternative date column (e.g., Rechnungsdatum, Buchungsdatum)",
+                        "consider a business view if available (e.g., vw_* Umsatz)",
+                    ]
+                    state["final_response"] = (
+                        "No rows matched the current plan.\n"
+                        f"- Scope: {scope_text}\n"
+                        f"- Plan: {plan_text}\n"
+                        f"- SQL preview: {sql_query[:180]}...\n"
+                        "- Next steps: " + "; ".join(suggestions)
+                    )
+                    logger.info("✨ [ANSWER] ✅ Zero-result explanation generated")
+                    debug_logger.agent_exit("answer", before_state, dict(state))
+                    return state
+
                 if count_value is not None:
                     # Provide a contextual response based on the query and table used
                     intent = state.get("intent", {})
@@ -1245,6 +1289,16 @@ class QueryOrchestrator:
                         filtered.append(t)
                 if not filtered:
                     break
+                # Reorder remaining candidates by quick COUNT(*) probe
+                try:
+                    names = [x if isinstance(x, str) else (x.get("full_name") or x.get("name", "")) for x in filtered]
+                    counts = await self._probe_candidate_counts([n for n in names if n])
+                    def sort_key(x):
+                        n = x if isinstance(x, str) else (x.get("full_name") or x.get("name", ""))
+                        return counts.get(n, 0)
+                    filtered.sort(key=sort_key, reverse=True)
+                except Exception:
+                    pass
                 relevant_tables = filtered
 
                 # Regenerate SQL with remaining candidates
@@ -1356,6 +1410,38 @@ class QueryOrchestrator:
         except Exception as e:
             logger.error(f"Error formatting execution results: {e}")
             return f"The query executed successfully and returned {execution_result.get('row_count', 'unknown')} results, but I had trouble formatting them for display."
+
+    async def _probe_candidate_counts(self, table_names: List[str]) -> Dict[str, int]:
+        """Quickly probe row counts per candidate to prioritize tables with data."""
+        counts: Dict[str, int] = {}
+        for t in table_names:
+            if not t:
+                continue
+            sql = f"SELECT COUNT(*) AS c FROM {t}"
+            try:
+                result = await self.mcp.query_bounded(sql, max_rows=1, timeout_ms=5000)
+                if isinstance(result, list) and result and isinstance(result[0], dict):
+                    # Extract JSON envelope if present
+                    import json
+                    text = result[0].get("text", "{}")
+                    payload = json.loads(text) if isinstance(text, str) and text.strip().startswith("{") else {}
+                    data = payload.get("data") or []
+                    if isinstance(data, list) and data:
+                        row0 = data[0]
+                        c = 0
+                        if isinstance(row0, dict):
+                            # pick first value
+                            try:
+                                c = int(list(row0.values())[0])
+                            except Exception:
+                                c = 0
+                        counts[t] = c
+                        continue
+                # Fallback if not in envelope shape
+                counts[t] = counts.get(t, 0)
+            except Exception:
+                counts[t] = counts.get(t, 0)
+        return counts
 
     async def _get_catalog_from_mcp(self) -> Optional[Dict[str, Any]]:
         """Get catalog data directly from MCP server."""

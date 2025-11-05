@@ -270,6 +270,38 @@ class ExecAndRecoveryAgent:
             if parsed.get("ok"):
                 logger.info(f"✅ Query executed: {parsed.get('row_count', 0)} rows, {parsed.get('execution_time_ms', 0)}ms")
                 state["exec_result"] = parsed
+
+                # Plan-level lightweight fallback: if zero rows, try COUNT(*) on primary table when available
+                try:
+                    if parsed.get("row_count", 0) == 0:
+                        join_plan = state.get("join_plan", {}) or {}
+                        primary_table = join_plan.get("primary_table")
+                        if primary_table:
+                            logger.info(f"🔍 Zero rows: probing primary table count for {primary_table}")
+                            probe_sql = f"SELECT COUNT(*) AS total_count FROM {primary_table}"
+                            probe_result = await self.mcp.query_bounded(
+                                probe_sql,
+                                max_rows=1,
+                                timeout_ms=int(timeout_ms)
+                            )
+                            probe_parsed = self._parse_query_result(probe_result)
+                            if probe_parsed.get("ok"):
+                                # Prefer non-zero count if available
+                                rows = probe_parsed.get("rows") or probe_parsed.get("data") or []
+                                if rows:
+                                    first = rows[0]
+                                    # If count > 0, adopt probe result
+                                    count_val = None
+                                    if isinstance(first, dict):
+                                        count_val = next((int(v) for k, v in first.items() if isinstance(v, (int, float))), None)
+                                    if isinstance(first, list) and first:
+                                        count_val = int(first[0]) if isinstance(first[0], (int, float)) else None
+                                    if count_val is not None and count_val > 0:
+                                        logger.info(f"🔁 Replacing zero-row result with primary-table COUNT(*)={count_val}")
+                                        state["exec_result"] = probe_parsed
+                except Exception as _:
+                    # Do not fail the flow on probe errors
+                    pass
             else:
                 error_msg = parsed.get("error", "Unknown error")
                 logger.warning(f"⚠️  Query failed: {error_msg}")
