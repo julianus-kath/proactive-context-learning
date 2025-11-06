@@ -582,12 +582,21 @@ Keep the question clear and actionable.
             required_action = "month_count"
         elif any(kw in text for kw in ["over the last", "last \d+ years", "last \d+ months", "entwickel", "trend"]):
             required_action = "trend_series"
+        elif any(kw in text for kw in ["growth", "wachstum", "increase", "gewachsen", "entwicklung"]) and any(kw in text for kw in ["over", "last", "years", "jahre", "time"]):
+            required_action = "growth_analysis"
+        elif any(kw in text for kw in ["productivity", "produktivität", "performance", "leistung", "efficiency", "effizienz"]) and any(kw in text for kw in ["department", "abteilung", "bereich", "by department"]):
+            required_action = "department_productivity"
+        elif any(kw in text for kw in ["vs", "versus", "compared", "comparison", "vergleich", "gegenüber", "gegen", "quarter", "quartal"]):
+            required_action = "comparative_analysis"
         elif "count" in metrics or "how many" in text or "wie viele" in text:
             required_action = "count"
 
         # Default top_k
         if required_action in ["topk_sum_by_customer"] and top_k is None and "top" in text:
             top_k = 5
+
+        # PHASE 6: Clarification loop for ambiguous queries
+        needs_clarification = self._check_needs_clarification(text, entities, metrics, required_action)
 
         # Enrich discovery keywords for specific actions (kept within intent parsing)
         extra_keywords: list[str] = []
@@ -639,3 +648,64 @@ Keep the question clear and actionable.
             "confidence": 0.0,
             "needs_clarification": False
         }
+
+    def _check_needs_clarification(self, text: str, entities: List[str], metrics: List[str], required_action: str) -> bool:
+        """
+        Check if the query needs clarification based on ambiguity indicators.
+
+        Returns True if clarification is needed.
+        """
+        text_lower = text.lower()
+
+        # Check for multiple conflicting metrics
+        conflicting_metrics = [
+            ("count", "sum", "total"),
+            ("min", "max"),
+        ]
+        for conflict_group in conflicting_metrics:
+            found_metrics = [m for m in metrics if m.lower() in conflict_group]
+            if len(found_metrics) > 1:
+                logger.info(f"🤔 [CLARIFICATION] Conflicting metrics: {found_metrics}")
+                return True
+
+        # Check for ambiguous entities (multiple business domains)
+        business_domains = {
+            "customer": ["kunde", "kunden", "customer", "client"],
+            "product": ["produkt", "produkte", "artikel", "product", "item"],
+            "project": ["projekt", "project", "task", "job"],
+            "sales": ["verkauf", "sales", "umsatz", "revenue"],
+            "inventory": ["lager", "inventory", "stock", "bestand"]
+        }
+
+        found_domains = []
+        for domain, keywords in business_domains.items():
+            if any(kw in text_lower for kw in keywords) or any(e.lower() in keywords for e in entities):
+                found_domains.append(domain)
+
+        if len(found_domains) > 2:
+            logger.info(f"🤔 [CLARIFICATION] Multiple business domains: {found_domains}")
+            return True
+
+        # Check for vague time periods
+        vague_times = ["recently", "lately", "recent", "past", "some time ago", "before"]
+        if any(vt in text_lower for vt in vague_times) and not any(num in text for num in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "one", "two", "three"]):
+            logger.info("🤔 [CLARIFICATION] Vague time period detected")
+            return True
+
+        # Check for ambiguous ranking requests
+        if "top" in text_lower and not any(char.isdigit() for char in text):
+            logger.info("🤔 [CLARIFICATION] 'Top' without specific number")
+            return True
+
+        # Check for unclear comparative queries
+        if any(word in text_lower for word in ["vs", "versus", "compared", "comparison", "better", "worse"]) and len(entities) < 2:
+            logger.info("🤔 [CLARIFICATION] Comparative query with insufficient entities")
+            return True
+
+        # Check for strategic queries that might need more context
+        strategic_actions_needing_clarification = ["growth_analysis", "department_productivity"]
+        if required_action in strategic_actions_needing_clarification and len(entities) == 0:
+            logger.info(f"🤔 [CLARIFICATION] Strategic action '{required_action}' needs entity clarification")
+            return True
+
+        return False

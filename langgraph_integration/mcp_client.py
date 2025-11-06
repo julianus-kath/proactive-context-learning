@@ -281,9 +281,9 @@ class MCPDatabaseTool:
                         "Content-Type": "application/json"
                     }) as session:
                         response = await session.post(
-                            f"{self.mcp_url}/mcp",
-                            json=payload,
-                            timeout=aiohttp.ClientTimeout(total=timeout_seconds)
+                        f"{self.mcp_url}/mcp",
+                        json=payload,
+                        timeout=aiohttp.ClientTimeout(total=timeout_seconds)
                         )
                         # Set proper content-type check
                         content_type = response.headers.get('Content-Type', '')
@@ -333,15 +333,15 @@ class MCPDatabaseTool:
                             result = data.get("result", data.get("content", {}))
 
                             # If result missing, but data has 'data', convert to a single text block
-                            if not result:
-                                logger.warning("MCP result is empty, checking for alternative response format")
-                                if "data" in data:
-                                    result = {"content": [{"type": "text", "text": json.dumps(data["data"])}]}
-                                else:
-                                    error_msg = "MCP response has empty result and no alternative data format"
-                                    if debug_logger:
-                                        debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
-                                    raise ValueError(error_msg)
+                        if not result:
+                            logger.warning("MCP result is empty, checking for alternative response format")
+                            if "data" in data:
+                                result = {"content": [{"type": "text", "text": json.dumps(data["data"])}]}
+                            else:
+                                error_msg = "MCP response has empty result and no alternative data format"
+                                if debug_logger:
+                                    debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
+                                raise ValueError(error_msg)
 
                             # Normalize content robustly regardless of result shape
                             try:
@@ -351,9 +351,9 @@ class MCPDatabaseTool:
                                 else:
                                     # Ensure content is a list
                                     content = result.get("content", []) if isinstance(result, dict) else []
-                                    if not isinstance(content, list):
-                                        logger.warning(f"Content is not a list, converting: {type(content)}")
-                                        content = [{"type": "text", "text": str(result)}]
+                                if not isinstance(content, list):
+                                    logger.warning(f"Content is not a list, converting: {type(content)}")
+                                    content = [{"type": "text", "text": str(result)}]
                             except Exception:
                                 # Fallback: wrap entire result as text
                                 logger.warning("Result normalization failed; wrapping as text content")

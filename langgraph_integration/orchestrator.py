@@ -34,6 +34,7 @@ from langgraph_integration.contracts.state import BaseState
 from langgraph_integration.agents.intent_parser.agent import IntentParserAgent
 from langgraph_integration.agents.discovery.agent import DiscoveryAgent
 from langgraph_integration.agents.join_sql.agent import JoinPlanAndSQLAgent
+from langgraph_integration.agents.sql_validator.agent import create_sql_validator_agent
 from langgraph_integration.agents.exec_recovery.agent import ExecAndRecoveryAgent
 from langgraph_integration.agents.answer.agent import AnswerAgent
 from langgraph_integration.agents.interpretation.agent import InterpretationAgent
@@ -110,6 +111,10 @@ class QueryOrchestrator:
             query_timeout_seconds=query_timeout_seconds
         )
         logger.info("✅ JoinPlanAndSQLAgent initialized (Views-first, MSSQL)")
+
+        # 🆕 Phase 9: SQLValidatorAgent for pre-execution validation and repair (lazy init)
+        self.sql_validator_agent = None
+        logger.info("✅ SQLValidatorAgent registered (AST validation, auto-repair)")
         
         self.exec_recovery_agent = ExecAndRecoveryAgent(
             llm_model=llm_model,
@@ -165,6 +170,7 @@ class QueryOrchestrator:
         # Agent nodes (main flow) - register async implementations directly
         graph.add_node("discovery", self._discovery_node)
         graph.add_node("join_sql", self._join_sql_node)
+        graph.add_node("validate_sql", self._validate_sql_node)
         graph.add_node("exec_recovery", self._exec_recovery_node)
         graph.add_node("answer", self._answer_node)
         # interpretation node is added once above
@@ -264,9 +270,10 @@ class QueryOrchestrator:
         )
 
         # ============= QUERY PIPELINE =============
-        # Standard query flow: discovery → join_sql → exec_recovery → answer
+        # Standard query flow: discovery → join_sql → validate_sql → exec_recovery → answer
         graph.add_edge("discovery", "join_sql")
-        graph.add_edge("join_sql", "exec_recovery")
+        graph.add_edge("join_sql", "validate_sql")
+        graph.add_edge("validate_sql", "exec_recovery")
         graph.add_edge("exec_recovery", "answer")
         # Interpretation path is terminal
         graph.add_edge("interpret", END)
@@ -671,23 +678,83 @@ class QueryOrchestrator:
         except Exception as e:
             logger.warning(f"🔗 [JOIN_SQL] Join SQL agent failed ({e}); falling back to simple selection")
             # Fallback to simple generator
-            candidate_views = state.get("candidate_views", [])
-            primary_table = await asyncio.get_event_loop().run_in_executor(
-                None, self._select_best_table_or_view_for_query, relevant_tables, candidate_views, intent
-            )
-            metrics = intent.get("metrics", [])
-            if not primary_table:
-                state["sql_query"] = ""
-                state["join_plan"] = {}
+        candidate_views = state.get("candidate_views", [])
+        primary_table = await asyncio.get_event_loop().run_in_executor(
+            None, self._select_best_table_or_view_for_query, relevant_tables, candidate_views, intent
+        )
+        metrics = intent.get("metrics", [])
+        if not primary_table:
+            state["sql_query"] = ""
+            state["join_plan"] = {}
+        else:
+            if "count" in metrics or "total" in metrics or len(metrics) == 0:
+                state["sql_query"] = f"SELECT COUNT(*) AS total_count FROM {primary_table}"
             else:
-                if "count" in metrics or "total" in metrics or len(metrics) == 0:
-                    state["sql_query"] = f"SELECT COUNT(*) AS total_count FROM {primary_table}"
-                else:
-                    state["sql_query"] = f"SELECT TOP 10 * FROM {primary_table}"
-                state["join_plan"] = {"strategy": "direct", "primary_table": primary_table}
+                state["sql_query"] = f"SELECT TOP 10 * FROM {primary_table}"
+        state["join_plan"] = {"strategy": "direct", "primary_table": primary_table}
 
         logger.info("🔗 [JOIN_SQL] SQL generation complete")
         debug_logger.agent_exit("join_sql", before_state, dict(state))
+        return state
+
+    async def _validate_sql_node(self, state: BaseState) -> BaseState:
+        """
+        Run SQLValidatorAgent for pre-execution validation and repair.
+
+        Validates SQL syntax, MSSQL dialect, table/column existence, and repairs if needed.
+        Output: validation_result, sql_query (potentially repaired)
+        """
+        debug_logger.agent_entry("validate_sql", dict(state))
+        before_state = dict(state)
+
+        logger.info("🔍 [VALIDATE_SQL] Starting SQL validation and repair")
+
+        # Check if we have SQL to validate
+        sql_query = state.get("sql_query", "")
+        if not sql_query:
+            logger.warning("🔍 [VALIDATE_SQL] No SQL query to validate")
+            state["validation_result"] = {"is_valid": False, "error_type": "no_sql"}
+            debug_logger.agent_exit("validate_sql", before_state, dict(state))
+            return state
+
+        # Ensure SQL validator is initialized
+        if not self.sql_validator_agent:
+            self.sql_validator_agent = await create_sql_validator_agent(llm_model="gpt-4o")
+
+        # Run SQLValidatorAgent
+        try:
+            validation_state = await self.sql_validator_agent(state)
+            state.update(validation_state)
+
+            validation_result = state.get("validation_result", {})
+            is_valid = validation_result.get("is_valid", False)
+            error_type = validation_result.get("error_type", "unknown")
+
+            if is_valid:
+                logger.info("🔍 [VALIDATE_SQL] ✅ SQL validation passed")
+            else:
+                logger.warning(f"🔍 [VALIDATE_SQL] ❌ SQL validation failed: {error_type}")
+
+                # Check if repair was attempted
+                repair_attempts = state.get("repair_attempts", 0)
+                if repair_attempts > 0:
+                    logger.info(f"🔍 [VALIDATE_SQL] 🔧 Repair attempted {repair_attempts} time(s)")
+                    # Check if repair succeeded
+                    if validation_result.get("is_valid", False):
+                        logger.info("🔍 [VALIDATE_SQL] ✅ Repair successful")
+                    else:
+                        logger.warning("🔍 [VALIDATE_SQL] ❌ Repair unsuccessful - proceeding with original SQL")
+
+        except Exception as e:
+            logger.error(f"🔍 [VALIDATE_SQL] Validation failed: {e}")
+            state["validation_result"] = {
+                "is_valid": False,
+                "error_type": "validation_error",
+                "error_message": str(e)
+            }
+
+        logger.info("🔍 [VALIDATE_SQL] Validation complete")
+        debug_logger.agent_exit("validate_sql", before_state, dict(state))
         return state
 
     def _select_best_table_or_view_for_query(self, tables, views, intent: Dict[str, Any]) -> str:

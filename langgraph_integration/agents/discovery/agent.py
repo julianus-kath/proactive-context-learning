@@ -164,10 +164,19 @@ class DiscoveryAgent:
             return {**state, "error_info": error}
         
         try:
-            # Search for matching tables/views using a single joined query first
+            # PHASE 5: Use strategic discovery for complex queries
+            required_action = intent.get("required_action", "")
+            strategic_actions = ["growth_analysis", "department_productivity", "comparative_analysis"]
+
             candidates: List[Dict[str, Any]] = []
-            query_str = " ".join(keywords)
-            logger.debug(f"  Searching with joined keywords: '{query_str}'")
+            if required_action in strategic_actions:
+                logger.info(f"🔍 [STRATEGIC] Using strategic discovery for {required_action}")
+                strategic_candidates = await self._strategic_query_discovery(user_input, intent)
+                candidates.extend(strategic_candidates)
+            else:
+                # Standard search for simple queries
+                query_str = " ".join(keywords)
+                logger.debug(f"  Searching with joined keywords: '{query_str}'")
             try:
                 result = await self.mcp.search_tables(query_str, page=1, page_size=10, intent_data=intent)
                 parsed = self._parse_search_result(result)
@@ -346,7 +355,7 @@ class DiscoveryAgent:
 
                 # Penalty for empty tables
                 empty_penalty = -0.5 if c.get("estimated_rows", 0) == 0 else 0
-                
+
                 # Intent-aware name bonus/penalty
                 name = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
                 keyword_bonus = 0.0
@@ -504,7 +513,7 @@ class DiscoveryAgent:
                         if not filtered:
                             filtered = sorted(candidates, key=lambda x: x.get("score", 0), reverse=True)[:1]
                     else:
-                        # Still use the best candidate even if below threshold
+                # Still use the best candidate even if below threshold
                         filtered = candidates[:1]
                 except Exception:
                     filtered = candidates[:1]
@@ -1020,7 +1029,7 @@ class DiscoveryAgent:
                         pass
             except Exception:
                 pass
-
+            
             state["relevant_tables"] = relevant_tables
             state["relevant_table_details"] = relevant_table_details
             state["schema_snippet"] = schema_snippet
@@ -1252,7 +1261,7 @@ class DiscoveryAgent:
             + 0.10 * has_rows
             + 0.05 * is_view
         )
-
+        
         # Entity-aware adjustments: prefer appropriate sources for the intent
         try:
             name = (candidate.get("table_name") or candidate.get("full_name") or "").lower()
@@ -1318,6 +1327,112 @@ class DiscoveryAgent:
             return max(0.0, min(1.0, score))
         except Exception:
             return min(1.0, score)
+
+    async def _strategic_query_discovery(self, user_input: str, intent: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Enhanced discovery for strategic/complex queries requiring multi-keyword search."""
+        logger.info(f"🔍 [STRATEGIC_DISCOVERY] Starting strategic discovery for: {user_input}")
+
+        required_action = intent.get("required_action", "")
+        entities = intent.get("primary_entities", [])
+        keywords = intent.get("keywords_for_discovery", [])
+
+        # Define search strategies based on query type
+        search_strategies = {
+            "growth_analysis": {
+                "primary_keywords": ["kunde", "kunden", "customer", "customers", "adress", "adressen"],
+                "secondary_keywords": ["datum", "date", "created", "erfass"],
+                "boost_patterns": ["adressen", "kunden", "customer"],
+                "exclude_patterns": ["grid", "template", "kennzeichen", "druckbeleg"]
+            },
+            "department_productivity": {
+                "primary_keywords": ["mitarbeiter", "employee", "personal", "staff", "abteilung", "department"],
+                "secondary_keywords": ["produktivität", "productivity", "leistung", "performance", "effizienz"],
+                "boost_patterns": ["mitarbeiter", "employee", "abteilung", "department"],
+                "exclude_patterns": ["grid", "template", "config", "setup"]
+            },
+            "comparative_analysis": {
+                "primary_keywords": ["umsatz", "revenue", "verkauf", "sales", "betrag", "amount"],
+                "secondary_keywords": ["datum", "date", "quartal", "quarter", "monat", "month"],
+                "boost_patterns": ["vkposition", "rechnung", "invoice", "umsatz", "revenue"],
+                "exclude_patterns": ["grid", "template", "kennzeichen", "config"]
+            }
+        }
+
+        strategy = search_strategies.get(required_action, {
+            "primary_keywords": keywords + entities,
+            "secondary_keywords": [],
+            "boost_patterns": entities,
+            "exclude_patterns": ["grid", "template", "kennzeichen", "druckbeleg", "config"]
+        })
+
+        # Perform multi-keyword search
+        all_candidates = []
+
+        # Search primary keywords
+        for keyword in strategy["primary_keywords"][:3]:  # Limit to avoid overload
+            try:
+                logger.debug(f"🔍 [STRATEGIC] Searching primary keyword: '{keyword}'")
+                result = await self.mcp.search_tables(keyword, page=1, page_size=15)
+                parsed = self._parse_search_result(result)
+                if parsed:
+                    all_candidates.extend(parsed)
+            except Exception as e:
+                logger.debug(f"🔍 [STRATEGIC] Primary search for '{keyword}' failed: {e}")
+
+        # Search secondary keywords if we have few results
+        if len(all_candidates) < 5 and strategy["secondary_keywords"]:
+            for keyword in strategy["secondary_keywords"][:2]:
+                try:
+                    logger.debug(f"🔍 [STRATEGIC] Searching secondary keyword: '{keyword}'")
+                    result = await self.mcp.search_tables(keyword, page=1, page_size=10)
+                    parsed = self._parse_search_result(result)
+                    if parsed:
+                        all_candidates.extend(parsed)
+                except Exception as e:
+                    logger.debug(f"🔍 [STRATEGIC] Secondary search for '{keyword}' failed: {e}")
+
+        # Deduplicate and apply strategic scoring
+        seen = set()
+        unique_candidates = []
+        for candidate in all_candidates:
+            table_name = candidate.get("table_name", "")
+            if table_name and table_name not in seen:
+                seen.add(table_name)
+
+                # Apply strategic scoring boosts
+                score = candidate.get("relevance_score", 0.0)
+
+                # Boost for strategy patterns
+                table_lower = table_name.lower()
+                for pattern in strategy["boost_patterns"]:
+                    if pattern.lower() in table_lower:
+                        score = min(1.0, score + 0.3)
+                        break
+
+                # Penalize excluded patterns
+                for pattern in strategy["exclude_patterns"]:
+                    if pattern.lower() in table_lower:
+                        score = max(0.0, score - 0.5)
+                        break
+
+                candidate["relevance_score"] = score
+                unique_candidates.append(candidate)
+
+        # Sort by strategic score
+        unique_candidates.sort(key=lambda x: (
+            -x.get("relevance_score", 0),
+            -x.get("estimated_rows", 0),
+            x.get("table_name", "")
+        ))
+
+        # Take top candidates
+        top_candidates = unique_candidates[:8]
+
+        logger.info(f"🔍 [STRATEGIC_DISCOVERY] Found {len(top_candidates)} strategic candidates")
+        for i, c in enumerate(top_candidates[:3]):
+            logger.info(f"🔍 [STRATEGIC] {i+1}. {c.get('table_name')} (score: {c.get('relevance_score', 0):.2f})")
+
+        return top_candidates
 
 
 # Exported function to create and run the agent
