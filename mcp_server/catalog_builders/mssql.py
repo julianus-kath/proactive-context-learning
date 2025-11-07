@@ -121,7 +121,7 @@ class MSSQLCatalogBuilder:
         ORDER BY s.name, t.name
         """
 
-        table_rows = await self.db_adapter.fetch(table_query)
+        table_rows = await self.db_adapter.fetch(table_query, limit=None)  # Get all tables, no limit
         tables = {}
 
         for row in table_rows:
@@ -180,7 +180,7 @@ class MSSQLCatalogBuilder:
         ORDER BY v.TABLE_SCHEMA, v.TABLE_NAME
         """
 
-        view_rows = await self.db_adapter.fetch(view_query)
+        view_rows = await self.db_adapter.fetch(view_query, limit=None)  # Get all views, no limit
         views = {}
 
         for row in view_rows:
@@ -275,7 +275,7 @@ class MSSQLCatalogBuilder:
         ORDER BY s1.name, t1.name, fk.name
         """
 
-        fk_rows = await self.db_adapter.fetch(fk_query)
+        fk_rows = await self.db_adapter.fetch(fk_query, limit=None)  # Get all relationships, no limit
         relationships = []
 
         for row in fk_rows:
