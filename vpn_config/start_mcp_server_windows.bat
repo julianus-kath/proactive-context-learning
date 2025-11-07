@@ -61,47 +61,42 @@ if exist "%CATALOG_FILE%" (
   if exist "%METADATA_FILE%" (
     echo   📦 Found existing catalog and metadata files
 
-    rem --- Extract catalog age using PowerShell ---
-    for /f "usebackq tokens=2 delims=:,}" %%A in (`"powershell -NoLogo -NoProfile -Command ^
-      try { ^
-        $metadata = Get-Content '%METADATA_FILE%' | ConvertFrom-Json; ^
-        $timestamp = [DateTime]::Parse($metadata.timestamp); ^
-        $ageSeconds = ([DateTime]::UtcNow - $timestamp).TotalSeconds; ^
-        $ttlHours = $metadata.ttl_hours; ^
-        $ttlSeconds = $ttlHours * 3600; ^
-        \"age_seconds=:$ageSeconds, ttl_seconds=:$ttlSeconds\" ^
-      } catch { \"age_seconds=:error, ttl_seconds=:error\" }"`) do (
-      set "CATALOG_INFO=%%A"
+    rem --- Check catalog TTL using Python script ---
+    for /f "tokens=*" %%i in ('"%PYTHON_CMD%" "%PROJECT_ROOT%\check_catalog_ttl.py" "%PROJECT_ROOT%"') do (
+      set "TTL_LINE=%%i"
+      rem Parse each line of output
+      if "!TTL_LINE:~0,11!"=="AGE_SECONDS" (
+        set "!TTL_LINE!"
+      )
+      if "!TTL_LINE:~0,11!"=="TTL_SECONDS" (
+        set "!TTL_LINE!"
+      )
+      if "!TTL_LINE:~0,13!"=="TTL_THRESHOLD" (
+        set "!TTL_LINE!"
+      )
+      if "!TTL_LINE:~0,6!"=="STATUS" (
+        set "!TTL_LINE!"
+      )
+      if "!TTL_LINE!"=="NO_METADATA" (
+        echo   ⚠️  Could not read catalog metadata
+        echo   🔄 Will rebuild catalog to be safe
+        del /q "%CATALOG_FILE%" 2>nul
+        del /q "%METADATA_FILE%" 2>nul
+        echo   ✅ Old catalog deleted - will rebuild
+        goto :rebuild_info
+      )
     )
 
-    rem --- Parse the results ---
-    for /f "tokens=1,2 delims=," %%i in ("%CATALOG_INFO%") do (
-      set "AGE_SECONDS=%%i"
-      set "TTL_SECONDS=%%j"
-    )
+    rem --- Display catalog status ---
+    echo   📊 Catalog Age: !AGE_SECONDS! seconds
+    echo   🎯 TTL Threshold: !TTL_THRESHOLD! seconds
 
-    set "AGE_SECONDS=%AGE_SECONDS:age_seconds=:%"
-    set "TTL_SECONDS=%TTL_SECONDS:ttl_seconds=:%"
+    set /a "REMAINING_TTL=!TTL_SECONDS!-!AGE_SECONDS!"
+    echo   ⏰ Remaining TTL: !REMAINING_TTL! seconds
 
-    if "%AGE_SECONDS%"=="error" (
-      echo   ⚠️  Could not read catalog metadata
-      echo   🔄 Will rebuild catalog to be safe
-      del /q "%CATALOG_FILE%" 2>nul
-      del /q "%METADATA_FILE%" 2>nul
-      echo   ✅ Old catalog deleted - will rebuild
-      goto :rebuild_info
-    )
-
-    rem --- Calculate remaining TTL ---
-    set /a "REMAINING_TTL=%TTL_SECONDS%-%AGE_SECONDS%"
-
-    echo   📊 Catalog Age: %AGE_SECONDS% seconds
-    echo   🎯 TTL Threshold: %TTL_THRESHOLD% seconds
-    echo   ⏰ Remaining TTL: %REMAINING_TTL% seconds
-
-    if %AGE_SECONDS% GEQ %TTL_THRESHOLD% (
+    if "!STATUS!"=="OLD" (
       echo.
-      echo   ⚠️  Catalog is older than TTL threshold (%TTL_THRESHOLD% seconds)
+      echo   ⚠️  Catalog is older than TTL threshold (!TTL_THRESHOLD! seconds)
       echo.
       set /p "REBUILD_CHOICE=Press Y to rebuild catalog or N to continue with cached catalog [Y/N]: "
 
@@ -117,9 +112,18 @@ if exist "%CATALOG_FILE%" (
         echo   ℹ️  Note: Using cached catalog may have outdated schema information
       )
     ) else (
-      echo.
-      echo   ✅ Catalog is fresh (under %TTL_THRESHOLD% seconds old)
-      echo   📦 Will use existing catalog
+      if "!STATUS!"=="FRESH" (
+        echo.
+        echo   ✅ Catalog is fresh (under !TTL_THRESHOLD! seconds old)
+        echo   📦 Will use existing catalog
+      ) else (
+        echo.
+        echo   ⚠️  Could not determine catalog status
+        echo   🔄 Will rebuild catalog to be safe
+        del /q "%CATALOG_FILE%" 2>nul
+        del /q "%METADATA_FILE%" 2>nul
+        echo   ✅ Old catalog deleted - will rebuild
+      )
     )
   ) else (
     echo   ⚠️  Found catalog file but no metadata - catalog may be corrupted
