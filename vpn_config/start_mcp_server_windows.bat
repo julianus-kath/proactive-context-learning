@@ -62,6 +62,7 @@ if exist "%CATALOG_FILE%" (
     echo   📦 Found existing catalog and metadata files
 
     rem --- Check catalog TTL using Python script ---
+    set "NEED_REBUILD="
     for /f "tokens=*" %%i in ('"%PYTHON_CMD%" "%PROJECT_ROOT%\check_catalog_ttl.py" "%PROJECT_ROOT%"') do (
       set "TTL_LINE=%%i"
       rem Parse each line of output
@@ -78,13 +79,17 @@ if exist "%CATALOG_FILE%" (
         set "!TTL_LINE!"
       )
       if "!TTL_LINE!"=="NO_METADATA" (
-        echo   ⚠️  Could not read catalog metadata
-        echo   🔄 Will rebuild catalog to be safe
-        del /q "%CATALOG_FILE%" 2>nul
-        del /q "%METADATA_FILE%" 2>nul
-        echo   ✅ Old catalog deleted - will rebuild
-        goto :rebuild_info
+        set "NEED_REBUILD=1"
       )
+    )
+
+    if defined NEED_REBUILD (
+      echo   ⚠️  Could not read catalog metadata
+      echo   🔄 Will rebuild catalog to be safe
+      del /q "%CATALOG_FILE%" 2>nul
+      del /q "%METADATA_FILE%" 2>nul
+      echo   ✅ Old catalog deleted - will rebuild
+      goto :rebuild_info
     )
 
     rem --- Display catalog status ---
@@ -111,19 +116,21 @@ if exist "%CATALOG_FILE%" (
         echo   📦 Keeping existing catalog as requested
         echo   ℹ️  Note: Using cached catalog may have outdated schema information
       )
-    ) else (
-      if "!STATUS!"=="FRESH" (
-        echo.
-        echo   ✅ Catalog is fresh (under !TTL_THRESHOLD! seconds old)
-        echo   📦 Will use existing catalog
-      ) else (
-        echo.
-        echo   ⚠️  Could not determine catalog status
-        echo   🔄 Will rebuild catalog to be safe
-        del /q "%CATALOG_FILE%" 2>nul
-        del /q "%METADATA_FILE%" 2>nul
-        echo   ✅ Old catalog deleted - will rebuild
-      )
+    )
+
+    if "!STATUS!"=="FRESH" (
+      echo.
+      echo   ✅ Catalog is fresh (under !TTL_THRESHOLD! seconds old)
+      echo   📦 Will use existing catalog
+    )
+
+    if "!STATUS!"=="" (
+      echo.
+      echo   ⚠️  Could not determine catalog status
+      echo   🔄 Will rebuild catalog to be safe
+      del /q "%CATALOG_FILE%" 2>nul
+      del /q "%METADATA_FILE%" 2>nul
+      echo   ✅ Old catalog deleted - will rebuild
     )
   ) else (
     echo   ⚠️  Found catalog file but no metadata - catalog may be corrupted
