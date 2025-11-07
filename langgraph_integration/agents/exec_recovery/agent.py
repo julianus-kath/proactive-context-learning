@@ -989,11 +989,19 @@ class ExecAndRecoveryAgent:
         """Parse MCP query result (handles both bounded JSON and unbounded text formats)."""
         try:
             logger.debug(f"Parsing query result: {result[:2] if result else 'None'}")
+            logger.debug(f"Result type: {type(result)}, length: {len(result) if result else 0}")
+
             # Handle case where MCP returns malformed response
             if not result or len(result) == 0:
                 return {"ok": False, "error": "Empty result from MCP server"}
 
+            # Handle case where result is a single string (error message)
+            if isinstance(result, str):
+                return {"ok": False, "error": result}
+
             first_result = result[0]
+            logger.debug(f"First result type: {type(first_result)}, value: {first_result}")
+
             if isinstance(first_result, str):
                 # MCP returned a string error message
                 return {"ok": False, "error": first_result}
@@ -1002,6 +1010,7 @@ class ExecAndRecoveryAgent:
                 return {"ok": False, "error": f"Unexpected result type: {type(first_result)}"}
 
             content = first_result.get("text", "")
+            logger.debug(f"Content type: {type(content)}, length: {len(content) if isinstance(content, str) else 'N/A'}")
 
             # Try to parse as JSON first (for query_bounded responses). The server returns
             # human-readable text plus a JSON block after 'Full response (JSON):'.
@@ -1045,75 +1054,75 @@ class ExecAndRecoveryAgent:
                         "warnings": warnings,
                         "error": error
                     }
-                # If JSON not detected, fall through to parse as text below
+            # If JSON not detected, fall through to parse as text below
             except Exception:
                 # Not JSON or failed to extract JSON - handle as text-table format
                 logger.info("Received text table response from unbounded query, parsing manually...")
 
             # Fallback: parse as text-table format (also used when JSON not detected without exception)
-                if not content or "Query execution failed" in content:
-                    return {"ok": False, "error": content or "Query execution failed"}
+            if not content or "Query execution failed" in content:
+                return {"ok": False, "error": content or "Query execution failed"}
 
-                # Parse the text table format
-                lines = content.strip().split('\n')
-                if len(lines) < 3:
-                    return {"ok": False, "error": "Invalid table format"}
+            # Parse the text table format
+            lines = content.strip().split('\n')
+            if len(lines) < 3:
+                return {"ok": False, "error": "Invalid table format"}
 
-                # Extract row count from header
-                header_match = re.search(r'Query Results \((\d+) rows\)', lines[0])
-                if not header_match:
-                    return {"ok": False, "error": "Could not parse row count"}
+            # Extract row count from header
+            header_match = re.search(r'Query Results \((\d+) rows\)', lines[0])
+            if not header_match:
+                return {"ok": False, "error": "Could not parse row count"}
 
-                row_count = int(header_match.group(1))
+            row_count = int(header_match.group(1))
 
-                if row_count == 0:
-                    return {
-                        "ok": True,
-                        "rows": [],
-                        "row_count": 0,
-                        "execution_time_ms": 0,
-                        "truncated": False,
-                        "warnings": [],
-                        "error": None
-                    }
-
-                # Find data rows (skip header and separator)
-                data_start = 2  # Skip "Query Results (X rows):" and blank line
-                if data_start >= len(lines):
-                    return {"ok": False, "error": "No data rows found"}
-
-                # Extract column headers
-                header_line = lines[data_start]
-                columns = [col.strip() for col in header_line.split('|')]
-
-                # Extract data rows
-                rows = []
-                for line in lines[data_start + 2:]:  # Skip headers and separator
-                    if line.strip():
-                        values = [val.strip() for val in line.split('|')]
-                        if len(values) == len(columns):
-                            row_dict = {}
-                            for col, val in zip(columns, values):
-                                # Try to convert to number
-                                try:
-                                    # Check if it's an integer
-                                    if '.' not in val:
-                                        row_dict[col] = int(val)
-                                    else:
-                                        row_dict[col] = float(val)
-                                except ValueError:
-                                    row_dict[col] = val
-                            rows.append(row_dict)
-
+            if row_count == 0:
                 return {
                     "ok": True,
-                    "rows": rows,
-                    "row_count": len(rows),
-                    "execution_time_ms": 0,  # Not provided in text format
+                    "rows": [],
+                    "row_count": 0,
+                    "execution_time_ms": 0,
                     "truncated": False,
                     "warnings": [],
                     "error": None
                 }
+
+            # Find data rows (skip header and separator)
+            data_start = 2  # Skip "Query Results (X rows):" and blank line
+            if data_start >= len(lines):
+                return {"ok": False, "error": "No data rows found"}
+
+            # Extract column headers
+            header_line = lines[data_start]
+            columns = [col.strip() for col in header_line.split('|')]
+
+            # Extract data rows
+            rows = []
+            for line in lines[data_start + 2:]:  # Skip headers and separator
+                if line.strip():
+                    values = [val.strip() for val in line.split('|')]
+                    if len(values) == len(columns):
+                        row_dict = {}
+                        for col, val in zip(columns, values):
+                            # Try to convert to number
+                            try:
+                                # Check if it's an integer
+                                if '.' not in val:
+                                    row_dict[col] = int(val)
+                                else:
+                                    row_dict[col] = float(val)
+                            except ValueError:
+                                row_dict[col] = val
+                        rows.append(row_dict)
+
+            return {
+                "ok": True,
+                "rows": rows,
+                "row_count": len(rows),
+                "execution_time_ms": 0,  # Not provided in text format
+                "truncated": False,
+                "warnings": [],
+                "error": None
+            }
 
         except Exception as e:
             logger.warning(f"Failed to parse query result: {e}")

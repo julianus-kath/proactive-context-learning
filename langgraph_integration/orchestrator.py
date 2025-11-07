@@ -1347,15 +1347,15 @@ class QueryOrchestrator:
     # Reason: Naive regex caused double-keyword-extraction problem
     # See: CHANGES_SUMMARY.md "Intent Parsing Architecture Gap"
 
-    async def process_query(self, user_input: str) -> str:
+    async def process_query(self, user_input: str) -> Dict[str, Any]:
         """
-        High-level interface: process a query and return the final response.
+        High-level interface: process a query and return the complete processing state.
 
         Args:
             user_input: User's natural language query
 
         Returns:
-            Final response string (1-2 sentence answer or clarification)
+            Dict containing processing state including final_answer, intent, sql_query, etc.
         """
         logger.info(f"📝 PROCESS_QUERY CALLED: {user_input[:100]}...")
         logger.info("📝 Starting graph execution...")
@@ -1415,7 +1415,14 @@ class QueryOrchestrator:
             logger.info(f"🎯 [FULL_PIPELINE] Join plan: {join_plan}")
 
             if not sql_query:
-                return f"I found relevant tables but couldn't generate a SQL query for '{user_input}'. The table structure might be too complex for automatic SQL generation."
+                return {
+                    "user_input": user_input,
+                    "intent": intent,
+                    "relevant_tables": relevant_tables,
+                    "candidate_views": candidate_views,
+                    "error_info": {"type": "SQL_GENERATION_ERROR", "message": "Could not generate SQL query"},
+                    "final_answer": f"I found relevant tables but couldn't generate a SQL query for '{user_input}'. The table structure might be too complex for automatic SQL generation."
+                }
 
             # Step 3: Execution - Run the SQL and get results
             logger.info("🎯 [FULL_PIPELINE] Step 3: SQL Execution")
@@ -1444,7 +1451,16 @@ class QueryOrchestrator:
                     msg = error_info.get('message', error_info.get('error', 'Unknown error'))
                 else:
                     msg = str(error_info)
-                return f"I encountered an error executing the query: {msg}"
+                return {
+                    "user_input": user_input,
+                    "intent": intent,
+                    "relevant_tables": relevant_tables,
+                    "candidate_views": candidate_views,
+                    "sql_query": sql_query,
+                    "join_plan": join_plan,
+                    "error_info": error_info,
+                    "final_answer": f"I encountered an error executing the query: {msg}"
+                }
 
             # If success but empty, try next candidates up to 2 more times
             tried = set()
@@ -1513,15 +1529,39 @@ class QueryOrchestrator:
 
             if execution_result and execution_result.get("ok"):
                 # Format the actual data results
-                return await self._format_execution_results(execution_result, intent, user_input)
+                final_answer = await self._format_execution_results(execution_result, intent, user_input)
+                return {
+                    "user_input": user_input,
+                    "intent": intent,
+                    "relevant_tables": relevant_tables,
+                    "candidate_views": candidate_views,
+                    "sql_query": sql_query,
+                    "join_plan": join_plan,
+                    "exec_result": execution_result,
+                    "final_answer": final_answer
+                }
             else:
-                return f"The query executed but returned no results for '{user_input}'."
+                return {
+                    "user_input": user_input,
+                    "intent": intent,
+                    "relevant_tables": relevant_tables,
+                    "candidate_views": candidate_views,
+                    "sql_query": sql_query,
+                    "join_plan": join_plan,
+                    "exec_result": execution_result,
+                    "error_info": error_info,
+                    "final_answer": f"The query executed but returned no results for '{user_input}'."
+                }
 
         except Exception as e:
             logger.error(f"🎯 [FULL_PIPELINE] Pipeline failed: {e}")
             import traceback
             logger.error(f"🎯 [FULL_PIPELINE] Traceback: {traceback.format_exc()}")
-            return f"I encountered an error processing your query '{user_input}': {str(e)}"
+            return {
+                "user_input": user_input,
+                "error_info": {"type": "PROCESSING_ERROR", "message": str(e)},
+                "final_answer": f"I encountered an error processing your query '{user_input}': {str(e)}"
+            }
 
     async def _format_execution_results(self, execution_result: Dict[str, Any], intent: Dict[str, Any], user_input: str) -> str:
         """Format execution results into user-friendly response."""

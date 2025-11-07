@@ -325,6 +325,8 @@ class MCPDatabaseTool:
                             raise ValueError(f"MCP server error: {error_msg}")
 
                         # Return content handling multiple envelope variants
+                        content = []  # Initialize content variable
+
                         if isinstance(data, list):
                             # Some servers return content directly as a list
                             content = data
@@ -333,15 +335,15 @@ class MCPDatabaseTool:
                             result = data.get("result", data.get("content", {}))
 
                             # If result missing, but data has 'data', convert to a single text block
-                        if not result:
-                            logger.warning("MCP result is empty, checking for alternative response format")
-                            if "data" in data:
-                                result = {"content": [{"type": "text", "text": json.dumps(data["data"])}]}
-                            else:
-                                error_msg = "MCP response has empty result and no alternative data format"
-                                if debug_logger:
-                                    debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
-                                raise ValueError(error_msg)
+                            if not result:
+                                logger.warning("MCP result is empty, checking for alternative response format")
+                                if "data" in data:
+                                    result = {"content": [{"type": "text", "text": json.dumps(data["data"])}]}
+                                else:
+                                    error_msg = "MCP response has empty result and no alternative data format"
+                                    if debug_logger:
+                                        debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
+                                    raise ValueError(error_msg)
 
                             # Normalize content robustly regardless of result shape
                             try:
