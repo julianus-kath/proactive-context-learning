@@ -47,10 +47,28 @@ class MSSQLCatalogBuilder:
         logger.info("🏗️ Building MSSQL catalog...")
 
         try:
-            # Build catalog components
-            tables_dict = await self._build_table_catalog()
-            views_dict = await self._build_view_catalog()
-            relationships = await self._build_relationship_catalog()
+            # Build catalog components (with error handling for permission issues)
+            try:
+                tables_dict = await self._build_table_catalog()
+                logger.info(f"✅ Built {len(tables_dict)} tables")
+            except Exception as e:
+                logger.error(f"❌ Failed to build table catalog: {e}")
+                raise
+
+            try:
+                views_dict = await self._build_view_catalog()
+                logger.info(f"✅ Built {len(views_dict)} views")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not build view catalog due to permissions: {e}")
+                views_dict = {}
+
+            # Try to build relationships (may fail due to insufficient permissions)
+            try:
+                relationships = await self._build_relationship_catalog()
+                logger.info(f"✅ Built {len(relationships)} relationships")
+            except Exception as e:
+                logger.warning(f"⚠️ Could not build relationships due to permissions: {e}")
+                relationships = []
 
             # Convert dicts to lists for search API compatibility
             tables = list(tables_dict.values())
@@ -90,18 +108,16 @@ class MSSQLCatalogBuilder:
         """
         logger.info("📊 Building table catalog...")
 
-        # Query for table metadata with accurate row estimates using dm_db_partition_stats
-        # Use LEFT JOIN to include empty tables and SUM over row_count for heap/clustered indexes
+        # Query for table metadata - simplified version without VIEW DATABASE STATE permission
+        # Uses basic table info without row count statistics (requires special permissions)
         table_query = """
         SELECT
             s.name AS TABLE_SCHEMA,
             t.name AS TABLE_NAME,
             'BASE TABLE' AS TABLE_TYPE,
-            ISNULL(SUM(CASE WHEN p.index_id IN (0,1) THEN p.row_count ELSE 0 END), 0) AS estimated_rows
+            0 AS estimated_rows  -- Placeholder: accurate counts require VIEW DATABASE STATE permission
         FROM sys.tables t
         INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
-        LEFT JOIN sys.dm_db_partition_stats p ON t.object_id = p.object_id
-        GROUP BY s.name, t.name
         ORDER BY s.name, t.name
         """
 
@@ -145,13 +161,13 @@ class MSSQLCatalogBuilder:
         """
         logger.info("👁️ Building comprehensive view catalog...")
 
-        # Enhanced query for view metadata with more details and better row estimates for indexed views
+        # Simplified view query without VIEW DATABASE STATE permission requirement
         view_query = """
         SELECT
             v.TABLE_SCHEMA,
             v.TABLE_NAME,
             m.definition AS view_definition,
-            ISNULL(SUM(CASE WHEN ps.index_id IN (0,1) THEN ps.row_count ELSE 0 END), 0) AS estimated_rows,
+            0 AS estimated_rows,  -- Placeholder: accurate counts require VIEW DATABASE STATE permission
             sv.create_date,
             sv.modify_date,
             CASE WHEN sv.is_replicated = 1 THEN 1 ELSE 0 END AS is_replicated,
@@ -161,8 +177,6 @@ class MSSQLCatalogBuilder:
         LEFT JOIN sys.views sv ON v.TABLE_NAME = sv.name
         LEFT JOIN sys.schemas ss ON v.TABLE_SCHEMA = ss.name AND sv.schema_id = ss.schema_id
         LEFT JOIN sys.sql_modules m ON sv.object_id = m.object_id
-        LEFT JOIN sys.dm_db_partition_stats ps ON sv.object_id = ps.object_id
-        GROUP BY v.TABLE_SCHEMA, v.TABLE_NAME, m.definition, sv.create_date, sv.modify_date, sv.is_replicated, sv.has_opaque_metadata, sv.object_id
         ORDER BY v.TABLE_SCHEMA, v.TABLE_NAME
         """
 
