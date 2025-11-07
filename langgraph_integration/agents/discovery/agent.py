@@ -180,6 +180,15 @@ class DiscoveryAgent:
             try:
                 result = await self.mcp.search_tables(query_str, page=1, page_size=10, intent_data=intent)
                 parsed = self._parse_search_result(result)
+
+                # Log raw search results
+                logger.info(f"🔍 SEARCH RESULTS for '{query_str}': {len(parsed)} tables found")
+                for i, table in enumerate(parsed[:8]):  # Log first 8 results
+                    name = table.get('table_name', table.get('name', 'unknown'))
+                    score = table.get('relevance_score', 0)
+                    rows = table.get('estimated_rows', 0)
+                    logger.info(f"  {i+1}. {name} | score={score:.3f} | rows={rows}")
+
                 candidates.extend(parsed)
             except Exception as e:
                 logger.warning(f"  Joined search (tables) failed: {e}")
@@ -241,7 +250,15 @@ class DiscoveryAgent:
                 return state
             
             logger.info(f"✅ Found {len(unique_candidates)} candidate tables/views")
-            
+
+            # Log all candidates found for debugging
+            logger.info("📋 ALL CANDIDATES FOUND:")
+            for i, cand in enumerate(unique_candidates[:15]):  # Log first 15 to avoid spam
+                name = cand.get('table_name', cand.get('name', 'unknown'))
+                score = cand.get('relevance_score', 0)
+                rows = cand.get('estimated_rows', 0)
+                logger.info(f"  {i+1:2d}. {name} | score={score:.3f} | rows={rows}")
+
             # Store candidates in state for next node
             state["candidate_views"] = unique_candidates
             return state
@@ -521,11 +538,16 @@ class DiscoveryAgent:
             
             # Prefer non-empty entities and higher estimated_rows, then by score
             def rank_key(c):
-                return (
-                    1 if c.get("has_rows", False) else 0,
-                    int(c.get("estimated_rows", 0) or 0),
-                    float(c.get("score", 0.0))
-                )
+                has_rows = 1 if c.get("has_rows", False) else 0
+                row_count = int(c.get("estimated_rows", 0) or 0)
+                score = float(c.get("score", 0.0))
+
+                # Log detailed ranking for top candidates
+                if len(filtered) <= 10:  # Only log for smaller result sets to avoid spam
+                    table_name = c.get("table_name", c.get("name", "unknown"))
+                    logger.info(f"📊 RANKING: {table_name} | has_rows={has_rows} | rows={row_count} | score={score:.3f}")
+
+                return (has_rows, row_count, score)
 
             # CRITICAL: Intent-specific hard filters before final sort
             # These are AGGRESSIVE filters to ensure archive/admin/config tables NEVER poison results
@@ -670,8 +692,12 @@ class DiscoveryAgent:
                 pass
             
             logger.info(f"✅ Selected {len(selected)} candidate(s) for description")
+            logger.info("🎯 FINAL SELECTION AFTER FILTERING:")
             for i, c in enumerate(selected):
-                logger.debug(f"  {i+1}: {c.get('table_name', c.get('name', ''))} (score={c.get('score', 0):.3f})")
+                name = c.get('table_name', c.get('name', ''))
+                score = c.get('score', 0)
+                rows = c.get('estimated_rows', 0)
+                logger.info(f"  {i+1}. {name} | score={score:.3f} | rows={rows} | FINAL")
             
             state["candidate_views"] = selected
             return state
