@@ -867,17 +867,44 @@ class MCPTools:
             
             # Format as human-readable text + JSON
             if response.ok:
+                # Log query results for debugging/monitoring
+                logger.info(f"✅ QUERY EXECUTED SUCCESSFULLY")
+                logger.info(f"📊 Results: {response.row_count} rows, {response.execution_time_ms}ms execution time")
+                if response.truncated:
+                    applied_limit = response.metadata.get('applied_limit') if response.metadata else None
+                    logger.info(f"⚠️ Results truncated to {applied_limit} rows")
+                if response.redacted_columns:
+                    logger.info(f"🔒 Redacted {len(response.redacted_columns)} sensitive columns")
+
+                # Log sample of results (truncated for log readability)
+                if response.rows and len(response.rows) > 0:
+                    sample_size = min(3, len(response.rows))  # Log first 3 rows max
+                    logger.info(f"📋 Sample results ({sample_size}/{len(response.rows)} rows):")
+                    for i, row in enumerate(response.rows[:sample_size]):
+                        # Create a truncated version for logging
+                        safe_row = MCPTools._make_json_safe(row) if row else {}
+                        # Truncate long values in log
+                        truncated_row = {}
+                        for k, v in safe_row.items():
+                            if isinstance(v, str) and len(v) > 50:
+                                truncated_row[k] = v[:47] + "..."
+                            else:
+                                truncated_row[k] = v
+                        logger.info(f"   Row {i+1}: {json.dumps(truncated_row, cls=DecimalEncoder)}")
+                elif response.row_count == 0:
+                    logger.info(f"📋 No rows returned (empty result set)")
+
                 result_text = f"✅ Query executed successfully\n\n"
                 result_text += f"Rows returned: {response.row_count}\n"
                 result_text += f"Execution time: {response.execution_time_ms}ms\n"
-                
+
                 if response.truncated:
                     applied_limit = response.metadata.get('applied_limit') if response.metadata else None
                     result_text += f"⚠️ Results truncated (limit: {applied_limit})\n"
-                
+
                 if response.redacted_columns:
                     result_text += f"🔒 Redacted columns: {', '.join(response.redacted_columns)}\n"
-                
+
                 columns_text = ', '.join(response.columns) if response.columns else "(no columns)"
                 result_text += f"\nColumns: {columns_text}\n\n"
                 
@@ -904,6 +931,11 @@ class MCPTools:
                     isError=False
                 )
             else:
+                # Log query failure
+                logger.error(f"❌ QUERY FAILED")
+                logger.error(f"📊 Error: {response.error_code} - {response.error_message}")
+                logger.error(f"⏱️ Execution time: {response.execution_time_ms}ms")
+
                 # Error response
                 error_text = f"❌ Query failed\n\n"
                 error_text += f"Error code: {response.error_code}\n"

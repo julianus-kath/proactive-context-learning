@@ -210,14 +210,17 @@ async def process_conversation(request: ConversationRequest = Body(...)):
         print(f"📝 Last user message: {last_user_message[:100]}...")
         
         # Process through multi-agent orchestrator
-        final_response = await orchestrator.process_query(last_user_message)
-        
+        result = await orchestrator.process_query(last_user_message)
+
         print(f"✅ Conversation processed successfully")
-        
+
+        # Extract the final answer from the orchestrator result
+        final_response = result.get("final_answer", "I couldn't process your query. Please try again.")
+
         # Prepare updated messages array
         updated_messages = request.messages.copy()
         updated_messages.append({"role": "assistant", "content": final_response})
-        
+
         # Return response (orchestrator handles all operations internally)
         return ConversationResponse(
             final_response=final_response,

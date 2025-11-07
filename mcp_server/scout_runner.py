@@ -450,6 +450,11 @@ class ScoutRunner:
                     score = min(1.0, score + 0.05)
                     reasons.append(f"{estimated_rows} rows")
                 
+                # Filter out empty tables unless they have very high relevance
+                if estimated_rows == 0 and score < 0.8:
+                    reasons.append("empty table (filtered)")
+                    continue
+
                 # Only include tables with meaningful score
                 if score >= 0.3:
                     results.append({

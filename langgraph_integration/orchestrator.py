@@ -687,10 +687,12 @@ class QueryOrchestrator:
             state["sql_query"] = ""
             state["join_plan"] = {}
         else:
+            # Ensure schema-qualified table names for MSSQL (OLLuisiDiener.dbo.TableName)
+            qualified_table = self._qualify_table_name(primary_table)
             if "count" in metrics or "total" in metrics or len(metrics) == 0:
-                state["sql_query"] = f"SELECT COUNT(*) AS total_count FROM {primary_table}"
+                state["sql_query"] = f"SELECT COUNT(*) AS total_count FROM {qualified_table}"
             else:
-                state["sql_query"] = f"SELECT TOP 10 * FROM {primary_table}"
+                state["sql_query"] = f"SELECT TOP 10 * FROM {qualified_table}"
         state["join_plan"] = {"strategy": "direct", "primary_table": primary_table}
 
         logger.info("🔗 [JOIN_SQL] SQL generation complete")
@@ -756,6 +758,15 @@ class QueryOrchestrator:
         logger.info("🔍 [VALIDATE_SQL] Validation complete")
         debug_logger.agent_exit("validate_sql", before_state, dict(state))
         return state
+
+    def _qualify_table_name(self, table_name: str) -> str:
+        """Ensure table name is schema-qualified for MSSQL."""
+        if '.' in table_name:
+            # Already qualified
+            return table_name
+        else:
+            # Add default schema qualification for MSSQL
+            return f"OLLuisiDiener.dbo.{table_name}"
 
     def _select_best_table_or_view_for_query(self, tables, views, intent: Dict[str, Any]) -> str:
         """
