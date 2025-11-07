@@ -48,9 +48,13 @@ class MSSQLCatalogBuilder:
 
         try:
             # Build catalog components
-            tables = await self._build_table_catalog()
-            views = await self._build_view_catalog()
+            tables_dict = await self._build_table_catalog()
+            views_dict = await self._build_view_catalog()
             relationships = await self._build_relationship_catalog()
+
+            # Convert dicts to lists for search API compatibility
+            tables = list(tables_dict.values())
+            views = list(views_dict.values())
 
             # Combine into final catalog
             catalog = {
