@@ -176,7 +176,7 @@ class DiscoveryAgent:
             else:
                 # Standard search for simple queries
                 query_str = " ".join(keywords)
-                logger.debug(f"  Searching with joined keywords: '{query_str}'")
+            logger.debug(f"  Searching with joined keywords: '{query_str}'")
             try:
                 result = await self.mcp.search_tables(query_str, page=1, page_size=10, intent_data=intent)
                 parsed = self._parse_search_result(result)
@@ -513,9 +513,10 @@ class DiscoveryAgent:
                         if not filtered:
                             filtered = sorted(candidates, key=lambda x: x.get("score", 0), reverse=True)[:1]
                     else:
-                # Still use the best candidate even if below threshold
+                        # Still use the best candidate even if below threshold
                         filtered = candidates[:1]
                 except Exception:
+                    # Still use the best candidate even if below threshold
                     filtered = candidates[:1]
             
             # Prefer non-empty entities and higher estimated_rows, then by score

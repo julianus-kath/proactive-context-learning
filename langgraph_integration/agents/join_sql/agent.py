@@ -385,9 +385,9 @@ class JoinPlanAndSQLAgent:
                 if join_condition:
                     join_plan["joins"].append({
                         "table": customer_dim,
-                        "on": join_condition,
-                        "type": "INNER"
-                    })
+                    "on": join_condition,
+                    "type": "INNER"
+                })
                 else:
                     logger.warning(f"No FK hint for join between {primary} and {customer_dim}; skipping join to avoid cartesian product")
 
@@ -1871,23 +1871,23 @@ class JoinPlanAndSQLAgent:
                     tw_conds = [f"{date_col} >= '{start}'", f"{date_col} <= '{end}'"]
             else:
                 tw = (time_window or "").lower()
-                if "last month" in tw or "letzten monat" in tw:
-                    tw_conds = [
-                        f"{date_col} >= DATEADD(month, -1, DATEADD(day, 1, EOMONTH(GETDATE(), -1)))",
-                        f"{date_col} <= EOMONTH(GETDATE(), -1)"
-                    ]
-                elif "this month" in tw or "diesen monat" in tw:
-                    tw_conds = [
-                        f"{date_col} >= DATEADD(day, 1, EOMONTH(GETDATE(), -1))",
-                        f"{date_col} <= EOMONTH(GETDATE())"
-                    ]
-                elif "this year" in tw or "dieses jahr" in tw:
-                    tw_conds = [f"YEAR({date_col}) = YEAR(GETDATE())"]
-                elif "last year" in tw or "letztes jahr" in tw:
-                    tw_conds = [f"YEAR({date_col}) = YEAR(GETDATE()) - 1"]
-                else:
-                    tw_conds = []
-                where_conditions.extend(tw_conds)
+            if "last month" in tw or "letzten monat" in tw:
+                tw_conds = [
+                    f"{date_col} >= DATEADD(month, -1, DATEADD(day, 1, EOMONTH(GETDATE(), -1)))",
+                    f"{date_col} <= EOMONTH(GETDATE(), -1)"
+                ]
+            elif "this month" in tw or "diesen monat" in tw:
+                tw_conds = [
+                    f"{date_col} >= DATEADD(day, 1, EOMONTH(GETDATE(), -1))",
+                    f"{date_col} <= EOMONTH(GETDATE())"
+                ]
+            elif "this year" in tw or "dieses jahr" in tw:
+                tw_conds = [f"YEAR({date_col}) = YEAR(GETDATE())"]
+            elif "last year" in tw or "letztes jahr" in tw:
+                tw_conds = [f"YEAR({date_col}) = YEAR(GETDATE()) - 1"]
+            else:
+                tw_conds = []
+            where_conditions.extend(tw_conds)
 
         if wants_sum:
             sum_col = pick_sum_column(cols)

@@ -363,10 +363,15 @@ Respond ONLY with JSON.
             # Derived action hints for downstream agents (discovery/planning/execution)
             derived = self._derive_action_hints(state.get("user_input", ""), intent)
             intent.update(derived)
+            # Expand keywords with German translations and related terms
+            base_keywords = intent.get("keywords_for_discovery", [])
+            expanded_keywords = self._expand_keywords_with_translations(base_keywords, intent.get("primary_entities", []))
+            intent["keywords_for_discovery"] = expanded_keywords[:10]
+
             # Merge derived extra keywords into discovery keywords (dedup + cap)
             try:
                 if derived.get("extra_keywords"):
-                    merged_kw = (intent.get("keywords_for_discovery") or []) + list(derived.get("extra_keywords") or [])
+                    merged_kw = expanded_keywords + list(derived.get("extra_keywords") or [])
                     # deduplicate preserving order
                     seen = set()
                     merged_kw = [k for k in merged_kw if not (k in seen or seen.add(k))]
@@ -382,12 +387,18 @@ Respond ONLY with JSON.
             # Fallback extraction
             fallback = self._fallback_entity_extraction(user_input)
             intent.update(fallback)
+
+            # Expand keywords with German translations
+            base_keywords = intent.get("keywords_for_discovery", [])
+            expanded_keywords = self._expand_keywords_with_translations(base_keywords, intent.get("primary_entities", []))
+            intent["keywords_for_discovery"] = expanded_keywords[:10]
+
             # Also derive action hints on fallback
             derived = self._derive_action_hints(user_input, intent)
             intent.update(derived)
             try:
                 if derived.get("extra_keywords"):
-                    merged_kw = (intent.get("keywords_for_discovery") or []) + list(derived.get("extra_keywords") or [])
+                    merged_kw = expanded_keywords + list(derived.get("extra_keywords") or [])
                     seen = set()
                     merged_kw = [k for k in merged_kw if not (k in seen or seen.add(k))]
                     intent["keywords_for_discovery"] = merged_kw[:10]
@@ -617,6 +628,49 @@ Keep the question clear and actionable.
             "time_granularity": time_granularity,
             "extra_keywords": extra_keywords
         }
+
+    def _expand_keywords_with_translations(self, base_keywords: list, entities: list) -> list:
+        """Expand keywords with German translations and related terms for better table discovery."""
+        expanded = list(base_keywords)  # Start with original keywords
+
+        # Entity-specific translations
+        entity_translations = {
+            "customer": ["kunde", "kunden", "client", "adressen", "contacts"],
+            "customers": ["kunde", "kunden", "client", "adressen", "contacts"],
+            "product": ["produkt", "produkte", "artikel", "item", "artikel"],
+            "products": ["produkt", "produkte", "artikel", "item", "artikel"],
+            "project": ["projekt", "projekte", "task", "job"],
+            "projects": ["projekt", "projekte", "task", "job"],
+            "sales": ["verkauf", "umsatz", "revenue", "rechnung", "invoice"],
+            "inventory": ["lager", "stock", "bestand", "inventory"],
+            "order": ["auftrag", "bestellung", "order"],
+            "orders": ["auftrag", "bestellung", "order"],
+            "supplier": ["lieferant", "supplier", "vendor"],
+            "suppliers": ["lieferant", "supplier", "vendor"]
+        }
+
+        # Add translations for recognized entities
+        for entity in entities:
+            entity_lower = entity.lower()
+            if entity_lower in entity_translations:
+                expanded.extend(entity_translations[entity_lower])
+
+        # Add common German business terms
+        german_business_terms = [
+            "khk", "adressen", "kontakt", "firma", "unternehmen",
+            "position", "positionen", "kopf", "zeile"
+        ]
+        expanded.extend(german_business_terms)
+
+        # Remove duplicates while preserving order
+        seen = set()
+        deduplicated = []
+        for keyword in expanded:
+            if keyword not in seen:
+                seen.add(keyword)
+                deduplicated.append(keyword)
+
+        return deduplicated
 
     def _is_schema_query(self, user_lower: str) -> bool:
         """Detect schema/structure queries."""
