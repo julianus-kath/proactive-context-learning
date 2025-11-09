@@ -534,6 +534,9 @@ class JoinPlanAndSQLAgent:
             if required_action == "topk_sum_by_customer":
                 logger.info(f"🔨 [SQL_GEN] Routing to TOP-K customer revenue generator")
                 return await self._generate_topk_customer_revenue_sql(state)
+            elif required_action == "sum_with_period":
+                logger.info(f"🔨 [SQL_GEN] Routing to SUM with temporal period generator")
+                return await self._generate_sum_with_period_sql(state)
             elif required_action == "trend_series":
                 logger.info(f"🔨 [SQL_GEN] Routing to trend series generator")
                 return await self._generate_trend_series_sql(state)
@@ -1154,9 +1157,55 @@ class JoinPlanAndSQLAgent:
             logger.error(f"❌ {error['message']}")
             return {**state, "error_info": error}
 
+    def _extract_table_names_from_sql(self, sql: str) -> List[str]:
+        """
+        Extract all table names referenced in a SQL query.
+        
+        Finds tables in FROM and JOIN clauses.
+        Handles [schema].[table] and schema.table formats.
+        """
+        import re
+        table_names = []
+        
+        try:
+            # Pattern to match table names in FROM and JOIN clauses
+            # Matches: FROM|JOIN schema.table or schema.[table] or [schema].[table]
+            pattern = r'(?:FROM|JOIN)\s+(?:\[?[\w_]+\]?\.)?(?:\[?[\w_]+\]?)'
+            matches = re.finditer(pattern, sql, re.IGNORECASE)
+            
+            for match in matches:
+                text = match.group(0)
+                # Extract the table part after FROM/JOIN and any whitespace
+                table_part = re.sub(r'(?:FROM|JOIN)\s+', '', text, flags=re.IGNORECASE).strip()
+                if table_part:
+                    # Remove brackets if present
+                    table_part = table_part.replace('[', '').replace(']', '')
+                    table_names.append(table_part)
+        except Exception as e:
+            logger.warning(f"Failed to extract table names from SQL: {e}")
+        
+        return table_names
+    
+    def _normalize_table_name(self, table_name: str) -> str:
+        """
+        Normalize a table name for comparison.
+        
+        Handles:
+        - schema.table vs just table
+        - [schema].[table] vs schema.table
+        - Case insensitivity
+        """
+        # Remove brackets
+        normalized = table_name.replace('[', '').replace(']', '')
+        # Lowercase for comparison
+        normalized = normalized.lower().strip()
+        return normalized
+
     async def _validate_sql_node(self, state: BaseState) -> BaseState:
         """
         Perform comprehensive SQL syntax validation with re-planning support.
+        
+        CRITICAL NEW FEATURE (Phase 11): Table name validation against discovered tables.
         
         Enhanced validation checks:
         - Starts with SELECT
@@ -1164,6 +1213,7 @@ class JoinPlanAndSQLAgent:
         - Has column list (not just "SELECT")
         - Valid MSSQL keywords
         - Balanced parentheses/quotes
+        - **ALL TABLE NAMES EXIST IN DISCOVERY RESULTS** ← NEW
         - Minimum SQL completeness
         """
         logger.info("✅ Validating SQL...")
@@ -1219,7 +1269,66 @@ class JoinPlanAndSQLAgent:
             if not any(word not in MSSQL_FUNCTIONS for word in sql_words[sql_words.index("FROM")+1:sql_words.index("FROM")+3] if sql_words.index("FROM")+1 < len(sql_words)):
                 raise ValueError("Missing or invalid table reference after FROM")
 
-            logger.info("✅ SQL validation passed")
+            # 🚨🚨🚨 PHASE 11 CRITICAL FIX: Validate all table names exist in discovery results
+            logger.info("🔍 Phase 11: Validating table names against discovered tables...")
+            
+            sql_tables = self._extract_table_names_from_sql(sql)
+            logger.info(f"📊 Tables referenced in SQL: {sql_tables}")
+            
+            # Get discovered tables from state
+            discovered_tables = set()
+            
+            # Add relevant_tables
+            for t in (state.get("relevant_tables") or []):
+                discovered_tables.add(self._normalize_table_name(t))
+            
+            # Add candidate_views
+            for cv in (state.get("candidate_views") or []):
+                if isinstance(cv, str):
+                    discovered_tables.add(self._normalize_table_name(cv))
+                elif isinstance(cv, dict):
+                    name = cv.get("table_name") or cv.get("name") or cv.get("full_name")
+                    if name:
+                        discovered_tables.add(self._normalize_table_name(name))
+            
+            logger.info(f"✅ Discovered tables pool: {discovered_tables}")
+            
+            # Validate each SQL table is in the discovered set
+            unknown_tables = []
+            for sql_table in sql_tables:
+                normalized = self._normalize_table_name(sql_table)
+                
+                # Check exact match
+                if normalized in discovered_tables:
+                    logger.info(f"  ✅ Table '{sql_table}' found in discovered tables")
+                    continue
+                
+                # Check partial match (just the table name without schema)
+                if '.' in normalized:
+                    table_only = normalized.split('.')[-1]
+                else:
+                    table_only = normalized
+                
+                # Look for partial matches
+                found = False
+                for discovered in discovered_tables:
+                    if discovered.endswith(table_only) or discovered == table_only:
+                        logger.info(f"  ✅ Table '{sql_table}' matched as '{discovered}'")
+                        found = True
+                        break
+                
+                if not found:
+                    unknown_tables.append(sql_table)
+                    logger.warning(f"  ❌ Table '{sql_table}' NOT FOUND in discovered tables")
+            
+            if unknown_tables:
+                raise ValueError(
+                    f"SQL references unknown tables: {', '.join(unknown_tables)}. "
+                    f"Discovered tables were: {', '.join(sorted(discovered_tables))}. "
+                    f"This may indicate the discovery phase found wrong tables - check intent parsing."
+                )
+
+            logger.info("✅ SQL validation passed (including table name validation)")
             return state
 
         except Exception as e:
@@ -1230,7 +1339,7 @@ class JoinPlanAndSQLAgent:
                 "error": str(e),
                 "sql": sql[:200],
                 "replan_needed": True,  # Signal that re-planning is needed
-                "validation_stage": "syntax_check"
+                "validation_stage": "syntax_and_table_check"
             }
             logger.error(f"❌ {error['message']}")
             logger.info("🔄 Validation failure detected - will trigger re-planning")
@@ -1624,6 +1733,89 @@ class JoinPlanAndSQLAgent:
 
         # Generate SQL with month filter
         sql = f"SELECT COUNT(*) AS total_count FROM {primary_table} WHERE MONTH({date_col}) = {month_num} AND YEAR({date_col}) = YEAR(GETDATE())"
+
+        return {**state, "sql_query": sql}
+
+    async def _generate_sum_with_period_sql(self, state: BaseState) -> BaseState:
+        """Generate SUM/TOTAL with temporal period SQL for queries like 'sales from Sept to Oct'."""
+        logger.info(f"🔨 [SUM_WITH_PERIOD] Generating SUM with temporal period SQL")
+
+        intent = state.get("intent", {})
+        join_plan = state.get("join_plan", {})
+        column_index = state.get("column_index", {}) or {}
+        user_text = (state.get("user_input") or "").lower()
+
+        primary_table = join_plan.get("primary_table", "")
+        if not primary_table:
+            error = {"type": "NO_PRIMARY_TABLE", "message": "No primary table available for SUM with period"}
+            return {**state, "error_info": error}
+
+        # Ensure ALL tables in join plan have columns probed
+        column_index = await self._ensure_columns_probed_for_join_plan(join_plan, column_index)
+        state["column_index"] = column_index
+
+        # Extract month names (handles "from Sept to Oct" or single month)
+        months_dict = {
+            "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
+            "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, "december": 12,
+            "januar": 1, "februar": 2, "märz": 3, "maerz": 3, "april": 4, "mai": 5, "juni": 6,
+            "juli": 7, "august": 8, "september": 9, "oktober": 10, "november": 11, "dezember": 12
+        }
+
+        # Extract month range: "from September to October" or "September to October"
+        month_start = None
+        month_end = None
+        import re
+        for month_name, num in months_dict.items():
+            if month_name in user_text:
+                if month_start is None:
+                    month_start = num
+                else:
+                    month_end = num
+
+        if month_start is None:
+            error = {"type": "NO_MONTH", "message": "Could not extract month(s) from query"}
+            return {**state, "error_info": error}
+
+        # Default: if only one month, use it as both start and end
+        if month_end is None:
+            month_end = month_start
+
+        # Get columns
+        cols = column_index.get(primary_table, [])
+
+        # Find date column
+        def find_date_column(columns: List[str]) -> Optional[str]:
+            tokens = ["datum", "date", "zeit", "time", "created", "erfass", "belegdatum", "posted", "buchung"]
+            lc = [c.lower() for c in columns]
+            for t in tokens:
+                for i, name in enumerate(lc):
+                    if t in name:
+                        return columns[i]
+            return None
+
+        # Find amount column
+        def find_amount_column(columns: List[str]) -> Optional[str]:
+            tokens = ["umsatz", "betrag", "amount", "total", "summe", "preis", "wert", "gesamtpreis", "netto", "brutto"]
+            lc = [c.lower() for c in columns]
+            for t in tokens:
+                for i, name in enumerate(lc):
+                    if t in name:
+                        return columns[i]
+            return None
+
+        date_col = find_date_column(cols)
+        amount_col = find_amount_column(cols)
+
+        # Generate SQL
+        if date_col and amount_col:
+            sql = f"SELECT SUM({amount_col}) AS total_sum FROM {primary_table} WHERE MONTH({date_col}) BETWEEN {month_start} AND {month_end} AND YEAR({date_col}) = YEAR(GETDATE())"
+        elif date_col:
+            # No amount column; fallback to COUNT
+            sql = f"SELECT COUNT(*) AS total_count FROM {primary_table} WHERE MONTH({date_col}) BETWEEN {month_start} AND {month_end} AND YEAR({date_col}) = YEAR(GETDATE())"
+        else:
+            # No date column; fallback to exploratory
+            sql = f"SELECT TOP 50 * FROM {primary_table}"
 
         return {**state, "sql_query": sql}
 

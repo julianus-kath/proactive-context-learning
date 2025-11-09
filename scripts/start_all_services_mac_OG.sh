@@ -17,14 +17,10 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-DIM='\033[2m'
-WHITE='\033[0;37m'
 NC='\033[0m' # No Color
 
 # Project root directory
-PROJECT_ROOT="/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/"
+PROJECT_ROOT="/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code"
 cd "$PROJECT_ROOT"
 
 # Log file for services
@@ -142,7 +138,6 @@ cleanup() {
     kill_by_name "uvicorn"
     kill_by_name "langgraph_service"
     kill_by_name "web_app"
-    kill_by_name "debug_langgraph_comprehensive"
 
     # Kill services on known ports (NOT 8000 - that's on Windows)
     kill_port 3000  # Web UI
@@ -203,24 +198,6 @@ if [ -z "$MCP_SERVER_URL" ]; then
 fi
 
 echo -e "${GREEN}✅ MCP_SERVER_URL is configured: ${MCP_SERVER_URL}${NC}"
-
-# ============================================
-# Feature toggles
-# ============================================
-# Enable/disable LangGraph Studio (default: off to avoid interference)
-ENABLE_STUDIO="${ENABLE_STUDIO:-0}"
-
-# Auto-open debugger in new terminal (default: off, shows instructions instead)
-# Set to 1 to automatically open a new terminal with debugger output
-AUTO_OPEN_DEBUGGER="${AUTO_OPEN_DEBUGGER:-0}"
-
-# Debugger PID (will be set if debugger starts)
-DEBUG_PID=""
-if [ "$ENABLE_STUDIO" = "1" ]; then
-    echo -e "${YELLOW}🔧 Feature toggle: LangGraph Studio is ENABLED (ENABLE_STUDIO=1)${NC}"
-else
-    echo -e "${YELLOW}🔧 Feature toggle: LangGraph Studio is DISABLED (set ENABLE_STUDIO=1 to enable)${NC}"
-fi
 
 # ============================================
 # Check Windows MCP Server Connection
@@ -297,17 +274,10 @@ echo -e "${GREEN}✅ Windows MCP server is ready${NC}"
 echo ""
 echo -e "${BLUE}📦 Installing dependencies...${NC}"
 
-# Upgrade build tooling for reliable wheel builds
-echo -e "${YELLOW}   Upgrading pip/setuptools/wheel...${NC}"
-python3 -m pip install --upgrade pip setuptools wheel || {
-    echo -e "${RED}❌ Failed to upgrade pip/setuptools/wheel${NC}"
-    exit 1
-}
-
 # Install LangGraph integration dependencies
 if [ -f "langgraph_integration/requirements.txt" ]; then
     echo -e "${YELLOW}   Installing LangGraph integration dependencies...${NC}"
-    pip3 install -r langgraph_integration/requirements.txt || {
+    pip3 install -q -r langgraph_integration/requirements.txt || {
         echo -e "${RED}❌ Failed to install LangGraph dependencies${NC}"
         exit 1
     }
@@ -316,7 +286,7 @@ fi
 # Install chatbot UI dependencies
 if [ -f "chatbot_ui/requirements.txt" ]; then
     echo -e "${YELLOW}   Installing Chatbot UI dependencies...${NC}"
-    pip3 install -r chatbot_ui/requirements.txt || {
+    pip3 install -q -r chatbot_ui/requirements.txt || {
         echo -e "${RED}❌ Failed to install Chatbot UI dependencies${NC}"
         exit 1
     }
@@ -335,88 +305,69 @@ echo ""
 echo -e "${BLUE}🚀 Starting Mac services...${NC}"
 echo ""
 
-if [ "$ENABLE_STUDIO" = "1" ]; then
-    # ============================================
-    # Start LangGraph Studio (Visualization)
-    # ============================================
-    echo -e "${YELLOW}📊 Starting LangGraph Studio (Port 2024) - Graph Visualization & Debugging...${NC}"
-    cd "$PROJECT_ROOT"
+# ============================================
+# Start LangGraph Studio (Visualization)
+# ============================================
+echo -e "${YELLOW}📊 Starting LangGraph Studio (Port 2024) - Graph Visualization & Debugging...${NC}"
+cd "$PROJECT_ROOT"
 
-    # Ensure langgraph-cli (with in-memory API) is installed
-    echo -e "${YELLOW}   Checking langgraph-cli installation...${NC}"
+# Ensure langgraph-cli is installed
+echo -e "${YELLOW}   Checking langgraph-cli installation...${NC}"
+if ! command -v langgraph &> /dev/null; then
+    echo -e "${YELLOW}   Installing langgraph-cli (this may take a moment)...${NC}"
+    pip3 install langgraph-cli >/dev/null 2>&1
     if ! command -v langgraph &> /dev/null; then
-        echo -e "${YELLOW}   Installing langgraph-cli[inmem] (this may take a moment)...${NC}"
-        python3 -m pip install -U "langgraph-cli[inmem]" || true
-    fi
-
-    # Verify both CLI and API are available
-    if command -v langgraph &> /dev/null; then
-        LANGGRAPH_CLI_VERSION=$(langgraph --version 2>&1 | head -1)
-        echo -e "${GREEN}   ✅ langgraph-cli found: ${LANGGRAPH_CLI_VERSION}${NC}"
-    else
-        echo -e "${YELLOW}⚠️  langgraph CLI not found after install attempt${NC}"
-    fi
-
-    python3 - << 'PY' 2>/dev/null || export LANGGRAPH_API_MISSING=1
-try:
-    import langgraph_api  # type: ignore
-    print("langgraph_api: ok")
-except Exception as e:
-    raise SystemExit(1)
-PY
-
-    if [ "$LANGGRAPH_API_MISSING" = "1" ]; then
-        echo -e "${YELLOW}   Installing missing langgraph-api via langgraph-cli[inmem]...${NC}"
-        python3 -m pip install -U "langgraph-cli[inmem]" || true
-    fi
-
-    # Start LangGraph Studio in the background (if CLI is available)
-    if command -v langgraph &> /dev/null; then
-        # Clear old logs
-        > "$LOG_DIR/langgraph_studio.log"
-
-        # Start langgraph dev server (uses langgraph.json config for build_graph reference)
-        cd "$PROJECT_ROOT"
-        nohup langgraph dev --port 2024 --no-reload --tunnel > "$LOG_DIR/langgraph_studio.log" 2>&1 &
-        STUDIO_PID=$!
-        echo -e "${GREEN}✅ LangGraph Studio started (PID: $STUDIO_PID)${NC}"
-
-        # Wait for Studio to be ready
-        studio_attempts=0
-        while [ $studio_attempts -lt 15 ]; do
-            if curl -s "http://localhost:2024" >/dev/null 2>&1; then
-                echo -e "${GREEN}✅ LangGraph Studio is ready!${NC}"
-                STUDIO_URL="http://localhost:2024"
-                break
-            fi
-            echo -n "."
-            sleep 1
-            studio_attempts=$((studio_attempts + 1))
-        done
-
-        if [ $studio_attempts -ge 15 ]; then
-            echo -e "${YELLOW}⚠️  LangGraph Studio is taking longer to start (this can happen on first run)${NC}"
-            echo -e "${YELLOW}   Showing recent Studio logs for diagnosis...${NC}"
-            tail -n 80 "$LOG_DIR/langgraph_studio.log" 2>/dev/null || true
-        fi
-
-        # Extract tunnel URL from logs
-        sleep 3  # Give it a moment to write the tunnel info to logs
-        TUNNEL_URL=$(grep "Studio UI:" "$LOG_DIR/langgraph_studio.log" 2>/dev/null | sed 's/.*\[\[0-9;]*m//g' | sed 's/\[\[0-9;]*m.*//g' | grep -o 'https://[^ ]*')
-
-        if [ -n "$TUNNEL_URL" ]; then
-            STUDIO_URL="$TUNNEL_URL"
-            echo -e "${GREEN}✅ LangGraph Studio tunnel URL: ${STUDIO_URL}${NC}"
-        else
-            STUDIO_URL="http://localhost:2024"
-            echo -e "${YELLOW}⚠️  Could not extract tunnel URL, using localhost${NC}"
-        fi
-    else
-        echo -e "${YELLOW}⚠️  LangGraph CLI not available, skipping Studio${NC}"
+        echo -e "${YELLOW}⚠️  Failed to install langgraph-cli, skipping Studio${NC}"
         STUDIO_URL=""
+    else
+        echo -e "${GREEN}   ✅ langgraph-cli installed${NC}"
     fi
 else
-    echo -e "${YELLOW}📊 LangGraph Studio is DISABLED (ENABLE_STUDIO=0). Skipping Studio startup.${NC}"
+    LANGGRAPH_CLI_VERSION=$(langgraph --version 2>&1 | head -1)
+    echo -e "${GREEN}   ✅ langgraph-cli found: ${LANGGRAPH_CLI_VERSION}${NC}"
+fi
+
+# Start LangGraph Studio in the background (if CLI is available)
+if command -v langgraph &> /dev/null; then
+    # Clear old logs
+    > "$LOG_DIR/langgraph_studio.log"
+
+    # Start langgraph dev server (uses langgraph.json config for build_graph reference)
+    cd "$PROJECT_ROOT"
+    nohup langgraph dev --port 2024 --no-reload --tunnel > "$LOG_DIR/langgraph_studio.log" 2>&1 &
+    STUDIO_PID=$!
+    echo -e "${GREEN}✅ LangGraph Studio started (PID: $STUDIO_PID)${NC}"
+
+    # Wait for Studio to be ready
+    studio_attempts=0
+    while [ $studio_attempts -lt 15 ]; do
+        if curl -s "http://localhost:2024" >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ LangGraph Studio is ready!${NC}"
+            STUDIO_URL="http://localhost:2024"
+            break
+        fi
+        echo -n "."
+        sleep 1
+        studio_attempts=$((studio_attempts + 1))
+    done
+
+    if [ $studio_attempts -ge 15 ]; then
+        echo -e "${YELLOW}⚠️  LangGraph Studio is taking longer to start (this is normal)${NC}"
+    fi
+
+    # Extract tunnel URL from logs
+    sleep 3  # Give it a moment to write the tunnel info to logs
+    TUNNEL_URL=$(grep "Studio UI:" "$LOG_DIR/langgraph_studio.log" 2>/dev/null | sed 's/.*\[\[0-9;]*m//g' | sed 's/\[\[0-9;]*m.*//g' | grep -o 'https://[^ ]*')
+
+    if [ -n "$TUNNEL_URL" ]; then
+        STUDIO_URL="$TUNNEL_URL"
+        echo -e "${GREEN}✅ LangGraph Studio tunnel URL: ${STUDIO_URL}${NC}"
+    else
+        STUDIO_URL="http://localhost:2024"
+        echo -e "${YELLOW}⚠️  Could not extract tunnel URL, using localhost${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠️  LangGraph CLI not available, skipping Studio${NC}"
     STUDIO_URL=""
 fi
 
@@ -464,25 +415,6 @@ wait_for_service "http://localhost:5001/health" "LangGraph Service" || {
     echo -e "${YELLOW}Check full logs: tail -f $LOG_DIR/langgraph.log${NC}"
     cleanup
 }
-
-# Start LangGraph Debugger (Real-time agent reasoning monitor)
-echo ""
-echo -e "${YELLOW}🔬 Starting LangGraph Debugger (Real-time agent reasoning monitor)...${NC}"
-cd "$PROJECT_ROOT"
-
-if [ ! -f "debug_langgraph_comprehensive.py" ]; then
-    echo -e "${YELLOW}⚠️  debug_langgraph_comprehensive.py not found, skipping debugger${NC}"
-    DEBUG_PID=""
-else
-    > "$LOG_DIR/langgraph_debugger.log"
-    # Use default API key if not set (debug script defaults to supersecretapikey)
-    DEBUG_API_KEY="${API_KEY:-supersecretapikey}"
-    nohup python3 debug_langgraph_comprehensive.py --url "http://localhost:5001" --api-key "$DEBUG_API_KEY" > "$LOG_DIR/langgraph_debugger.log" 2>&1 &
-    DEBUG_PID=$!
-    echo -e "${GREEN}✅ LangGraph Debugger started (PID: $DEBUG_PID)${NC}"
-    echo -e "${YELLOW}   Debugger output: tail -f $LOG_DIR/langgraph_debugger.log${NC}"
-    echo -e "${YELLOW}   Or view directly in terminal${NC}"
-fi
 
 # Start Web UI
 echo ""
@@ -535,10 +467,6 @@ echo -e "  LangGraph Service:  tail -f $LOG_DIR/langgraph.log"
 if [ -n "$STUDIO_URL" ]; then
     echo -e "  LangGraph Studio:   tail -f $LOG_DIR/langgraph_studio.log"
 fi
-if [ -n "$DEBUG_PID" ]; then
-    echo -e "  LangGraph Debugger: tail -f $LOG_DIR/langgraph_debugger.log"
-    echo -e "                    (Shows real-time agent reasoning steps)"
-fi
 echo ""
 echo -e "${BLUE}Documentation & Debugging:${NC}"
 echo -e "  📖 Architecture:     docs/MULTI_AGENT_ARCHITECTURE.md"
@@ -552,40 +480,6 @@ if [ -n "$STUDIO_URL" ]; then
     echo -e "  • Inspect full state at each step"
     echo -e "  • Replay and debug failed runs"
     echo -e "  • Test graph with custom inputs"
-fi
-if [ -n "$DEBUG_PID" ]; then
-    echo ""
-    echo -e "${CYAN}${BOLD}╔═══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}${BOLD}║  🔬 WATCH REAL-TIME AGENT REASONING (Recommended!)          ║${NC}"
-    echo -e "${CYAN}${BOLD}╚═══════════════════════════════════════════════════════════════╝${NC}"
-
-    # Auto-open debugger in new terminal if enabled
-    if [ "$AUTO_OPEN_DEBUGGER" = "1" ]; then
-        echo -e "${GREEN}✅ Auto-opening debugger in new terminal window...${NC}"
-        # macOS Terminal.app - open new window with tail command
-        osascript -e "tell application \"Terminal\" to do script \"cd '$PROJECT_ROOT' && tail -f logs/langgraph_debugger.log\"" 2>/dev/null || {
-            echo -e "${YELLOW}⚠️  Could not auto-open terminal. Please run manually:${NC}"
-            echo -e "    ${GREEN}${BOLD}tail -f logs/langgraph_debugger.log${NC}"
-        }
-    else
-        echo -e "${WHITE}Open a ${BOLD}NEW TERMINAL${NC}${WHITE} and run:${NC}"
-        echo -e ""
-        echo -e "    ${GREEN}${BOLD}tail -f logs/langgraph_debugger.log${NC}"
-    fi
-
-    echo -e ""
-    echo -e "${WHITE}This shows:${NC}"
-    echo -e "  ${CYAN}✓${NC} Agent entries/exits with state snapshots"
-    echo -e "  ${CYAN}✓${NC} Intent parsing (keywords, confidence, operation)"
-    echo -e "  ${CYAN}✓${NC} Discovery results (tables found)"
-    echo -e "  ${CYAN}✓${NC} SQL generation and execution"
-    echo -e "  ${CYAN}✓${NC} Routing decisions and error propagation"
-    echo -e ""
-    echo -e "${YELLOW}💡 This is the best way to debug 'missing info' responses!${NC}"
-
-    if [ "$AUTO_OPEN_DEBUGGER" != "1" ]; then
-        echo -e "${DIM}   (To auto-open debugger, set AUTO_OPEN_DEBUGGER=1 in startup script)${NC}"
-    fi
 fi
 echo ""
 echo -e "${YELLOW}Press Ctrl+C to stop all services${NC}"

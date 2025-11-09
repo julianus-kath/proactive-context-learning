@@ -369,7 +369,7 @@ async def test_mock_answer_formatting(answer_agent):
         user_input="How many customers?",
         exec_result={
             "ok": True,
-            "rows": [{"count": 100}],
+            "data": [{"count": 100}],  # Changed from "rows" to "data" (Phase 10b fix)
             "row_count": 100,
             "execution_time_ms": 150,
             "truncated": False

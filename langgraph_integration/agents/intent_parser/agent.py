@@ -548,7 +548,7 @@ Keep the question clear and actionable.
         """Derive structured action hints from user input and extracted intent.
 
         Produces fields to guide discovery and planning:
-        - required_action: one of ["count", "topk_sum_by_customer", "trend_series", "month_count", "interpret_previous"]
+        - required_action: one of ["count", "topk_sum_by_customer", "sum_with_period", "trend_series", "month_count", "interpret_previous"]
         - group_by: e.g., "customer"
         - top_k: integer if applicable
         - time_granularity: "year"|"month" for trends
@@ -556,6 +556,15 @@ Keep the question clear and actionable.
         text = (user_input or "").lower()
         entities = [e.lower() for e in (intent.get("primary_entities") or [])]
         metrics = [m.lower() for m in (intent.get("metrics") or [])]
+
+        # FALLBACK: Extract metrics from raw text if LLM extraction returned empty
+        if not metrics:
+            if any(k in text for k in ["sum", "total", "umsatz", "verkauf", "revenue", "improved"]):
+                metrics.append("sum")
+            if any(k in text for k in ["count", "how many", "wie viele", "number of"]):
+                metrics.append("count")
+            if any(k in text for k in ["average", "avg", "mean", "durchschnitt", "mittelwert"]):
+                metrics.append("avg")
 
         # top_k detection
         top_k = None
@@ -599,6 +608,15 @@ Keep the question clear and actionable.
             required_action = "department_productivity"
         elif any(kw in text for kw in ["vs", "versus", "compared", "comparison", "vergleich", "gegenüber", "gegen", "quarter", "quartal"]):
             required_action = "comparative_analysis"
+        # NEW: SUM/TOTAL + temporal period (e.g., "sales from Sept to Oct", "improved from Sept to Oct")
+        elif ("sum" in metrics or "total" in metrics or "umsatz" in text or "verkauf" in text or "sales" in text) and \
+             any(m in text for m in ["october", "oktober", "january", "februar", "march", "april", "mai", "juni", "juli", "august", "september", "november", "dezember", "january", "february"]):
+            required_action = "sum_with_period"
+        # FALLBACK: Explicit temporal queries with words like "improved", "changed", "from X to Y"
+        elif any(k in text for k in ["improved", "changed", "growth", "increased", "decreased", "from", "between"]) and \
+             any(m in text for m in ["october", "oktober", "september", "juni", "juli", "august", "januar", "februar", "march", "april", "mai", "november", "dezember"]):
+            # Even without explicit sum/sales keywords, temporal with period indicators suggests time-series aggregation
+            required_action = "sum_with_period"
         elif "count" in metrics or "how many" in text or "wie viele" in text:
             required_action = "count"
 
@@ -612,7 +630,7 @@ Keep the question clear and actionable.
         # Enrich discovery keywords for specific actions (kept within intent parsing)
         extra_keywords: list[str] = []
         try:
-            if required_action in ["topk_sum_by_customer", "sum_by_customer"]:
+            if required_action in ["topk_sum_by_customer", "sum_by_customer", "sum_with_period"]:
                 extra_keywords = [
                     # sales/revenue domain (DE/EN)
                     "umsatz", "verkauf", "vk", "rechnung", "rechnungen", "rechnungsposition", "position", "positionen",

@@ -269,197 +269,7 @@ class ExecAndRecoveryAgent:
             if parsed.get("ok"):
                 logger.info(f"✅ Query executed: {parsed.get('row_count', 0)} rows, {parsed.get('execution_time_ms', 0)}ms")
                 state["exec_result"] = parsed
-
-                # Plan-level lightweight fallback: if zero rows, try COUNT(*) on primary table when available
-                try:
-                    # Fallbacks when the result is empty or COUNT==0
-                    zero_rows = parsed.get("row_count", 0) == 0
-                    zero_count = False
-                    try:
-                        if not zero_rows:
-                            rows = parsed.get("rows") or []
-                            if len(rows) == 1 and isinstance(rows[0], dict):
-                                vals = [v for v in rows[0].values() if isinstance(v, (int, float))]
-                                zero_count = (len(vals) == 1 and int(vals[0]) == 0)
-                    except Exception:
-                        zero_count = False
-
-                    if zero_rows or zero_count:
-                        join_plan = state.get("join_plan", {}) or {}
-                        primary_table = join_plan.get("primary_table")
-
-                        # 1) Probe primary table COUNT(*) if not already a COUNT result
-                        if primary_table and (zero_rows or zero_count):
-                            logger.info(f"🔍 Zero rows: probing primary table count for {primary_table}")
-                            probe_sql = f"SELECT COUNT(*) AS total_count FROM {primary_table}"
-                            probe_result = await self.mcp.query_bounded(probe_sql, max_rows=1, timeout_ms=int(timeout_ms))
-                            probe_parsed = self._parse_query_result(probe_result)
-                            if probe_parsed.get("ok"):
-                                rows = probe_parsed.get("rows") or []
-                                if rows and isinstance(rows[0], dict):
-                                    val = next((int(v) for v in rows[0].values() if isinstance(v, (int, float))), None)
-                                    if val and val > 0:
-                                        logger.info(f"🔁 Switched to primary-table COUNT(*)={val}")
-                                        state["exec_result"] = probe_parsed
-                                        return state
-
-                        # 2) Probe alternate candidates (tables/views) via COUNT(*) and adopt first non-zero
-                        #    Only for explicit product COUNT intents to avoid cross-domain hijacks
-                        intent = state.get("intent", {}) or {}
-                        metrics_lc = [m.lower() for m in (intent.get("metrics") or [])]
-                        entities_lc = [e.lower() for e in (intent.get("primary_entities") or [])]
-                        is_product_count_intent = ("count" in metrics_lc) and any(e in ["product", "products", "artikel", "item", "items"] for e in entities_lc)
-
-                        if is_product_count_intent:
-                            #    a) From relevant_tables (strings)
-                            candidates = state.get("relevant_tables", []) or []
-                            probed = set([primary_table] if primary_table else [])
-                            for cand in candidates:
-                                if not isinstance(cand, str):
-                                    continue
-                                if cand in probed:
-                                    continue
-                                probed.add(cand)
-                                try:
-                                    logger.info(f"🔍 Probing alternate candidate count: {cand}")
-                                    alt_sql = f"SELECT COUNT(*) AS total_count FROM {cand}"
-                                    alt_result = await self.mcp.query_bounded(alt_sql, max_rows=1, timeout_ms=int(timeout_ms))
-                                    alt_parsed = self._parse_query_result(alt_result)
-                                    if alt_parsed.get("ok"):
-                                        rows = alt_parsed.get("rows") or []
-                                        if rows and isinstance(rows[0], dict):
-                                            val = next((int(v) for v in rows[0].values() if isinstance(v, (int, float))), None)
-                                            if val and val > 0:
-                                                logger.info(f"🔁 Switching to candidate {cand} COUNT(*)={val}")
-                                                state["sql_query"] = alt_sql
-                                                state["exec_result"] = alt_parsed
-                                                # Update join_plan primary to reflect chosen source
-                                                jp = dict(join_plan)
-                                                jp["primary_table"] = cand
-                                                state["join_plan"] = jp
-                                                return state
-                                except Exception:
-                                    continue
-
-                            #    b) From candidate_views (objects)
-                            cand_objs = state.get("candidate_views", []) or []
-                            # Heuristic ordering: prefer product/article-like names and non-empty estimates
-                            def _cand_rank(obj):
-                                try:
-                                    name = (obj.get("table_name") or obj.get("name") or obj.get("full_name") or "").lower()
-                                    est = int(obj.get("estimated_rows") or 0)
-                                    cols = int(obj.get("column_count") or 0)
-                                    product_like = 1 if any(k in name for k in ["artikel", "product", "products"]) else 0
-                                    bad_like = -1 if any(k in name for k in ["projekt", "archive", "archiv"]) else 0
-                                    return (product_like, 1 if est > 0 else 0, cols, -bad_like)
-                                except Exception:
-                                    return (0, 0, 0, 0)
-
-                            sorted_objs = sorted(cand_objs, key=_cand_rank, reverse=True)
-                            for obj in sorted_objs[:6]:
-                                try:
-                                    cand_name = obj.get("table_name") or obj.get("name") or obj.get("full_name")
-                                    if not cand_name or cand_name in probed:
-                                        continue
-                                    probed.add(cand_name)
-                                    logger.info(f"🔍 Probing fallback candidate_views count: {cand_name}")
-                                    alt_sql = f"SELECT COUNT(*) AS total_count FROM {cand_name}"
-                                    alt_result = await self.mcp.query_bounded(alt_sql, max_rows=1, timeout_ms=int(timeout_ms))
-                                    alt_parsed = self._parse_query_result(alt_result)
-                                    if alt_parsed.get("ok"):
-                                        rows = alt_parsed.get("rows") or []
-                                        if rows and isinstance(rows[0], dict):
-                                            val = next((int(v) for v in rows[0].values() if isinstance(v, (int, float))), None)
-                                            if val and val > 0:
-                                                logger.info(f"🔁 Switching to candidate {cand_name} COUNT(*)={val}")
-                                                state["sql_query"] = alt_sql
-                                                state["exec_result"] = alt_parsed
-                                                jp = dict(join_plan)
-                                                jp["primary_table"] = cand_name
-                                                state["join_plan"] = jp
-                                                return state
-                                except Exception:
-                                    continue
-
-                            #    c) As a last resort, semantic search for product/article masters and probe top hits
-                            try:
-                                # Use intent-driven keywords with lightweight synonyms (no table names)
-                                intent = state.get("intent", {}) or {}
-                                base_kws = (intent.get("keywords_for_discovery") or intent.get("primary_entities") or [])
-                                ui = (state.get("user_input") or "").strip()
-                                if not base_kws and ui:
-                                    base_kws = [ui]
-                                # Expand product-like synonyms if product intent detected
-                                expanded = []
-                                bl = " ".join(base_kws).lower()
-                                if any(tok in bl for tok in ["product", "products", "artikel", "item", "items"]):
-                                    expanded = ["product", "products", "artikel", "artikelstamm", "item", "items"]
-                                else:
-                                    expanded = base_kws[:]
-                                # Deduplicate and limit
-                                seen = set()
-                                kw_candidates = []
-                                for k in expanded:
-                                    kl = (k or "").strip().lower()
-                                    if kl and kl not in seen:
-                                        seen.add(kl)
-                                        kw_candidates.append(kl)
-                                for kw in kw_candidates[:6]:
-                                    try:
-                                        logger.info(f"🔎 Semantic search fallback for '{kw}'")
-                                        sres = await self.mcp.search_tables(kw, page=1, page_size=10)
-                                        # Extract JSON block from text
-                                        s_text = sres[0].get("text", "") if sres and isinstance(sres[0], dict) else ""
-                                        data = None
-                                        if isinstance(s_text, str):
-                                            last_brace = s_text.rfind('{')
-                                            if last_brace >= 0:
-                                                try:
-                                                    data = json.loads(s_text[last_brace:])
-                                                except Exception:
-                                                    data = None
-                                        if not isinstance(data, dict):
-                                            continue
-                                        results = data.get("data", {}).get("results", [])
-                                        # Rank by estimated_rows and token overlap with keyword
-                                        def _rank(r):
-                                            try:
-                                                name = (r.get("full_name") or r.get("name") or "").lower()
-                                                est = int(r.get("estimated_rows") or 0)
-                                                overlap = 1 if kw in name else 0
-                                                is_table = 1 if (r.get("type") or "").upper() == "TABLE" else 0
-                                                return (overlap, is_table, est)
-                                            except Exception:
-                                                return (0, 0, 0)
-                                        results.sort(key=_rank, reverse=True)
-                                        for r in results[:6]:
-                                            cand_name = r.get("full_name") or r.get("name")
-                                            if not cand_name or cand_name in probed:
-                                                continue
-                                            probed.add(cand_name)
-                                            logger.info(f"🔍 Probing semantic candidate count: {cand_name}")
-                                            alt_sql = f"SELECT COUNT(*) AS total_count FROM {cand_name}"
-                                            alt_result = await self.mcp.query_bounded(alt_sql, max_rows=1, timeout_ms=int(timeout_ms))
-                                            alt_parsed = self._parse_query_result(alt_result)
-                                            if alt_parsed.get("ok"):
-                                                rows = alt_parsed.get("rows") or []
-                                                if rows and isinstance(rows[0], dict):
-                                                    val = next((int(v) for v in rows[0].values() if isinstance(v, (int, float))), None)
-                                                    if val and val > 0:
-                                                        logger.info(f"🔁 Switching to candidate {cand_name} COUNT(*)={val}")
-                                                        state["sql_query"] = alt_sql
-                                                        state["exec_result"] = alt_parsed
-                                                        jp = dict(join_plan)
-                                                        jp["primary_table"] = cand_name
-                                                        state["join_plan"] = jp
-                                                        return state
-                                    except Exception:
-                                        continue
-                            except Exception:
-                                pass
-                except Exception:
-                    # Do not fail the flow on probe errors
-                    pass
+                # Trust the result; let result_validator handle zero-row cases via retry logic
             else:
                 error_msg = parsed.get("error", "Unknown error")
                 logger.warning(f"⚠️  Query failed: {error_msg}")
@@ -1047,7 +857,7 @@ class ExecAndRecoveryAgent:
 
                     return {
                         "ok": ok,
-                        "rows": rows,
+                        "data": rows,  # Use "data" key for orchestrator compatibility
                         "row_count": row_count,
                         "execution_time_ms": execution_time_ms,
                         "truncated": truncated,
@@ -1078,7 +888,7 @@ class ExecAndRecoveryAgent:
             if row_count == 0:
                 return {
                     "ok": True,
-                    "rows": [],
+                    "data": [],  # Use "data" key for orchestrator compatibility
                     "row_count": 0,
                     "execution_time_ms": 0,
                     "truncated": False,
@@ -1116,7 +926,7 @@ class ExecAndRecoveryAgent:
 
             return {
                 "ok": True,
-                "rows": rows,
+                "data": rows,  # Use "data" key for orchestrator compatibility
                 "row_count": len(rows),
                 "execution_time_ms": 0,  # Not provided in text format
                 "truncated": False,

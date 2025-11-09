@@ -1,328 +1,312 @@
-# LangGraph MCP Integration
-**Phase 2 Blueprint Implementation**
+# LangGraph Orchestrator - Multi-Agent Query Pipeline (Phase 10b)
 
-This module implements the Phase 2 Blueprint for integrating LangGraph with the MCP (Model Context Protocol) database server. The workflow parses user intent, generates safe SQL via LLM, calls the MCP Server, and formats results back to the user.
+## Why
 
-## 🎯 **Blueprint Compliance**
+The Phase 9 orchestrator was hanging indefinitely due to two critical bugs:
 
-This implementation follows the exact Phase 2 Blueprint specifications:
+1. **Aggressive Fallback Probing Loop** (`exec_recovery/agent.py`): When queries returned zero rows, the executor would make dozens of sequential MCP calls probing tables, views, and re-running semantic searches. This nested exception handler never escaped, causing the node to hang and never return state to downstream nodes.
 
-✅ **LangGraph workflow** that parses user intent  
-✅ **Generates safe SQL** via LLM  
-✅ **Calls MCP Server** for database operations  
-✅ **Formats results** back to the user  
-✅ **MCPDatabaseTool class** as specified  
-✅ **Required dependencies** in requirements.txt  
+2. **Cross-Boundary Windows/Mac Import** (`orchestrator.py`): The join planner imported `ViewsRanker` from `mcp_server.table_ranker`, violating the architecture principle that macOS should only communicate with Windows via the MCP client interface.
 
-## 📁 **Project Structure**
+3. **Async Mismatch** (`sql_validator/agent.py`): Attempted to `await` a synchronous function `get_shared_mcp_tool()`.
+
+These issues prevented state propagation through the complete pipeline, causing queries to fail silently or timeout.
+
+## What
+
+### Fixed Issues
+
+1. **Removed Fallback Probing Loop** (lines ~273-462 in old `exec_recovery/agent.py`)
+   - Deleted ~190 lines of aggressive fallback logic
+   - Replaced with simple trust model: "Trust the result; let result_validator handle edge cases"
+   - Node now returns immediately after query execution
+   - Enables proper state propagation to downstream nodes
+
+2. **Replaced Windows-Only Ranker** (lines ~840-880 in `orchestrator.py`)
+   - Removed `from mcp_server.table_ranker import ViewsRanker` import
+   - Implemented lightweight client-side heuristics using name/entity matching
+   - Complex ranking remains on MCP server (Windows), accessed via proper client channels
+
+3. **Fixed Async Initialization** (`sql_validator/agent.py` line 46)
+   - Removed erroneous `await` on synchronous `get_shared_mcp_tool()` call
+
+4. **Added Default Recursion Limit** (`orchestrator.py` lines 153-164)
+   - Added `ainvoke()` wrapper that sets `recursion_limit=500` by default
+   - Necessary because subgraphs and nested tool calls consume many recursion steps
+   - Allows callers to override via config if needed
+
+### Pipeline Architecture
+
+The orchestrator now properly executes the complete query pipeline:
 
 ```
-langgraph_integration/
-├── mcp_client.py          # MCPDatabaseTool implementation
-├── graph_definition.py    # LangGraph workflow definition
-├── prompts.py            # LLM prompts for different workflow steps
-├── test_flow.py          # Comprehensive test suite
-├── requirements.txt      # Dependencies as specified
-├── .env.example         # Environment configuration template
-└── README.md            # This file
+START
+  ↓
+index_database (MCP health check, Scout catalog verification)
+  ↓
+parse_intent (Semantic intent parsing, keyword extraction)
+  ↓
+route_operation (Conditional routing based on operation type)
+  ├─→ query: discovery → join_sql → validate_sql → exec_recovery → result_validator → answer → END
+  ├─→ schema_query: discovery_for_schema → answer_schema → END
+  ├─→ health_check: answer_health → END
+  ├─→ error: answer_error → END
+  └─→ clarify: answer → END
 ```
 
-## 🚀 **Quick Start**
+**Key Flow for Data Queries:**
 
-### **Prerequisites**
-1. **OpenAI API Key**: Set your OpenAI API key
-2. **MCP Server**: Running MCP database server (from the main project)
-3. **Python 3.8+**: With required dependencies
+1. **Discovery**: Scout mode semantic search + semantic ranking → candidate tables/views
+2. **Join & SQL**: Views-first strategy, FK analysis → MSSQL query generation
+3. **Validation**: AST validation, syntax check, column existence → repair if needed
+4. **Execution**: Row-capped, timeout-protected query execution via MCP
+5. **Result Validation**: Check row counts, coverage, aggregation → decide retry/accept
+6. **Answer**: Format results naturally, explain data provenance
 
-### **Installation**
+## How to Run
+
+### Quick Test
+
 ```bash
-# Navigate to the integration folder
-cd langgraph_integration
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Copy environment configuration
-cp .env.example .env
-# Edit .env with your OpenAI API key
-```
-
-### **Environment Setup**
-```bash
-# Required environment variables
-export OPENAI_API_KEY=your_api_key_here
-export MCP_SERVER_URL=http://localhost:8000
-export API_KEY=supersecretapikey
-```
-
-### **Start MCP Server** (if not already running)
-```bash
-# From the main project directory
-cd ../mcp_server
-python start_server.py
-
-# Or use Docker from main project
-cd ..
-python agent_system/startup.py --mode docker
-```
-
-## 🧪 **Testing**
-
-### **Quick Test**
-```bash
-# Test MCP connection
-python mcp_client.py
-
-# Run comprehensive test suite
-python test_flow.py
-```
-
-### **Detailed Testing**
-```bash
-# Full test suite with verbose output
-python test_flow.py --verbose
-
-# Quick test (basic functionality only)
-python test_flow.py --quick
-```
-
-## 💬 **Usage Examples**
-
-### **Basic Usage**
-```python
+# Test single query end-to-end
+python3 << 'EOF'
 import asyncio
-from graph_definition import create_database_workflow
+import sys
+sys.path.insert(0, '.')
 
-async def main():
-    # Create workflow
-    workflow = create_database_workflow()
+from langgraph_integration.orchestrator import QueryOrchestrator
+
+async def test():
+    orchestrator = QueryOrchestrator(llm_model="gpt-4o")
     
-    # Process queries
-    response = await workflow.process_query("How many customers do we have?")
-    print(response)
+    result = await orchestrator.ainvoke({
+        'user_input': 'Show me top 5 products by sales',
+        'conversation_history': []
+    })
+    
+    print(f"✅ Answer: {result.get('answer', '')[:100]}")
 
-asyncio.run(main())
+asyncio.run(test())
+EOF
 ```
 
-### **MCPDatabaseTool Direct Usage**
-```python
-import asyncio
-from mcp_client import MCPDatabaseTool
-
-async def main():
-    tool = MCPDatabaseTool()
-    
-    # Get schema
-    schema = await tool.get_schema()
-    print(schema)
-    
-    # Execute query
-    results = await tool.query("SELECT COUNT(*) FROM customers")
-    print(results)
-
-asyncio.run(main())
-```
-
-## 🏗️ **Architecture Details**
-
-### **Workflow Steps**
-
-1. **Intent Parsing**: Analyzes user input to determine operation type
-2. **Schema Retrieval**: Gets database schema when needed
-3. **SQL Generation**: Creates safe SQL queries using LLM
-4. **Query Execution**: Calls MCP server to execute queries
-5. **Result Formatting**: Formats results for user presentation
-6. **Error Handling**: Provides helpful error messages
-
-### **Operation Types**
-
-- **SCHEMA_QUERY**: Database structure questions
-- **DATA_QUERY**: Specific data retrieval
-- **ANALYSIS_QUERY**: Data analysis and aggregations
-- **SAMPLE_DATA**: Example data requests
-- **HEALTH_CHECK**: System status checks
-
-### **MCPDatabaseTool Methods**
+### Production Usage
 
 ```python
-class MCPDatabaseTool:
-    async def call_tool(self, tool_name: str, arguments: dict)
-    async def get_schema(self)
-    async def query(self, sql: str)
-    async def get_table_info(self, table_name: str)
-    async def get_sample_data(self, table_name: str, limit: int = 10)
-    async def health_check(self)
-```
+from langgraph_integration.orchestrator import QueryOrchestrator
 
-## 🔄 **Workflow Flow**
-
-```
-User Input
-    ↓
-Intent Parser (LLM)
-    ↓
-Route Decision
-    ↓
-┌─────────────────┬─────────────────┬─────────────────┐
-│   Schema Query  │   Data Query    │  Sample Data    │
-│       ↓         │       ↓         │       ↓         │
-│ Schema Explainer│ SQL Generator   │ Sample Retriever│
-│       ↓         │       ↓         │       ↓         │
-│ Format Results  │ Execute Query   │ Format Results  │
-│                 │       ↓         │                 │
-│                 │ Format Results  │                 │
-└─────────────────┴─────────────────┴─────────────────┘
-    ↓
-Final Response
-```
-
-## 🔧 **Configuration**
-
-### **Environment Variables**
-```bash
-# Core Configuration
-OPENAI_API_KEY=your_api_key_here
-MCP_SERVER_URL=http://localhost:8000
-API_KEY=supersecretapikey
-
-# Optional
-LOG_LEVEL=INFO
-```
-
-### **Customization**
-```python
-# Custom model and temperature
-workflow = create_database_workflow(
-    model_name="gpt-4",
-    temperature=0.1
+# Initialize once (expensive)
+orchestrator = QueryOrchestrator(
+    llm_model="gpt-4o",
+    llm_temp=0.0,
+    max_joins=3,
+    max_retries=2,
+    row_limit=1000,
+    query_timeout_seconds=30
 )
 
-# Custom MCP server settings
-tool = MCPDatabaseTool(
-    mcp_url="http://localhost:9000",
-    api_key="custom_api_key"
+# Use with default recursion_limit=500
+result = await orchestrator.ainvoke({
+    'user_input': user_question,
+    'conversation_history': conversation
+})
+
+# Or override recursion_limit
+result = await orchestrator.ainvoke(
+    {'user_input': user_question, 'conversation_history': conversation},
+    config={'recursion_limit': 1000}
 )
 ```
 
-## 📊 **Test Results**
+### Using via FastAPI
 
-The test suite validates:
-
-✅ **Environment Setup**: API keys, MCP server connection  
-✅ **Basic MCP Functionality**: All MCP tools working  
-✅ **Workflow Scenarios**: Different query types  
-✅ **Error Handling**: Graceful error responses  
-✅ **Performance**: Response times and success rates  
-
-### **Expected Test Output**
-```
-🚀 Starting LangGraph MCP Integration Tests
-============================================================
-
-📋 Setting up test environment...
-✅ Environment variables configured
-✅ MCP server is healthy
-✅ Workflow initialized successfully
-
-🔧 Testing basic MCP functionality...
-✅ Health check passed
-✅ Schema retrieval passed
-✅ Query execution passed
-✅ Table info passed
-✅ Sample data passed
-
-🔄 Testing workflow scenarios...
-✅ Schema query completed
-✅ Data query completed
-✅ Analysis query completed
-✅ Sample data query completed
-✅ Health check query completed
-
-⚠️  Testing error handling...
-✅ Invalid SQL handled gracefully
-✅ Nonexistent table handled gracefully
-✅ Malformed query handled gracefully
-✅ Empty input handled gracefully
-
-⚡ Testing performance...
-Average Response Time: 2.34s
-Success Rate: 5/5
-
-🎉 ALL TESTS PASSED! LangGraph MCP integration is working perfectly.
-```
-
-## 🚨 **Troubleshooting**
-
-### **Common Issues**
-
-#### **❌ "MCP server not available"**
-```bash
-# Check if MCP server is running
-curl http://localhost:8000/health
-
-# Start MCP server
-cd ../mcp_server && python start_server.py
-```
-
-#### **❌ "OpenAI API key not set"**
-```bash
-# Set environment variable
-export OPENAI_API_KEY=your_api_key_here
-
-# Or add to .env file
-echo "OPENAI_API_KEY=your_api_key_here" >> .env
-```
-
-#### **❌ "Import errors"**
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Check Python path
-python -c "import sys; print(sys.path)"
-```
-
-## 🔗 **Integration with Main Project**
-
-This module is designed to work alongside the main agent system:
-
-- **Standalone**: Can be used independently for simple LangGraph workflows
-- **Integrated**: Can be imported into the main agent system for enhanced functionality
-- **Compatible**: Uses the same MCP server and database as the main project
-
-### **Using in Main Project**
 ```python
-# From the main agent system
-from langgraph_integration.graph_definition import create_database_workflow
+from chatbot_ui.langgraph_service import app
+from fastapi.testclient import TestClient
 
-# Create enhanced workflow
-workflow = create_database_workflow()
-response = await workflow.process_query("Your query here")
+client = TestClient(app)
+response = client.post('/chat', json={
+    'message': 'Show me top customers',
+    'conversation_history': []
+})
+
+print(response.json()['answer'])
 ```
 
-## 📈 **Performance Characteristics**
+## Tests
 
-- **Average Response Time**: 2-5 seconds per query
-- **Concurrent Requests**: Supports multiple simultaneous queries
-- **Error Recovery**: Graceful handling of all error scenarios
-- **Memory Usage**: Efficient with connection pooling
-- **Scalability**: Stateless design for easy scaling
+### Integration Tests (19 tests)
 
-## 🎯 **Blueprint Compliance Summary**
+```bash
+# All orchestrator integration tests
+python3 -m pytest tests/test_orchestrator_integration.py -v
 
-| Requirement | Status | Implementation |
-|-------------|--------|----------------|
-| LangGraph workflow | ✅ | `graph_definition.py` |
-| Parse user intent | ✅ | Intent parser node |
-| Generate safe SQL | ✅ | SQL generator with safety checks |
-| Call MCP Server | ✅ | `MCPDatabaseTool` class |
-| Format results | ✅ | Result formatter node |
-| MCPDatabaseTool | ✅ | Exact blueprint implementation |
-| Required dependencies | ✅ | `requirements.txt` |
-| Environment config | ✅ | `.env` support |
+# Specific test
+python3 -m pytest tests/test_orchestrator_integration.py::TestQueryOrchestrator::test_orchestrator_initialization -v
+```
 
-**✅ Phase 2 Blueprint: FULLY IMPLEMENTED AND TESTED**
+**Tests Cover:**
+- ✅ Orchestrator initialization with all agents
+- ✅ Graph node composition
+- ✅ Intent parsing (query, schema_query, health_check)
+- ✅ Agent composition and subgraph building
+- ✅ State contract validation
+- ✅ Conditional routing logic
+- ✅ Factory pattern and singleton usage
+- ✅ FastAPI integration
 
----
+### End-to-End Tests
 
-This implementation provides a robust, production-ready LangGraph workflow that seamlessly integrates with your MCP database server, following the exact specifications of the Phase 2 Blueprint while adding comprehensive testing and error handling.
+```bash
+# Full pipeline test with MCP server
+python3 tests/test_full_pipeline_e2e.py
+
+# Or via pytest
+python3 -m pytest tests/test_full_pipeline_e2e.py -v
+```
+
+**Prerequisites:**
+- MCP server running (`192.168.1.35:8000`)
+- Database connected and Scout catalog available
+- `.env` with `MCP_SERVER_URL` and `MCP_API_KEY` configured
+
+### MCP Connectivity Check
+
+```bash
+python3 tests/test_mcp_connectivity.py
+```
+
+Validates:
+- Health endpoint responding
+- TCP connectivity
+- Tool call endpoint working
+- Scout catalog healthy
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# MCP Server (Windows/VPN)
+MCP_SERVER_URL=http://192.168.1.35:8000
+MCP_API_KEY=*** (your API key)
+
+# LLM
+OPENAI_API_KEY=sk-...
+
+# Safety & Performance
+RESULT_ROW_CAP=1000
+QUERY_TIMEOUT_SECONDS=30
+```
+
+### Orchestrator Parameters
+
+```python
+QueryOrchestrator(
+    llm_model="gpt-4o",           # LLM to use
+    llm_temp=0.0,                 # Temperature (0=deterministic)
+    max_joins=3,                  # Max joins in queries
+    max_retries=2,                # Retry attempts on exec failure
+    row_limit=1000,               # Default row cap
+    query_timeout_seconds=30      # Query timeout
+)
+```
+
+## Architecture Decisions
+
+### Single Responsibility per Agent
+
+Each agent handles one phase:
+
+- **IntentParserAgent**: Extract operation type, entities, metrics, time windows
+- **DiscoveryAgent**: Find relevant tables/views using Scout semantic search
+- **JoinPlanAndSQLAgent**: Plan joins, generate MSSQL queries
+- **SQLValidatorAgent**: Validate syntax, repair if needed
+- **ExecAndRecoveryAgent**: Execute safely, handle timeouts/errors
+- **ResultValidatorAgent**: Validate result quality, decide retries
+- **AnswerAgent**: Format results naturally
+
+### Trust Model for Execution
+
+- Execute once, trust the result
+- Don't probe the database for every zero-row response
+- Let result_validator decide if retry/replan needed
+- Keeps execution fast and state flowing properly
+
+### Views-First Strategy
+
+- Check business views first (pre-joined, curated data)
+- Fall back to raw tables only if views don't cover intent
+- Reduces join complexity and improves query quality
+
+### Recursion Limit Handling
+
+- Default `ainvoke(recursion_limit=500)` accounts for:
+  - Subgraph invocations (each node can be a graph)
+  - Tool calls and retries
+  - Internal LLM loops and decision points
+- Callers can override if they know they need more/less
+
+## Observability
+
+### Structured Logging
+
+All logs include:
+- Agent entry/exit markers (`🚀 AGENT ENTRY`, `✅ AGENT EXIT`)
+- Operation status (✅ success, ❌ error, ⚠️ warning)
+- Timing (duration_ms)
+- Tool call traces (tool name, arguments, results)
+
+Example:
+```
+INFO:langgraph_integration.orchestrator:🚦 [ROUTE] operation='query'
+INFO:langgraph_integration.orchestrator:🔍 [DISCOVERY] ✅ Discovery subgraph completed
+INFO:langgraph_integration.agents.exec_recovery.agent:✅ Query executed: 5 rows, 45ms
+INFO:langgraph_integration.agents.result_validator.agent:✅ [RESULT_VALIDATOR] Valid=True, Action=accept
+```
+
+### Debug Logger
+
+Enable detailed tracing:
+```python
+from langgraph_integration.debug_logger import get_debug_logger
+
+debug_logger = get_debug_logger()
+debug_logger.agent_entry("my_agent", state)
+debug_logger.intent_parsed(intent, method="llm")
+debug_logger.tool_called("search_tables", args, duration_ms)
+```
+
+## Notes
+
+### Limitations
+
+- Queries limited to ≤3 table joins (configurable via `max_joins`)
+- Results capped at `RESULT_ROW_CAP` rows (default 1000, configurable)
+- Queries timeout at `QUERY_TIMEOUT_SECONDS` (default 30s, configurable)
+- No support for complex stored procedures (read-only SELECT only)
+- Column name hallucinations prevented by column_index validation
+
+### Known Constraints
+
+- **Recursion Limit**: May need adjustment for very deep/complex queries (increase `config['recursion_limit']`)
+- **Cold Start**: First query ~2-3s (LLM models loading), subsequent queries ~1s
+- **MCP Availability**: System depends on Windows MCP server being reachable over network
+
+### Future Improvements
+
+- Blueprint memory (cache successful plans)
+- Router for domain-specific workspaces
+- Graph/RAG integration for docs and lineage
+- User study (UTAUT2) evaluation
+- Query cost estimation
+- Incremental result streaming
+
+## References
+
+- **ADR-0023**: Multi-Agent Orchestration Architecture
+- **ADR-0024**: Comprehensive ERP Assistant Architecture
+- **ADR-0012**: MCP-Only Architecture Migration
+- **ADR-0014**: Scout Mode Semantic Caching
+- **ADR-0015**: Semantic Table Ranking
+- **Repo Overview**: `.zencoder/rules/repo.md`

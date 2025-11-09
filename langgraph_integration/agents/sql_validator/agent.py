@@ -43,7 +43,7 @@ class SQLValidatorAgent:
     async def initialize(self):
         """Initialize MCP client."""
         if not self.mcp:
-            self.mcp = await get_shared_mcp_tool()
+            self.mcp = get_shared_mcp_tool()
 
     def _build_validation_graph(self) -> StateGraph:
         """Build the SQL validation graph with repair loop."""

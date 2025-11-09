@@ -76,8 +76,11 @@ class BaseState(TypedDict, total=False):
     sql_query: str  # Generated MSSQL query
 
     # Execution & recovery
-    exec_result: Dict[str, Any]  # {ok, rows, row_count, execution_time_ms, truncated, warnings}
+    exec_result: Dict[str, Any]  # {ok, data, row_count, execution_time_ms, truncated, warnings}
     error_info: Dict[str, Any]  # {type, message, context, suggestion}
+
+    # 🆕 PHASE 10a: Result validation (catch silent failures)
+    validation_result: Dict[str, Any]  # {valid, issue, suggestion, retry_action}
 
     # Final answer
     final_response: str  # Natural language answer or explanation
@@ -177,7 +180,7 @@ class ExecAndRecoveryAgentInput(TypedDict, total=False):
 class ExecAndRecoveryAgentOutput(TypedDict, total=False):
     """
     Outputs produced by ExecAndRecoveryAgent:
-    - exec_result: {ok, rows, row_count, execution_time_ms, truncated, warnings}
+    - exec_result: {ok, data, row_count, execution_time_ms, truncated, warnings}
     - error_info: if execution fails after retries
     - sql_query: updated (repaired) SQL if retry succeeded
     - retry_count: updated retry count

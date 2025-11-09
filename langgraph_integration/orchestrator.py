@@ -36,6 +36,7 @@ from langgraph_integration.agents.discovery.agent import DiscoveryAgent
 from langgraph_integration.agents.join_sql.agent import JoinPlanAndSQLAgent
 from langgraph_integration.agents.sql_validator.agent import create_sql_validator_agent
 from langgraph_integration.agents.exec_recovery.agent import ExecAndRecoveryAgent
+from langgraph_integration.agents.result_validator.agent import build_result_validator_node
 from langgraph_integration.agents.answer.agent import AnswerAgent
 from langgraph_integration.agents.interpretation.agent import InterpretationAgent
 from langgraph_integration.mcp_client import get_shared_mcp_tool
@@ -149,6 +150,19 @@ class QueryOrchestrator:
         """Explicit cleanup method."""
         await self.__aexit__(None, None, None)
 
+    async def ainvoke(self, input_state: Dict, **kwargs):
+        """
+        Invoke the orchestrator graph with sensible defaults.
+        
+        Sets default recursion_limit=500 if not provided (needed because
+        subgraphs, nested agent calls, and internal tool invocations
+        consume many recursion steps across the call stack).
+        """
+        config = kwargs.pop("config", {})
+        if "recursion_limit" not in config:
+            config["recursion_limit"] = 500
+        return await self.graph.ainvoke(input_state, config=config, **kwargs)
+
     def _build_graph(self) -> StateGraph:
         """
         Build the complete orchestrator graph.
@@ -172,6 +186,8 @@ class QueryOrchestrator:
         graph.add_node("join_sql", self._join_sql_node)
         graph.add_node("validate_sql", self._validate_sql_node)
         graph.add_node("exec_recovery", self._exec_recovery_node)
+        # 🆕 Phase 10a: Result validation node (catches silent failures)
+        graph.add_node("result_validator", build_result_validator_node)
         graph.add_node("answer", self._answer_node)
         # interpretation node is added once above
 
@@ -270,11 +286,52 @@ class QueryOrchestrator:
         )
 
         # ============= QUERY PIPELINE =============
-        # Standard query flow: discovery → join_sql → validate_sql → exec_recovery → answer
+        # Standard query flow: discovery → join_sql → validate_sql → exec_recovery → result_validator → (conditional) answer
         graph.add_edge("discovery", "join_sql")
         graph.add_edge("join_sql", "validate_sql")
         graph.add_edge("validate_sql", "exec_recovery")
-        graph.add_edge("exec_recovery", "answer")
+        # 🆕 Phase 10a: After exec, validate result before answering
+        graph.add_edge("exec_recovery", "result_validator")
+        
+        # 🆕 Phase 10a: Conditional routing from result_validator based on validation outcome
+        def route_validation_result(state: BaseState) -> str:
+            """
+            Route based on validation result.
+            
+            Retry actions:
+            - accept: validation passed, proceed to answer
+            - try_next_candidate: validation failed, try next discovery candidate
+            - replan_with_aggregation: missing GROUP BY, regenerate SQL
+            - replan_with_filter: missing WHERE, regenerate SQL
+            - ask_user: validation unclear, ask user for clarification
+            """
+            validation = state.get("validation_result", {})
+            retry_action = validation.get("retry_action", "accept")
+            
+            logger.info(f"🚦 [VALIDATION_ROUTE] retry_action={retry_action}")
+            
+            if retry_action == "try_next_candidate":
+                logger.info("🔄 Validation: Trying next discovery candidate")
+                return "discovery"
+            elif retry_action in ["replan_with_aggregation", "replan_with_filter"]:
+                logger.info(f"🔄 Validation: Replanning with {retry_action}")
+                return "join_sql"
+            elif retry_action == "ask_user":
+                logger.info("❓ Validation: Asking user for clarification")
+                return "answer"
+            else:  # accept or unknown
+                logger.info("✅ Validation: Result accepted, proceeding to answer")
+                return "answer"
+        
+        graph.add_conditional_edges(
+            "result_validator",
+            route_validation_result,
+            {
+                "discovery": "discovery",
+                "join_sql": "join_sql",
+                "answer": "answer",
+            }
+        )
         # Interpretation path is terminal
         graph.add_edge("interpret", END)
 
@@ -293,7 +350,7 @@ class QueryOrchestrator:
         compiled = graph.compile()
         logger.info("✅ Orchestrator graph compiled successfully")
         logger.info(f"   Graph nodes: {list(compiled.nodes.keys())}")
-        logger.info(f"   Start → route_operation (conditional) → multiple paths → END")
+        logger.info(f"   Query path: discovery → join_sql → validate_sql → exec_recovery → result_validator (conditional) → discovery|join_sql|answer")
         return compiled
 
     # Legacy-simple intent parser for tests and quick routes
@@ -676,24 +733,11 @@ class QueryOrchestrator:
             state["join_plan"] = join_plan
             logger.info(f"🔗 [JOIN_SQL] Generated SQL (agent): {sql_query}")
         except Exception as e:
-            logger.warning(f"🔗 [JOIN_SQL] Join SQL agent failed ({e}); falling back to simple selection")
-            # Fallback to simple generator
-        candidate_views = state.get("candidate_views", [])
-        primary_table = await asyncio.get_event_loop().run_in_executor(
-            None, self._select_best_table_or_view_for_query, relevant_tables, candidate_views, intent
-        )
-        metrics = intent.get("metrics", [])
-        if not primary_table:
+            logger.error(f"🔗 [JOIN_SQL] Join SQL agent failed: {e}", exc_info=True)
+            # On failure, set empty SQL and let validate_sql node handle the error
             state["sql_query"] = ""
             state["join_plan"] = {}
-        else:
-            # Ensure schema-qualified table names for MSSQL (OLLuisiDiener.dbo.TableName)
-            qualified_table = self._qualify_table_name(primary_table)
-            if "count" in metrics or "total" in metrics or len(metrics) == 0:
-                state["sql_query"] = f"SELECT COUNT(*) AS total_count FROM {qualified_table}"
-            else:
-                state["sql_query"] = f"SELECT TOP 10 * FROM {qualified_table}"
-        state["join_plan"] = {"strategy": "direct", "primary_table": primary_table}
+            state["error_info"] = {"type": "join_sql_generation_failed", "message": str(e)}
 
         logger.info("🔗 [JOIN_SQL] SQL generation complete")
         debug_logger.agent_exit("join_sql", before_state, dict(state))
@@ -807,43 +851,45 @@ class QueryOrchestrator:
         return ""
 
     def _select_best_view_for_query(self, views, intent: Dict[str, Any]) -> str:
-        """Select the best view for the query using business relevance ranking."""
+        """
+        Select the best view for the query using simple heuristics.
+        
+        NOTE: Complex ranking (ViewsRanker) lives on MCP server (Windows).
+        Here we do lightweight client-side selection based on name/entity matching.
+        """
         if not views:
             return ""
 
-        from mcp_server.table_ranker import ViewsRanker
-
         primary_entities = intent.get("primary_entities", [])
         keywords = intent.get("keywords_for_discovery", [])
-        operations = intent.get("operation", [])
 
-        # Convert views list to dict format expected by ViewsRanker
-        views_dict = {}
+        # Simple heuristic: prefer views whose name matches primary entities or keywords
+        search_terms = (primary_entities + keywords) if (primary_entities or keywords) else []
+        search_terms_lower = [s.lower() for s in search_terms]
+
+        best_view = None
+        best_score = 0
+
         for view in views:
-            if isinstance(view, dict):
-                view_name = view.get("full_name", view.get("name", ""))
-                if view_name:
-                    views_dict[view_name] = view
+            if not isinstance(view, dict):
+                continue
 
-        if not views_dict:
-            return ""
+            view_name = (view.get("full_name") or view.get("name") or "").lower()
+            if not view_name:
+                continue
 
-        # Use ViewsRanker for intelligent view selection
-        ranker = ViewsRanker()
-        ranked_views = ranker.rank_views(
-            views_dict,
-            entities=primary_entities + keywords,  # Combine entities and keywords
-            intent_operations=operations,
-            query_context={"intent": intent}
-        )
+            # Score: count how many search terms appear in view name
+            score = sum(1 for term in search_terms_lower if term in view_name)
 
-        if ranked_views and ranked_views[0].score > 0.3:  # Minimum threshold for view selection
-            best_view = ranked_views[0]
-            logger.info(f"👁️ [VIEW_SELECTION] Selected view '{best_view.full_name}' with score {best_view.score:.2f}")
-            logger.info(f"👁️ [VIEW_SELECTION] Reasons: {', '.join(best_view.reasons[:2])}")
-            return best_view.full_name
+            if score > best_score:
+                best_score = score
+                best_view = view.get("full_name") or view.get("name")
 
-        logger.debug(f"👁️ [VIEW_SELECTION] No views met minimum score threshold (0.3)")
+        if best_view and best_score > 0:
+            logger.info(f"👁️ [VIEW_SELECTION] Selected view '{best_view}' (score: {best_score})")
+            return best_view
+
+        logger.debug(f"👁️ [VIEW_SELECTION] No views matched primary entities/keywords")
         return ""
 
     def _select_best_table_for_query(self, tables, intent: Dict[str, Any]) -> str:
@@ -1535,11 +1581,18 @@ class QueryOrchestrator:
                 execution_result = exec_result.get("exec_result")
                 error_info = exec_result.get("error_info")
                 attempts += 1
+                
+                # DEBUG: Log execution result structure
+                if execution_result:
+                    logger.debug(f"🔍 exec_result keys: {execution_result.keys()}")
+                    logger.debug(f"🔍 exec_result ok={execution_result.get('ok')}, row_count={execution_result.get('row_count')}, data length={len(execution_result.get('data', []))}")
+                
                 if error_info:
                     break
 
             if execution_result and execution_result.get("ok"):
                 # Format the actual data results
+                logger.info(f"✅ Formatting results: {execution_result.get('row_count')} rows")
                 final_answer = await self._format_execution_results(execution_result, intent, user_input)
                 return {
                     "user_input": user_input,
@@ -1581,12 +1634,16 @@ class QueryOrchestrator:
             row_count = execution_result.get("row_count", 0)
             execution_time = execution_result.get("execution_time_ms", 0)
 
+            # DEBUG: Log data reception
+            logger.debug(f"📊 _format_execution_results: data={len(data)} rows, row_count={row_count}, keys in exec_result={execution_result.keys()}")
+
             # Handle different query types
             query_operation = intent.get("operation", "query")
             primary_entities = intent.get("primary_entities", [])
             metrics = intent.get("metrics", [])
 
             if not data:
+                logger.warning(f"⚠️  No data returned. execution_result keys={execution_result.keys()}, row_count={row_count}")
                 return f"Your query '{user_input}' executed successfully but returned no data. This might mean there are no matching records in the database."
 
             # Format based on query type

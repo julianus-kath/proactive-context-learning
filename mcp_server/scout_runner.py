@@ -429,6 +429,24 @@ class ScoutRunner:
                             score = min(1.0, score + 0.6)
                             reasons.append("Customer master boost")
                     
+                    # Product count intent: boost product master tables
+                    elif "count" in intent_operations and any(e in ["artikel", "product", "products", "sku", "skus"] for e in intent_entities):
+                        if any(tok in name_lower for tok in ["maartikel", "artikel", "artikel", "product", "products", "sku", "material"]) and not is_junk:
+                            score = min(1.0, score + 0.6)
+                            reasons.append("Product master boost")
+                    
+                    # Product + Sales composite intent: boost when "top" + product + sales detected
+                    elif any(op in ["top", "highest", "best", "most", "ranking"] for op in intent_operations) and \
+                         any(e in ["artikel", "product", "sku"] for e in intent_entities) and \
+                         any(s in intent_entities for s in ["sales", "verkauf", "revenue", "umsatz", "invoice"]):
+                        # Boost both product and sales tables for top-selling queries
+                        if any(tok in name_lower for tok in ["maartikel", "artikel", "product"]) and not is_junk:
+                            score = min(1.0, score + 0.5)
+                            reasons.append("Product (top-selling) boost")
+                        elif any(tok in name_lower for tok in ["vkposition", "rechnungsposition", "position", "rechnung", "rechnungen", "vkbeleg", "vkbelege"]) and not is_junk:
+                            score = min(1.0, score + 0.5)
+                            reasons.append("Sales (top-selling) boost")
+                    
                     # Revenue/sum intent: STRONG boost for sales transaction tables, penalize non-sales
                     elif any(op in ["sum", "total", "revenue"] for op in intent_operations):
                         # STRONG boost for actual sales/invoice tables
