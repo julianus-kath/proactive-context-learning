@@ -256,7 +256,7 @@ END
 4. Explore the visualization
 
 ### Debugging
-- Read: [LANGGRAPH_STUDIO_GUIDE.md](docs/LANGGRAPH_STUDIO_GUIDE.md)
+- Read: [LANGGRAPH_STUDIO_GUIDE.md](../../docs/LANGGRAPH_STUDIO_GUIDE.md)
 - Use state inspector to understand data flow
 - Check logs if something goes wrong
 
@@ -304,10 +304,10 @@ grep MCP_SERVER_URL .env
 
 ## Documentation
 
-- 📘 [Studio User Guide](docs/LANGGRAPH_STUDIO_GUIDE.md)
-- 📊 [Implementation Details](docs/PHASE_8_LANGGRAPH_STUDIO_IMPLEMENTATION.md)
-- ⚡ [Quick Reference](docs/SERVICES_QUICK_REFERENCE.md)
-- 🏗️ [Architecture](docs/MULTI_AGENT_ARCHITECTURE.md)
+- 📘 [Studio User Guide](../../docs/LANGGRAPH_STUDIO_GUIDE.md)
+- 📊 [Implementation Details](../../docs/PHASE_8_LANGGRAPH_STUDIO_IMPLEMENTATION.md)
+- ⚡ [Quick Reference](../../docs/SERVICES_QUICK_REFERENCE.md)
+- 🏗️ [Architecture](../../docs/MULTI_AGENT_ARCHITECTURE.md)
 
 ---
 

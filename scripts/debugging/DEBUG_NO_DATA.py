@@ -167,7 +167,7 @@ async def test_orchestrator_format(parsed_result: Dict[str, Any]):
             return
         
         # This is line 1633 in orchestrator.py
-        data = parsed_result.get("data", [])
+        data = parsed_result.get("../../data", [])
         row_count = parsed_result.get("row_count", 0)
         execution_time = parsed_result.get("execution_time_ms", 0)
         

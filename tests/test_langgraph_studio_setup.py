@@ -21,7 +21,7 @@ def test_langgraph_json():
     print_section("1. Testing langgraph.json")
     
     try:
-        with open("langgraph.json") as f:
+        with open("../langgraph.json") as f:
             config = json.load(f)
         print("✅ langgraph.json is valid JSON")
         

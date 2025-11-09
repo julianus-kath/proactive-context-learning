@@ -18,7 +18,7 @@ import os
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-sys.path.insert(0, '/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code')
+sys.path.insert(0, '/')
 
 from langgraph_integration.orchestrator import QueryOrchestrator
 from langgraph_integration.contracts.state import BaseState
@@ -125,7 +125,7 @@ class StreamingDebugger:
     def _handle_stream_event(self, event: Dict[str, Any], events_by_node: Dict) -> None:
         """Handle a single stream event from LangGraph."""
         event_type = event.get("event", "")
-        data = event.get("data", {})
+        data = event.get("../../data", {})
         
         if event_type == "on_chain_start":
             # Node is starting

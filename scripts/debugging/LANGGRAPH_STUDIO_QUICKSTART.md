@@ -188,9 +188,9 @@ pip install -U "langgraph-cli[inmem]"
 
 ## 📚 Next Steps
 
-1. **[Read the detailed fix summary](./LANGGRAPH_STUDIO_FIX_SUMMARY.md)** - Understand what was fixed
-2. **[Check the changelog](./LANGGRAPH_STUDIO_CHANGELOG.md)** - See exactly what changed
-3. **[Start the services](./start_all_services_mac.sh)** - Run the startup script
+1. **[Read the detailed fix summary](LANGGRAPH_STUDIO_FIX_SUMMARY.md)** - Understand what was fixed
+2. **[Check the changelog](LANGGRAPH_STUDIO_CHANGELOG.md)** - See exactly what changed
+3. **[Start the services](../../start_all_services_mac.sh)** - Run the startup script
 4. **[Open Studio](https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024)** - Visualize your graph!
 
 ---

@@ -219,7 +219,7 @@ def format_tool_call(data: Dict[str, Any]) -> str:
 def format_tool_result(data: Dict[str, Any]) -> str:
     """Format MCP tool result"""
     tool = data.get("tool", data.get("tool_name", "?"))
-    result_data = data.get("result", data.get("data", {}))
+    result_data = data.get("result", data.get("../../data", {}))
     success = data.get("success", True)
     duration = data.get("duration_ms")
     
