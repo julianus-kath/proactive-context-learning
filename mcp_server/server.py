@@ -225,6 +225,10 @@ async def mcp_endpoint(
                 result = await MCPTools._search_views(tool_args, db_manager)
             elif tool_name == "describe_view":
                 result = await MCPTools._describe_view(tool_args, db_manager)
+            elif tool_name == "scout_catalog_diagnostics":
+                result = await MCPTools._scout_catalog_diagnostics(tool_args, db_manager)
+            elif tool_name == "scout_catalog_refresh":
+                result = await MCPTools._scout_catalog_refresh(tool_args, db_manager)
             else:
                 raise HTTPException(status_code=404, detail=f"Unknown tool: {tool_name}")
 
