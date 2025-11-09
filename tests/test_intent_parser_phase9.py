@@ -303,6 +303,31 @@ class TestIntentParserFallback:
         assert parsed["primary_entities"] == ["products"]
 
 
+class TestIntentParserLocalization:
+    """Localization-specific behaviour for IntentParserAgent."""
+
+    @pytest.fixture
+    def parser(self):
+        return IntentParserAgent(llm_model="gpt-4o", llm_temp=0.0)
+
+    def test_expand_keywords_includes_german_synonyms(self, parser):
+        expanded = parser._expand_keywords_with_translations(["customers"], ["customers"])
+        lowered = [kw.lower() for kw in expanded]
+        assert "kunde" in lowered
+        assert "kunden" in lowered
+
+    def test_derive_action_hints_german_count(self, parser):
+        user_input = "Wie viele Kunden hatten wir letztes Jahr?"
+        intent = {"primary_entities": ["customers"], "metrics": []}
+        hints = parser._derive_action_hints(user_input, intent)
+        assert hints["required_action"] == "count"
+
+    def test_fallback_extraction_handles_german_entities(self, parser):
+        user_input = "Welche Projekte sind abgeschlossen?"
+        fallback = parser._fallback_entity_extraction(user_input)
+        assert "projekte" in [entity.lower() for entity in fallback["primary_entities"]]
+
+
 if __name__ == "__main__":
     # Run tests
     pytest.main([__file__, "-v", "-s"])

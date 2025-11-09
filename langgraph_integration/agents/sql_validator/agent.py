@@ -336,11 +336,16 @@ class SQLValidatorAgent:
                 available_columns = column_index[table]
                 missing_cols = [col for col in columns if col not in available_columns]
                 if missing_cols:
+                    available_preview = ", ".join(available_columns[:5]) if available_columns else "(none)"
                     return {
                         "is_valid": False,
                         "error_type": "missing_column",
-                        "error_message": f"Columns not found in {table}: {', '.join(missing_cols)}",
-                        "suggestions": ["Check column names against column_index", "Use exploratory SELECT * if column names are uncertain"]
+                        "error_message": f"Columns not found in {table}: {', '.join(missing_cols)}. Available columns include: {available_preview}",
+                        "suggestions": [
+                            "Check column names against column_index",
+                            "Use exploratory SELECT * if column names are uncertain",
+                            f"Consider using one of: {available_preview}"
+                        ]
                     }
             else:
                 result["warnings"].append(f"Could not validate columns for table {table} - not in column_index")

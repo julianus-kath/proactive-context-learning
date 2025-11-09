@@ -205,6 +205,71 @@ async def test_validation_with_joins():
         return True
 
 
+async def test_validation_pass_german_identifiers():
+    """Ensure validator accepts queries with German column names."""
+    print("\n" + "="*80)
+    print("TEST 6: SQL Validation - German Identifiers")
+    print("="*80)
+
+    agent = JoinPlanAndSQLAgent()
+
+    state = {
+        "sql_query": (
+            "SELECT SUM(v.Betrag) AS Gesamtbetrag FROM dbo.VKBelege v "
+            "WHERE v.Rechnungsdatum BETWEEN '2024-01-01' AND '2024-12-31'"
+        ),
+        "relevant_tables": ["dbo.VKBelege"],
+        "candidate_views": [],
+        "column_index": {"dbo.VKBelege": ["Betrag", "Rechnungsdatum"]},
+    }
+
+    result = await agent._validate_sql_node(state)
+
+    validation = result.get("validation_result", {})
+    if not validation.get("is_valid"):
+        print(f"❌ VALIDATION FAILED: {validation}")
+        return False
+
+    print("✅ VALIDATION PASSED for German identifiers")
+    return True
+
+
+async def test_validation_missing_column_hints():
+    """Validator should surface actionable hints when a column is missing."""
+    print("\n" + "="*80)
+    print("TEST 7: SQL Validation - Missing Column Messaging")
+    print("="*80)
+
+    agent = JoinPlanAndSQLAgent()
+
+    state = {
+        "sql_query": "SELECT v.UnknownSpalte FROM dbo.VKBelege v",
+        "relevant_tables": ["dbo.VKBelege"],
+        "candidate_views": [],
+        "column_index": {"dbo.VKBelege": ["Betrag", "Rechnungsdatum", "Belegnummer"]},
+    }
+
+    result = await agent._validate_sql_node(state)
+
+    validation = result.get("validation_result", {})
+    if validation.get("is_valid"):
+        print("❌ VALIDATION SHOULD HAVE FAILED but passed")
+        return False
+
+    error_message = validation.get("error_message", "")
+    print(f"Validation error message: {error_message}")
+    if "UnknownSpalte" not in error_message:
+        print("❌ Error message did not mention the missing column")
+        return False
+
+    if not any(hint in error_message for hint in ["Betrag", "Belegnummer", "Rechnungsdatum"]):
+        print("❌ Error message did not surface available column hints")
+        return False
+
+    print("✅ Missing column error includes actionable hints")
+    return True
+
+
 async def run_all_tests():
     """Run all tests and report summary."""
     print("\n")
@@ -230,6 +295,12 @@ async def run_all_tests():
     
     # Test 5: Validation with JOINs
     results["Validation Joins"] = await test_validation_with_joins()
+
+    # Test 6: German identifiers
+    results["Validation German Identifiers"] = await test_validation_pass_german_identifiers()
+
+    # Test 7: Missing column hints
+    results["Validation Missing Column"] = await test_validation_missing_column_hints()
     
     # Summary
     print("\n" + "="*80)

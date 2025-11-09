@@ -38,6 +38,7 @@ class ValidationResult(TypedDict, total=False):
         "replan_with_aggregation",
         "replan_with_filter"
     ]]
+    clarification_question: Optional[str]
 
 
 @dataclass
@@ -184,7 +185,26 @@ class ResultValidator:
                 "suggestion": f"Aggregate query (metrics: {metrics}) returned 0 rows. Likely wrong table was selected. (SELECT COUNT(*) should always return ≥1 row)",
                 "retry_action": "try_next_candidate"
             }
-        
+
+        sql_lower = sql_query.lower()
+        time_filter_keywords = [" between ", "date", "monat", "monat.", "jahr", "year", "month"]
+        has_time_filter = any(keyword in sql_lower for keyword in time_filter_keywords)
+        if has_time_filter:
+            tables_preview = ", ".join(discovery_results[:3]) if discovery_results else "the current tables"
+            question = (
+                "I did not find any rows for the requested time window. "
+                "Should I expand the timeframe or look at a different data source?"
+            )
+            logger.info("🔍 [VALIDATE] Zero rows with time filter → ask user for clarification")
+            return {
+                "valid": False,
+                "issue": "zero_rows",
+                "issue_severity": "warning",
+                "suggestion": f"No rows matched the current filters. Discovered tables: {tables_preview}.",
+                "retry_action": "ask_user",
+                "clarification_question": question
+            }
+ 
         # High confidence detail query with zero rows is OK (table exists but is empty or filtered)
         logger.info(f"🔍 [VALIDATE] Zero rows accepted (detail query with high confidence)")
         return {
@@ -328,12 +348,17 @@ class ResultValidator:
             # 2. All non-NULL values are identical
             if len(values) >= 2 and len(set(str(v) for v in values)) == 1:
                 logger.warning(f"🔍 [VALIDATE] Suspicious pattern: all {col_name} values are identical (out of {len(rows)} rows)")
+                question = (
+                    f"The column '{col_name}' contains the same value in all returned rows. "
+                    "Should I refine the query (for example by adding a filter or choosing another metric)?"
+                )
                 return {
                     "valid": False,
                     "issue": "suspicious_values",
                     "issue_severity": "warning",
                     "suggestion": f"Column {col_name} has {len(values)} identical values across {len(rows)} rows. May indicate incomplete data or wrong table.",
-                    "retry_action": "try_next_candidate"
+                    "retry_action": "ask_user",
+                    "clarification_question": question
                 }
         
         return {"valid": True}
@@ -400,4 +425,16 @@ def build_result_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
     logger.info(f"🔍 [RESULT_VALIDATOR] Valid={validation.get('valid')}, Action={validation.get('retry_action')}")
     
     state["validation_result"] = validation
+
+    if validation.get("retry_action") == "ask_user":
+        intent = state.get("intent") or {}
+        intent["operation"] = "clarify"
+        intent["needs_clarification"] = True
+        question = validation.get("clarification_question") or validation.get("suggestion") or "Could you clarify what you would like to see?"
+        intent["clarification_question"] = question
+        intent["ambiguity_reason"] = validation.get("suggestion")
+        intent["suggested_options"] = state.get("relevant_tables", [])[:3]
+        state["intent"] = intent
+        logger.info("🔍 [RESULT_VALIDATOR] Escalating to clarification mode")
+
     return state

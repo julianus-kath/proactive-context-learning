@@ -327,6 +327,13 @@ class ScoutRunner:
         """
         return self.store.is_valid()
     
+    def get_catalog_diagnostics(self) -> Dict[str, Any]:
+        """
+        Return detailed catalog diagnostics (coverage, freshness, alerts).
+        """
+        from mcp_server.scout_diagnostics import summarize_catalog
+        return summarize_catalog(str(self.store.catalog_dir))
+    
     # ========================================================================
     # SEMANTIC SEARCH API (consolidated from scout_mode.py)
     # ========================================================================

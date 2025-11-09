@@ -20,6 +20,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
 from langgraph_integration.contracts.state import BaseState, DiscoveryAgentOutput
+from langgraph_integration.contracts.discovery_models import DiscoveryCandidate, DiscoveryOutput
 from langgraph_integration.mcp_client import get_shared_mcp_tool, get_column_index_mcp, _extract_json_from_text
 from langgraph_integration.prompts.discovery import TABLE_FOCUS_PROMPT, VIEWS_FIRST_GUIDANCE
 
@@ -208,8 +209,8 @@ class DiscoveryAgent:
             seen = set()
             unique_candidates = []
             for c in candidates:
-                table_name = c.get("table_name") or c.get("name") or c.get("full_name", "")
-                if table_name not in seen and table_name:
+                table_name = c.get("full_name") or c.get("table_name") or c.get("name") or ""
+                if table_name and table_name not in seen:
                     seen.add(table_name)
                     unique_candidates.append(c)
             
@@ -354,7 +355,7 @@ class DiscoveryAgent:
         seen = set()
         unique_candidates = []
         for c in candidates:
-            table_name = c.get("table_name") or c.get("name") or c.get("full_name", "")
+            table_name = c.get("full_name") or c.get("table_name") or c.get("name") or ""
             if table_name not in seen and table_name:
                 seen.add(table_name)
 
@@ -1093,7 +1094,7 @@ class DiscoveryAgent:
         if not relevant_tables:
             logger.warning("⚠️  No relevant tables to fetch columns for")
             state["column_index"] = {}
-            return state
+            return self._finalize_discovery_payload(state)
         
         try:
             logger.info(f"  Fetching columns for: {relevant_tables}")
@@ -1104,7 +1105,7 @@ class DiscoveryAgent:
             if not column_index:
                 logger.warning("⚠️  Column index fetch returned empty, continuing without it")
                 state["column_index"] = {}
-                return state
+                return self._finalize_discovery_payload(state)
             
             logger.info(f"✅ Successfully fetched column index:")
             for table, columns in column_index.items():
@@ -1115,14 +1116,14 @@ class DiscoveryAgent:
             
             # 🔑 Store in state for Planning Agent to use
             state["column_index"] = column_index
-            return state
+            return self._finalize_discovery_payload(state)
             
         except Exception as e:
             logger.error(f"❌ Failed to fetch column index: {str(e)}")
             logger.warning("⚠️  Continuing without column index (Planning Agent will fall back)")
             # Don't fail the flow - let Planning Agent handle the fetch if needed
             state["column_index"] = {}
-            return state
+            return self._finalize_discovery_payload(state)
     
     # Helper methods
     
@@ -1188,49 +1189,48 @@ class DiscoveryAgent:
 
         try:
             content = result[0].get("text", "")
-            # Robustly extract JSON from possible decorated text
             data = _extract_json_from_text(content) if isinstance(content, str) else content
 
-            # Handle different response formats (including {ok, data: {results|tables}})
-            tables: List[Dict[str, Any]] = []
             if isinstance(data, dict):
                 container = data
                 if "data" in data and isinstance(data["data"], dict):
                     container = data["data"]
-                if "results" in container:
-                    tables = container.get("results", [])
-                elif "tables" in container:
-                    tables = container.get("tables", [])
+                tables = container.get("results") or container.get("tables") or []
             elif isinstance(data, list):
                 tables = data
             else:
                 return []
 
-            # Normalize table format
             normalized: List[Dict[str, Any]] = []
-            for t in tables:
-                if isinstance(t, dict):
-                    full_name = t.get("full_name", "")
-                    name = t.get("table_name") or t.get("name") or full_name
-                    # Prefer MCP's relevance_score (0.0-1.0); fallback to score/relevance if present
-                    relevance = t.get("relevance_score", t.get("score", t.get("relevance", 0.0)))
-                    # Derive booleans from MCP payload
-                    derived_is_view = (t.get("type") == "VIEW") if t.get("type") else t.get("is_view", False)
-                    estimated_rows = t.get("estimated_rows", None)
-                    derived_has_rows = (estimated_rows is not None and estimated_rows > 0) if estimated_rows is not None else t.get("has_rows", True)
+            for raw_candidate in tables:
+                if not isinstance(raw_candidate, dict):
+                    continue
 
-                    normalized.append({
-                        "table_name": name,
-                        "full_name": full_name or name,
-                        "relevance_score": float(relevance),
-                        "is_view": bool(derived_is_view),
-                        "role_coverage": float(t.get("role_coverage", 0)),
-                        "has_rows": bool(derived_has_rows),
-                        "estimated_rows": estimated_rows if isinstance(estimated_rows, (int, float)) else 0,
-                        "column_count": t.get("column_count", 0)
-                    })
+                candidate_input = {
+                    "full_name": raw_candidate.get("full_name") or raw_candidate.get("table_name") or raw_candidate.get("name"),
+                    "schema": raw_candidate.get("schema") or raw_candidate.get("table_schema"),
+                    "name": raw_candidate.get("table_name") or raw_candidate.get("name"),
+                    "type": raw_candidate.get("type"),
+                    "is_view": raw_candidate.get("is_view"),
+                    "relevance_score": raw_candidate.get("relevance_score", raw_candidate.get("score", raw_candidate.get("relevance", 0.0))),
+                    "role_coverage": raw_candidate.get("role_coverage", 0.0),
+                    "has_rows": raw_candidate.get("has_rows"),
+                    "estimated_rows": raw_candidate.get("estimated_rows"),
+                    "column_count": raw_candidate.get("column_count"),
+                    "fk_count": raw_candidate.get("fk_count"),
+                    "columns": raw_candidate.get("columns", []),
+                    "description": raw_candidate.get("description"),
+                }
+
+                try:
+                    candidate = DiscoveryCandidate.model_validate(candidate_input)
+                    normalized.append(candidate.model_dump())
+                except Exception as exc:
+                    logger.debug(f"Skipping discovery candidate due to validation error: {exc}")
+                    continue
 
             return normalized
+
         except Exception as e:
             logger.warning(f"Failed to parse search result: {e}")
             return []
@@ -1460,6 +1460,44 @@ class DiscoveryAgent:
             logger.info(f"🔍 [STRATEGIC] {i+1}. {c.get('table_name')} (score: {c.get('relevance_score', 0):.2f})")
 
         return top_candidates
+
+    def _finalize_discovery_payload(self, state: BaseState) -> BaseState:
+        """Validate and normalize discovery payload before handing off to downstream agents."""
+        try:
+            raw_details = state.get("relevant_table_details") or state.get("candidate_views") or []
+            detail_models: List[DiscoveryCandidate] = []
+            for raw in raw_details:
+                try:
+                    detail_models.append(DiscoveryCandidate.model_validate(raw))
+                except Exception as exc:
+                    logger.debug(f"Skipping table detail due to validation error: {exc}")
+
+            if not detail_models:
+                # As a fallback, use names already present in relevant_tables
+                detail_models = [
+                    DiscoveryCandidate.model_validate({"full_name": name})
+                    for name in state.get("relevant_tables", []) or []
+                ]
+
+            candidate_view_models = [model for model in detail_models if model.is_view]
+            relevant_tables = [model.full_name for model in detail_models]
+
+            payload = DiscoveryOutput(
+                relevant_tables=relevant_tables or [str(name) for name in (state.get("relevant_tables") or [])],
+                schema_snippet=state.get("schema_snippet"),
+                candidate_views=candidate_view_models,
+                relevant_table_details=detail_models,
+                column_index=state.get("column_index") or {},
+            )
+
+            state["relevant_tables"] = payload.relevant_tables
+            state["schema_snippet"] = payload.schema_snippet or state.get("schema_snippet", "")
+            state["candidate_views"] = [view.model_dump() for view in payload.candidate_views]
+            state["relevant_table_details"] = [detail.model_dump() for detail in payload.relevant_table_details]
+            state["column_index"] = payload.column_index
+        except Exception as exc:
+            logger.warning(f"⚠️ Discovery output validation failed: {exc}")
+        return state
 
 
 # Exported function to create and run the agent

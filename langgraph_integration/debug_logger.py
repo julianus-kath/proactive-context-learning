@@ -7,16 +7,108 @@ import os
 import json
 import logging
 import sys
+import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 from enum import Enum
 from functools import wraps
+from collections import defaultdict
 import threading
 
 # Thread-safe log collection for frontend streaming
-_logs_buffer = []
+_logs_buffer: List[Dict[str, Any]] = []
 _logs_lock = threading.Lock()
+
+
+def _sanitize_for_serialization(
+    value: Any,
+    *,
+    max_depth: int = 5,
+    max_list_length: int = 20,
+    max_dict_items: int = 50,
+    _visited: Optional[set] = None
+) -> Any:
+    """
+    Convert arbitrary Python objects into JSON-serializable structures.
+
+    Limits recursion depth and collection sizes to keep logs manageable.
+    """
+    if max_depth <= 0:
+        return repr(value)
+
+    if _visited is None:
+        _visited = set()
+
+    # Primitive types pass through
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+
+    obj_id = id(value)
+    if obj_id in _visited:
+        return "<recursive>"
+    _visited.add(obj_id)
+
+    # Datetime-like objects
+    if isinstance(value, datetime):
+        return value.isoformat()
+
+    # Path, Enum, etc.
+    if isinstance(value, (Path, Enum)):
+        return str(value)
+
+    # Dictionaries
+    if isinstance(value, dict):
+        sanitized: Dict[str, Any] = {}
+        for idx, (key, val) in enumerate(value.items()):
+            if idx >= max_dict_items:
+                sanitized["__truncated__"] = f"{len(value) - max_dict_items} more items"
+                break
+            sanitized[str(key)] = _sanitize_for_serialization(
+                val,
+                max_depth=max_depth - 1,
+                max_list_length=max_list_length,
+                max_dict_items=max_dict_items,
+                _visited=_visited,
+            )
+        return sanitized
+
+    # Iterables
+    if isinstance(value, (list, tuple, set)):
+        iterable = list(value)
+        sanitized_list = [
+            _sanitize_for_serialization(
+                item,
+                max_depth=max_depth - 1,
+                max_list_length=max_list_length,
+                max_dict_items=max_dict_items,
+                _visited=_visited,
+            )
+            for item in iterable[:max_list_length]
+        ]
+        if len(iterable) > max_list_length:
+            sanitized_list.append(f"... {len(iterable) - max_list_length} more items")
+        return sanitized_list
+
+    # Objects with dict() or __dict__
+    for attr in ("dict", "__dict__"):
+        if hasattr(value, attr):
+            try:
+                obj_dict = getattr(value, attr)
+                if callable(obj_dict):
+                    obj_dict = obj_dict()
+                return _sanitize_for_serialization(
+                    obj_dict,
+                    max_depth=max_depth - 1,
+                    max_list_length=max_list_length,
+                    max_dict_items=max_dict_items,
+                    _visited=_visited,
+                )
+            except Exception:
+                continue
+
+    # Fallback to repr
+    return repr(value)
 
 
 class LogLevel(Enum):
@@ -92,6 +184,12 @@ class DebugLogger:
         self.logger.addHandler(console_handler)
         
         self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self._jsonl_lock = threading.Lock()
+        self._event_counter = 0
+        self._agent_timings = defaultdict(list)
+        self.session_jsonl_dir = self.log_dir / "sessions"
+        self.session_jsonl_dir.mkdir(parents=True, exist_ok=True)
+        self.session_jsonl_path = self.session_jsonl_dir / f"{self.session_id}.jsonl"
         self.call_stack = []  # Track nested operations
         self.current_node = None  # Track current LangGraph node context
         
@@ -135,6 +233,17 @@ class DebugLogger:
         message_lines.append(f"{indent}{separator}")
         return "\n".join(message_lines)
     
+    def _write_jsonl(self, entry: Dict[str, Any]) -> None:
+        """Persist structured log entry to session JSONL file."""
+        try:
+            sanitized_entry = _sanitize_for_serialization(entry)
+            with self._jsonl_lock:
+                with self.session_jsonl_path.open("a", encoding="utf-8") as f:
+                    json.dump(sanitized_entry, f, ensure_ascii=False)
+                    f.write("\n")
+        except Exception as exc:
+            self.logger.debug(f"Failed to write JSONL log entry: {exc}")
+    
     def tool_call(self, tool_name: str, arguments: Dict[str, Any], tool_id: str = None):
         """
         Log a tool call initiation.
@@ -159,7 +268,16 @@ class DebugLogger:
         )
         
         self.logger.debug(message)
-        self._add_to_buffer(message, "TOOL_CALL")
+        self._add_to_buffer(
+            message,
+            "TOOL_CALL",
+            {
+                "event": "tool_call",
+                "tool_name": tool_name,
+                "tool_id": call_id,
+                "arguments": arguments,
+            }
+        )
     
     def tool_result(self, tool_name: str, result: Any, duration_ms: float = None, error: str = None):
         """
@@ -210,7 +328,37 @@ class DebugLogger:
             )
             self.logger.info(message)
         
-        self._add_to_buffer(message, "TOOL_RESULT")
+        structured_payload = {
+            "event": "tool_result",
+            "tool_name": tool_name,
+            "status": status,
+            "duration_ms": data.get("duration_ms"),
+            "error": error,
+            "result_preview": data.get("result_preview"),
+        }
+        self._add_to_buffer(message, "TOOL_RESULT", structured_payload)
+    
+    def tool_error(self, tool_name: str, error: str, context: Optional[Dict[str, Any]] = None):
+        """
+        Log tool errors explicitly (used by MCP client fallbacks).
+        """
+        data = {
+            "tool_name": tool_name,
+            "error": error,
+            "timestamp": datetime.now().isoformat(),
+        }
+        if context:
+            data["context"] = context
+        
+        message = self._log_entry(
+            LogLevel.ERROR,
+            f"Tool Error: {tool_name}",
+            data,
+            nested=False
+        )
+        self.logger.error(message)
+        structured_payload = {"event": "tool_error", **data}
+        self._add_to_buffer(message, "TOOL_ERROR", structured_payload)
     
     def scout_mode_operation(self, operation: str, query: str, tables_searched: List[str], results: Dict[str, Any]):
         """
@@ -243,7 +391,8 @@ class DebugLogger:
         )
         
         self.logger.info(message)
-        self._add_to_buffer(message, "SCOUT_MODE")
+        structured_payload = {"event": "scout_mode", **data}
+        self._add_to_buffer(message, "SCOUT_MODE", structured_payload)
     
     def intent_parsed(
         self,
@@ -285,7 +434,8 @@ class DebugLogger:
         
         level = self.logger.info if intent_type != "clarify" else self.logger.warning
         level(message)
-        self._add_to_buffer(message, "INTENT_PARSE")
+        structured_payload = {"event": "intent_parsed", **data}
+        self._add_to_buffer(message, "INTENT_PARSE", structured_payload)
     
     def schema_discovered(
         self,
@@ -327,7 +477,8 @@ class DebugLogger:
         )
         
         self.logger.debug(message)
-        self._add_to_buffer(message, "SCHEMA_DISCOVERY")
+        structured_payload = {"event": "schema_discovered", **data}
+        self._add_to_buffer(message, "SCHEMA_DISCOVERY", structured_payload)
     
     def sql_generated(self, sql: str, reason: str, table_context: List[str] = None):
         """
@@ -355,7 +506,8 @@ class DebugLogger:
         )
         
         self.logger.info(message)
-        self._add_to_buffer(message, "SQL_GENERATION")
+        structured_payload = {"event": "sql_generated", **data}
+        self._add_to_buffer(message, "SQL_GENERATION", structured_payload)
     
     def query_executed(
         self,
@@ -395,7 +547,8 @@ class DebugLogger:
         
         level = self.logger.info if not error else self.logger.error
         level(message)
-        self._add_to_buffer(message, "QUERY_EXECUTION")
+        structured_payload = {"event": "query_executed", **data}
+        self._add_to_buffer(message, "QUERY_EXECUTION", structured_payload)
     
     def decision_made(self, decision: str, reason: str, options_considered: List[str] = None):
         """
@@ -423,7 +576,8 @@ class DebugLogger:
         )
         
         self.logger.info(message)
-        self._add_to_buffer(message, "DECISION")
+        structured_payload = {"event": "decision_made", **data}
+        self._add_to_buffer(message, "DECISION", structured_payload)
     
     def state_updated(self, state_key: str, old_value: Any = None, new_value: Any = None):
         """
@@ -452,7 +606,8 @@ class DebugLogger:
         )
         
         self.logger.debug(message)
-        self._add_to_buffer(message, "STATE_UPDATE")
+        structured_payload = {"event": "state_updated", **data}
+        self._add_to_buffer(message, "STATE_UPDATE", structured_payload)
     
     def timing_checkpoint(self, checkpoint_name: str, duration_ms: float):
         """
@@ -476,7 +631,8 @@ class DebugLogger:
         )
         
         self.logger.debug(message)
-        self._add_to_buffer(message, "TIMING")
+        structured_payload = {"event": "timing_checkpoint", **data}
+        self._add_to_buffer(message, "TIMING", structured_payload)
     
     def workflow_error(self, error_type: str, message: str, context: Dict[str, Any] = None):
         """
@@ -504,7 +660,8 @@ class DebugLogger:
         )
         
         self.logger.error(log_message)
-        self._add_to_buffer(log_message, "ERROR")
+        structured_payload = {"event": "workflow_error", **data}
+        self._add_to_buffer(log_message, "ERROR", structured_payload)
     
     def warning(self, title: str, details: str, context: Dict[str, Any] = None):
         """
@@ -531,7 +688,8 @@ class DebugLogger:
         )
         
         self.logger.warning(message)
-        self._add_to_buffer(message, "WARNING")
+        structured_payload = {"event": "warning", **data, "title": title}
+        self._add_to_buffer(message, "WARNING", structured_payload)
     
     def info(self, title: str, details: str = None, data: Dict[str, Any] = None):
         """
@@ -560,7 +718,8 @@ class DebugLogger:
         )
         
         self.logger.info(message)
-        self._add_to_buffer(message, "INFO")
+        structured_payload = {"event": "info", **log_data, "title": title}
+        self._add_to_buffer(message, "INFO", structured_payload)
     
     def log_info(self, message: str, details: Dict[str, Any] = None):
         """
@@ -586,7 +745,8 @@ class DebugLogger:
         )
         
         self.logger.info(log_message)
-        self._add_to_buffer(log_message, "INFO")
+        structured_payload = {"event": "info", **log_data, "message": message}
+        self._add_to_buffer(log_message, "INFO", structured_payload)
     
     def set_node_context(self, node_name: str):
         """Set the current LangGraph node context for better logging organization."""
@@ -627,22 +787,18 @@ class DebugLogger:
             nested=False
         )
         
+        # Track timing for exit computation
+        self._agent_timings[agent_name].append(time.perf_counter())
+
         self.logger.info(message)
-        # Add custom data to buffer for deep debugging
-        with _logs_lock:
-            log_entry = {
-                "timestamp": datetime.now().isoformat(),
-                "type": "AGENT_ENTRY",
-                "message": f"Agent {agent_name} entering with {len(state_keys)} state keys",
-                "node": agent_name,
-                "data": {
-                    "state_keys": state_keys,
-                    "intent": intent,
-                    "state": state  # Full state snapshot
-                },
-                "session_id": self.session_id
-            }
-            _logs_buffer.append(log_entry)
+        structured_payload = {
+            "event": "agent_entry",
+            "agent": agent_name,
+            "state_keys": state_keys,
+            "state_snapshot": state,
+            "intent": intent,
+        }
+        self._add_to_buffer(message, "AGENT_ENTRY", structured_payload)
     
     def agent_exit(self, agent_name: str, before_state: Dict[str, Any], after_state: Dict[str, Any]):
         """
@@ -686,6 +842,20 @@ class DebugLogger:
             if intent_changes:
                 data["intent_changes"] = intent_changes
         
+        # Compute duration if entry recorded a start time
+        duration_ms = None
+        timings = self._agent_timings.get(agent_name)
+        if timings:
+            try:
+                start_time = timings.pop()
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                data["duration_ms"] = round(duration_ms, 2)
+            except Exception:
+                duration_ms = None
+        elif agent_name in self._agent_timings:
+            # Ensure list exists even if empty for future runs
+            self._agent_timings[agent_name] = []
+
         message = self._log_entry(
             LogLevel.INFO,
             f"✅ AGENT EXIT: {agent_name}",
@@ -694,23 +864,21 @@ class DebugLogger:
         )
         
         self.logger.info(message)
-        # Add custom data to buffer
-        with _logs_lock:
-            log_entry = {
-                "timestamp": datetime.now().isoformat(),
-                "type": "AGENT_EXIT",
-                "message": f"Agent {agent_name} exited, modified {len(changed_keys)} keys",
-                "node": agent_name,
-                "data": {
-                    "added_keys": list(added_keys),
-                    "removed_keys": list(removed_keys),
-                    "modified_keys": changed_keys,
-                    "state": after_state,
-                    "prev_state": before_state
-                },
-                "session_id": self.session_id
-            }
-            _logs_buffer.append(log_entry)
+        structured_payload = {
+            "event": "agent_exit",
+            "agent": agent_name,
+            "added_keys": list(added_keys),
+            "removed_keys": list(removed_keys),
+            "modified_keys": changed_keys,
+            "before_state": before_state,
+            "after_state": after_state,
+        }
+        if duration_ms is not None:
+            structured_payload["duration_ms"] = round(duration_ms, 2)
+        if "intent" in changed_keys:
+            structured_payload["intent_changes"] = data.get("intent_changes", {})
+
+        self._add_to_buffer(message, "AGENT_EXIT", structured_payload)
     
     def intent_parsed_phase9(self, intent: Dict[str, Any], parsing_method: str = "LLM"):
         """
@@ -741,19 +909,12 @@ class DebugLogger:
         )
         
         self.logger.info(message)
-        # Add to buffer
-        with _logs_lock:
-            log_entry = {
-                "timestamp": datetime.now().isoformat(),
-                "type": "INTENT_CHECK",
-                "message": f"Intent parsed with {len(intent.get('keywords_for_discovery', []))} keywords",
-                "data": {
-                    "intent": intent,
-                    "method": parsing_method
-                },
-                "session_id": self.session_id
-            }
-            _logs_buffer.append(log_entry)
+        structured_payload = {
+            "event": "intent_parsed_phase9",
+            "intent": intent,
+            "parsing_method": parsing_method,
+        }
+        self._add_to_buffer(message, "INTENT_CHECK", structured_payload)
     
     def mcp_tool_invoked(self, tool_name: str, params: Dict[str, Any], agent: str = None):
         """
@@ -781,20 +942,13 @@ class DebugLogger:
         )
         
         self.logger.debug(message)
-        # Add to buffer
-        with _logs_lock:
-            log_entry = {
-                "timestamp": datetime.now().isoformat(),
-                "type": "MCP_CALL",
-                "message": f"MCP tool {tool_name} called with params: {str(params)[:100]}",
-                "data": {
-                    "tool": tool_name,
-                    "params": params,
-                    "agent": agent
-                },
-                "session_id": self.session_id
-            }
-            _logs_buffer.append(log_entry)
+        structured_payload = {
+            "event": "mcp_tool_invoked",
+            "tool": tool_name,
+            "params": params,
+            "agent": agent,
+        }
+        self._add_to_buffer(message, "MCP_CALL", structured_payload)
     
     def mcp_tool_result(self, tool_name: str, result: Dict[str, Any], error: str = None):
         """
@@ -835,34 +989,41 @@ class DebugLogger:
         
         level = self.logger.info if not error else self.logger.error
         level(message)
-        # Add to buffer
-        with _logs_lock:
-            log_entry = {
-                "timestamp": datetime.now().isoformat(),
-                "type": "MCP_RESULT",
-                "message": f"MCP tool {tool_name} returned {status}",
-                "data": {
-                    "tool": tool_name,
-                    "result": result,
-                    "error": error
-                },
-                "session_id": self.session_id
-            }
-            _logs_buffer.append(log_entry)
+        structured_payload = {
+            "event": "mcp_tool_result",
+            "tool": tool_name,
+            "status": status,
+            "result": result,
+            "error": error,
+        }
+        self._add_to_buffer(message, "MCP_RESULT", structured_payload)
     
-    def _add_to_buffer(self, message: str, log_type: str):
-        """Add message to thread-safe buffer for frontend streaming."""
+    def _add_to_buffer(
+        self,
+        message: str,
+        log_type: str,
+        structured_data: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Add message to thread-safe buffer and persist structured payload."""
+        self._event_counter += 1
+        entry: Dict[str, Any] = {
+            "timestamp": datetime.now().isoformat(),
+            "type": log_type,
+            "message": message,
+            "session_id": self.session_id,
+            "sequence": self._event_counter,
+        }
+        if self.current_node:
+            entry["node"] = self.current_node
+        if structured_data is not None:
+            entry["data"] = structured_data
+
+        sanitized_entry = _sanitize_for_serialization(entry)
+
         with _logs_lock:
-            log_entry = {
-                "timestamp": datetime.now().isoformat(),
-                "type": log_type,
-                "message": message,
-                "session_id": self.session_id
-            }
-            # Include node context if set
-            if self.current_node:
-                log_entry["node"] = self.current_node
-            _logs_buffer.append(log_entry)
+            _logs_buffer.append(sanitized_entry)
+
+        self._write_jsonl(sanitized_entry)
     
     @staticmethod
     def get_buffered_logs() -> List[Dict[str, Any]]:

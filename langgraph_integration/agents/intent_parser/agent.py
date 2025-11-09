@@ -176,22 +176,23 @@ class IntentParserAgent:
 
         # For data queries, do initial analysis
         prompt = f"""
-Analyze this database query and provide initial intent classification.
+        Analyze this database query and provide initial intent classification.
 
-Query: "{user_input}"
+        Query: "{user_input}"
+        The query may be written in German or English. Treat German business terms (e.g., "Kunden", "Umsatz") as first-class concepts and keep them in the output without translating them.
 
-Provide JSON with:
-{{
-  "query_type": "data_query",  // or "schema_query", "health_check", "clarify"
-  "broad_category": "reporting|analysis|operational|lookup",
-  "key_topics": ["topic1", "topic2"],  // Main subjects mentioned
-  "intent_indicators": ["count", "sum", "filter", "trend"],  // What user wants to do
-  "complexity": "simple|moderate|complex",  // Query complexity level
-  "confidence": 0.8  // Initial confidence [0.0-1.0]
-}}
+        Provide JSON with:
+        {{
+          "query_type": "data_query",  // or "schema_query", "health_check", "clarify"
+          "broad_category": "reporting|analysis|operational|lookup",
+          "key_topics": ["topic1", "topic2"],  // Main subjects mentioned
+          "intent_indicators": ["count", "sum", "filter", "trend"],  // What user wants to do
+          "complexity": "simple|moderate|complex",  // Query complexity level
+          "confidence": 0.8  // Initial confidence [0.0-1.0]
+        }}
 
-Respond ONLY with JSON, no markdown blocks.
-"""
+        Respond ONLY with JSON, no markdown blocks.
+        """
         try:
             response = await self.llm.ainvoke(prompt)
             response_text = self._strip_markdown_blocks(response.content.strip())
@@ -291,59 +292,60 @@ Respond ONLY with JSON.
 
         # Detailed extraction prompt
         prompt = f"""
-Extract structured intent from this ERP database query.
+        Extract structured intent from this ERP database query.
 
-Query: "{user_input}"
-Context: {json.dumps(analysis)}
+        Query: "{user_input}"
+        Context: {json.dumps(analysis)}
+        The question may use German (DE) or English (EN) terminology. Preserve meaningful German nouns/phrases in the output. You may include English equivalents only if they appear explicitly in the question, but never drop or translate away the original vocabulary.
 
-Return JSON with EXACTLY these fields:
-{{
-  "primary_entities": ["entity1", "entity2"],  // 1-3 main business entities (customers, products, orders)
-  "secondary_entities": ["entity3"],           // Supporting entities if any
-  "metrics": ["count", "sum", "avg"],          // What to measure/aggregate
-  "filters": [                                 // Structured filter conditions
-    {{
-      "field": "column_name",
-      "operator": "<|>|=|!=",
-      "value": "filter_value",
-      "description": "human readable description"
-    }}
-  ],
-  "time_window": {{
-    "period": "last_month|last_quarter|this_year",
-    "start": "YYYY-MM-DD",
-    "end": "YYYY-MM-DD"
-  }} or null,
-  "keywords_for_discovery": ["clean", "keywords"],  // For table search (NO noise words)
-  "confidence": 0.85
-}}
+        Return JSON with EXACTLY these fields:
+        {{
+          "primary_entities": ["entity1", "entity2"],  // 1-3 main business entities (customers, products, orders)
+          "secondary_entities": ["entity3"],           // Supporting entities if any
+          "metrics": ["count", "sum", "avg"],          // What to measure/aggregate
+          "filters": [                                 // Structured filter conditions
+            {{
+              "field": "column_name",
+              "operator": "<|>|=|!=",
+              "value": "filter_value",
+              "description": "human readable description"
+            }}
+          ],
+          "time_window": {{
+            "period": "last_month|last_quarter|this_year",
+            "start": "YYYY-MM-DD",
+            "end": "YYYY-MM-DD"
+          }} or null,
+          "keywords_for_discovery": ["clean", "keywords"],  // For table search (NO noise words)
+          "confidence": 0.85
+        }}
 
-EXAMPLES:
+        EXAMPLES:
 
-Query: "How many customers do we have?"
-{{
-  "primary_entities": ["customers"],
-  "secondary_entities": [],
-  "metrics": ["count"],
-  "filters": [],
-  "time_window": null,
-  "keywords_for_discovery": ["customers"],
-  "confidence": 1.0
-}}
+        Query: "How many customers do we have?"
+        {{
+          "primary_entities": ["customers"],
+          "secondary_entities": [],
+          "metrics": ["count"],
+          "filters": [],
+          "time_window": null,
+          "keywords_for_discovery": ["customers"],
+          "confidence": 1.0
+        }}
 
-Query: "Which products have inventory below 100?"
-{{
-  "primary_entities": ["products"],
-  "secondary_entities": [],
-  "metrics": ["inventory"],
-  "filters": [{{"field": "inventory", "operator": "<", "value": "100", "description": "below 100"}}],
-  "time_window": null,
-  "keywords_for_discovery": ["products", "inventory", "stock"],
-  "confidence": 0.95
-}}
+        Query: "Which products have inventory below 100?"
+        {{
+          "primary_entities": ["products"],
+          "secondary_entities": [],
+          "metrics": ["inventory"],
+          "filters": [{{"field": "inventory", "operator": "<", "value": "100", "description": "below 100"}}],
+          "time_window": null,
+          "keywords_for_discovery": ["products", "inventory", "stock"],
+          "confidence": 0.95
+        }}
 
-Respond ONLY with JSON.
-"""
+        Respond ONLY with JSON.
+        """
         try:
             response = await self.llm.ainvoke(prompt)
             response_text = self._strip_markdown_blocks(response.content.strip())

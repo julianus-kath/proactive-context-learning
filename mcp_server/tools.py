@@ -319,7 +319,7 @@ class MCPTools:
             # Phase 4: Discovery tools
             MCPTool(
                 name="list_tables",
-                description="List all database tables with pagination (shows everything, not ranked). Generally NOT RECOMMENDED - use search_tables instead for smarter, ranked results. Only use if you need to browse all tables or filter by schema/pattern.",
+                description="List all database tables with pagination (shows everything, not ranked, names remain in the original ERP language). Generally NOT RECOMMENDED - use search_tables instead for smarter, ranked results. Only use if you need to browse all tables or filter by schema/pattern.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -361,7 +361,7 @@ class MCPTools:
             ),
             MCPTool(
                 name="search_tables",
-                description="Search tables with semantic ranking - intelligently finds relevant tables based on meaning, not just keywords (Phase 7.1 Scout Mode). Returns top matches ranked by relevance with descriptions. RECOMMENDED: Use this instead of list_tables to find tables - much faster and smarter!",
+                description="Search tables with semantic ranking backed by Scout catalog metadata. Understands original German table & column names and matches on business meaning, not just exact keywords (Phase 7.1 Scout Mode). Returns top matches ranked by relevance with descriptions. RECOMMENDED: Use this instead of list_tables to find tables - much faster and smarter. Provide business terms (German or English) and the catalog will bridge the terminology.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -605,6 +605,20 @@ class MCPTools:
                     "required": []
                 }
             ),
+            MCPTool(
+                name="scout_catalog_diagnostics",
+                description="Return freshness, coverage, and ranking diagnostics for the Scout catalog. Helpful when discovery results look stale or incomplete – surfaces TTL status, tables missing metadata, and recommendations.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "catalog_dir": {
+                            "type": "string",
+                            "description": "Optional override for catalog directory (default: data/catalog)"
+                        }
+                    },
+                    "required": []
+                }
+            ),
         ]
     
     @staticmethod
@@ -669,6 +683,8 @@ class MCPTools:
                     result = await MCPTools._get_fk_cardinality(arguments, db_manager)
                 elif tool_name == "get_domain_clusters":
                     result = await MCPTools._get_domain_clusters(arguments, db_manager)
+                elif tool_name == "scout_catalog_diagnostics":
+                    result = await MCPTools._scout_catalog_diagnostics(arguments, db_manager)
                 else:
                     metrics.success = False
                     metrics.error_code = "UNKNOWN_TOOL"
@@ -2051,6 +2067,34 @@ class MCPTools:
                 isError=True
             )
     
+    @staticmethod
+    async def _scout_catalog_diagnostics(arguments: Dict[str, Any], db_manager=None) -> MCPToolResult:
+        """
+        Return Scout catalog diagnostics for discovery debugging.
+        """
+        from mcp_server.scout_diagnostics import summarize_catalog
+
+        catalog_dir = arguments.get("catalog_dir") or "data/catalog"
+        summary = summarize_catalog(catalog_dir)
+        summary_text = json.dumps(summary, indent=2, ensure_ascii=False)
+
+        if summary.get("ok", True):
+            text = "📊 Scout catalog diagnostics\n\n" + summary_text
+            return MCPToolResult(
+                content=[{"type": "text", "text": text}],
+                isError=False,
+            )
+
+        text = (
+            "⚠️ Scout catalog diagnostics reported an issue.\n\n"
+            + summary_text
+            + "\n\nConsider forcing a Scout rebuild or inspecting catalog permissions."
+        )
+        return MCPToolResult(
+            content=[{"type": "text", "text": text}],
+            isError=True,
+        )
+
     # =====================================================
     # Phase 9 Tier 1 Enhancement Tools
     # =====================================================

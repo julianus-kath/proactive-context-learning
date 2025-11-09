@@ -121,6 +121,7 @@ class DiscoveryAgentOutput(TypedDict, total=False):
     - candidate_views: ranked views (if any)
     - session_described_tables: updated cache
     - column_index: 🆕 PHASE 7.2 indexed columns from Scout Catalog (prevents hallucination!)
+    - relevant_table_details: sanitized metadata for candidate tables/views
     - error_info: if discovery fails
     """
 
@@ -129,6 +130,7 @@ class DiscoveryAgentOutput(TypedDict, total=False):
     candidate_views: List[Dict[str, Any]]
     session_described_tables: Dict[str, Any]
     column_index: Dict[str, List[str]]  # 🆕 Exact column names for each table
+    relevant_table_details: List[Dict[str, Any]]
     error_info: Optional[Dict[str, Any]]
 
 
