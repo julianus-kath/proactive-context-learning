@@ -15,12 +15,20 @@ import json
 import logging
 import asyncio
 import concurrent.futures
-from typing import Any, Dict, List, Optional
+import difflib
+import re
+from typing import Any, Dict, List, Optional, Set
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
 from langgraph_integration.contracts.state import BaseState, DiscoveryAgentOutput
-from langgraph_integration.contracts.discovery_models import DiscoveryCandidate, DiscoveryOutput
+from langgraph_integration.contracts.discovery_models import (
+    DiscoveryCandidate,
+    DiscoveryOutput,
+    DiscoveryRoleHints,
+    RoleHintDimension,
+    RoleHintFact,
+)
 from langgraph_integration.mcp_client import get_shared_mcp_tool, get_column_index_mcp, _extract_json_from_text
 from langgraph_integration.prompts.discovery import TABLE_FOCUS_PROMPT, VIEWS_FIRST_GUIDANCE
 
@@ -72,6 +80,69 @@ class DiscoveryAgent:
         self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)
         self.max_candidates_to_describe = 3  # Never describe more than 3 tables
         self.view_role_coverage_threshold = 0.70  # Views-first if coverage >= this
+
+        # Token dictionaries to help infer semantic roles from catalog metadata.
+        # These operate on actual table/column identifiers (not fallback keywords).
+        self.date_signal_tokens: Set[str] = {
+            "date",
+            "datum",
+            "day",
+            "monat",
+            "month",
+            "jahr",
+            "year",
+            "woche",
+            "week",
+            "quarter",
+            "quartal",
+            "zeit",
+            "timestamp",
+            "erstellt",
+            "created",
+            "updated",
+            "modified",
+        }
+        self.id_signal_tokens: Set[str] = {
+            "id",
+            "nr",
+            "nummer",
+            "no",
+            "key",
+            "ident",
+            "code",
+            "guid",
+        }
+        self.label_signal_tokens: Set[str] = {
+            "name",
+            "bezeichnung",
+            "beschreibung",
+            "desc",
+            "title",
+            "label",
+            "anzeige",
+        }
+
+        # Canonical entity mapping to ensure downstream templates can rely on stable keys.
+        self.entity_canonical_map = {
+            "customer": "customer",
+            "customers": "customer",
+            "kunde": "customer",
+            "kunden": "customer",
+            "adress": "customer",
+            "adressen": "customer",
+            "contact": "customer",
+            "contacts": "customer",
+            "product": "product",
+            "products": "product",
+            "produkt": "product",
+            "produkte": "product",
+            "artikel": "product",
+            "artikelstamm": "product",
+            "project": "project",
+            "projects": "project",
+            "projekt": "project",
+            "projekte": "project",
+        }
         
     def build_subgraph(self) -> StateGraph:
         """
@@ -153,9 +224,9 @@ class DiscoveryAgent:
         intent = state.get("intent", {})
         
         # Extract search keywords
-        keywords = self._extract_keywords(user_input, intent)
+        primary_tokens = self._extract_keywords(user_input, intent)
         
-        if not keywords:
+        if not primary_tokens:
             error = {
                 "type": "DISCOVERY_ERROR",
                 "message": "Could not extract search keywords from user input",
@@ -176,8 +247,10 @@ class DiscoveryAgent:
                 candidates.extend(strategic_candidates)
             else:
                 # Standard search for simple queries
-                query_str = " ".join(keywords)
-            logger.debug(f"  Searching with joined keywords: '{query_str}'")
+                query_str = " ".join(primary_tokens).strip()
+                if not query_str:
+                    query_str = user_input
+            logger.debug(f"  Searching primary keywords: '{query_str}'")
             try:
                 result = await self.mcp.search_tables(query_str, page=1, page_size=10, intent_data=intent)
                 parsed = self._parse_search_result(result)
@@ -203,8 +276,22 @@ class DiscoveryAgent:
             except Exception as e:
                 logger.warning(f"  Joined search (views) failed: {e}")
 
-            # Fallback per-keyword searches DISABLED to prevent search spam
-            
+            # Intent-driven enrichment (very limited to avoid noise)
+            try:
+                enrichment_terms = self._enrichment_queries(intent)
+                for term in enrichment_terms[:4]:
+                    if not term or term.lower() == query_str.lower():
+                        continue
+                    try:
+                        logger.debug(f"  Enrichment search: '{term}'")
+                        eres = await self.mcp.search_tables(term, page=1, page_size=5, intent_data=intent)
+                        eparsed = self._parse_search_result(eres)
+                        candidates.extend(eparsed)
+                    except Exception as ee:
+                        logger.debug(f"  Enrichment search failed for '{term}': {ee}")
+            except Exception as enrich_exc:
+                logger.debug(f"  Skipping enrichment search due to error: {enrich_exc}")
+
             # Deduplicate by table name
             seen = set()
             unique_candidates = []
@@ -233,6 +320,17 @@ class DiscoveryAgent:
                                     unique_candidates.append(ec)
                         except Exception as ee:
                             logger.debug(f"  KHKAdressen enrichment failed: {ee}")
+                if wants_sum and any("umsatz" in k for k in (intent.get("keywords_for_discovery") or [])):
+                    try:
+                        enr = await self.mcp.search_tables("Umsatz", page=1, page_size=5, intent_data=intent)
+                        eparsed = self._parse_search_result(enr)
+                        for ec in eparsed:
+                            tname = ec.get("table_name") or ec.get("name")
+                            if tname and tname not in seen:
+                                seen.add(tname)
+                                unique_candidates.append(ec)
+                    except Exception as ee:
+                        logger.debug(f"  Umsatz enrichment failed: {ee}")
             except Exception:
                 pass
 
@@ -244,7 +342,7 @@ class DiscoveryAgent:
             has_meaningful_matches = len(semantic_candidates) > 0
 
             if not unique_candidates or not has_meaningful_matches:
-                logger.warning(f"⚠️  No semantically relevant tables/views found for keywords: {', '.join(keywords)}")
+                logger.warning(f"⚠️  No semantically relevant tables/views found for keywords: {', '.join(primary_tokens)}")
                 logger.info(f"   Found {len(unique_candidates)} candidates, but none with semantic relevance > 0.05")
                 # Trigger clarification by returning empty candidates
                 state["candidate_views"] = []
@@ -491,10 +589,34 @@ class DiscoveryAgent:
         logger.info("🎯 DiscoveryAgent: Filtering to ≤3 candidates...")
         
         candidates = state.get("candidate_views", [])
-        MIN_SCORE = 0.30
+        MIN_SCORE = 0.0
         
         if not candidates:
             return state
+
+        try:
+            def _val(c, key, default=None):
+                if isinstance(c, dict):
+                    return c.get(key, default)
+                if hasattr(c, key):
+                    return getattr(c, key)
+                return default
+
+            preview = []
+            for cand in candidates[:8]:
+                name = (
+                    _val(cand, "table_name")
+                    or _val(cand, "name")
+                    or _val(cand, "full_name")
+                    or ""
+                )
+                score = _val(cand, "score", 0.0)
+                rows = _val(cand, "estimated_rows")
+                preview.append(f"{name} (score={score:.3f}, rows={rows})")
+            if preview:
+                logger.info("📋 Candidates before filtering: " + "; ".join(preview))
+        except Exception as exc:
+            logger.info(f"Unable to log candidate preview: {exc}")
         
         try:
             # Filter by confidence threshold
@@ -576,6 +698,9 @@ class DiscoveryAgent:
                     # UI/Grid/Template tables (NOT business data)
                     if any(tok in n for tok in ["grid", "template", "kennzeichen", "druckbeleg", "erfassungstyp", "layout"]):
                         return True
+                    # HR / payroll / salary tables (not revenue facts)
+                    if any(tok in n for tok in ["personal", "lohn", "abrechnung", "salary", "payroll"]):
+                        return True
                     return False
                 
                 # For customer COUNT: drop ALL junk, prefer master address/customer tables
@@ -629,11 +754,15 @@ class DiscoveryAgent:
                     # Prefer sales transaction tables
                     def looks_sales(c):
                         n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
-                        return any(tok in n for tok in [
-                            "vkposition", "rechnungsposition", "position", "positionen",
-                            "rechnung", "rechnungen", "vkbeleg", "belege",
-                            "auftrag", "auftrags", "invoice", "invoices", "order", "orders", "umsatz", "faktura", "verkauf"
-                        ]) and not is_junk(c) and not any(ex in n for tok in ["projekt", "crm", "ek"])
+                        return (
+                            any(tok in n for tok in [
+                                "vkposition", "rechnungsposition", "position", "positionen",
+                                "rechnung", "rechnungen", "vkbeleg", "belege",
+                                "auftrag", "auftrags", "invoice", "invoices", "order", "orders", "umsatz", "faktura", "verkauf"
+                            ])
+                            and not is_junk(c)
+                            and not any(tok in n for tok in ["projekt", "crm", "ek"])
+                        )
                     sales_only = [c for c in filtered if looks_sales(c)]
                     if sales_only:
                         logger.info(f"🎯 Restricting to {len(sales_only)} sales transaction table(s)")
@@ -655,6 +784,8 @@ class DiscoveryAgent:
             except Exception:
                 pass
             selected = filtered[:sel_limit]
+            if not selected:
+                selected = sorted(candidates, key=rank_key, reverse=True)[:sel_limit]
 
             # Intent-specific post-prune ordering tweaks
             try:
@@ -767,6 +898,15 @@ class DiscoveryAgent:
                             else:
                                 result = await self.mcp.describe_table(table_name, include_sample=False)
                             parsed = self._parse_describe_result(result, table_name)
+                            if isinstance(parsed, dict):
+                                if "full_name" not in parsed:
+                                    parsed["full_name"] = table_name
+                                if "schema" not in parsed and "." in table_name:
+                                    parsed["schema"] = table_name.split(".", 1)[0]
+                                if not parsed.get("estimated_rows") and cand.get("estimated_rows"):
+                                    parsed["estimated_rows"] = cand.get("estimated_rows")
+                                if "has_rows" not in parsed and (cand.get("estimated_rows") or 0) > 0:
+                                    parsed["has_rows"] = True
                             # Optionally fetch view dependencies
                             if cand.get("is_view", False):
                                 try:
@@ -1113,9 +1253,10 @@ class DiscoveryAgent:
                 logger.info(f"  {table}: {col_count} column(s)")
                 if col_count <= 5:
                     logger.debug(f"    Columns: {columns}")
-            
-            # 🔑 Store in state for Planning Agent to use
+
             state["column_index"] = column_index
+            logger.info(f"🗂️ Column index fetched; existing detail entries: {len(state.get('relevant_table_details') or [])}")
+            await self._enrich_row_estimates(state)
             return self._finalize_discovery_payload(state)
             
         except Exception as e:
@@ -1127,60 +1268,357 @@ class DiscoveryAgent:
     
     # Helper methods
     
+    def _split_tokens(self, value: Optional[str]) -> List[str]:
+        if not value:
+            return []
+        text = re.sub(r"([a-z0-9])([A-ZÄÖÜ])", r"\1 \2", str(value))
+        text = re.sub(r"[^0-9A-Za-zÄÖÜäöüß]+", " ", text)
+        tokens = [tok.lower() for tok in text.split() if tok]
+        return tokens
+
+    def _canonical_entity(self, entity: str) -> str:
+        stripped = entity.strip().lower()
+        if stripped in self.entity_canonical_map:
+            return self.entity_canonical_map[stripped]
+        # Remove plural 's' or German plural 'en' heuristically
+        if stripped.endswith("en") and stripped[:-2] in self.entity_canonical_map:
+            return self.entity_canonical_map[stripped[:-2]]
+        if stripped.endswith("s") and stripped[:-1] in self.entity_canonical_map:
+            return self.entity_canonical_map[stripped[:-1]]
+        return stripped
+
+    def _collect_terms(self, intent: Dict[str, Any], keys: Optional[List[str]] = None) -> Set[str]:
+        if not intent:
+            return set()
+        sequences: List[str] = []
+        if keys is None or "primary_entities" in keys:
+            sequences.extend(intent.get("primary_entities") or [])
+        if keys is None or "secondary_entities" in keys:
+            sequences.extend(intent.get("secondary_entities") or [])
+        if keys is None or "metrics" in keys:
+            sequences.extend(intent.get("metrics") or [])
+        if keys is None or "keywords_for_discovery" in keys:
+            sequences.extend(intent.get("keywords_for_discovery") or [])
+        if keys is None or "raw_query" in keys:
+            raw = intent.get("raw_query")
+            if raw:
+                sequences.append(raw)
+        tokens: Set[str] = set()
+        for seq in sequences:
+            tokens.update(self._split_tokens(seq))
+        return tokens
+
+    def _string_similarity(self, a: str, b: str) -> float:
+        if not a or not b:
+            return 0.0
+        return difflib.SequenceMatcher(None, a.lower(), b.lower()).ratio()
+
+    def _get_columns_for_table(
+        self,
+        table: str,
+        detail: DiscoveryCandidate,
+        column_index: Dict[str, List[str]],
+    ) -> List[str]:
+        if column_index and table in column_index and isinstance(column_index[table], list):
+            return [str(col) for col in column_index[table] if col]
+        if detail.columns:
+            cols = []
+            for col in detail.columns:
+                name = col.get("column") or col.get("column_name") or col.get("name")
+                if name:
+                    cols.append(str(name))
+            return cols
+        return []
+
+    def _token_overlap(self, tokens: Set[str], reference: Set[str]) -> float:
+        if not tokens or not reference:
+            return 0.0
+        intersection = tokens & reference
+        if not intersection:
+            return 0.0
+        return len(intersection) / len(reference)
+
+    def _score_column_against_terms(self, column: str, term_tokens: Set[str], term_strings: List[str]) -> float:
+        tokens = set(self._split_tokens(column))
+        overlap_score = self._token_overlap(tokens, term_tokens)
+        similarity_score = 0.0
+        for term in term_strings:
+            similarity_score = max(similarity_score, self._string_similarity(column, term))
+        # weight overlap higher than loose similarity
+        return max(overlap_score, similarity_score)
+
+    def _build_role_hints(
+        self,
+        detail_models: List[DiscoveryCandidate],
+        column_index: Dict[str, List[str]],
+        intent: Dict[str, Any],
+    ) -> DiscoveryRoleHints:
+        role_hints = DiscoveryRoleHints()
+        if not detail_models:
+            return role_hints
+
+        metric_terms = self._collect_terms(intent, keys=["metrics", "keywords_for_discovery", "raw_query"])
+        metric_strings = [
+            *(intent.get("metrics") or []),
+            *(intent.get("keywords_for_discovery") or []),
+        ]
+        if intent.get("raw_query"):
+            metric_strings.append(intent["raw_query"])
+
+        entity_terms_map: Dict[str, Set[str]] = {}
+        for entity in intent.get("primary_entities") or []:
+            canonical = self._canonical_entity(entity)
+            tokens = self._split_tokens(entity)
+            if canonical not in entity_terms_map:
+                entity_terms_map[canonical] = set()
+            entity_terms_map[canonical].update(tokens)
+        for entity in intent.get("secondary_entities") or []:
+            canonical = self._canonical_entity(entity)
+            tokens = self._split_tokens(entity)
+            if canonical not in entity_terms_map:
+                entity_terms_map[canonical] = set()
+            entity_terms_map[canonical].update(tokens)
+
+        fact_candidates: List[RoleHintFact] = []
+
+        for detail in detail_models:
+            table = detail.full_name
+            columns = self._get_columns_for_table(table, detail, column_index)
+            column_tokens_map = {col: set(self._split_tokens(col)) for col in columns}
+
+            metric_candidates: Dict[str, float] = {}
+            if metric_terms:
+                for col in columns:
+                    score = self._score_column_against_terms(col, metric_terms, metric_strings)
+                    if score > 0:
+                        metric_candidates[col] = score
+
+            date_columns = [
+                col
+                for col, tokens in column_tokens_map.items()
+                if self._token_overlap(tokens, self.date_signal_tokens) > 0
+            ]
+
+            entity_keys: Dict[str, List[str]] = {}
+            for role, tokens in entity_terms_map.items():
+                if not tokens:
+                    continue
+                candidate_cols = [
+                    col
+                    for col, col_tokens in column_tokens_map.items()
+                    if self._token_overlap(col_tokens, tokens | self.id_signal_tokens) > 0
+                ]
+                if candidate_cols:
+                    entity_keys[role] = candidate_cols[:3]
+
+            fact_candidates.append(
+                RoleHintFact(
+                    table=table,
+                    estimated_rows=detail.estimated_rows,
+                    metric_candidates=dict(sorted(metric_candidates.items(), key=lambda item: item[1], reverse=True)[:5]),
+                    date_columns=date_columns[:5],
+                    entity_keys=entity_keys,
+                )
+            )
+
+            # Dimension detection
+            table_tokens = set(self._split_tokens(detail.name or detail.full_name))
+            for role, tokens in entity_terms_map.items():
+                if not tokens:
+                    continue
+                overlap = self._token_overlap(table_tokens, tokens)
+                if overlap <= 0:
+                    continue
+
+                id_cols = [
+                    col
+                    for col, col_tokens in column_tokens_map.items()
+                    if self._token_overlap(col_tokens, self.id_signal_tokens | tokens) > 0
+                ]
+                label_cols = [
+                    col
+                    for col, col_tokens in column_tokens_map.items()
+                    if self._token_overlap(col_tokens, self.label_signal_tokens) > 0
+                ]
+
+                candidate_dimension = RoleHintDimension(
+                    role=role,
+                    table=table,
+                    estimated_rows=detail.estimated_rows,
+                    id_columns=id_cols[:3],
+                    label_columns=label_cols[:3],
+                )
+
+                existing = role_hints.dimensions.get(role)
+                if existing is None or (detail.estimated_rows or 0) > (existing.estimated_rows or 0):
+                    role_hints.dimensions[role] = candidate_dimension
+
+        fact_candidates.sort(
+            key=lambda fc: (
+                max(fc.metric_candidates.values()) if fc.metric_candidates else 0.0,
+                fc.estimated_rows or 0,
+            ),
+            reverse=True,
+        )
+        role_hints.fact_candidates = fact_candidates
+        return role_hints
+
+    async def _enrich_row_estimates(self, state: BaseState) -> None:
+        """Probe candidate tables to ensure we have a non-zero row estimate."""
+        details = state.get("relevant_table_details") or []
+        logger.info(f"🧮 Enrich row estimates for {len(details)} candidate(s)")
+        if not details:
+            return
+
+        enriched: List[DiscoveryCandidate] = []
+        for raw in details:
+            try:
+                model = DiscoveryCandidate.model_validate(raw)
+            except Exception:
+                continue
+            current_rows = model.estimated_rows or 0
+            if current_rows <= 0:
+                try:
+                    row_count = await self._probe_table_rows(model.full_name)
+                except Exception as exc:
+                    logger.debug(f"🔍 Row probe failed for {model.full_name}: {exc}")
+                    row_count = 0
+                if row_count > 0:
+                    logger.info(f"✅ Row probe confirmed data for {model.full_name} (>= {row_count} rows)")
+                    model.estimated_rows = row_count
+                    model.has_rows = True
+                elif model.has_rows:
+                    # Describe metadata claims the table has rows even though probe failed.
+                    # Treat it as non-empty but mark minimal estimate to keep it in play.
+                    model.estimated_rows = 1
+                    logger.info(f"ℹ️  Trusting describe(has_rows) for {model.full_name}; setting estimated_rows=1")
+            logger.info(f"📊 Row estimate for {model.full_name}: {model.estimated_rows}")
+            enriched.append(model)
+
+        enriched_models = [m for m in enriched]
+
+        if not enriched_models or not any((model.estimated_rows or 0) > 0 for model in enriched_models):
+            fallback = await self._fallback_fact_from_keywords(state.get("intent") or {})
+            if fallback:
+                logger.info(f"✅ Fallback fact candidate selected: {fallback.full_name}")
+                enriched_models = [fallback]
+                state["relevant_tables"] = [fallback.full_name]
+
+        state["relevant_table_details"] = [m.model_dump() for m in enriched_models]
+
+    async def _probe_table_rows(self, table: str) -> int:
+        """Return 1 if the table appears to contain rows, otherwise 0."""
+        qualified = self._qualify_table_name(table)
+        sql = f"SELECT TOP 1 1 AS probe FROM {qualified}"
+        try:
+            result = await self.mcp.query_bounded(sql, max_rows=1)
+        except Exception as exc:
+            logger.debug(f"Row probe error for {table}: {exc}")
+            return 0
+
+        if not result:
+            return 0
+        text = result[0].get("text", "")
+        try:
+            data = _extract_json_from_text(text)
+            if isinstance(data, dict):
+                row_count = data.get("row_count")
+                if isinstance(row_count, (int, float)):
+                    return int(row_count)
+                rows = data.get("rows")
+                if isinstance(rows, list) and rows:
+                    return len(rows)
+        except Exception as exc:
+            logger.debug(f"Unable to parse row probe result for {table}: {exc}")
+        return 0
+
+    def _qualify_table_name(self, table: str) -> str:
+        raw = (table or "").strip()
+        if not raw:
+            return ""
+        stripped = raw.strip("[]")
+        if "." in stripped:
+            schema, name = stripped.split(".", 1)
+        else:
+            schema, name = "dbo", stripped
+        schema = schema.strip("[]") or "dbo"
+        name = name.strip("[]")
+        return f"[{schema}].[{name}]"
+
+    async def _fallback_fact_from_keywords(self, intent: Dict[str, Any]) -> Optional[DiscoveryCandidate]:
+        keywords = intent.get("keywords_for_discovery") or []
+        if not keywords:
+            return None
+
+        query = " ".join(keywords[:4])
+        try:
+            result = await self.mcp.search_tables(query, page=1, page_size=8, intent_data=intent)
+        except Exception as exc:
+            logger.debug(f"Fallback fact search failed: {exc}")
+            return None
+
+        parsed = self._parse_search_result(result)
+        for raw in parsed:
+            try:
+                candidate = DiscoveryCandidate.model_validate(raw)
+            except Exception:
+                continue
+
+            rows = candidate.estimated_rows or 0
+            if rows <= 0:
+                rows = await self._probe_table_rows(candidate.full_name)
+            if rows <= 0:
+                continue
+
+            candidate.estimated_rows = rows
+            candidate.has_rows = True
+            return candidate
+
+        return None
+
     def _extract_keywords(self, user_input: str, intent: Dict[str, Any]) -> List[str]:
         """
-        Extract search keywords strictly from the IntentParser output.
-        No fallback, no augmentation, no trimming.
-        """
-        base = intent.get("keywords_for_discovery", [])
-        logger.info(f"📌 Using intent keywords (exact): {base}")
+        Extract primary search keywords strictly from the IntentParser output.
 
-        # Minimal, intent-driven synonym expansion (single joined query string)
-        # This keeps dependency on intent while improving cross-language recall.
+        We intentionally avoid inventing new tokens here—primary discovery must stay
+        anchored to what the intent parser produced so we don't drift into unrelated
+        domains (payroll tables, admin metadata, etc.).
+        """
+        base = [k for k in (intent.get("keywords_for_discovery") or []) if k]
+        if not base and user_input:
+            # As a last resort, fall back to the raw query string once (no tokenisation).
+            base = [user_input]
+        logger.info(f"📌 Using intent keywords (exact): {base}")
+        return base
+
+    def _enrichment_queries(self, intent: Dict[str, Any]) -> List[str]:
+        """
+        Build a small set of intent-driven enrichment queries. These are executed
+        separately so they cannot drown out the primary signal.
+        """
         entities = [e.lower() for e in (intent.get("primary_entities") or [])]
         metrics = [m.lower() for m in (intent.get("metrics") or [])]
+        base = [k.lower() for k in (intent.get("keywords_for_discovery") or []) if k]
 
         extra: List[str] = []
         if any(e in ["customer", "customers", "kunde", "kunden"] for e in entities + base):
-            extra += ["kunde", "kunden", "adresse", "adressen", "khkadressen", "customer", "customers"]
+            extra.extend(["KHKAdressen", "Kunde", "Kunden"])
         if any(e in ["product", "products", "produkt", "produkte", "artikel", "artikelstamm"] for e in entities + base):
-            extra += ["produkt", "produkte", "artikel", "artikelstamm", "artikelnummer", "product", "products"]
-        if any(m in ["sum", "total"] for m in metrics) or any(k.lower() in ["umsatz", "revenue", "sales"] for k in base):
-            # Revenue/sales domain terms (DE/EN) to help recall sales facts/views
-            extra += [
-                "umsatz", "betrag", "erloes", "erlös", "revenue", "sales",
-                "vk", "verkauf", "rechnung", "rechnungs", "beleg", "belege",
-                "position", "positionen", "vkbeleg", "vkbelege", "vkposition", "vkpositionen",
-                "auftrag", "auftrags", "faktura"
-            ]
+            extra.extend(["Artikelstamm", "Produkte", "Artikel"])
+        if any(m in ["sum", "total"] for m in metrics) or any(k in ["umsatz", "revenue", "sales"] for k in base):
+            extra.extend(["Umsatz", "VKPosition", "Rechnungsposition"])
 
-        # Build one joined query string to respect the single-call constraint
-        joined = " ".join(dict.fromkeys([*(k for k in base if k), *extra]))
-        return [joined] if joined else base
-    
-    def _fallback_keyword_extraction(self, user_input: str) -> List[str]:
-        """
-        Fallback extraction if intent parser didn't provide keywords.
-        
-        This should rarely happen, but provides graceful degradation.
-        """
-        stop_words = {
-            "the", "a", "an", "is", "are", "was", "were", "be", "been",
-            "by", "of", "for", "to", "and", "or", "in", "on", "at",
-            "how", "many", "show", "me", "please", "get", "list", "find", "search", "what",
-            "have", "has", "had", "do", "does", "did", "with", "from", "as", "it",
-            "we", "you", "they", "he", "she", "this", "that", "there",
-            "where", "when", "why", "which", "who"
-        }
-        
-        words = user_input.lower().split()
-        keywords = []
-        for word in words:
-            word = word.strip("?,.!;:")
-            if word not in stop_words and len(word) > 2:
-                keywords.append(word)
-        
-        return list(dict.fromkeys(keywords))[:5]
+        # Deduplicate while preserving order and drop anything already present in the
+        # primary keywords to avoid redundant calls.
+        seen = set()
+        filtered: List[str] = []
+        for term in extra:
+            key = term.lower()
+            if key in seen or key in base:
+                continue
+            seen.add(key)
+            filtered.append(term)
+        return filtered
     
     def _parse_search_result(self, result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Parse MCP search_tables result with robust JSON extraction."""
@@ -1465,6 +1903,15 @@ class DiscoveryAgent:
         """Validate and normalize discovery payload before handing off to downstream agents."""
         try:
             raw_details = state.get("relevant_table_details") or state.get("candidate_views") or []
+            if not raw_details:
+                fallback_tables = state.get("relevant_tables") or []
+                if fallback_tables:
+                    logger.info("🧾 No detailed metadata available, constructing fallback candidates from relevant_tables")
+                    raw_details = [
+                        {"full_name": tbl, "estimated_rows": 1, "has_rows": True}
+                        for tbl in fallback_tables
+                    ]
+            logger.info(f"🧾 Finalizing discovery payload with {len(raw_details)} raw detail entries")
             detail_models: List[DiscoveryCandidate] = []
             for raw in raw_details:
                 try:
@@ -1472,15 +1919,44 @@ class DiscoveryAgent:
                 except Exception as exc:
                     logger.debug(f"Skipping table detail due to validation error: {exc}")
 
-            if not detail_models:
-                # As a fallback, use names already present in relevant_tables
-                detail_models = [
-                    DiscoveryCandidate.model_validate({"full_name": name})
-                    for name in state.get("relevant_tables", []) or []
+            if detail_models:
+                non_empty_details = [
+                    model
+                    for model in detail_models
+                    if (model.estimated_rows or 0) > 0 or model.has_rows
                 ]
+                logger.info(
+                    f"🧾 Non-empty detail entries: {len(non_empty_details)} / {len(detail_models)}"
+                )
+                if non_empty_details:
+                    detail_models = non_empty_details
+                else:
+                    logger.warning("⚠️ Discovery only found empty tables; requesting clarification")
+                    state["error_info"] = {
+                        "type": "DISCOVERY_EMPTY_TABLES",
+                        "message": "Discovery found only empty tables for this request.",
+                        "details": {
+                            "candidates": [model.full_name for model in detail_models],
+                        },
+                    }
+                    detail_models = []
+            if not detail_models:
+                # As a fallback, use names already present in relevant_tables (without metadata)
+                detail_models = []
+                for name in state.get("relevant_tables", []) or []:
+                    try:
+                        detail_models.append(DiscoveryCandidate.model_validate({"full_name": name}))
+                    except Exception:
+                        continue
 
             candidate_view_models = [model for model in detail_models if model.is_view]
             relevant_tables = [model.full_name for model in detail_models]
+
+            role_hints = self._build_role_hints(
+                detail_models,
+                state.get("column_index") or {},
+                state.get("intent") or {},
+            )
 
             payload = DiscoveryOutput(
                 relevant_tables=relevant_tables or [str(name) for name in (state.get("relevant_tables") or [])],
@@ -1488,6 +1964,7 @@ class DiscoveryAgent:
                 candidate_views=candidate_view_models,
                 relevant_table_details=detail_models,
                 column_index=state.get("column_index") or {},
+                role_hints=role_hints,
             )
 
             state["relevant_tables"] = payload.relevant_tables
@@ -1495,6 +1972,7 @@ class DiscoveryAgent:
             state["candidate_views"] = [view.model_dump() for view in payload.candidate_views]
             state["relevant_table_details"] = [detail.model_dump() for detail in payload.relevant_table_details]
             state["column_index"] = payload.column_index
+            state["discovery_role_hints"] = payload.role_hints.model_dump()
         except Exception as exc:
             logger.warning(f"⚠️ Discovery output validation failed: {exc}")
         return state

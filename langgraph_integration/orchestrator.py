@@ -150,6 +150,21 @@ class QueryOrchestrator:
         """Explicit cleanup method."""
         await self.__aexit__(None, None, None)
 
+    def _normalize_error_info(self, error: Any) -> Optional[Dict[str, Any]]:
+        """Ensure error_info payloads are consistent dictionaries."""
+        if not error:
+            return None
+        if isinstance(error, dict):
+            return error
+        logger.warning(
+            "payload_type_violation: expected error_info dict, received %s",
+            type(error).__name__,
+        )
+        return {
+            "type": "UNKNOWN_ERROR",
+            "message": str(error),
+        }
+
     async def ainvoke(self, input_state: Dict, **kwargs):
         """
         Invoke the orchestrator graph with sensible defaults.
@@ -670,9 +685,9 @@ class QueryOrchestrator:
                 state.get("session_described_tables", {})
             )
 
-            if result.get("error_info"):
-                logger.error(f"🔍 [DISCOVERY] ❌ ERROR from discovery subgraph:")
-                error = result["error_info"]
+            error = self._normalize_error_info(result.get("error_info"))
+            if error:
+                logger.error("🔍 [DISCOVERY] ❌ ERROR from discovery subgraph:")
                 logger.error(f"🔍 [DISCOVERY]    type: {error.get('type')}")
                 logger.error(f"🔍 [DISCOVERY]    message: {error.get('message')}")
                 state["error_info"] = error
@@ -1065,9 +1080,10 @@ class QueryOrchestrator:
             state["sql_query"] = result.get("sql_query", state.get("sql_query", ""))
             state["retry_count"] = result.get("retry_count", 0)
 
-            if result.get("error_info"):
-                logger.error(f"⚡ [EXEC_RECOVERY] Error from exec_recovery: {result['error_info']}")
-                state["error_info"] = result["error_info"]
+            error = self._normalize_error_info(result.get("error_info"))
+            if error:
+                logger.error(f"⚡ [EXEC_RECOVERY] Error from exec_recovery: {error}")
+                state["error_info"] = error
 
             if isinstance(exec_result, dict) and exec_result.get("ok"):
                 logger.info(
@@ -1362,6 +1378,16 @@ class QueryOrchestrator:
         # Set operation to health_check so AnswerAgent knows what to return
         state.setdefault("intent", {})["operation"] = "health_check"
 
+        try:
+            health_status = await self.mcp.get_health_status()
+        except Exception as e:
+            logger.warning(f"Failed to retrieve health status: {e}")
+            health_status = {
+                "status": "error",
+                "error": str(e),
+            }
+        state["health_status"] = health_status
+
         # Run answer agent
         return await self._answer_node(state)
 
@@ -1425,6 +1451,27 @@ class QueryOrchestrator:
         intent_result = await intent_subgraph.ainvoke(BaseState(user_input=user_input))
         intent = intent_result.get("intent", {})
         logger.info(f"🎯 [PIPELINE] Intent parsed: {intent}")
+
+        if intent.get("operation") == "health_check":
+            logger.info("🏥 [PIPELINE] Routing health_check directly to health formatter")
+            health_state = BaseState(
+                user_input=user_input,
+                intent=intent,
+                messages=[],
+            )
+            health_result = await self._answer_health_node(health_state)
+            return {
+                "user_input": user_input,
+                "intent": intent,
+                "relevant_tables": [],
+                "candidate_views": [],
+                "sql_query": "",
+                "join_plan": {},
+                "exec_result": None,
+                "health_status": health_result.get("health_status"),
+                "error_info": health_result.get("error_info"),
+                "final_answer": health_result.get("final_response"),
+            }
 
         # Check for clarification
         if intent.get("needs_clarification", False):
@@ -1496,7 +1543,7 @@ class QueryOrchestrator:
 
             exec_result = await self._exec_recovery_node(exec_input)
             execution_result = exec_result.get("exec_result")
-            error_info = exec_result.get("error_info")
+            error_info = self._normalize_error_info(exec_result.get("error_info"))
 
             logger.info(f"🎯 [FULL_PIPELINE] Execution completed: {execution_result}")
             logger.info(f"🎯 [FULL_PIPELINE] Errors: {error_info}")
@@ -1579,7 +1626,7 @@ class QueryOrchestrator:
                 )
                 exec_result = await self._exec_recovery_node(exec_input)
                 execution_result = exec_result.get("exec_result")
-                error_info = exec_result.get("error_info")
+                error_info = self._normalize_error_info(exec_result.get("error_info"))
                 attempts += 1
                 
                 # DEBUG: Log execution result structure

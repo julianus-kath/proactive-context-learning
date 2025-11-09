@@ -16,16 +16,13 @@ import logging
 import asyncio
 import concurrent.futures
 from typing import Any, Dict, List, Optional, Tuple
-from langchain_openai import ChatOpenAI
+
 from langgraph.graph import StateGraph, END
 
+from langgraph_integration.contracts.discovery_models import DiscoveryRoleHints, RoleHintDimension, RoleHintFact
 from langgraph_integration.contracts.state import BaseState, JoinPlanAndSQLAgentInput, JoinPlanAndSQLAgentOutput
-from langgraph_integration.mcp_client import get_shared_mcp_tool
-from langgraph_integration.prompts.join_sql import (
-    JOIN_PLANNER_PROMPT,
-    SQL_GENERATOR_PROMPT_MSSQL,
-    VIEWS_PREFERENCE
-)
+from langgraph_integration.mcp_client import get_shared_mcp_tool, _extract_json_from_text
+from langgraph_integration.templates.mssql_template_builder import MSSQLTemplateBuilder, TemplateBuildError
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +78,6 @@ class JoinPlanAndSQLAgent:
             query_timeout_seconds: Query timeout in seconds
         """
         self.mcp = get_shared_mcp_tool()
-        self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)
         self.max_joins = max_joins
         self.view_role_coverage_threshold = view_role_coverage_threshold
         self.row_limit = row_limit
@@ -211,215 +207,102 @@ class JoinPlanAndSQLAgent:
             return {**state, "error_info": error}
 
     async def _build_join_plan_node(self, state: BaseState) -> BaseState:
-        """
-        Build join plan from schema and relationships.
-        
-        Strategy: views-first or joins (max 3 hops)
-        """
-        logger.info("📋 Building join plan...")
+        """Use discovery role hints to assemble a deterministic join plan."""
+        logger.info("📋 Building join plan (template)")
 
-        # Check if already have a view plan
-        if state.get("join_plan") and state["join_plan"].get("strategy") == "view":
-            logger.info("✅ Using view-based plan")
-            return state
-
-        relevant_tables = state.get("relevant_tables", [])
-        intent = state.get("intent", {})
-        fk_hints = state.get("fk_hints", [])
-
-        logger.info(f"📋 [JOIN_PLAN] relevant_tables: {relevant_tables}")
-        logger.info(f"📋 [JOIN_PLAN] intent: {intent}")
-        logger.info(f"📋 [JOIN_PLAN] fk_hints count: {len(fk_hints)}")
-
-        if not relevant_tables:
-            error = {
-                "type": "NO_TABLES",
-                "message": "No relevant tables available for join planning. Discovery did not find matching tables.",
-                "debug": {
-                    "schema_snippet": state.get("schema_snippet", ""),
-                    "candidate_views": state.get("candidate_views", []),
-                    "discovery_error": state.get("error_info")
-                }
-            }
-            logger.error(f"❌ {error['message']}")
-            return {**state, "error_info": error}
+        intent = state.get("intent", {}) or {}
+        fk_hints = state.get("fk_hints", []) or []
+        role_hints_payload = state.get("discovery_role_hints") or {}
 
         try:
-            # Ensure column_index is available for column-based decisions
-            column_index = state.get("column_index", {}) or {}
-            # Classify tables by role from names (light heuristic)
-            def is_customer(name: str) -> bool:
-                n = (name or "").lower()
-                return any(t in n for t in ["khkadressen", "adressen", "adresse", "kunde", "kunden", "customer", "crmadr", "adress"])
+            role_hints = DiscoveryRoleHints.model_validate(role_hints_payload)
+        except Exception as exc:
+            logger.warning(f"⚠️ Unable to parse discovery role hints: {exc}")
+            role_hints = DiscoveryRoleHints()
 
-            def is_sales(name: str) -> bool:
-                n = (name or "").lower()
-                # Exclude admin/permission/auth tables
-                if any(x in n for x in ["berecht", "permission", "rechte", "user", "role", "auth"]):
-                    return False
-                return any(t in n for t in [
-                    "vk", "verkauf", "rechnung", "rechnungs", "beleg", "belege",
-                    "auftrags", "auftrag", "pos", "position", "positionen",
-                    "invoice", "invoices", "order", "orders", "umsatz", "faktura"
-                ])
-
-            def is_product(name: str) -> bool:
-                n = (name or "").lower()
-                return any(t in n for t in ["artikel", "artikelstamm", "product", "products", "material"])
-
-            metrics = [m.lower() for m in (intent.get("metrics") or [])]
-            wants_sum = any(m in ["sum", "total"] for m in metrics)
-            entities = [e.lower() for e in (intent.get("primary_entities") or [])]
-
-            # Choose primary: for SUM/revenue, prefer sales-like; otherwise first
-            primary = None
-            if wants_sum:
-                for t in relevant_tables:
-                    if is_sales(t):
-                        # Ensure columns contain amount-like metrics; otherwise skip
-                        cols_t = column_index.get(t) if isinstance(column_index, dict) else None
-                        if not cols_t:
-                            try:
-                                cols_t = await self._probe_columns(t)
-                                if isinstance(column_index, dict):
-                                    column_index[t] = cols_t
-                            except Exception:
-                                cols_t = []
-                        lc = [c.lower() for c in (cols_t or [])]
-                        if any(tok in nm for nm in lc for tok in ["umsatz","betrag","amount","total","preis","wert","gesamtpreis","vkpreis","verkaufspreis"]):
-                            primary = t
-                            break
-                # Consider candidate views if no sales-like table found
-                if not primary:
-                    cand_views = state.get("candidate_views", []) or []
-                    for c in cand_views:
-                        name = c if isinstance(c, str) else (c.get("table_name") or c.get("name") or c.get("full_name") or "")
-                        if name and is_sales(name):
-                            # Check amount-like columns
-                            cols_v = column_index.get(name) if isinstance(column_index, dict) else None
-                            if not cols_v:
-                                try:
-                                    cols_v = await self._probe_columns(name)
-                                    if isinstance(column_index, dict):
-                                        column_index[name] = cols_v
-                                except Exception:
-                                    cols_v = []
-                            lcv = [c.lower() for c in (cols_v or [])]
-                            if any(tok in nm for nm in lcv for tok in ["umsatz","betrag","amount","total","preis","wert","gesamtpreis","vkpreis","verkaufspreis"]):
-                                primary = name
-                                # Ensure it is present in relevant_tables pool for downstream processing
-                                if name not in relevant_tables:
-                                    relevant_tables = [name] + list(relevant_tables)
-                                break
-                # Do not search beyond discovery outputs (planner must not expand the set of sources)
-                # If no sales-like candidate is present in discovery outputs, we keep the current primary and rely on discovery tuning
-            # Count of products: prefer product/article master tables
-            if (not wants_sum) and ("count" in metrics or not metrics) and any(e.startswith("product") or e.startswith("artikel") for e in entities):
-                # Search both in relevant_tables and candidate_views for product-like sources
-                for t in relevant_tables:
-                    if is_product(t):
-                        primary = t
-                        break
-                if not primary:
-                    cand_views = state.get("candidate_views", []) or []
-                    # Prefer non-view tables with product-like names and non-zero estimated_rows if available
-                    def _rank(c):
-                        try:
-                            name = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
-                            est = int(c.get("estimated_rows") or 0)
-                            is_view = 1 if c.get("is_view", False) else 0
-                            return (
-                                1 if is_product(name) else 0,
-                                1 if est > 0 else 0,
-                                0 if is_view else 1,  # prefer tables
-                                int(c.get("column_count") or 0)
-                            )
-                        except Exception:
-                            return (0, 0, 0, 0)
-                    cand_sorted = sorted(cand_views, key=_rank, reverse=True)
-                    for c in cand_sorted:
-                        name = c.get("table_name") or c.get("name") or c.get("full_name")
-                        if name and is_product(name):
-                            primary = name
-                            # Prepend to relevant_tables if missing
-                            if name not in relevant_tables:
-                                relevant_tables = [name] + list(relevant_tables)
-                            break
-
-            if not primary:
-                primary = relevant_tables[0]
-
-            # Build base plan
-            join_plan = {
-                "strategy": "joins",
-                "primary_table": primary,
-                "joins": [],
-                "fk_hints": fk_hints,
-                "where_filters": intent.get("filters", []),
-                "select_columns": [],
-                "groupby_columns": [],
-                "limit": self.row_limit,
-                "reason": f"Using {len(relevant_tables)} table(s) with joins"
+        fact_candidate = self._select_fact_candidate(role_hints, intent)
+        if fact_candidate is None:
+            error = {
+                "type": "FACT_NOT_FOUND",
+                "message": "Unable to identify a fact table for this query.",
             }
+            logger.error(error["message"])
+            return {**state, "error_info": error}
 
-            # Add customer dimension if present and not already primary
-            customer_dim = None
-            for t in relevant_tables:
-                if t != primary and is_customer(t):
-                    customer_dim = t
-                    break
+        join_plan: Dict[str, Any] = {
+            "strategy": "template",
+            "fact_table": fact_candidate.table,
+            "primary_table": fact_candidate.table,
+            "metric_candidates": fact_candidate.metric_candidates,
+            "date_columns": fact_candidate.date_columns,
+            "entity_keys": fact_candidate.entity_keys,
+            "filters": intent.get("filters", []),
+            "time_window": intent.get("time_window"),
+            "joins": [],
+            "dimensions": {},
+            "fk_hints": fk_hints,
+            "required_action": intent.get("required_action"),
+            "fact_estimated_rows": fact_candidate.estimated_rows,
+        }
 
-            def find_fk_condition(from_table: str, to_table: str) -> Optional[str]:
-                for hint in fk_hints:
-                    if hint.get("from_table") == from_table and hint.get("to_table") == to_table and hint.get("join_condition"):
-                        return hint["join_condition"]
+        required_action = intent.get("required_action")
+
+        def attach_dimension(role_name: str, required: bool = False) -> Optional[RoleHintDimension]:
+            dimension = self._select_dimension(role_hints, role_name)
+            if not dimension:
+                if required:
+                    logger.error(f"❌ Required dimension '{role_name}' missing from discovery role hints")
                 return None
 
-            if customer_dim:
-                join_condition = find_fk_condition(primary, customer_dim)
+            join_condition = self._find_fk_condition(fact_candidate.table, dimension.table, fk_hints)
+            if not join_condition:
+                logger.warning(
+                    f"⚠️ No FK join condition available between {fact_candidate.table} and {dimension.table}"
+                )
+                join_condition = self._synthesize_join_condition(
+                    fact_candidate,
+                    dimension,
+                    role_name,
+                )
                 if not join_condition:
-                    # Try reverse direction
-                    jc_rev = find_fk_condition(customer_dim, primary)
-                    if jc_rev:
-                        join_condition = jc_rev
-                if join_condition:
-                    join_plan["joins"].append({
-                        "table": customer_dim,
-                    "on": join_condition,
-                    "type": "INNER"
-                })
-                else:
-                    logger.warning(f"No FK hint for join between {primary} and {customer_dim}; skipping join to avoid cartesian product")
+                    if required:
+                        logger.error(
+                            f"❌ Unable to synthesize join condition between {fact_candidate.table} and {dimension.table}"
+                        )
+                        return None
+                    return dimension
 
-            # Optionally add up to remaining dimension tables (safe joins with FK only)
-            for t in relevant_tables:
-                if t in [primary, customer_dim]:
-                    continue
-                if len(join_plan["joins"]) >= self.max_joins - 1:
-                    break
-                jc = find_fk_condition(primary, t)
-                if not jc:
-                    jc = find_fk_condition(t, primary)
-                if jc:
-                    join_plan["joins"].append({
-                        "table": t,
-                        "on": jc,
-                        "type": "INNER"
-                    })
-
-            logger.info(f"✅ Built join plan: primary={primary}, joins={len(join_plan['joins'])}")
-
-            state["join_plan"] = join_plan
-            return state
-
-        except Exception as e:
-            error = {
-                "type": "PLAN_BUILD_ERROR",
-                "message": f"Failed to build join plan: {str(e)}",
-                "error": str(e)
+            join_plan["dimensions"][role_name] = {
+                "table": dimension.table,
+                "join_condition": join_condition,
+                "id_columns": dimension.id_columns,
+                "label_columns": dimension.label_columns,
             }
-            logger.error(f"❌ {error['message']}")
-            return {**state, "error_info": error}
+            join_plan["joins"].append(
+                {
+                    "table": dimension.table,
+                    "on": join_condition,
+                    "type": "INNER",
+                    "role": role_name,
+                }
+            )
+            return dimension
+
+        if required_action in {"topk_sum_by_customer", "sum_by_customer"}:
+            customer_dim = attach_dimension("customer", required=True)
+            if not customer_dim:
+                error = {
+                    "type": "DIMENSION_MISSING",
+                    "message": "Customer dimension is required but was not identified in discovery.",
+                }
+                logger.error(error["message"])
+                return {**state, "error_info": error}
+
+        if required_action == "low_stock":
+            attach_dimension("product", required=False)
+
+        state["join_plan"] = join_plan
+        return state
 
     async def _probe_columns(self, table_name: str) -> List[str]:
         """Probe a table/view for its column names using a small SELECT TOP 1 *."""
@@ -519,7 +402,21 @@ class JoinPlanAndSQLAgent:
             strategy = join_plan.get("strategy", "joins")
             intent = state.get("intent", {})
             metrics = intent.get("metrics", [])
-            required_action = intent.get("required_action")
+            required_action = (intent.get("required_action") or "").lower()
+
+            template_actions = {"topk_sum_by_customer", "sum_with_period", "sum_by_customer", "low_stock"}
+            if required_action in template_actions:
+                builder = MSSQLTemplateBuilder(join_plan=join_plan, intent=intent, row_limit=self.row_limit)
+                try:
+                    template_result = builder.build()
+                except TemplateBuildError as exc:
+                    return {**state, "error_info": exc.as_error_info()}
+
+                state["sql_query"] = template_result["sql"]
+                join_plan.update(template_result.get("metadata", {}))
+                state["join_plan"] = join_plan
+                return state
+
             parsed_top_k = intent.get("top_k")
             group_by_hint = (intent.get("group_by") or "").lower()
             # Heuristic: treat "how many"/"wie viele" as COUNT if metrics empty
@@ -1354,32 +1251,196 @@ class JoinPlanAndSQLAgent:
 
         try:
             content = result[0].get("text", "")
-            data = json.loads(content) if isinstance(content, str) else content
+            data = _extract_json_from_text(content) if content else {}
 
-            # Handle different response formats
+            relations = []
             if isinstance(data, dict):
-                relations = data.get("relations", data.get("relationships", data.get("fk", [])))
+                payload = data.get("data") if isinstance(data.get("data"), dict) else data
+                relations = payload.get("neighbors") or payload.get("relations") or payload.get("relationships") or []
             elif isinstance(data, list):
                 relations = data
-            else:
-                return []
 
-            # Normalize format
             normalized = []
-            for rel in relations:
-                if isinstance(rel, dict):
-                    normalized.append({
+            for rel in relations or []:
+                if not isinstance(rel, dict):
+                    continue
+                normalized.append(
+                    {
                         "from_table": table_name,
-                        "to_table": rel.get("related_table", rel.get("to_table", "")),
-                        "from_column": rel.get("from_column", rel.get("column", "")),
-                        "to_column": rel.get("to_column", rel.get("related_column", "")),
-                        "join_condition": rel.get("join_condition", "")
-                    })
+                        "to_table": rel.get("related_table") or rel.get("to_table") or rel.get("table") or "",
+                        "from_column": rel.get("from_column") or rel.get("column") or "",
+                        "to_column": rel.get("to_column") or rel.get("related_column") or "",
+                        "join_condition": rel.get("join_condition") or "",
+                    }
+                )
 
             return normalized
         except Exception as e:
             logger.warning(f"Failed to parse relations result: {e}")
             return []
+
+    def _select_fact_candidate(self, role_hints: DiscoveryRoleHints, intent: Dict[str, Any]) -> Optional[RoleHintFact]:
+        """Choose the most appropriate fact table candidate for the current intent."""
+        if not role_hints.fact_candidates:
+            return None
+
+        required_action = (intent.get("required_action") or "").lower()
+        needs_metric = required_action in {
+            "topk_sum_by_customer",
+            "sum_by_customer",
+            "sum_with_period",
+            "growth_analysis",
+            "comparative_analysis",
+            "low_stock",
+        }
+
+        ranked = list(role_hints.fact_candidates)
+        ranked.sort(
+            key=lambda fc: (
+                max(fc.metric_candidates.values()) if fc.metric_candidates else 0.0,
+                fc.estimated_rows or 0,
+            ),
+            reverse=True,
+        )
+
+        if not needs_metric:
+            return ranked[0]
+
+        for candidate in ranked:
+            if candidate.metric_candidates:
+                return candidate
+        return ranked[0]
+
+    def _select_dimension(self, role_hints: DiscoveryRoleHints, role: str) -> Optional[RoleHintDimension]:
+        """Retrieve a dimension hint by canonical role."""
+        if not role:
+            return None
+        canonical = self._canonical_entity(role)
+        if canonical in role_hints.dimensions:
+            return role_hints.dimensions[canonical]
+        for key, value in role_hints.dimensions.items():
+            if self._canonical_entity(key) == canonical:
+                return value
+        return None
+
+    def _find_fk_condition(
+        self,
+        from_table: str,
+        to_table: str,
+        fk_hints: List[Dict[str, Any]],
+    ) -> Optional[str]:
+        """Locate a join condition between two tables from FK hints."""
+        if not from_table or not to_table or not fk_hints:
+            return None
+
+        for hint in fk_hints:
+            if (
+                hint.get("from_table") == from_table
+                and hint.get("to_table") == to_table
+                and hint.get("join_condition")
+            ):
+                return hint["join_condition"]
+            if (
+                hint.get("from_table") == to_table
+                and hint.get("to_table") == from_table
+                and hint.get("join_condition")
+            ):
+                return hint["join_condition"]
+        return None
+
+    def _synthesize_join_condition(
+        self,
+        fact_candidate: RoleHintFact,
+        dimension: RoleHintDimension,
+        role: str,
+    ) -> Optional[str]:
+        """Synthesize a join condition using entity key hints when explicit FK metadata is missing."""
+        fact_keys = fact_candidate.entity_keys.get(self._canonical_entity(role)) or []
+        dim_ids = dimension.id_columns or dimension.label_columns
+
+        if not fact_keys or not dim_ids:
+            return None
+
+        left_col, right_col = self._match_entity_columns(fact_keys, dim_ids)
+        if not left_col or not right_col:
+            return None
+
+        left_expr = self._format_qualified_column(fact_candidate.table, left_col)
+        right_expr = self._format_qualified_column(dimension.table, right_col)
+        return f"{left_expr} = {right_expr}"
+
+    def _match_entity_columns(self, fact_cols: List[str], dim_cols: List[str]) -> Tuple[Optional[str], Optional[str]]:
+        """Best-effort column matching based on normalized names."""
+        import re
+
+        def norm(value: str) -> str:
+            return re.sub(r"[^a-z0-9]", "", (value or "").lower())
+
+        for f_col in fact_cols:
+            nf = norm(f_col)
+            if not nf:
+                continue
+            for d_col in dim_cols:
+                nd = norm(d_col)
+                if not nd:
+                    continue
+                if nf == nd or nf.endswith(nd) or nd.endswith(nf):
+                    return f_col, d_col
+        return None, None
+
+    def _format_qualified_column(self, table: str, column: str) -> str:
+        """Return [schema].[table].[column] with brackets."""
+        schema, name = self._split_table_name(table)
+        col = column.split(".")[-1].strip("[]")
+        return f"[{schema.strip('[]')}].[{name.strip('[]')}].[{col}]"
+
+    def _split_table_name(self, table: str) -> Tuple[str, str]:
+        raw = (table or "").strip()
+        if not raw:
+            raise TemplateBuildError("Table name is required to format join condition.")
+        stripped = raw.strip("[]")
+        if "." in stripped:
+            schema, name = stripped.split(".", 1)
+        else:
+            schema, name = "dbo", stripped
+        schema = schema.strip("[]") or "dbo"
+        name = name.strip("[]")
+        if not name:
+            raise TemplateBuildError("Invalid table name for join condition.", {"table": table})
+        return schema, name
+
+    def _canonical_entity(self, entity: str) -> str:
+        """Map entity labels to canonical singular keys."""
+        if not entity:
+            return ""
+        stripped = entity.strip().lower()
+        mapping = {
+            "customer": "customer",
+            "customers": "customer",
+            "kunde": "customer",
+            "kunden": "customer",
+            "adress": "customer",
+            "adressen": "customer",
+            "contact": "customer",
+            "contacts": "customer",
+            "product": "product",
+            "products": "product",
+            "produkt": "product",
+            "produkte": "product",
+            "artikel": "product",
+            "artikelstamm": "product",
+            "project": "project",
+            "projects": "project",
+            "projekt": "project",
+            "projekte": "project",
+        }
+        if stripped in mapping:
+            return mapping[stripped]
+        if stripped.endswith("en") and stripped[:-2] in mapping:
+            return mapping[stripped[:-2]]
+        if stripped.endswith("s") and stripped[:-1] in mapping:
+            return mapping[stripped[:-1]]
+        return stripped
 
     async def _ensure_columns_probed_for_join_plan(self, join_plan: Dict[str, Any], column_index: Dict[str, List[str]]) -> Dict[str, List[str]]:
         """Ensure all tables in join plan have columns probed and available in column_index.

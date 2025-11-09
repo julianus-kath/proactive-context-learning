@@ -78,6 +78,16 @@ class IntentParserAgent:
         """
         self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)  # Uses OPENAI_API_KEY from env
 
+    async def parse(self, user_input: str, messages: Optional[List[Dict[str, Any]]] = None) -> ParsedIntent:
+        """Convenience method to parse intent directly without manual state management."""
+        state: BaseState = {
+            "user_input": user_input,
+            "messages": messages or [],
+        }
+        subgraph = self.build_subgraph()
+        result = await subgraph.ainvoke(state)
+        return result.get("intent", {})
+
     def build_subgraph(self) -> StateGraph:
         """
         Build the LangGraph subgraph for intent parsing.
@@ -174,25 +184,30 @@ class IntentParserAgent:
             }
             return {**state, "intent": intent}
 
+        conversation_context = self._format_message_history(state.get("messages", []))
+
         # For data queries, do initial analysis
         prompt = f"""
-        Analyze this database query and provide initial intent classification.
+Analyze this database query and provide initial intent classification.
 
-        Query: "{user_input}"
-        The query may be written in German or English. Treat German business terms (e.g., "Kunden", "Umsatz") as first-class concepts and keep them in the output without translating them.
+Conversation history (most recent last):
+{conversation_context or "<none>"}
 
-        Provide JSON with:
-        {{
-          "query_type": "data_query",  // or "schema_query", "health_check", "clarify"
-          "broad_category": "reporting|analysis|operational|lookup",
-          "key_topics": ["topic1", "topic2"],  // Main subjects mentioned
-          "intent_indicators": ["count", "sum", "filter", "trend"],  // What user wants to do
-          "complexity": "simple|moderate|complex",  // Query complexity level
-          "confidence": 0.8  // Initial confidence [0.0-1.0]
-        }}
+Current user query: "{user_input}"
+The query may be written in German or English. Treat German business terms (e.g., "Kunden", "Umsatz") as first-class concepts and keep them in the output without translating them.
 
-        Respond ONLY with JSON, no markdown blocks.
-        """
+Provide JSON with:
+{{
+  "query_type": "data_query",  // or "schema_query", "health_check", "clarify"
+  "broad_category": "reporting|analysis|operational|lookup",
+  "key_topics": ["topic1", "topic2"],  // Main subjects mentioned
+  "intent_indicators": ["count", "sum", "filter", "trend"],  // What user wants to do
+  "complexity": "simple|moderate|complex",  // Query complexity level
+  "confidence": 0.8  // Initial confidence [0.0-1.0]
+}}
+
+Respond ONLY with JSON, no markdown blocks.
+"""
         try:
             response = await self.llm.ainvoke(prompt)
             response_text = self._strip_markdown_blocks(response.content.strip())
@@ -204,15 +219,14 @@ class IntentParserAgent:
             return state
 
         except Exception as e:
-            logger.warning(f"🧠 [ANALYZE] LLM analysis failed: {e}, falling back to heuristics")
-            # Fallback analysis
+            logger.warning(f"🧠 [ANALYZE] LLM analysis failed: {e}. Using minimal heuristic analysis.")
             analysis = {
                 "query_type": "data_query",
                 "broad_category": "lookup",
-                "key_topics": self._extract_basic_keywords(user_input),
+                "key_topics": [],
                 "intent_indicators": ["lookup"],
                 "complexity": "simple",
-                "confidence": 0.3
+                "confidence": 0.0
             }
             state["query_analysis"] = analysis
             return state
@@ -224,15 +238,26 @@ class IntentParserAgent:
         Uses the initial analysis to classify the exact operation type.
         """
         user_input = state.get("user_input", "")
+        intent = state.get("intent", {}) or {}
+        preset_operation = intent.get("operation")
+        if preset_operation and preset_operation not in {"query", None, ""}:
+            logger.info(f"🧠 [CLASSIFY] Operation preset to '{preset_operation}', skipping classification.")
+            return {**state, "intent": intent}
+
         analysis = state.get("query_analysis", {})
 
         logger.info(f"🧠 [CLASSIFY] Classifying operation for: {user_input}")
 
         # Use LLM to classify operation with more precision
+        conversation_context = self._format_message_history(state.get("messages", []))
+
         prompt = f"""
 Based on this query analysis, classify the exact operation type.
 
-Query: "{user_input}"
+Conversation history (most recent last):
+{conversation_context or "<none>"}
+
+Current user query: "{user_input}"
 Initial Analysis: {json.dumps(analysis)}
 
 Classify into one of:
@@ -257,7 +282,6 @@ Respond ONLY with JSON.
             classification = json.loads(response_text)
 
             # Update intent with operation classification
-            intent = state.get("intent", {})
             intent.update({
                 "operation": classification.get("operation", "query"),
                 "operation_confidence": classification.get("confidence", 0.5),
@@ -269,13 +293,21 @@ Respond ONLY with JSON.
             return {**state, "intent": intent}
 
         except Exception as e:
-            logger.warning(f"🧠 [CLASSIFY] LLM classification failed: {e}, using fallback")
-            intent = state.get("intent", {})
-            intent.update({
-                "operation": "query",  # Default to query
-                "operation_confidence": 0.4,
-                "classification_reasoning": "Fallback classification"
-            })
+            logger.warning(f"🧠 [CLASSIFY] LLM classification failed: {e}. Requesting clarification.")
+            intent = state.get("intent", {}) or {}
+            intent.setdefault("primary_entities", [])
+            intent.setdefault("metrics", [])
+            intent.setdefault("filters", [])
+            intent["operation"] = "clarify"
+            intent["operation_confidence"] = 0.0
+            intent["classification_reasoning"] = "Unable to classify intent from query"
+            intent["needs_clarification"] = True
+            intent["clarification_question"] = intent.get(
+                "clarification_question",
+                "Kannst du genauer beschreiben, welche Information du benötigst?"
+            )
+            intent["ambiguity_reason"] = intent.get("ambiguity_reason", "Operation classification failed")
+            intent["keywords_for_discovery"] = intent.get("keywords_for_discovery", [])[:10]
             return {**state, "intent": intent}
 
     async def _extract_entities_node(self, state: BaseState) -> BaseState:
@@ -287,6 +319,11 @@ Respond ONLY with JSON.
         user_input = state.get("user_input", "")
         analysis = state.get("query_analysis", {})
         intent = state.get("intent", {})
+        conversation_context = self._format_message_history(state.get("messages", []))
+
+        if intent.get("operation") != "query":
+            logger.info(f"🧠 [EXTRACT] Skipping extraction for operation '{intent.get('operation')}'")
+            return {**state, "intent": intent}
 
         logger.info(f"🧠 [EXTRACT] Extracting entities from: {user_input}")
 
@@ -294,7 +331,10 @@ Respond ONLY with JSON.
         prompt = f"""
         Extract structured intent from this ERP database query.
 
-        Query: "{user_input}"
+        Conversation history (most recent last):
+        {conversation_context or "<none>"}
+
+        Current user query: "{user_input}"
         Context: {json.dumps(analysis)}
         The question may use German (DE) or English (EN) terminology. Preserve meaningful German nouns/phrases in the output. You may include English equivalents only if they appear explicitly in the question, but never drop or translate away the original vocabulary.
 
@@ -361,6 +401,7 @@ Respond ONLY with JSON.
                 "keywords_for_discovery": extracted.get("keywords_for_discovery", [])[:10],
                 "extraction_confidence": extracted.get("confidence", 0.5)
             })
+            intent["raw_query"] = user_input
 
             # Derived action hints for downstream agents (discovery/planning/execution)
             derived = self._derive_action_hints(state.get("user_input", ""), intent)
@@ -385,27 +426,19 @@ Respond ONLY with JSON.
             return {**state, "intent": intent}
 
         except Exception as e:
-            logger.warning(f"🧠 [EXTRACT] LLM extraction failed: {e}, using fallback")
-            # Fallback extraction
-            fallback = self._fallback_entity_extraction(user_input)
-            intent.update(fallback)
-
-            # Expand keywords with German translations
-            base_keywords = intent.get("keywords_for_discovery", [])
-            expanded_keywords = self._expand_keywords_with_translations(base_keywords, intent.get("primary_entities", []))
-            intent["keywords_for_discovery"] = expanded_keywords[:10]
-
-            # Also derive action hints on fallback
-            derived = self._derive_action_hints(user_input, intent)
-            intent.update(derived)
-            try:
-                if derived.get("extra_keywords"):
-                    merged_kw = expanded_keywords + list(derived.get("extra_keywords") or [])
-                    seen = set()
-                    merged_kw = [k for k in merged_kw if not (k in seen or seen.add(k))]
-                    intent["keywords_for_discovery"] = merged_kw[:10]
-            except Exception:
-                pass
+            logger.warning(f"🧠 [EXTRACT] LLM extraction failed: {e}. Marking intent for clarification.")
+            intent.setdefault("primary_entities", [])
+            intent.setdefault("metrics", [])
+            intent.setdefault("filters", [])
+            intent["keywords_for_discovery"] = (intent.get("keywords_for_discovery") or [])[:10]
+            intent["extraction_confidence"] = 0.0
+            intent["needs_clarification"] = True
+            intent["clarification_question"] = intent.get(
+                "clarification_question",
+                "Ich konnte nicht eindeutig erkennen, welche Daten du brauchst. Kannst du das genauer beschreiben?"
+            )
+            intent["ambiguity_reason"] = intent.get("ambiguity_reason", "Intent extraction failed")
+            intent["raw_query"] = user_input
             return {**state, "intent": intent}
 
     async def _validate_intent_node(self, state: BaseState) -> BaseState:
@@ -415,6 +448,10 @@ Respond ONLY with JSON.
         Checks if the extracted intent is complete and coherent.
         """
         intent = state.get("intent", {})
+
+        if intent.get("operation") != "query":
+            logger.info(f"🧠 [VALIDATE] Skipping validation for operation '{intent.get('operation')}'")
+            return {**state, "intent": intent}
 
         logger.info(f"🧠 [VALIDATE] Validating intent completeness")
 
@@ -521,31 +558,6 @@ Keep the question clear and actionable.
                 return matches[0].strip()
         return text
 
-    def _extract_basic_keywords(self, text: str) -> list:
-        """Basic keyword extraction for fallback."""
-        stop_words = {
-            "the", "a", "an", "is", "are", "how", "many", "show", "me",
-            "what", "which", "do", "we", "have", "has", "get", "find"
-        }
-        words = text.lower().split()
-        return [w.strip("?,.!;:") for w in words if w not in stop_words and len(w) > 2][:3]
-
-    def _fallback_entity_extraction(self, user_input: str) -> dict:
-        """Fallback entity extraction when LLM fails."""
-        logger.info(f"🧠 Using fallback entity extraction for: {user_input}")
-
-        keywords = self._extract_basic_keywords(user_input)
-
-        return {
-            "primary_entities": keywords[:2],
-            "secondary_entities": [],
-            "metrics": ["count"] if "count" in user_input.lower() else [],
-            "filters": [],
-            "time_window": None,
-            "keywords_for_discovery": keywords,
-            "extraction_confidence": 0.3
-        }
-
     def _derive_action_hints(self, user_input: str, intent: dict) -> dict:
         """Derive structured action hints from user input and extracted intent.
 
@@ -559,7 +571,7 @@ Keep the question clear and actionable.
         entities = [e.lower() for e in (intent.get("primary_entities") or [])]
         metrics = [m.lower() for m in (intent.get("metrics") or [])]
 
-        # FALLBACK: Extract metrics from raw text if LLM extraction returned empty
+        # Heuristic enrichment if metrics missing
         if not metrics:
             if any(k in text for k in ["sum", "total", "umsatz", "verkauf", "revenue", "improved"]):
                 metrics.append("sum")
@@ -614,7 +626,7 @@ Keep the question clear and actionable.
         elif ("sum" in metrics or "total" in metrics or "umsatz" in text or "verkauf" in text or "sales" in text) and \
              any(m in text for m in ["october", "oktober", "january", "februar", "march", "april", "mai", "juni", "juli", "august", "september", "november", "dezember", "january", "february"]):
             required_action = "sum_with_period"
-        # FALLBACK: Explicit temporal queries with words like "improved", "changed", "from X to Y"
+        # Temporal queries with words like "improved", "changed", "from X to Y"
         elif any(k in text for k in ["improved", "changed", "growth", "increased", "decreased", "from", "between"]) and \
              any(m in text for m in ["october", "oktober", "september", "juni", "juli", "august", "januar", "februar", "march", "april", "mai", "november", "dezember"]):
             # Even without explicit sum/sales keywords, temporal with period indicators suggests time-series aggregation
@@ -648,6 +660,20 @@ Keep the question clear and actionable.
             "time_granularity": time_granularity,
             "extra_keywords": extra_keywords
         }
+
+    def _format_message_history(self, messages: List[Dict[str, Any]], limit: int = 6) -> str:
+        """Format recent conversation turns so LLM prompts have context."""
+        if not messages:
+            return ""
+
+        formatted: List[str] = []
+        for message in messages[-limit:]:
+            role = (message.get("role") or "user").lower()
+            content = message.get("content") or ""
+            if not content:
+                continue
+            formatted.append(f"{role}: {content}")
+        return "\n".join(formatted)
 
     def _expand_keywords_with_translations(self, base_keywords: list, entities: list) -> list:
         """Expand keywords with German translations and related terms for better table discovery."""
@@ -695,16 +721,16 @@ Keep the question clear and actionable.
     def _is_schema_query(self, user_lower: str) -> bool:
         """Detect schema/structure queries."""
         schema_keywords = [
-            "what table", "schema", "database structure", "what columns",
-            "what fields", "list table", "how many table", "show table",
-            "describe", "structure"
+            "what table", "what tables", "schema", "database structure", "what columns",
+            "what fields", "list table", "list tables", "how many table", "how many tables",
+            "show table", "show tables", "describe", "structure"
         ]
         return any(kw in user_lower for kw in schema_keywords)
 
     def _is_health_check(self, user_lower: str) -> bool:
         """Detect health/status queries."""
         health_keywords = [
-            "health", "status", "working", "running", "online", "available",
+            "health", "healthy", "status", "working", "running", "online", "available",
             "connected", "connection", "alive"
         ]
         return any(kw in user_lower for kw in health_keywords)
@@ -712,7 +738,7 @@ Keep the question clear and actionable.
     def _empty_intent(self, user_input: str) -> dict:
         """Return empty intent for empty input."""
         return {
-            "operation": "query",
+            "operation": "clarify",
             "primary_entities": [],
             "metrics": [],
             "filters": [],
@@ -720,7 +746,9 @@ Keep the question clear and actionable.
             "keywords_for_discovery": [],
             "raw_query": user_input or "",
             "confidence": 0.0,
-            "needs_clarification": False
+            "needs_clarification": True,
+            "clarification_question": "Ich habe keine Frage erhalten. Kannst du formulieren, was du wissen möchtest?",
+            "ambiguity_reason": "empty_query"
         }
 
     def _check_needs_clarification(self, text: str, entities: List[str], metrics: List[str], required_action: str) -> bool:

@@ -797,27 +797,41 @@ class ExecAndRecoveryAgent:
 
     def _parse_query_result(self, result: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Parse MCP query result (handles both bounded JSON and unbounded text formats)."""
+        content = ""
+
         try:
             logger.debug(f"Parsing query result: {result[:2] if result else 'None'}")
             logger.debug(f"Result type: {type(result)}, length: {len(result) if result else 0}")
 
+            def failure(message: str) -> Dict[str, Any]:
+                return {
+                    "ok": False,
+                    "data": None,
+                    "row_count": 0,
+                    "execution_time_ms": 0,
+                    "truncated": False,
+                    "warnings": [],
+                    "error": message,
+                    "error_info": {"type": "QUERY_ERROR", "message": message},
+                }
+
             # Handle case where MCP returns malformed response
             if not result or len(result) == 0:
-                return {"ok": False, "error": "Empty result from MCP server"}
+                return failure("Empty result from MCP server")
 
             # Handle case where result is a single string (error message)
             if isinstance(result, str):
-                return {"ok": False, "error": result}
+                return failure(result)
 
             first_result = result[0]
             logger.debug(f"First result type: {type(first_result)}, value: {first_result}")
 
             if isinstance(first_result, str):
                 # MCP returned a string error message
-                return {"ok": False, "error": first_result}
+                return failure(first_result)
 
             if not isinstance(first_result, dict):
-                return {"ok": False, "error": f"Unexpected result type: {type(first_result)}"}
+                return failure(f"Unexpected result type: {type(first_result)}")
 
             content = first_result.get("text", "")
             logger.debug(f"Content type: {type(content)}, length: {len(content) if isinstance(content, str) else 'N/A'}")
@@ -857,12 +871,13 @@ class ExecAndRecoveryAgent:
 
                     return {
                         "ok": ok,
-                        "data": rows,  # Use "data" key for orchestrator compatibility
+                        "data": rows,
                         "row_count": row_count,
                         "execution_time_ms": execution_time_ms,
                         "truncated": truncated,
                         "warnings": warnings,
-                        "error": error
+                        "error": error,
+                        "error_info": None if not error else {"type": "QUERY_ERROR", "message": error},
                     }
             # If JSON not detected, fall through to parse as text below
             except Exception:
@@ -871,35 +886,36 @@ class ExecAndRecoveryAgent:
 
             # Fallback: parse as text-table format (also used when JSON not detected without exception)
             if not content or "Query execution failed" in content:
-                return {"ok": False, "error": content or "Query execution failed"}
+                return failure(content or "Query execution failed")
 
             # Parse the text table format
             lines = content.strip().split('\n')
             if len(lines) < 3:
-                return {"ok": False, "error": "Invalid table format"}
+                return failure("Invalid table format")
 
             # Extract row count from header
             header_match = re.search(r'Query Results \((\d+) rows\)', lines[0])
             if not header_match:
-                return {"ok": False, "error": "Could not parse row count"}
+                return failure("Could not parse row count")
 
             row_count = int(header_match.group(1))
 
             if row_count == 0:
                 return {
                     "ok": True,
-                    "data": [],  # Use "data" key for orchestrator compatibility
+                    "data": [],
                     "row_count": 0,
                     "execution_time_ms": 0,
                     "truncated": False,
                     "warnings": [],
-                    "error": None
+                    "error": None,
+                    "error_info": None,
                 }
 
             # Find data rows (skip header and separator)
             data_start = 2  # Skip "Query Results (X rows):" and blank line
             if data_start >= len(lines):
-                return {"ok": False, "error": "No data rows found"}
+                return failure("No data rows found")
 
             # Extract column headers
             header_line = lines[data_start]
@@ -915,7 +931,6 @@ class ExecAndRecoveryAgent:
                         for col, val in zip(columns, values):
                             # Try to convert to number
                             try:
-                                # Check if it's an integer
                                 if '.' not in val:
                                     row_dict[col] = int(val)
                                 else:
@@ -926,18 +941,19 @@ class ExecAndRecoveryAgent:
 
             return {
                 "ok": True,
-                "data": rows,  # Use "data" key for orchestrator compatibility
+                "data": rows,
                 "row_count": len(rows),
                 "execution_time_ms": 0,  # Not provided in text format
                 "truncated": False,
                 "warnings": [],
-                "error": None
+                "error": None,
+                "error_info": None,
             }
 
         except Exception as e:
             logger.warning(f"Failed to parse query result: {e}")
             logger.warning(f"Raw content: {content[:200]}...")
-            return {"ok": False, "error": str(e)}
+            return failure(str(e))
 
     def _extract_sql(self, text: str) -> str:
         """

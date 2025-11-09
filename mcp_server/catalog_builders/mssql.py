@@ -135,14 +135,17 @@ class MSSQLCatalogBuilder:
             # Get relationship counts
             fk_count = await self._get_foreign_key_count(schema_name, table_name)
 
+            estimated_rows, has_rows = await self._estimate_table_rows(schema_name, table_name)
+
             table_metadata = {
                 "schema": schema_name,
                 "name": table_name,
                 "full_name": full_name,
                 "type": "table",
-                "estimated_rows": row.get("estimated_rows", 0),
+                "estimated_rows": estimated_rows,
                 "column_count": len(columns),
                 "fk_count": fk_count,
+                "has_rows": has_rows,
                 "columns": columns,
                 "last_updated": datetime.utcnow().isoformat()
             }
@@ -372,6 +375,52 @@ class MSSQLCatalogBuilder:
         formatted_query = fk_count_query.replace("?", "'{}'").format(schema, table)
         result = await self.db_adapter.fetch(formatted_query)
         return result[0]["fk_count"] if result else 0
+
+    async def _estimate_table_rows(self, schema: str, table: str) -> Tuple[int, bool]:
+        """
+        Estimate row count for a table with graceful fallback when permissions are limited.
+        """
+        row_count_query = """
+        SELECT
+            SUM(p.rows) AS row_count
+        FROM sys.schemas s
+        INNER JOIN sys.tables t ON s.schema_id = t.schema_id
+        INNER JOIN sys.partitions p ON t.object_id = p.object_id
+        WHERE s.name = ? AND t.name = ? AND p.index_id IN (0, 1)
+        """
+        safe_schema = schema.replace("'", "''")
+        safe_table = table.replace("'", "''")
+        formatted_query = row_count_query.replace("?", "'{}'").format(safe_schema, safe_table)
+
+        try:
+            result = await self.db_adapter.fetch(formatted_query, limit=None)
+            if result:
+                row = result[0]
+                row_count = row.get("row_count")
+                if row_count is None:
+                    row_count = row.get("ROW_COUNT")
+                if row_count is not None:
+                    count = int(row_count)
+                    return count, count > 0
+        except Exception as exc:
+            logger.debug(f"Row count query failed for {schema}.{table}: {exc}")
+
+        has_rows = await self._probe_table_has_rows(schema, table)
+        return (1 if has_rows else 0, has_rows)
+
+    async def _probe_table_has_rows(self, schema: str, table: str) -> bool:
+        """
+        Lightweight probe to detect whether a table contains any rows.
+        """
+        schema_escaped = schema.replace("]", "]]")
+        table_escaped = table.replace("]", "]]")
+        probe_sql = f"SELECT TOP 1 1 AS probe FROM [{schema_escaped}].[{table_escaped}]"
+        try:
+            rows = await self.db_adapter.fetch(probe_sql, limit=1)
+            return bool(rows)
+        except Exception as exc:
+            logger.debug(f"Row probe failed for {schema}.{table}: {exc}")
+            return False
 
     async def _get_view_dependencies_detailed(self, schema: str, view: str) -> List[Dict[str, Any]]:
         """

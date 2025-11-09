@@ -12,6 +12,7 @@ import aiohttp
 import asyncio
 import logging
 import time
+from datetime import datetime
 import json
 import re
 from typing import Dict, Any, List, Optional
@@ -498,6 +499,28 @@ class MCPDatabaseTool:
         except Exception as e:
             logger.error(f"Health check failed: {e}")
             return False
+
+    async def get_health_status(self) -> Dict[str, Any]:
+        """
+        Retrieve detailed MCP health status payload (database + scout metrics).
+        """
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{self.mcp_url}/health") as response:
+                    if response.status == 200:
+                        return await response.json()
+                    return {
+                        "status": "error",
+                        "error": f"HTTP {response.status}",
+                        "timestamp": datetime.utcnow().isoformat(),
+                    }
+        except Exception as e:
+            logger.error(f"Failed to fetch health status: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
     
     # ========== PHASE 4 DISCOVERY TOOLS ==========
     

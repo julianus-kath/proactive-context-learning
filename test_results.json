@@ -1,0 +1,887 @@
+{
+  "results": [
+    {
+      "query": "How many customers do we have?",
+      "description": "Basic customer count query",
+      "expected_action": "count",
+      "success": true,
+      "error": null,
+      "has_sql": true,
+      "has_result": true,
+      "intent": {
+        "operation": "query",
+        "operation_confidence": 0.9,
+        "classification_reasoning": "The user is asking for a count of customers, which is a typical data retrieval operation.",
+        "alternative_operations": [
+          "query"
+        ],
+        "primary_entities": [
+          "customers"
+        ],
+        "secondary_entities": [],
+        "metrics": [
+          "count"
+        ],
+        "filters": [],
+        "time_window": null,
+        "keywords_for_discovery": [
+          "customers",
+          "kunde",
+          "kunden",
+          "client",
+          "adressen",
+          "contacts",
+          "khk",
+          "kontakt",
+          "firma",
+          "unternehmen"
+        ],
+        "extraction_confidence": 1.0,
+        "raw_query": "How many customers do we have?",
+        "required_action": "count",
+        "group_by": "customer",
+        "top_k": null,
+        "time_granularity": null,
+        "extra_keywords": [],
+        "confidence": 1.0,
+        "needs_clarification": false,
+        "validation_notes": {
+          "has_entities": true,
+          "has_keywords": true,
+          "extraction_confidence": 1.0
+        }
+      },
+      "sql_query": "SELECT COUNT(*) AS total_count FROM BCSPjmAdressenKontaktFolge ORDER BY (SELECT NULL)",
+      "error_info": null,
+      "final_answer": "There are 0 customers in the database.",
+      "action_match": true
+    },
+    {
+      "query": "Wie viele Kunden haben wir?",
+      "description": "German customer count query",
+      "expected_action": "count",
+      "success": true,
+      "error": null,
+      "has_sql": true,
+      "has_result": true,
+      "intent": {
+        "operation": "query",
+        "operation_confidence": 0.9,
+        "classification_reasoning": "The user is asking for a count of customers, which is a typical data retrieval operation.",
+        "alternative_operations": [
+          "query"
+        ],
+        "primary_entities": [
+          "Kunden"
+        ],
+        "secondary_entities": [],
+        "metrics": [
+          "count"
+        ],
+        "filters": [],
+        "time_window": null,
+        "keywords_for_discovery": [
+          "Kunden",
+          "khk",
+          "adressen",
+          "kontakt",
+          "firma",
+          "unternehmen",
+          "position",
+          "positionen",
+          "kopf",
+          "zeile"
+        ],
+        "extraction_confidence": 1.0,
+        "raw_query": "Wie viele Kunden haben wir?",
+        "required_action": "count",
+        "group_by": "customer",
+        "top_k": null,
+        "time_granularity": null,
+        "extra_keywords": [],
+        "confidence": 1.0,
+        "needs_clarification": false,
+        "validation_notes": {
+          "has_entities": true,
+          "has_keywords": true,
+          "extraction_confidence": 1.0
+        }
+      },
+      "sql_query": "SELECT COUNT(*) AS total_count FROM BCSPjmAdressenKontaktFolge ORDER BY (SELECT NULL)",
+      "error_info": null,
+      "final_answer": "There are 0 Kunden in the database.",
+      "action_match": true
+    },
+    {
+      "query": "How many products do we own?",
+      "description": "Product count query",
+      "expected_action": "count",
+      "success": true,
+      "error": null,
+      "has_sql": true,
+      "has_result": true,
+      "intent": {
+        "operation": "query",
+        "operation_confidence": 0.9,
+        "classification_reasoning": "The user is asking for a count of products, which implies retrieving data from a database to determine the total number of products owned. This aligns with a typical data retrieval operation.",
+        "alternative_operations": [
+          "query"
+        ],
+        "primary_entities": [
+          "products"
+        ],
+        "secondary_entities": [],
+        "metrics": [
+          "count"
+        ],
+        "filters": [],
+        "time_window": null,
+        "keywords_for_discovery": [
+          "products",
+          "produkt",
+          "produkte",
+          "artikel",
+          "item",
+          "khk",
+          "adressen",
+          "kontakt",
+          "firma",
+          "unternehmen"
+        ],
+        "extraction_confidence": 1.0,
+        "raw_query": "How many products do we own?",
+        "required_action": "count",
+        "group_by": null,
+        "top_k": null,
+        "time_granularity": null,
+        "extra_keywords": [],
+        "confidence": 1.0,
+        "needs_clarification": false,
+        "validation_notes": {
+          "has_entities": true,
+          "has_keywords": true,
+          "extraction_confidence": 1.0
+        }
+      },
+      "sql_query": "SELECT COUNT(*) AS total_count FROM KHKArtikelVariantenLagerplatz ORDER BY (SELECT NULL)",
+      "error_info": null,
+      "final_answer": "There are 0 products in the database.",
+      "action_match": true
+    },
+    {
+      "query": "Wer sind unsere Top 5 Kunden nach Gesamtumsatz?",
+      "description": "German top customers by revenue",
+      "expected_action": "topk_sum_by_customer",
+      "success": true,
+      "error": null,
+      "has_sql": false,
+      "has_result": false,
+      "intent": {
+        "operation": "query",
+        "operation_confidence": 0.9,
+        "classification_reasoning": "The user is asking for a list of the top 5 customers based on total revenue, which is a typical data retrieval request.",
+        "alternative_operations": [
+          "query"
+        ],
+        "primary_entities": [
+          "Kunden"
+        ],
+        "secondary_entities": [],
+        "metrics": [
+          "sum"
+        ],
+        "filters": [],
+        "time_window": null,
+        "keywords_for_discovery": [
+          "Kunden",
+          "Gesamtumsatz",
+          "khk",
+          "adressen",
+          "kontakt",
+          "firma",
+          "unternehmen",
+          "position",
+          "positionen",
+          "kopf"
+        ],
+        "extraction_confidence": 0.9,
+        "raw_query": "Wer sind unsere Top 5 Kunden nach Gesamtumsatz?",
+        "required_action": "topk_sum_by_customer",
+        "group_by": "customer",
+        "top_k": 5,
+        "time_granularity": null,
+        "extra_keywords": [
+          "umsatz",
+          "verkauf",
+          "vk",
+          "rechnung",
+          "rechnungen",
+          "rechnungsposition",
+          "position",
+          "positionen",
+          "invoice",
+          "invoices",
+          "order",
+          "orders",
+          "faktura",
+          "amount",
+          "betrag",
+          "preis",
+          "wert"
+        ],
+        "confidence": 1.0,
+        "needs_clarification": false,
+        "validation_notes": {
+          "has_entities": true,
+          "has_keywords": true,
+          "extraction_confidence": 0.9
+        }
+      },
+      "sql_query": "",
+      "error_info": {
+        "type": "SQL_GENERATION_ERROR",
+        "message": "Could not generate SQL query"
+      },
+      "final_answer": "I found relevant tables but couldn't generate a SQL query for 'Wer sind unsere Top 5 Kunden nach Gesamtumsatz?'. The table structure might be too complex for automatic SQL generation.",
+      "action_match": true
+    },
+    {
+      "query": "What was our total revenue last month?",
+      "description": "Revenue aggregation query",
+      "expected_action": "sum_by_customer",
+      "success": true,
+      "error": null,
+      "has_sql": false,
+      "has_result": false,
+      "intent": {
+        "operation": "query",
+        "operation_confidence": 0.9,
+        "classification_reasoning": "The user is asking for a specific data point, which is the total revenue for the last month. This is a typical data retrieval request that would be handled by a SELECT query in a database.",
+        "alternative_operations": [
+          "query"
+        ],
+        "primary_entities": [
+          "revenue"
+        ],
+        "secondary_entities": [],
+        "metrics": [
+          "sum"
+        ],
+        "filters": [],
+        "time_window": {
+          "period": "last_month",
+          "start": "2023-09-01",
+          "end": "2023-09-30"
+        },
+        "keywords_for_discovery": [
+          "revenue",
+          "total",
+          "khk",
+          "adressen",
+          "kontakt",
+          "firma",
+          "unternehmen",
+          "position",
+          "positionen",
+          "kopf"
+        ],
+        "extraction_confidence": 0.9,
+        "raw_query": "What was our total revenue last month?",
+        "required_action": null,
+        "group_by": null,
+        "top_k": null,
+        "time_granularity": null,
+        "extra_keywords": [],
+        "confidence": 1.0,
+        "needs_clarification": false,
+        "validation_notes": {
+          "has_entities": true,
+          "has_keywords": true,
+          "extraction_confidence": 0.9
+        }
+      },
+      "sql_query": "",
+      "error_info": {
+        "type": "SQL_GENERATION_ERROR",
+        "message": "Could not generate SQL query"
+      },
+      "final_answer": "I found relevant tables but couldn't generate a SQL query for 'What was our total revenue last month?'. The table structure might be too complex for automatic SQL generation.",
+      "action_match": false
+    },
+    {
+      "query": "Wie hoch war unser Gesamtumsatz im letzten Monat?",
+      "description": "German revenue query",
+      "expected_action": "sum_by_customer",
+      "success": true,
+      "error": null,
+      "has_sql": false,
+      "has_result": false,
+      "intent": {
+        "operation": "query",
+        "operation_confidence": 0.9,
+        "classification_reasoning": "The user is asking for the total revenue for the last month, which is a typical data retrieval request.",
+        "alternative_operations": [
+          "query"
+        ],
+        "primary_entities": [
+          "Umsatz"
+        ],
+        "secondary_entities": [],
+        "metrics": [
+          "sum"
+        ],
+        "filters": [],
+        "time_window": {
+          "period": "last_month",
+          "start": "2023-09-01",
+          "end": "2023-09-30"
+        },
+        "keywords_for_discovery": [
+          "Umsatz",
+          "Gesamtumsatz",
+          "khk",
+          "adressen",
+          "kontakt",
+          "firma",
+          "unternehmen",
+          "position",
+          "positionen",
+          "kopf"
+        ],
+        "extraction_confidence": 0.9,
+        "raw_query": "Wie hoch war unser Gesamtumsatz im letzten Monat?",
+        "required_action": null,
+        "group_by": null,
+        "top_k": null,
+        "time_granularity": "month",
+        "extra_keywords": [],
+        "confidence": 1.0,
+        "needs_clarification": false,
+        "validation_notes": {
+          "has_entities": true,
+          "has_keywords": true,
+          "extraction_confidence": 0.9
+        }
+      },
+      "sql_query": "",
+      "error_info": {
+        "type": "SQL_GENERATION_ERROR",
+        "message": "Could not generate SQL query"
+      },
+      "final_answer": "I found relevant tables but couldn't generate a SQL query for 'Wie hoch war unser Gesamtumsatz im letzten Monat?'. The table structure might be too complex for automatic SQL generation.",
+      "action_match": false
+    },
+    {
+      "query": "How many projects did we have in October?",
+      "description": "Month-filtered count query",
+      "expected_action": "month_count",
+      "success": true,
+      "error": null,
+      "has_sql": true,
+      "has_result": true,
+      "intent": {
+        "operation": "query",
+        "operation_confidence": 0.9,
+        "classification_reasoning": "The user is asking for a count of projects for a specific time period, which is a typical data retrieval request.",
+        "alternative_operations": [
+          "query"
+        ],
+        "primary_entities": [
+          "projects"
+        ],
+        "secondary_entities": [],
+        "metrics": [
+          "count"
+        ],
+        "filters": [],
+        "time_window": {
+          "period": "last_month",
+          "start": "2023-10-01",
+          "end": "2023-10-31"
+        },
+        "keywords_for_discovery": [
+          "projects",
+          "projekt",
+          "projekte",
+          "task",
+          "job",
+          "khk",
+          "adressen",
+          "kontakt",
+          "firma",
+          "unternehmen"
+        ],
+        "extraction_confidence": 0.9,
+        "raw_query": "How many projects did we have in October?",
+        "required_action": "month_count",
+        "group_by": null,
+        "top_k": null,
+        "time_granularity": null,
+        "extra_keywords": [],
+        "confidence": 1.0,
+        "needs_clarification": false,
+        "validation_notes": {
+          "has_entities": true,
+          "has_keywords": true,
+          "extraction_confidence": 0.9
+        }
+      },
+      "sql_query": "SELECT TOP 50 * FROM BCSPjmProjekteTemplates",
+      "error_info": null,
+      "final_answer": "There are 1 projects in the database.",
+      "action_match": true
+    },
+    {
+      "query": "How did our project landscape develop over the last three years?",
+      "description": "Time series trend analysis",
+      "expected_action": "trend_series",
+      "success": true,
+      "error": null,
+      "has_sql": true,
+      "has_result": true,
+      "intent": {
+        "operation": "query",
+        "operation_confidence": 0.9,
+        "classification_reasoning": "The user is asking for information about the development of a project landscape over a specific time period, which suggests a request for data retrieval.",
+        "alternative_operations": [
+          "query"
+        ],
+        "primary_entities": [
+          "project landscape"
+        ],
+        "secondary_entities": [],
+        "metrics": [],
+        "filters": [],
+        "time_window": {
+          "period": null,
+          "start": "2020-01-01",
+          "end": "2023-12-31"
+        },
+        "keywords_for_discovery": [
+          "project",
+          "landscape",
+          "development",
+          "khk",
+          "adressen",
+          "kontakt",
+          "firma",
+          "unternehmen",
+          "position",
+          "positionen"
+        ],
+        "extraction_confidence": 0.9,
+        "raw_query": "How did our project landscape develop over the last three years?",
+        "required_action": "trend_series",
+        "group_by": null,
+        "top_k": null,
+        "time_granularity": "year",
+        "extra_keywords": [],
+        "confidence": 1.0,
+        "needs_clarification": false,
+        "validation_notes": {
+          "has_entities": true,
+          "has_keywords": true,
+          "extraction_confidence": 0.9
+        }
+      },
+      "sql_query": "SELECT TOP 100 * FROM KHKDruckbelegeKennzeichen",
+      "error_info": null,
+      "final_answer": "Found 100 results with columns: BelID, Druckbeleg, Mandant, Typ, Druckindex, BerichtName, Warten, Exemplare, Druckkennzeichen, Datum, Mitarbeiter, DruckbelegTAN, Timestamp. Use a more specific query to see the actual data.",
+      "action_match": true
+    },
+    {
+      "query": "Welche Produkte sind knapp auf Lager?",
+      "description": "Low stock inventory query",
+      "expected_action": "count",
+      "success": true,
+      "error": null,
+      "has_sql": false,
+      "has_result": false,
+      "intent": {
+        "operation": "query",
+        "operation_confidence": 0.9,
+        "classification_reasoning": "The user is asking about products that are low in stock, which implies a request for data retrieval from the inventory or stock database.",
+        "alternative_operations": [
+          "query"
+        ],
+        "primary_entities": [
+          "Produkte"
+        ],
+        "secondary_entities": [],
+        "metrics": [
+          "inventory"
+        ],
+        "filters": [
+          {
+            "field": "inventory",
+            "operator": "<",
+            "value": "threshold_value",
+            "description": "knapp auf Lager"
+          }
+        ],
+        "time_window": null,
+        "keywords_for_discovery": [
+          "Produkte",
+          "Lager",
+          "inventory",
+          "stock",
+          "khk",
+          "adressen",
+          "kontakt",
+          "firma",
+          "unternehmen",
+          "position"
+        ],
+        "extraction_confidence": 0.9,
+        "raw_query": "Welche Produkte sind knapp auf Lager?",
+        "required_action": null,
+        "group_by": null,
+        "top_k": null,
+        "time_granularity": null,
+        "extra_keywords": [],
+        "confidence": 1.0,
+        "needs_clarification": false,
+        "validation_notes": {
+          "has_entities": true,
+          "has_keywords": true,
+          "extraction_confidence": 0.9
+        }
+      },
+      "sql_query": "",
+      "error_info": {
+        "type": "SQL_GENERATION_ERROR",
+        "message": "Could not generate SQL query"
+      },
+      "final_answer": "I found relevant tables but couldn't generate a SQL query for 'Welche Produkte sind knapp auf Lager?'. The table structure might be too complex for automatic SQL generation.",
+      "action_match": false
+    },
+    {
+      "query": "How has our customer base grown over the last 3 years?",
+      "description": "Customer growth analysis",
+      "expected_action": "growth_analysis",
+      "success": true,
+      "error": null,
+      "has_sql": true,
+      "has_result": true,
+      "intent": {
+        "operation": "query",
+        "operation_confidence": 0.9,
+        "classification_reasoning": "The user is asking for information about the growth of the customer base over a specific time period, which typically involves retrieving and analyzing data from a database.",
+        "alternative_operations": [
+          "query"
+        ],
+        "primary_entities": [
+          "customers"
+        ],
+        "secondary_entities": [],
+        "metrics": [
+          "count"
+        ],
+        "filters": [],
+        "time_window": {
+          "period": null,
+          "start": "2020-01-01",
+          "end": "2023-01-01"
+        },
+        "keywords_for_discovery": [
+          "customer base",
+          "growth",
+          "kunde",
+          "kunden",
+          "client",
+          "adressen",
+          "contacts",
+          "khk",
+          "kontakt",
+          "firma"
+        ],
+        "extraction_confidence": 0.9,
+        "raw_query": "How has our customer base grown over the last 3 years?",
+        "required_action": "trend_series",
+        "group_by": "customer",
+        "top_k": null,
+        "time_granularity": "year",
+        "extra_keywords": [],
+        "confidence": 1.0,
+        "needs_clarification": false,
+        "validation_notes": {
+          "has_entities": true,
+          "has_keywords": true,
+          "extraction_confidence": 0.9
+        }
+      },
+      "sql_query": "SELECT COUNT(*) AS total_count FROM BCSPjmAdressenKontaktFolge",
+      "error_info": null,
+      "final_answer": "There are 0 customers in the database.",
+      "action_match": false
+    },
+    {
+      "query": "Compare Q1 vs Q2 performance",
+      "description": "Quarter-over-quarter comparison",
+      "expected_action": "comparative_analysis",
+      "success": false,
+      "error": "'str' object has no attribute 'get'",
+      "has_sql": false,
+      "has_result": false,
+      "intent": {},
+      "sql_query": "",
+      "error_info": null,
+      "final_answer": ""
+    },
+    {
+      "query": "How does productivity vary by department?",
+      "description": "Department productivity analysis",
+      "expected_action": "department_productivity",
+      "success": false,
+      "error": "'str' object has no attribute 'get'",
+      "has_sql": false,
+      "has_result": false,
+      "intent": {},
+      "sql_query": "",
+      "error_info": null,
+      "final_answer": ""
+    },
+    {
+      "query": "These results, can you sort them by revenue descending?",
+      "description": "Follow-up interpretation request",
+      "expected_action": "interpret_previous",
+      "success": false,
+      "error": "'str' object has no attribute 'get'",
+      "has_sql": false,
+      "has_result": false,
+      "intent": {},
+      "sql_query": "",
+      "error_info": null,
+      "final_answer": ""
+    },
+    {
+      "query": "Top customers",
+      "description": "Ambiguous query needing clarification",
+      "expected_action": null,
+      "success": true,
+      "error": null,
+      "has_sql": false,
+      "has_result": false,
+      "intent": {
+        "operation": "query",
+        "operation_confidence": 0.9,
+        "classification_reasoning": "The query 'Top customers' suggests a request for data retrieval, likely involving a SELECT query to identify customers based on certain criteria such as sales volume or frequency.",
+        "alternative_operations": [
+          "query"
+        ],
+        "primary_entities": [
+          "customers"
+        ],
+        "secondary_entities": [],
+        "metrics": [
+          "sum",
+          "avg"
+        ],
+        "filters": [],
+        "time_window": null,
+        "keywords_for_discovery": [
+          "customers",
+          "top",
+          "kunde",
+          "kunden",
+          "client",
+          "adressen",
+          "contacts",
+          "khk",
+          "kontakt",
+          "firma"
+        ],
+        "extraction_confidence": 0.9,
+        "raw_query": "Top customers",
+        "required_action": "topk_sum_by_customer",
+        "group_by": "customer",
+        "top_k": 5,
+        "time_granularity": null,
+        "extra_keywords": [
+          "umsatz",
+          "verkauf",
+          "vk",
+          "rechnung",
+          "rechnungen",
+          "rechnungsposition",
+          "position",
+          "positionen",
+          "invoice",
+          "invoices",
+          "order",
+          "orders",
+          "faktura",
+          "amount",
+          "betrag",
+          "preis",
+          "wert"
+        ],
+        "confidence": 1.0,
+        "needs_clarification": false,
+        "validation_notes": {
+          "has_entities": true,
+          "has_keywords": true,
+          "extraction_confidence": 0.9
+        }
+      },
+      "sql_query": "",
+      "error_info": {
+        "type": "SQL_GENERATION_ERROR",
+        "message": "Could not generate SQL query"
+      },
+      "final_answer": "I found relevant tables but couldn't generate a SQL query for 'Top customers'. The table structure might be too complex for automatic SQL generation."
+    },
+    {
+      "query": "Count and sum customers",
+      "description": "Conflicting metrics",
+      "expected_action": null,
+      "success": true,
+      "error": null,
+      "has_sql": true,
+      "has_result": true,
+      "intent": {
+        "operation": "query",
+        "operation_confidence": 0.9,
+        "classification_reasoning": "The user query 'Count and sum customers' suggests a request to perform data retrieval operations, specifically aggregating customer data, which aligns with typical SELECT queries.",
+        "alternative_operations": [
+          "query"
+        ],
+        "primary_entities": [
+          "customers"
+        ],
+        "secondary_entities": [],
+        "metrics": [
+          "count",
+          "sum"
+        ],
+        "filters": [],
+        "time_window": null,
+        "keywords_for_discovery": [
+          "customers",
+          "kunde",
+          "kunden",
+          "client",
+          "adressen",
+          "contacts",
+          "khk",
+          "kontakt",
+          "firma",
+          "unternehmen"
+        ],
+        "extraction_confidence": 0.9,
+        "raw_query": "Count and sum customers",
+        "required_action": "sum_by_customer",
+        "group_by": "customer",
+        "top_k": null,
+        "time_granularity": null,
+        "extra_keywords": [
+          "umsatz",
+          "verkauf",
+          "vk",
+          "rechnung",
+          "rechnungen",
+          "rechnungsposition",
+          "position",
+          "positionen",
+          "invoice",
+          "invoices",
+          "order",
+          "orders",
+          "faktura",
+          "amount",
+          "betrag",
+          "preis",
+          "wert"
+        ],
+        "confidence": 1.0,
+        "needs_clarification": false,
+        "validation_notes": {
+          "has_entities": true,
+          "has_keywords": true,
+          "extraction_confidence": 0.9
+        }
+      },
+      "sql_query": "SELECT TOP 10 * FROM KHKDispostapelPositionenVerursacher ORDER BY (SELECT NULL)",
+      "error_info": null,
+      "final_answer": "There are 1 customers in the database."
+    },
+    {
+      "query": "How many customers, products, and projects do we have?",
+      "description": "Multiple business domains",
+      "expected_action": null,
+      "success": true,
+      "error": null,
+      "has_sql": true,
+      "has_result": true,
+      "intent": {
+        "operation": "query",
+        "operation_confidence": 0.9,
+        "classification_reasoning": "The user is asking for counts of customers, products, and projects, which typically involves retrieving data from a database using SELECT queries.",
+        "alternative_operations": [
+          "query"
+        ],
+        "primary_entities": [
+          "customers",
+          "products",
+          "projects"
+        ],
+        "secondary_entities": [],
+        "metrics": [
+          "count"
+        ],
+        "filters": [],
+        "time_window": null,
+        "keywords_for_discovery": [
+          "customers",
+          "products",
+          "projects",
+          "kunde",
+          "kunden",
+          "client",
+          "adressen",
+          "contacts",
+          "produkt",
+          "produkte"
+        ],
+        "extraction_confidence": 1.0,
+        "raw_query": "How many customers, products, and projects do we have?",
+        "required_action": "count",
+        "group_by": "customer",
+        "top_k": null,
+        "time_granularity": null,
+        "extra_keywords": [],
+        "confidence": 1.0,
+        "needs_clarification": false,
+        "validation_notes": {
+          "has_entities": true,
+          "has_keywords": true,
+          "extraction_confidence": 1.0
+        }
+      },
+      "sql_query": "SELECT COUNT(*) AS total_count FROM BCSPjmAdressenKontaktFolge ORDER BY (SELECT NULL)",
+      "error_info": null,
+      "final_answer": "There are 0 customers in the database."
+    },
+    {
+      "query": "Is the system healthy?",
+      "description": "Health check query",
+      "expected_action": null,
+      "success": false,
+      "error": "'str' object has no attribute 'get'",
+      "has_sql": false,
+      "has_result": false,
+      "intent": {},
+      "sql_query": "",
+      "error_info": null,
+      "final_answer": ""
+    }
+  ],
+  "summary": {
+    "total_tests": 17,
+    "passed": 8,
+    "failed": 9,
+    "sql_generation_rate": 0.47058823529411764,
+    "result_generation_rate": 0.47058823529411764,
+    "action_matching_rate": 1.0
+  }
+}

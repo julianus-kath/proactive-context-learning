@@ -1,3 +1,57 @@
+import pytest
+
+from langgraph_integration.orchestrator import create_query_orchestrator
+
+
+@pytest.fixture(scope="module")
+def compiled_graph():
+    orchestrator = create_query_orchestrator()
+    return orchestrator.graph.get_graph()
+
+
+def test_nodes_present(compiled_graph):
+    nodes = set(compiled_graph.nodes.keys())
+    expected_nodes = {
+        "__start__",
+        "index_database",
+        "parse_intent",
+        "route_operation",
+        "discovery",
+        "join_sql",
+        "validate_sql",
+        "exec_recovery",
+        "result_validator",
+        "answer",
+        "__end__",
+    }
+    assert expected_nodes.issubset(nodes), f"Missing nodes: {expected_nodes - nodes}"
+
+
+def test_query_path_edges(compiled_graph):
+    direct_edges = {(edge.source, edge.target) for edge in compiled_graph.edges if not edge.conditional}
+    conditional_edges = {(edge.source, edge.target) for edge in compiled_graph.edges if edge.conditional}
+
+    required_direct = {
+        ("__start__", "index_database"),
+        ("index_database", "parse_intent"),
+        ("parse_intent", "route_operation"),
+        ("discovery", "join_sql"),
+        ("join_sql", "validate_sql"),
+        ("validate_sql", "exec_recovery"),
+        ("exec_recovery", "result_validator"),
+    }
+    assert required_direct <= direct_edges, f"Missing direct edges: {required_direct - direct_edges}"
+
+    required_conditional = {
+        ("route_operation", "discovery"),
+        ("result_validator", "answer"),
+    }
+    assert required_conditional <= conditional_edges, f"Missing conditional edges: {required_conditional - conditional_edges}"
+
+
+def test_terminal_edges(compiled_graph):
+    direct_edges = {(edge.source, edge.target) for edge in compiled_graph.edges if not edge.conditional}
+    assert ("answer", "__end__") in direct_edges
 #!/usr/bin/env python3
 """
 Smoke test: Verify all LangGraph agents have proper topology (no orphaned nodes).

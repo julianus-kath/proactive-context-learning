@@ -24,7 +24,7 @@ WHITE='\033[0;37m'
 NC='\033[0m' # No Color
 
 # Project root directory
-PROJECT_ROOT="/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/"
+PROJECT_ROOT="/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code_cursor/proactive-context-learning/"
 cd "$PROJECT_ROOT"
 
 # Log file for services

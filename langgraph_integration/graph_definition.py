@@ -69,3 +69,28 @@ DatabaseWorkflow = QueryOrchestrator
 
 # If tests or other code import from this file, they'll get the new system
 logger.info("✅ graph_definition.py routed to orchestrator.py (multi-agent system active)")
+
+
+def describe_graph() -> None:
+    """
+    Print a human-friendly summary of the compiled LangGraph topology.
+
+    Useful for debugging to ensure the graph matches ADR expectations.
+    """
+    orchestrator = create_query_orchestrator()
+    compiled = orchestrator.graph
+    graph = compiled.get_graph()
+
+    logger.info("🧭 LangGraph Topology Overview")
+    logger.info("Nodes:")
+    for node_id in graph.nodes:
+        logger.info("  • %s", node_id)
+
+    logger.info("Edges:")
+    for edge in graph.edges:
+        kind = "conditional" if edge.conditional else "direct"
+        logger.info("  • %s -> %s (%s)", edge.source, edge.target, kind)
+
+
+if __name__ == "__main__":
+    describe_graph()

@@ -619,6 +619,21 @@ class MCPTools:
                     "required": []
                 }
             ),
+            MCPTool(
+                name="scout_catalog_refresh",
+                description="Trigger a Scout catalog rebuild. Useful after schema changes or ranking anomalies. Optionally wait for completion before returning.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "wait_for_completion": {
+                            "type": "boolean",
+                            "description": "If true, wait for the rebuild to finish before responding (default: false)",
+                            "default": False
+                        }
+                    },
+                    "required": []
+                }
+            ),
         ]
     
     @staticmethod
@@ -685,6 +700,8 @@ class MCPTools:
                     result = await MCPTools._get_domain_clusters(arguments, db_manager)
                 elif tool_name == "scout_catalog_diagnostics":
                     result = await MCPTools._scout_catalog_diagnostics(arguments, db_manager)
+                elif tool_name == "scout_catalog_refresh":
+                    result = await MCPTools._scout_catalog_refresh(arguments, db_manager)
                 else:
                     metrics.success = False
                     metrics.error_code = "UNKNOWN_TOOL"
@@ -2094,6 +2111,45 @@ class MCPTools:
             content=[{"type": "text", "text": text}],
             isError=True,
         )
+
+    @staticmethod
+    async def _scout_catalog_refresh(arguments: Dict[str, Any], db_manager=None) -> MCPToolResult:
+        """
+        Trigger a Scout catalog rebuild, optionally waiting for completion.
+        """
+        runner = _get_scout_runner(db_manager)
+        if runner is None:
+            return MCPToolResult(
+                content=[{"type": "text", "text": json.dumps({"ok": False, "error": "Scout runner not available"}, cls=DecimalEncoder)}],
+                isError=True,
+            )
+
+        wait = bool(arguments.get("wait_for_completion"))
+        try:
+            if wait:
+                success = await runner._build_catalog_async()
+                response = {
+                    "ok": bool(success),
+                    "waited": True,
+                    "message": "Scout catalog rebuild completed" if success else "Scout catalog rebuild failed",
+                }
+                return MCPToolResult(content=[{"type": "text", "text": json.dumps(response, cls=DecimalEncoder)}], isError=not success)
+
+            started = runner.force_refresh()
+            response = {
+                "ok": True,
+                "waited": False,
+                "message": "Scout catalog rebuild started" if started else "Catalog rebuild already in progress",
+                "in_progress": not started,
+            }
+            return MCPToolResult(content=[{"type": "text", "text": json.dumps(response, cls=DecimalEncoder)}], isError=False)
+        except Exception as exc:
+            logger.error(f"scout_catalog_refresh failed: {exc}")
+            response = {
+                "ok": False,
+                "error": str(exc),
+            }
+            return MCPToolResult(content=[{"type": "text", "text": json.dumps(response, cls=DecimalEncoder)}], isError=True)
 
     # =====================================================
     # Phase 9 Tier 1 Enhancement Tools

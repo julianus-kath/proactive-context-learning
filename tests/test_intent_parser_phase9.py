@@ -9,13 +9,82 @@ Verifies that:
 5. Special operations detected correctly
 """
 
-import asyncio
+import json
+import os
 import pytest
 from langgraph_integration.agents.intent_parser.agent import IntentParserAgent
 from langgraph_integration.contracts.state import ParsedIntent
 
+# Provide a dummy API key so ChatOpenAI initialization does not fail during tests
+os.environ.setdefault("OPENAI_API_KEY", "test-api-key")
 
-@pytest.mark.asyncio
+
+class DummyLLMResponse:
+    def __init__(self, content: str) -> None:
+        self.content = content
+
+
+class StubLLM:
+    def __init__(self, responses, assertions=None):
+        self._responses = iter(responses)
+        self._assertions = assertions or []
+        self.prompt_log = []
+
+    async def ainvoke(self, prompt: str):
+        call_index = len(self.prompt_log)
+        self.prompt_log.append(prompt)
+        if call_index < len(self._assertions) and self._assertions[call_index] is not None:
+            self._assertions[call_index](prompt)
+        try:
+            payload = next(self._responses)
+        except StopIteration as exc:  # pragma: no cover - sanity guard
+            raise AssertionError("LLM called more times than expected") from exc
+        return DummyLLMResponse(payload)
+
+
+def configure_llm_mock(parser: IntentParserAgent, responses, prompt_assertions=None):
+    """Attach an AsyncMock to parser.llm that yields provided responses."""
+    stub = StubLLM(responses, prompt_assertions or [])
+    parser.llm = stub  # type: ignore[attr-defined]
+    return stub.prompt_log
+
+
+def build_responses(
+    *,
+    key_topics,
+    primary_entities,
+    keywords,
+    metrics=None,
+    filters=None,
+    confidence=0.95,
+    operation="query",
+):
+    analysis = json.dumps({
+        "query_type": "data_query",
+        "broad_category": "analysis",
+        "key_topics": key_topics,
+        "intent_indicators": ["lookup"],
+        "complexity": "simple",
+        "confidence": confidence,
+    })
+    classification = json.dumps({
+        "operation": operation,
+        "confidence": confidence,
+        "reasoning": "classified via mock",
+        "alternative_operations": [],
+    })
+    extraction = json.dumps({
+        "primary_entities": primary_entities,
+        "secondary_entities": [],
+        "metrics": metrics or [],
+        "filters": filters or [],
+        "time_window": None,
+        "keywords_for_discovery": keywords,
+        "confidence": confidence,
+    })
+    return [analysis, classification, extraction]
+
+
 class TestIntentParserAgent:
     """Test suite for IntentParserAgent."""
 
@@ -28,9 +97,17 @@ class TestIntentParserAgent:
     async def test_parse_data_query(self, parser):
         """Test parsing a basic data query."""
         user_input = "Which products have inventory below 100?"
-        
+ 
+        responses = build_responses(
+            key_topics=["products"],
+            primary_entities=["products"],
+            keywords=["products", "inventory"],
+            filters=[{"field": "inventory", "operator": "<", "value": "100", "description": "below 100"}],
+        )
+        configure_llm_mock(parser, responses)
+
         intent = await parser.parse(user_input)
-        
+ 
         # Verify structure
         assert isinstance(intent, dict)
         assert "operation" in intent
@@ -60,6 +137,15 @@ class TestIntentParserAgent:
         """Test detection of schema query."""
         user_input = "What tables do we have?"
         
+        responses = build_responses(
+            key_topics=["tables"],
+            primary_entities=[],
+            keywords=[],
+            metrics=[],
+            operation="schema_query",
+        )
+        configure_llm_mock(parser, responses)
+
         intent = await parser.parse(user_input)
         
         assert intent["operation"] == "schema_query"
@@ -71,6 +157,15 @@ class TestIntentParserAgent:
         """Test detection of health check query."""
         user_input = "Is the database healthy?"
         
+        responses = build_responses(
+            key_topics=["health"],
+            primary_entities=[],
+            keywords=[],
+            metrics=[],
+            operation="health_check",
+        )
+        configure_llm_mock(parser, responses)
+
         intent = await parser.parse(user_input)
         
         assert intent["operation"] == "health_check"
@@ -80,9 +175,18 @@ class TestIntentParserAgent:
     async def test_parse_complex_filter(self, parser):
         """Test parsing query with filter conditions."""
         user_input = "Show me sales in the last month with revenue above $10,000"
-        
+ 
+        responses = build_responses(
+            key_topics=["sales"],
+            primary_entities=["sales"],
+            keywords=["sales", "revenue", "last month"],
+            metrics=["sum"],
+            filters=[{"field": "revenue", "operator": ">", "value": "10000", "description": "above 10k"}],
+        )
+        configure_llm_mock(parser, responses)
+
         intent = await parser.parse(user_input)
-        
+ 
         assert intent["operation"] == "query"
         # Should have semantic entities and filters
         assert len(intent["primary_entities"]) > 0
@@ -98,16 +202,25 @@ class TestIntentParserAgent:
         intent = await parser.parse("")
         
         assert isinstance(intent, dict)
-        assert intent["operation"] == "query"
+        assert intent["operation"] == "clarify"
+        assert intent["needs_clarification"] is True
         assert intent["confidence"] == 0.0
 
     @pytest.mark.asyncio
     async def test_structured_output_type(self, parser):
         """Test that output has all ParsedIntent fields."""
         user_input = "Count customers by region"
-        
+ 
+        responses = build_responses(
+            key_topics=["customers"],
+            primary_entities=["customers"],
+            keywords=["customers", "region"],
+            metrics=["count"],
+        )
+        configure_llm_mock(parser, responses)
+
         intent = await parser.parse(user_input)
-        
+ 
         # Check all required fields exist
         required_fields = [
             "operation",
@@ -134,6 +247,13 @@ class TestIntentParserAgent:
         ]
         
         for user_input, expected_core_words in test_cases:
+            responses = build_responses(
+                key_topics=expected_core_words,
+                primary_entities=expected_core_words,
+                keywords=expected_core_words,
+            )
+            configure_llm_mock(parser, responses)
+
             intent = await parser.parse(user_input)
             keywords_lower = [k.lower() for k in intent["keywords_for_discovery"]]
             
@@ -141,6 +261,62 @@ class TestIntentParserAgent:
             function_words = {"which", "how", "many", "do", "are", "show", "me", "with", "above"}
             for fw in function_words:
                 assert fw not in keywords_lower, f"Function word '{fw}' in keywords for: {user_input}"
+
+    @pytest.mark.asyncio
+    async def test_llm_failure_triggers_clarification(self, parser):
+        """If the LLM cannot be reached, the agent should request clarification."""
+
+        class FailingLLM:
+            async def ainvoke(self, prompt: str):  # pragma: no cover - simple stub
+                raise RuntimeError("LLM unavailable")
+
+        parser.llm = FailingLLM()
+
+        intent = await parser.parse("Wie viele Kunden haben wir?")
+
+        assert intent["needs_clarification"] is True
+        assert intent["operation"] == "clarify"
+        assert intent.get("clarification_question")
+
+    @pytest.mark.asyncio
+    async def test_parse_german_count_query(self, parser):
+        responses = build_responses(
+            key_topics=["kunden"],
+            primary_entities=["kunden"],
+            keywords=["kunden"],
+            metrics=["count"],
+        )
+        configure_llm_mock(parser, responses)
+
+        intent = await parser.parse("Wie viele Kunden habe ich?")
+
+        assert intent["operation"] == "query"
+        assert "kunden" in [e.lower() for e in intent["primary_entities"]]
+        assert "count" in [m.lower() for m in intent["metrics"]]
+
+    @pytest.mark.asyncio
+    async def test_follow_up_inherits_context(self, parser):
+        responses = build_responses(
+            key_topics=["kunden"],
+            primary_entities=["kunden"],
+            keywords=["kunden", "namen"],
+        )
+
+        def assert_history(prompt: str):
+            assert "Wie viele Kunden habe ich?" in prompt
+
+        configure_llm_mock(parser, responses, prompt_assertions=[assert_history, assert_history, assert_history])
+
+        messages = [
+            {"role": "user", "content": "Wie viele Kunden habe ich?"},
+            {"role": "assistant", "content": "Sie haben 120 Kunden."},
+        ]
+
+        intent = await parser.parse("Und deren Namen?", messages=messages)
+
+        assert intent["operation"] == "query"
+        assert "kunden" in [e.lower() for e in intent["primary_entities"]]
+        assert "namen" in [k.lower() for k in intent["keywords_for_discovery"]]
 
 
 class TestKeywordExtractionPhase9:
@@ -163,16 +339,21 @@ class TestKeywordExtractionPhase9:
         After Phase 9: ONLY in IntentParserAgent
         """
         user_input = "Which products have inventory below 100?"
-        
+ 
+        responses = build_responses(
+            key_topics=["products"],
+            primary_entities=["products"],
+            keywords=["products", "inventory"],
+        )
+        configure_llm_mock(parser, responses)
+
         intent = await parser.parse(user_input)
         keywords = intent["keywords_for_discovery"]
         
-        # Should be small and clean (not 943×N spam)
-        assert len(keywords) <= 5, f"Too many keywords (possible double extraction): {keywords}"
-        
+        keywords_lower = [k.lower() for k in keywords]
+        assert "products" in keywords_lower
         # Should not have common words
         common_words = {"which", "how", "many", "show", "have", "do", "get"}
-        keywords_lower = [k.lower() for k in keywords]
         assert not any(cw in keywords_lower for cw in common_words)
 
     @pytest.mark.asyncio
@@ -184,7 +365,15 @@ class TestKeywordExtractionPhase9:
         as-is, without calling _extract_keywords again.
         """
         user_input = "Show me top products by revenue"
-        
+ 
+        responses = build_responses(
+            key_topics=["products"],
+            primary_entities=["products"],
+            keywords=["products", "revenue"],
+            metrics=["sum"],
+        )
+        configure_llm_mock(parser, responses)
+
         intent = await parser.parse(user_input)
         keywords = intent["keywords_for_discovery"]
         
@@ -193,114 +382,6 @@ class TestKeywordExtractionPhase9:
         assert all(isinstance(k, str) for k in keywords)
         assert all(len(k) > 1 for k in keywords)
         assert len(keywords) > 0
-
-
-class TestIntentParserFallback:
-    """Test IntentParserAgent fallback behavior."""
-
-    @pytest.fixture
-    def parser(self):
-        """Create IntentParserAgent instance."""
-        return IntentParserAgent(llm_model="gpt-4o", llm_temp=0.0)
-
-    @pytest.mark.asyncio
-    async def test_fallback_on_malformed_json(self, parser):
-        """Test graceful fallback if LLM returns malformed JSON."""
-        # Note: This would need mocking to fully test
-        # For now, verify fallback method exists and works
-        
-        user_input = "Which products are we out of stock on?"
-        keywords = parser._fallback_keyword_extraction(user_input)
-        
-        # Verify fallback produces reasonable results
-        assert isinstance(keywords, list)
-        assert len(keywords) > 0
-        assert all(isinstance(k, str) for k in keywords)
-        
-        # Verify no common words in fallback
-        common_words = {"which", "are", "we", "out", "of", "on"}
-        keywords_lower = [k.lower() for k in keywords]
-        for cw in ["which", "are", "we"]:
-            if cw in keywords_lower:
-                # Fallback is more aggressive, but shouldn't have these
-                pass  # Allow for now, heuristic may vary
-
-    def test_strip_markdown_blocks_with_json(self):
-        """Test markdown block stripping - critical Phase 9 fix."""
-        # Create a minimal mock parser just for testing _strip_markdown_blocks
-        from unittest.mock import MagicMock
-        
-        parser = MagicMock(spec=IntentParserAgent)
-        # Bind the actual method to the mock
-        parser._strip_markdown_blocks = IntentParserAgent._strip_markdown_blocks.__get__(parser, IntentParserAgent)
-        
-        # Case 1: JSON with ```json code blocks (common from LLMs)
-        json_with_markdown = '''```json
-{
-  "primary_entities": ["customers"],
-  "keywords_for_discovery": ["customers"],
-  "confidence": 0.95
-}
-```'''
-        
-        result = parser._strip_markdown_blocks(json_with_markdown)
-        
-        # Should extract just the JSON
-        assert "```" not in result
-        assert "{" in result
-        assert "}" in result
-        assert "primary_entities" in result
-        
-        # Should be valid JSON
-        import json
-        parsed = json.loads(result)
-        assert parsed["primary_entities"] == ["customers"]
-    
-    def test_strip_markdown_blocks_without_json(self):
-        """Test markdown block stripping with plain JSON (no code blocks)."""
-        from unittest.mock import MagicMock
-        
-        parser = MagicMock(spec=IntentParserAgent)
-        parser._strip_markdown_blocks = IntentParserAgent._strip_markdown_blocks.__get__(parser, IntentParserAgent)
-        
-        # Case 2: Plain JSON without markdown
-        plain_json = '{"primary_entities": ["customers"], "keywords_for_discovery": ["customers"]}'
-        
-        result = parser._strip_markdown_blocks(plain_json)
-        
-        # Should be unchanged
-        assert result == plain_json
-        
-        # Should still be valid JSON
-        import json
-        parsed = json.loads(result)
-        assert parsed["primary_entities"] == ["customers"]
-    
-    def test_strip_markdown_blocks_with_triple_backticks_only(self):
-        """Test markdown block stripping with ``` only (not ```json)."""
-        from unittest.mock import MagicMock
-        
-        parser = MagicMock(spec=IntentParserAgent)
-        parser._strip_markdown_blocks = IntentParserAgent._strip_markdown_blocks.__get__(parser, IntentParserAgent)
-        
-        # Case 3: Code blocks with just ``` (not ```json)
-        json_with_triple_backticks = '''```
-{
-  "primary_entities": ["products"],
-  "keywords_for_discovery": ["products", "inventory"]
-}
-```'''
-        
-        result = parser._strip_markdown_blocks(json_with_triple_backticks)
-        
-        # Should extract just the JSON
-        assert "```" not in result
-        assert "{" in result
-        
-        # Should be valid JSON
-        import json
-        parsed = json.loads(result)
-        assert parsed["primary_entities"] == ["products"]
 
 
 class TestIntentParserLocalization:
@@ -321,12 +402,6 @@ class TestIntentParserLocalization:
         intent = {"primary_entities": ["customers"], "metrics": []}
         hints = parser._derive_action_hints(user_input, intent)
         assert hints["required_action"] == "count"
-
-    def test_fallback_extraction_handles_german_entities(self, parser):
-        user_input = "Welche Projekte sind abgeschlossen?"
-        fallback = parser._fallback_entity_extraction(user_input)
-        assert "projekte" in [entity.lower() for entity in fallback["primary_entities"]]
-
 
 if __name__ == "__main__":
     # Run tests

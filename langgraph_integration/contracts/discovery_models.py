@@ -6,7 +6,7 @@ Provides strict validation so downstream agents receive predictable structures.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -68,8 +68,41 @@ class DiscoveryCandidate(BaseModel):
 
         if data.get("estimated_rows") is not None:
             data["has_rows"] = data["estimated_rows"] > 0
+        elif data.get("row_count") is not None:
+            try:
+                data["estimated_rows"] = int(data["row_count"])
+                data["has_rows"] = data["estimated_rows"] > 0
+            except Exception:
+                pass
 
         return data
+
+
+class RoleHintFact(BaseModel):
+    """Hints describing a fact-like table that can answer aggregate queries."""
+
+    table: str
+    estimated_rows: Optional[int] = None
+    metric_candidates: Dict[str, float] = Field(default_factory=dict)
+    date_columns: List[str] = Field(default_factory=list)
+    entity_keys: Dict[str, List[str]] = Field(default_factory=dict)
+
+
+class RoleHintDimension(BaseModel):
+    """Hints describing a dimension table (e.g., customer, product)."""
+
+    role: str
+    table: str
+    estimated_rows: Optional[int] = None
+    id_columns: List[str] = Field(default_factory=list)
+    label_columns: List[str] = Field(default_factory=list)
+
+
+class DiscoveryRoleHints(BaseModel):
+    """Structured hints for downstream planners."""
+
+    fact_candidates: List[RoleHintFact] = Field(default_factory=list)
+    dimensions: Dict[str, RoleHintDimension] = Field(default_factory=dict)
 
 
 class DiscoveryOutput(BaseModel):
@@ -82,6 +115,7 @@ class DiscoveryOutput(BaseModel):
     candidate_views: List[DiscoveryCandidate] = Field(default_factory=list)
     relevant_table_details: List[DiscoveryCandidate] = Field(default_factory=list)
     column_index: Dict[str, List[str]] = Field(default_factory=dict)
+    role_hints: DiscoveryRoleHints = Field(default_factory=DiscoveryRoleHints)
 
     @model_validator(mode="after")
     def deduplicate_tables(self) -> "DiscoveryOutput":
