@@ -16,8 +16,8 @@ from dotenv import load_dotenv
 # Add the parent directory and langgraph_integration to the path
 parent_dir = os.path.join(os.path.dirname(__file__), '..')
 langgraph_dir = os.path.join(parent_dir, 'langgraph_integration')
-sys.path.append(parent_dir)
-sys.path.append(langgraph_dir)
+sys.path.insert(0, parent_dir)
+sys.path.insert(0, langgraph_dir)
 
 try:
     # Import the new multi-agent orchestrator (ACTIVE - Phase 8)
