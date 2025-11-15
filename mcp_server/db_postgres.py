@@ -5,6 +5,7 @@ Uses asyncpg with connection pooling, timeouts, and read-only enforcement.
 
 import asyncpg
 import logging
+import re
 from typing import List, Dict, Any, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -105,9 +106,11 @@ class PostgresConnector:
             ValueError: If query is not a SELECT statement
             RuntimeError: If query execution fails
         """
-        # Enforce SELECT-only queries
-        sql_upper = sql.strip().upper()
-        if not sql_upper.startswith("SELECT"):
+        # Enforce read-only queries (SELECT or WITH...SELECT)
+        sql_stripped = sql.strip()
+        match = re.match(r"(\w+)", sql_stripped, re.IGNORECASE)
+        first_keyword = match.group(1).upper() if match else ""
+        if first_keyword not in {"SELECT", "WITH"}:
             raise ValueError("Only SELECT queries are allowed")
         
         # Apply row limit

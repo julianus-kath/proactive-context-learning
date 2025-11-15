@@ -6,12 +6,18 @@ Provides HTTP endpoints for the chatbot UI to interact with the LangGraph workfl
 import os
 import sys
 import asyncio
+import logging
 from typing import Dict, Any
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 import uvicorn
 from dotenv import load_dotenv
+
+from langgraph_integration.contracts.response_envelope import (
+    ErrorInfo as ErrorInfoModel,
+    ResponseEnvelope,
+)
 
 # Add the parent directory and langgraph_integration to the path
 parent_dir = os.path.join(os.path.dirname(__file__), '..')
@@ -89,6 +95,7 @@ class DebugLogsResponse(BaseModel):
 # Global orchestrator instance (Phase 9.1: Multi-agent system with IntentParserAgent subgraph)
 orchestrator = None
 debug_logger = None
+logger = logging.getLogger(__name__)
 
 @app.on_event("startup")
 async def startup_event():
@@ -151,13 +158,43 @@ async def process_query(request: QueryRequest = Body(...)):
 
         # Process the query through multi-agent orchestrator
         print("📝 Calling orchestrator.process_query...")
-        final_response = await orchestrator.process_query(request.user_input.strip())
-        print(f"📝 Got response: {final_response[:100]}...")
+        orchestrator_result = await orchestrator.process_query(request.user_input.strip())
+        print(f"📝 Got response: {str(orchestrator_result)[:100]}...")
+
+        response_text = orchestrator_result
+        if isinstance(orchestrator_result, dict):
+            exec_payload = orchestrator_result.get("exec_result")
+            if exec_payload is not None:
+                try:
+                    envelope = ResponseEnvelope.model_validate(exec_payload)
+                    orchestrator_result["exec_result"] = envelope.model_dump(exclude_none=True)
+                except ValidationError as exc:
+                    logger.warning("payload_type_violation: exec_result invalid in API wrapper (%s)", exc)
+                    orchestrator_result["exec_result"] = ResponseEnvelope(ok=False, data=[]).model_dump(exclude_none=True)
+
+            error_payload = orchestrator_result.get("error_info")
+            if error_payload:
+                try:
+                    normalized_error = ErrorInfoModel.model_validate(error_payload)
+                    orchestrator_result["error_info"] = normalized_error.model_dump(exclude_none=True)
+                except ValidationError as exc:
+                    logger.warning("payload_type_violation: error_info invalid in API wrapper (%s)", exc)
+                    orchestrator_result["error_info"] = ErrorInfoModel(
+                        type="UNKNOWN_ERROR",
+                        message=str(error_payload),
+                    ).model_dump(exclude_none=True)
+
+            response_text = orchestrator_result.get("final_answer") or orchestrator_result.get("final_response")
+            if not response_text:
+                logger.warning("payload_type_violation: orchestrator returned dict without final response")
+                response_text = str(orchestrator_result)
+        else:
+            response_text = str(orchestrator_result)
 
         print(f"✅ Query processed successfully")
         
         return QueryResponse(
-            final_response=final_response,
+            final_response=response_text,
             status="success"
         )
         
@@ -212,10 +249,34 @@ async def process_conversation(request: ConversationRequest = Body(...)):
         # Process through multi-agent orchestrator
         result = await orchestrator.process_query(last_user_message)
 
+        if isinstance(result, dict):
+            exec_payload = result.get("exec_result")
+            if exec_payload is not None:
+                try:
+                    envelope = ResponseEnvelope.model_validate(exec_payload)
+                    result["exec_result"] = envelope.model_dump(exclude_none=True)
+                except ValidationError as exc:
+                    logger.warning("payload_type_violation: exec_result invalid in conversation API (%s)", exc)
+                    result["exec_result"] = ResponseEnvelope(ok=False, data=[]).model_dump(exclude_none=True)
+
+            error_payload = result.get("error_info")
+            if error_payload:
+                try:
+                    normalized_error = ErrorInfoModel.model_validate(error_payload)
+                    result["error_info"] = normalized_error.model_dump(exclude_none=True)
+                except ValidationError as exc:
+                    logger.warning("payload_type_violation: error_info invalid in conversation API (%s)", exc)
+                    result["error_info"] = ErrorInfoModel(
+                        type="UNKNOWN_ERROR",
+                        message=str(error_payload),
+                    ).model_dump(exclude_none=True)
+
         print(f"✅ Conversation processed successfully")
 
         # Extract the final answer from the orchestrator result
         final_response = result.get("final_answer", "I couldn't process your query. Please try again.")
+        is_clarify = bool(result.get("clarify"))
+        clarification_question = result.get("clarification_question")
 
         # Prepare updated messages array
         updated_messages = request.messages.copy()
@@ -224,8 +285,10 @@ async def process_conversation(request: ConversationRequest = Body(...)):
         # Return response (orchestrator handles all operations internally)
         return ConversationResponse(
             final_response=final_response,
-            operation="query",  # Orchestrator handles all operations
-            clarify=False,
+            operation="clarify" if is_clarify else "query",
+            clarify=is_clarify,
+            clarification=clarification_question,
+            question=clarification_question,
             response=final_response,
             messages=updated_messages,
             status="success"

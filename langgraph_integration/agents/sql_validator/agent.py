@@ -12,7 +12,7 @@ This agent:
 import asyncio
 import logging
 import re
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, Set
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
@@ -127,6 +127,9 @@ class SQLValidatorAgent:
         if repair_attempts >= self.max_repair_attempts:
             return "max_attempts"
 
+        if state.get("repair_failed"):
+            return "max_attempts"
+
         # Check if repair was successful
         validation_result = state.get("validation_result", {})
         is_valid = validation_result.get("is_valid", False)
@@ -203,19 +206,31 @@ class SQLValidatorAgent:
         """Validate basic SQL syntax using regex and pattern matching."""
         result = {"is_valid": True, "warnings": []}
 
-        sql_upper = sql.upper().strip()
+        sql_stripped = sql.strip()
+        sql_upper = sql_stripped.upper()
 
-        # Must start with SELECT
-        if not sql_upper.startswith("SELECT"):
+        if sql_upper.startswith("WITH"):
+            select_idx = sql_upper.find("SELECT")
+            if select_idx == -1:
+                return {
+                    "is_valid": False,
+                    "error_type": "syntax_error",
+                    "error_message": "CTE query missing SELECT statement",
+                    "suggestions": ["Ensure CTE is followed by a SELECT query"]
+                }
+            effective_upper = sql_upper[select_idx:]
+        elif sql_upper.startswith("SELECT"):
+            effective_upper = sql_upper
+        else:
             return {
                 "is_valid": False,
                 "error_type": "syntax_error",
                 "error_message": "Query must start with SELECT",
-                "suggestions": ["Ensure query begins with SELECT"]
+                "suggestions": ["Ensure query begins with SELECT or WITH (for CTEs)"]
             }
 
         # Check for basic SELECT structure
-        if "FROM" not in sql_upper:
+        if "FROM" not in effective_upper:
             return {
                 "is_valid": False,
                 "error_type": "syntax_error",
@@ -299,8 +314,17 @@ class SQLValidatorAgent:
         """Validate that all tables and columns referenced in SQL exist."""
         result = {"is_valid": True, "warnings": []}
 
-        column_index = state.get("column_index", {}) or {}
+        raw_column_index = state.get("column_index", {}) or {}
+        column_index: Dict[str, List[str]] = {}
+
+        for key, cols in raw_column_index.items():
+            column_index.setdefault(key, cols)
+            base_name = key.split(".")[-1]
+            column_index.setdefault(base_name, cols)
         relevant_tables = state.get("relevant_tables", []) or []
+
+        cte_names = self._extract_cte_names(sql)
+        cte_base_names = {name.split(".")[-1] for name in cte_names}
 
         # Extract table and column references from SQL
         tables_used, columns_used = self._extract_tables_columns_from_sql(sql)
@@ -308,6 +332,8 @@ class SQLValidatorAgent:
         # Check tables exist
         missing_tables = []
         for table in tables_used:
+            if table in cte_base_names:
+                continue
             if table not in column_index and table not in relevant_tables:
                 # Try to find it in the full list
                 found = False
@@ -332,6 +358,8 @@ class SQLValidatorAgent:
 
         # Check columns exist for each table
         for table, columns in columns_used.items():
+            if table in cte_base_names:
+                continue
             if table in column_index:
                 available_columns = column_index[table]
                 missing_cols = [col for col in columns if col not in available_columns]
@@ -396,39 +424,57 @@ class SQLValidatorAgent:
 
     def _extract_tables_columns_from_sql(self, sql: str) -> Tuple[List[str], Dict[str, List[str]]]:
         """Extract table and column references from SQL query."""
-        tables = []
-        columns = {}
+        tables: List[str] = []
+        columns: Dict[str, List[str]] = {}
 
-        # Simple regex-based extraction (could be improved with proper SQL parsing)
+        # Normalize SQL to simplify parsing (remove brackets)
+        normalized_sql = sql.replace("[", "").replace("]", "")
+        cte_names = self._extract_cte_names(normalized_sql)
+        cte_base_names = {name.split(".")[-1] for name in cte_names}
 
-        # Extract table names from FROM and JOIN clauses
-        from_pattern = r'\bFROM\s+([`\[]?[a-zA-Z_][a-zA-Z0-9_]*[`\]]?)'
-        join_pattern = r'\bJOIN\s+([`\[]?[a-zA-Z_][a-zA-Z0-9_]*[`\]]?)'
+        from_pattern = r"\bFROM\s+([a-zA-Z_][\w\.]*)"
+        join_pattern = r"\bJOIN\s+([a-zA-Z_][\w\.]*)"
+
+        alias_map: Dict[str, List[str]] = {}
 
         for pattern in [from_pattern, join_pattern]:
-            matches = re.findall(pattern, sql, re.IGNORECASE)
+            matches = re.findall(pattern, normalized_sql, re.IGNORECASE)
             for match in matches:
-                table_name = match.strip("`[]")
-                if table_name not in tables:
-                    tables.append(table_name)
-                    columns[table_name] = []
+                ref = match.strip()
+                base_table = ref.split(".")[-1]
+                if base_table in cte_base_names:
+                    continue
+                if base_table not in tables:
+                    tables.append(base_table)
+                    columns[base_table] = []
+                alias_map.setdefault(base_table, [])
+                if ref not in alias_map[base_table]:
+                    alias_map[base_table].append(ref)
 
-        # Extract column references (simplified)
-        # This is a basic implementation - a full SQL parser would be better
-        select_part = sql.split("FROM")[0] if "FROM" in sql else sql
-        column_refs = re.findall(r'\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(', select_part)  # Functions
-        column_refs.extend(re.findall(r'\b([a-zA-Z_][a-zA-Z0-9_]*)\b', select_part))  # Identifiers
-
-        # Associate columns with tables (very simplified)
-        for table in tables:
-            table_cols = []
-            # Look for table.column patterns
-            table_col_pattern = rf'\b{re.escape(table)}\.([a-zA-Z_][a-zA-Z0-9_]*)\b'
-            matches = re.findall(table_col_pattern, sql, re.IGNORECASE)
-            table_cols.extend(matches)
-            columns[table] = list(set(table_cols))
+        # Associate columns with tables by looking for table.column patterns
+        for base_table in tables:
+            table_cols = set()
+            for ref in alias_map.get(base_table, []) or [base_table]:
+                pattern = rf"\b{re.escape(ref)}\.([a-zA-Z_][a-zA-Z0-9_]*)\b"
+                matches = re.findall(pattern, normalized_sql, re.IGNORECASE)
+                table_cols.update(matches)
+            columns[base_table] = list(table_cols)
 
         return tables, columns
+
+    def _extract_cte_names(self, sql: str) -> Set[str]:
+        """Extract CTE names declared in the SQL statement."""
+        import re
+
+        cte_names: Set[str] = set()
+        pattern = re.compile(r'(?i)(?:WITH|,)\s+([A-Za-z0-9_\.\[\]]+)\s+AS\s*\(')
+        for match in pattern.finditer(sql):
+            raw = match.group(1)
+            if not raw:
+                continue
+            normalized = raw.replace("[", "").replace("]", "")
+            cte_names.add(normalized.strip())
+        return cte_names
 
     def _extract_join_conditions(self, sql: str) -> Dict[str, str]:
         """Extract JOIN conditions from SQL."""
@@ -449,6 +495,7 @@ class SQLValidatorAgent:
 
         repair_attempts = state.get("repair_attempts", 0)
         state["repair_attempts"] = repair_attempts + 1
+        state.pop("repair_failed", None)
 
         sql_query = state.get("sql_query", "")
         validation_result = state.get("validation_result", {})

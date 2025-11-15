@@ -1084,7 +1084,9 @@ class ExecAndRecoveryAgent:
             return ""
         
         # Validate: single SELECT only, no multiple statements
-        if text[select_idx:semicolon_idx].upper().count("SELECT") > 1:
+        select_segment = text[select_idx:semicolon_idx]
+        select_count = select_segment.upper().count("SELECT")
+        if not text.strip().upper().startswith("WITH") and select_count > 1:
             logger.warning("⚠️  Multiple SELECT statements found - cannot disambiguate")
             return ""
         
@@ -1102,14 +1104,23 @@ class ExecAndRecoveryAgent:
         """Validate extracted SQL is a single, complete SELECT."""
         sql = sql.strip()
         
-        # Must start with SELECT
-        if not sql.upper().startswith("SELECT"):
+        sql_upper = sql.upper()
+
+        if sql_upper.startswith("WITH"):
+            select_idx = sql_upper.find("SELECT")
+            if select_idx == -1:
+                logger.error("❌ CTE does not contain a SELECT statement")
+                return False
+            effective_upper = sql_upper[select_idx:]
+        elif sql_upper.startswith("SELECT"):
+            effective_upper = sql_upper
+        else:
             logger.error("❌ Extracted SQL does not start with SELECT")
             return False
         
         # Must not have multiple statements
-        statement_count = sql.upper().count("SELECT")
-        if statement_count > 1:
+        statement_count = effective_upper.count("SELECT")
+        if not sql_upper.startswith("WITH") and statement_count > 1:
             logger.error(f"❌ Multiple SELECT statements ({statement_count}) found")
             return False
         
@@ -1121,7 +1132,7 @@ class ExecAndRecoveryAgent:
                 return False
         
         # Minimum sanity check: has FROM clause
-        if "FROM" not in sql.upper():
+        if "FROM" not in effective_upper:
             logger.warning(f"⚠️  SQL missing FROM clause (might be incomplete)")
             # Don't fail on this - it could be a valid edge case
         

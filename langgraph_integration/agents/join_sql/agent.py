@@ -15,7 +15,7 @@ import json
 import logging
 import asyncio
 import concurrent.futures
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Set
 
 from langgraph.graph import StateGraph, END
 
@@ -229,10 +229,12 @@ class JoinPlanAndSQLAgent:
             logger.error(error["message"])
             return {**state, "error_info": error}
 
+        fact_table = fact_candidate.table
+
         join_plan: Dict[str, Any] = {
             "strategy": "template",
-            "fact_table": fact_candidate.table,
-            "primary_table": fact_candidate.table,
+            "fact_table": fact_table,
+            "primary_table": fact_table,
             "metric_candidates": fact_candidate.metric_candidates,
             "date_columns": fact_candidate.date_columns,
             "entity_keys": fact_candidate.entity_keys,
@@ -253,39 +255,47 @@ class JoinPlanAndSQLAgent:
                 if required:
                     logger.error(f"❌ Required dimension '{role_name}' missing from discovery role hints")
                 return None
+            canonical_role = self._canonical_entity(role_name)
+            is_self_dimension = dimension.table == fact_table
 
-            join_condition = self._find_fk_condition(fact_candidate.table, dimension.table, fk_hints)
-            if not join_condition:
-                logger.warning(
-                    f"⚠️ No FK join condition available between {fact_candidate.table} and {dimension.table}"
-                )
-                join_condition = self._synthesize_join_condition(
-                    fact_candidate,
-                    dimension,
-                    role_name,
-                )
+            join_condition: Optional[str] = None
+            if not is_self_dimension:
+                join_condition = self._find_fk_condition(fact_table, dimension.table, fk_hints)
                 if not join_condition:
-                    if required:
-                        logger.error(
-                            f"❌ Unable to synthesize join condition between {fact_candidate.table} and {dimension.table}"
-                        )
-                        return None
-                    return dimension
+                    logger.warning(
+                        f"⚠️ No FK join condition available between {fact_table} and {dimension.table}"
+                    )
+                    join_condition = self._synthesize_join_condition(
+                        fact_candidate,
+                        dimension,
+                        role_name,
+                    )
+                    if not join_condition:
+                        if required:
+                            logger.error(
+                                f"❌ Unable to synthesize join condition between {fact_table} and {dimension.table}"
+                            )
+                            return None
+                        # Keep dimension metadata for optional joins (used for labels)
+                        join_condition = None
 
-            join_plan["dimensions"][role_name] = {
+            join_plan["dimensions"][canonical_role or role_name] = {
                 "table": dimension.table,
                 "join_condition": join_condition,
                 "id_columns": dimension.id_columns,
                 "label_columns": dimension.label_columns,
+                "self_join": is_self_dimension,
             }
-            join_plan["joins"].append(
-                {
-                    "table": dimension.table,
-                    "on": join_condition,
-                    "type": "INNER",
-                    "role": role_name,
-                }
-            )
+
+            if join_condition:
+                join_plan["joins"].append(
+                    {
+                        "table": dimension.table,
+                        "on": join_condition,
+                        "type": "INNER",
+                        "role": canonical_role or role_name,
+                    }
+                )
             return dimension
 
         if required_action in {"topk_sum_by_customer", "sum_by_customer"}:
@@ -294,6 +304,16 @@ class JoinPlanAndSQLAgent:
                 error = {
                     "type": "DIMENSION_MISSING",
                     "message": "Customer dimension is required but was not identified in discovery.",
+                }
+                logger.error(error["message"])
+                return {**state, "error_info": error}
+
+        if required_action in {"topk_sum_by_product", "sum_by_product"}:
+            product_dim = attach_dimension("product", required=True)
+            if not product_dim:
+                error = {
+                    "type": "DIMENSION_MISSING",
+                    "message": "Product dimension is required but was not identified in discovery.",
                 }
                 logger.error(error["message"])
                 return {**state, "error_info": error}
@@ -404,7 +424,16 @@ class JoinPlanAndSQLAgent:
             metrics = intent.get("metrics", [])
             required_action = (intent.get("required_action") or "").lower()
 
-            template_actions = {"topk_sum_by_customer", "sum_with_period", "sum_by_customer", "low_stock"}
+            template_actions = {
+                "topk_sum_by_customer",
+                "sum_with_period",
+                "sum_by_customer",
+                "topk_sum_by_product",
+                "sum_by_product",
+                "low_stock",
+                "growth_analysis",
+                "comparative_analysis",
+            }
             if required_action in template_actions:
                 builder = MSSQLTemplateBuilder(join_plan=join_plan, intent=intent, row_limit=self.row_limit)
                 try:
@@ -1083,6 +1112,24 @@ class JoinPlanAndSQLAgent:
         
         return table_names
     
+    def _extract_cte_names(self, sql: str, select_idx: int) -> Set[str]:
+        """
+        Extract names of CTEs declared before the main SELECT statement.
+        """
+        import re
+
+        cte_segment = sql[:select_idx]
+        pattern = re.compile(r'(?i)\b([A-Za-z0-9_\[\]\.]+)\b\s+AS\s*\(')
+        names = set()
+        for match in pattern.finditer(cte_segment):
+            raw = match.group(1)
+            if not raw:
+                continue
+            normalized = self._normalize_table_name(raw)
+            if normalized:
+                names.add(normalized)
+        return names
+    
     def _normalize_table_name(self, table_name: str) -> str:
         """
         Normalize a table name for comparison.
@@ -1128,25 +1175,35 @@ class JoinPlanAndSQLAgent:
 
         try:
             # Basic checks
-            sql_upper = sql.upper().strip()
-            sql_words = sql_upper.split()
+            sql_stripped = sql.strip()
+            if len(sql_stripped) < 10:  # Very short queries are likely incomplete
+                raise ValueError(f"Query too short ({len(sql_stripped)} chars) - likely incomplete")
 
-            # 🚨 ENHANCED: Check for incomplete queries
-            if len(sql.strip()) < 10:  # Very short queries are likely incomplete
-                raise ValueError(f"Query too short ({len(sql)} chars) - likely incomplete")
-            
-            if not sql_upper.startswith("SELECT"):
+            sql_upper = sql_stripped.upper()
+
+            if sql_upper.startswith("WITH"):
+                select_idx = sql_upper.find("SELECT")
+                if select_idx == -1:
+                    raise ValueError("CTE query missing SELECT statement")
+            elif sql_upper.startswith("SELECT"):
+                select_idx = 0
+            else:
                 raise ValueError("Query must start with SELECT")
 
+            effective_upper = sql_upper[select_idx:]
+            effective_sql = sql_stripped[select_idx:]
+            sql_words = effective_upper.split()
+            cte_names = self._extract_cte_names(sql_stripped, select_idx)
+
             # 🚨 ENHANCED: Check for incomplete SELECT statements
-            if sql_upper in ["SELECT", "SELECT DISTINCT"] or len(sql_words) < 4:
+            if effective_upper in ["SELECT", "SELECT DISTINCT"] or len(sql_words) < 4:
                 raise ValueError("Incomplete SELECT statement - missing columns or FROM clause")
 
-            if "FROM" not in sql_upper:
+            if "FROM" not in effective_upper:
                 raise ValueError("Query must have FROM clause")
 
             # 🚨 ENHANCED: Check for proper column specification (not just SELECT FROM)
-            select_to_from = sql_upper[6:sql_upper.index("FROM")].strip()  # Skip "SELECT "
+            select_to_from = effective_upper[6:effective_upper.index("FROM")].strip()  # Skip "SELECT "
             if not select_to_from or select_to_from in ["", "DISTINCT"]:
                 raise ValueError("Missing column specification between SELECT and FROM")
 
@@ -1163,7 +1220,11 @@ class JoinPlanAndSQLAgent:
                     raise ValueError(f"Non-SELECT statement detected: {keyword}")
 
             # 🚨 ENHANCED: Check minimum table reference
-            if not any(word not in MSSQL_FUNCTIONS for word in sql_words[sql_words.index("FROM")+1:sql_words.index("FROM")+3] if sql_words.index("FROM")+1 < len(sql_words)):
+            if not any(
+                word not in MSSQL_FUNCTIONS
+                for word in sql_words[sql_words.index("FROM") + 1 : sql_words.index("FROM") + 3]
+                if sql_words.index("FROM") + 1 < len(sql_words)
+            ):
                 raise ValueError("Missing or invalid table reference after FROM")
 
             # 🚨🚨🚨 PHASE 11 CRITICAL FIX: Validate all table names exist in discovery results
@@ -1194,6 +1255,10 @@ class JoinPlanAndSQLAgent:
             unknown_tables = []
             for sql_table in sql_tables:
                 normalized = self._normalize_table_name(sql_table)
+
+                if normalized in cte_names:
+                    logger.info(f"  ✅ Table '{sql_table}' resolved via CTE definition")
+                    continue
                 
                 # Check exact match
                 if normalized in discovered_tables:
@@ -1279,6 +1344,24 @@ class JoinPlanAndSQLAgent:
             logger.warning(f"Failed to parse relations result: {e}")
             return []
 
+    def _required_dimension_roles(self, required_action: str, intent: Dict[str, Any]) -> Set[str]:
+        """Return canonical dimension roles required for the given action."""
+        action = (required_action or "").lower()
+        roles: Set[str] = set()
+
+        if action in {"topk_sum_by_customer", "sum_by_customer"}:
+            roles.add("customer")
+        if action in {"topk_sum_by_product", "sum_by_product", "low_stock"}:
+            roles.add("product")
+        if action in {"growth_analysis", "comparative_analysis"}:
+            # prefer customer/product dimensions when comparing over time by customer/product
+            for entity in intent.get("primary_entities") or []:
+                canonical = self._canonical_entity(entity)
+                if canonical in {"customer", "product", "project"}:
+                    roles.add(canonical)
+
+        return roles
+
     def _select_fact_candidate(self, role_hints: DiscoveryRoleHints, intent: Dict[str, Any]) -> Optional[RoleHintFact]:
         """Choose the most appropriate fact table candidate for the current intent."""
         if not role_hints.fact_candidates:
@@ -1288,6 +1371,8 @@ class JoinPlanAndSQLAgent:
         needs_metric = required_action in {
             "topk_sum_by_customer",
             "sum_by_customer",
+            "topk_sum_by_product",
+            "sum_by_product",
             "sum_with_period",
             "growth_analysis",
             "comparative_analysis",
@@ -1295,6 +1380,8 @@ class JoinPlanAndSQLAgent:
         }
 
         ranked = list(role_hints.fact_candidates)
+        required_roles = self._required_dimension_roles(required_action, intent)
+
         ranked.sort(
             key=lambda fc: (
                 max(fc.metric_candidates.values()) if fc.metric_candidates else 0.0,
@@ -1302,6 +1389,17 @@ class JoinPlanAndSQLAgent:
             ),
             reverse=True,
         )
+
+        if required_roles:
+            for candidate in ranked:
+                entity_keys = candidate.entity_keys or {}
+                available_roles = {
+                    self._canonical_entity(role): cols
+                    for role, cols in entity_keys.items()
+                    if cols
+                }
+                if all(role in available_roles for role in required_roles):
+                    return candidate
 
         if not needs_metric:
             return ranked[0]

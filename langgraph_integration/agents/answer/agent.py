@@ -16,7 +16,9 @@ import concurrent.futures
 from typing import Any, Dict, Optional
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
+from pydantic import ValidationError
 
+from langgraph_integration.contracts.response_envelope import ResponseEnvelope
 from langgraph_integration.contracts.state import BaseState, AnswerAgentInput, AnswerAgentOutput
 from langgraph_integration.prompts.answer import (
     RESULT_FORMATTER_PROMPT,
@@ -155,6 +157,14 @@ class AnswerAgent:
 
         user_input = state.get("user_input", "")
         exec_result = state.get("exec_result", {})
+        try:
+            envelope = ResponseEnvelope.model_validate(exec_result)
+            exec_result = envelope.model_dump(exclude_none=True)
+            state["exec_result"] = exec_result
+        except ValidationError as exc:
+            logger.warning(f"  exec_result normalization failed: {exc}")
+            exec_result = ResponseEnvelope(ok=False, data=[]).model_dump(exclude_none=True)
+            state["exec_result"] = exec_result
         sql_query = state.get("sql_query", "")
 
         if not exec_result or not exec_result.get("ok"):
@@ -169,7 +179,7 @@ class AnswerAgent:
             return state
 
         try:
-            rows = exec_result.get("rows", [])
+            rows = exec_result.get("data") or []
             row_count = exec_result.get("row_count", len(rows))
 
             # Prepare results for LLM
@@ -344,6 +354,9 @@ class AnswerAgent:
         if not schema_snippet:
             response = "Could you clarify what information you're looking for?"
             state["final_response"] = response
+            state["clarify"] = True
+            state["clarification_question"] = response
+            intent["needs_clarification"] = True
             return state
 
         try:
@@ -362,6 +375,9 @@ class AnswerAgent:
 
             logger.info(f"✅ Clarification question generated")
             state["final_response"] = question
+            state["clarify"] = True
+            state["clarification_question"] = question
+            intent["needs_clarification"] = True
             return state
 
         except Exception as e:
@@ -369,6 +385,9 @@ class AnswerAgent:
             # Fallback to generic question
             fallback = "Could you provide more details about what you're looking for?"
             state["final_response"] = fallback
+            state["clarify"] = True
+            state["clarification_question"] = fallback
+            intent["needs_clarification"] = True
             return state
 
     async def _format_health_node(self, state: BaseState) -> BaseState:

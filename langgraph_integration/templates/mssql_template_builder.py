@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import re
+import textwrap
 from typing import Any, Dict, List, Optional, Tuple
 
 
@@ -34,9 +36,10 @@ class TemplateBuildError(Exception):
 @dataclass
 class DimensionInfo:
     table: str
-    join_condition: str
+    join_condition: Optional[str]
     label_columns: List[str]
     id_columns: List[str]
+    self_join: bool = False
 
 
 class MSSQLTemplateBuilder:
@@ -63,9 +66,21 @@ class MSSQLTemplateBuilder:
         elif action == "topk_sum_by_customer":
             sql = self._build_topk_sum_by_customer()
             template = "topk_sum_by_customer"
+        elif action == "sum_by_product":
+            sql = self._build_sum_by_product()
+            template = "sum_by_product"
+        elif action == "topk_sum_by_product":
+            sql = self._build_topk_sum_by_product()
+            template = "topk_sum_by_product"
         elif action == "low_stock":
             sql = self._build_low_stock()
             template = "low_stock"
+        elif action == "growth_analysis":
+            sql = self._build_growth_analysis()
+            template = "growth_analysis"
+        elif action == "comparative_analysis":
+            sql = self._build_comparative_analysis()
+            template = "comparative_analysis"
         else:
             raise TemplateBuildError(
                 f"Unsupported required_action '{action}' for template builder.",
@@ -101,17 +116,25 @@ class MSSQLTemplateBuilder:
         metric_col = self._metric_column(required=True)
         customer_dim = self._dimension("customer", required=True)
 
-        label_col = self._dimension_label(customer_dim)
-        join_condition = self._normalize_join_condition(customer_dim.join_condition)
-
         metric_expr = self._table_column(fact, metric_col)
-        label_expr = self._table_column(customer_dim.table, label_col)
+        label_col = self._dimension_label(customer_dim)
+
+        if customer_dim.self_join or customer_dim.table == fact:
+            label_expr = self._table_column(fact, label_col)
+            join_clause = ""
+        else:
+            label_expr = self._table_column(customer_dim.table, label_col)
+            join_condition = self._normalize_join_condition(customer_dim.join_condition or "")
+            join_clause = f"JOIN {self._qualify_table(customer_dim.table)} ON {join_condition}\n"
 
         sql = (
             f"SELECT TOP {self.row_limit} {label_expr} AS customer_name, "
             f"SUM({metric_expr}) AS total_metric\n"
             f"FROM {self._qualify_table(fact)}\n"
-            f"JOIN {self._qualify_table(customer_dim.table)} ON {join_condition}\n"
+        )
+        if join_clause:
+            sql += join_clause
+        sql += (
             f"GROUP BY {label_expr}\n"
             f"ORDER BY total_metric DESC"
         )
@@ -121,18 +144,84 @@ class MSSQLTemplateBuilder:
         fact = self._fact_table()
         metric_col = self._metric_column(required=True)
         customer_dim = self._dimension("customer", required=True)
-        label_col = self._dimension_label(customer_dim)
-        join_condition = self._normalize_join_condition(customer_dim.join_condition)
 
         metric_expr = self._table_column(fact, metric_col)
-        label_expr = self._table_column(customer_dim.table, label_col)
         top_k = self._top_k(default=5)
+        label_col = self._dimension_label(customer_dim)
+
+        if customer_dim.self_join or customer_dim.table == fact:
+            label_expr = self._table_column(fact, label_col)
+            join_clause = ""
+        else:
+            label_expr = self._table_column(customer_dim.table, label_col)
+            join_condition = self._normalize_join_condition(customer_dim.join_condition or "")
+            join_clause = f"JOIN {self._qualify_table(customer_dim.table)} ON {join_condition}\n"
 
         sql = (
             f"SELECT TOP {top_k} {label_expr} AS customer_name, "
             f"SUM({metric_expr}) AS total_metric\n"
             f"FROM {self._qualify_table(fact)}\n"
-            f"JOIN {self._qualify_table(customer_dim.table)} ON {join_condition}\n"
+        )
+        if join_clause:
+            sql += join_clause
+        sql += (
+            f"GROUP BY {label_expr}\n"
+            f"ORDER BY total_metric DESC"
+        )
+        return sql
+
+    def _build_sum_by_product(self) -> str:
+        fact = self._fact_table()
+        metric_col = self._metric_column(required=True)
+        product_dim = self._dimension("product", required=True)
+
+        label_col = self._dimension_label(product_dim)
+        metric_expr = self._table_column(fact, metric_col)
+        if product_dim.self_join or product_dim.table == fact:
+            label_expr = self._table_column(fact, label_col)
+            join_clause = ""
+        else:
+            label_expr = self._table_column(product_dim.table, label_col)
+            join_condition = self._normalize_join_condition(product_dim.join_condition or "")
+            join_clause = f"JOIN {self._qualify_table(product_dim.table)} ON {join_condition}\n"
+
+        sql = (
+            f"SELECT TOP {self.row_limit} {label_expr} AS product_name, "
+            f"SUM({metric_expr}) AS total_metric\n"
+            f"FROM {self._qualify_table(fact)}\n"
+        )
+        if join_clause:
+            sql += join_clause
+        sql += (
+            f"GROUP BY {label_expr}\n"
+            f"ORDER BY total_metric DESC"
+        )
+        return sql
+
+    def _build_topk_sum_by_product(self) -> str:
+        fact = self._fact_table()
+        metric_col = self._metric_column(required=True)
+        product_dim = self._dimension("product", required=True)
+        label_col = self._dimension_label(product_dim)
+
+        metric_expr = self._table_column(fact, metric_col)
+        top_k = self._top_k(default=5)
+        if product_dim.self_join or product_dim.table == fact:
+            label_expr = self._table_column(fact, label_col)
+            join_clause = ""
+        else:
+            label_expr = self._table_column(product_dim.table, label_col)
+            join_condition = self._normalize_join_condition(product_dim.join_condition or "")
+            join_clause = f"JOIN {self._qualify_table(product_dim.table)} ON {join_condition}\n"
+
+        sql = (
+            f"SELECT TOP {top_k} {label_expr} AS product_name, "
+            f"SUM({metric_expr}) AS total_metric\n"
+            f"FROM {self._qualify_table(fact)}\n"
+        )
+        if join_clause:
+            sql += join_clause
+        sql += (
             f"GROUP BY {label_expr}\n"
             f"ORDER BY total_metric DESC"
         )
@@ -151,13 +240,17 @@ class MSSQLTemplateBuilder:
 
         if product_dim:
             label_col = self._dimension_label(product_dim)
-            label_expr = self._table_column(product_dim.table, label_col)
-            join_condition = self._normalize_join_condition(product_dim.join_condition)
-            select_fields.insert(0, f"{label_expr} AS product_name")
-            joins = (
-                f"\nJOIN {self._qualify_table(product_dim.table)} "
-                f"ON {join_condition}"
-            )
+            if product_dim.self_join or product_dim.table == fact:
+                label_expr = self._table_column(fact, label_col)
+                select_fields.insert(0, f"{label_expr} AS product_name")
+            else:
+                label_expr = self._table_column(product_dim.table, label_col)
+                join_condition = self._normalize_join_condition(product_dim.join_condition or "")
+                select_fields.insert(0, f"{label_expr} AS product_name")
+                joins = (
+                    f"\nJOIN {self._qualify_table(product_dim.table)} "
+                    f"ON {join_condition}"
+                )
 
         select_list = ", ".join(select_fields)
 
@@ -167,6 +260,104 @@ class MSSQLTemplateBuilder:
             f"WHERE {metric_expr} <= {threshold}\n"
             f"ORDER BY {metric_expr} ASC"
         )
+        return sql
+
+    def _build_growth_analysis(self) -> str:
+        fact = self._fact_table()
+        date_col = self._date_column(required=True)
+        date_expr = self._table_column(fact, date_col)
+
+        metric_col = self._metric_column(required=False)
+        if metric_col:
+            metric_expr = self._table_column(fact, metric_col)
+            agg_expr = f"SUM({metric_expr})"
+            alias = "total_metric"
+        else:
+            agg_expr = "COUNT(*)"
+            alias = "total_count"
+
+        years = self._growth_years()
+        qualified_table = self._qualify_table(fact)
+
+        sql = textwrap.dedent(
+            f"""
+            WITH yearly AS (
+                SELECT
+                    YEAR({date_expr}) AS year_value,
+                    {agg_expr} AS {alias}
+                FROM {qualified_table}
+                WHERE {date_expr} >= DATEADD(YEAR, -{years}, GETDATE())
+                GROUP BY YEAR({date_expr})
+            )
+            SELECT
+                year_value AS year,
+                {alias},
+                LAG({alias}) OVER (ORDER BY year_value) AS previous_{alias},
+                CASE
+                    WHEN LAG({alias}) OVER (ORDER BY year_value) > 0 THEN
+                        ROUND(
+                            ({alias} - LAG({alias}) OVER (ORDER BY year_value)) * 100.0 /
+                            NULLIF(LAG({alias}) OVER (ORDER BY year_value), 0),
+                            2
+                        )
+                    ELSE NULL
+                END AS growth_percent
+            FROM yearly
+            ORDER BY year_value
+            """
+        ).strip()
+
+        return sql
+
+    def _build_comparative_analysis(self) -> str:
+        fact = self._fact_table()
+        date_col = self._date_column(required=True)
+        date_expr = self._table_column(fact, date_col)
+
+        metric_col = self._metric_column(required=False)
+        if metric_col:
+            metric_expr = self._table_column(fact, metric_col)
+            agg_expr = f"SUM({metric_expr})"
+            alias = "total_metric"
+        else:
+            agg_expr = "COUNT(*)"
+            alias = "total_count"
+
+        quarters = self._comparative_quarters()
+        qualified_table = self._qualify_table(fact)
+
+        sql = textwrap.dedent(
+            f"""
+            WITH quarterly AS (
+                SELECT
+                    YEAR({date_expr}) AS year_value,
+                    DATEPART(QUARTER, {date_expr}) AS quarter_value,
+                    CONCAT(YEAR({date_expr}), '-Q', DATEPART(QUARTER, {date_expr})) AS period_label,
+                    {agg_expr} AS {alias}
+                FROM {qualified_table}
+                WHERE {date_expr} >= DATEADD(QUARTER, -{quarters}, GETDATE())
+                GROUP BY YEAR({date_expr}), DATEPART(QUARTER, {date_expr})
+            )
+            SELECT
+                year_value,
+                quarter_value,
+                period_label,
+                {alias},
+                LAG({alias}) OVER (ORDER BY year_value, quarter_value) AS previous_{alias},
+                CASE
+                    WHEN LAG({alias}) OVER (ORDER BY year_value, quarter_value) > 0 THEN
+                        ROUND(
+                            ({alias} - LAG({alias}) OVER (ORDER BY year_value, quarter_value)) * 100.0 /
+                            NULLIF(LAG({alias}) OVER (ORDER BY year_value, quarter_value), 0),
+                            2
+                        )
+                    ELSE NULL
+                END AS delta_percent
+            FROM quarterly
+            ORDER BY year_value, quarter_value
+            """
+        ).strip()
+
         return sql
 
     # Data extraction helpers ----------------------------------------------------
@@ -184,10 +375,46 @@ class MSSQLTemplateBuilder:
     def _metric_column(self, required: bool = False) -> str:
         metric_candidates = self.join_plan.get("metric_candidates") or {}
         if metric_candidates:
-            best = sorted(
-                metric_candidates.items(), key=lambda item: item[1], reverse=True
-            )[0][0]
-            return self._strip_table_prefix(best)
+            def preference_rank(column: str) -> int:
+                name = column.lower()
+                rank = 1
+                if any(token in name for token in ("umsatz", "revenue", "gesamt", "total", "summe", "sales")):
+                    rank = 5
+                elif any(token in name for token in ("brutto", "netto", "wert", "amount", "value")):
+                    rank = 4
+                elif "preis" in name:
+                    rank = 3
+                elif "betrag" in name:
+                    rank = 2
+                if any(token in name for token in ("rabatt", "discount")):
+                    rank -= 2
+                return rank
+
+            sorted_candidates = sorted(
+                metric_candidates.items(),
+                key=lambda item: (item[1], preference_rank(item[0])),
+                reverse=True,
+            )
+            non_numeric_hints = (
+                "nummer",
+                "id",
+                "code",
+                "nr",
+                "no",
+                "kennung",
+                "artnr",
+                "gruppe",
+                "group",
+                "status",
+            )
+
+            for column, _ in sorted_candidates:
+                name = column.lower()
+                if any(hint in name for hint in non_numeric_hints):
+                    continue
+                return self._strip_table_prefix(column)
+
+            return self._strip_table_prefix(sorted_candidates[0][0])
         if required:
             raise TemplateBuildError(
                 "No metric candidates available for template.",
@@ -212,7 +439,8 @@ class MSSQLTemplateBuilder:
                 )
             return None
         join_condition = raw.get("join_condition")
-        if not join_condition:
+        self_join = bool(raw.get("self_join"))
+        if not join_condition and not self_join:
             if required:
                 raise TemplateBuildError(
                     f"Dimension '{role}' is missing a join condition."
@@ -223,6 +451,7 @@ class MSSQLTemplateBuilder:
             join_condition=join_condition,
             label_columns=raw.get("label_columns") or [],
             id_columns=raw.get("id_columns") or [],
+            self_join=self_join,
         )
 
     def _dimension_label(self, dimension: DimensionInfo) -> str:
@@ -294,6 +523,39 @@ class MSSQLTemplateBuilder:
             "Low stock queries require a numeric threshold filter (<=).",
             {"filters": filters},
         )
+
+    def _growth_years(self) -> int:
+        window = self.intent.get("time_window") or self.join_plan.get("time_window") or {}
+        if isinstance(window, dict):
+            years = window.get("years")
+            if isinstance(years, int) and years > 0:
+                return years
+            period = str(window.get("period") or "").lower()
+            match = re.search(r"last[_\s]*(\d+)\s*year", period)
+            if match:
+                try:
+                    return max(1, int(match.group(1)))
+                except Exception:
+                    pass
+        fallback = self.intent.get("growth_years")
+        if isinstance(fallback, int) and fallback > 0:
+            return fallback
+        return 3
+
+    def _comparative_quarters(self) -> int:
+        window = self.intent.get("time_window") or self.join_plan.get("time_window") or {}
+        if isinstance(window, dict):
+            quarters = window.get("quarters")
+            if isinstance(quarters, int) and quarters > 0:
+                return quarters
+            period = str(window.get("period") or "").lower()
+            match = re.search(r"last[_\s]*(\d+)\s*quarter", period)
+            if match:
+                try:
+                    return max(2, int(match.group(1)))
+                except Exception:
+                    pass
+        return 4
 
     # Formatting helpers ---------------------------------------------------------
 

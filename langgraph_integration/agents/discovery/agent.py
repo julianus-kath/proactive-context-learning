@@ -241,13 +241,14 @@ class DiscoveryAgent:
             strategic_actions = ["growth_analysis", "department_productivity", "comparative_analysis"]
 
             candidates: List[Dict[str, Any]] = []
+            query_str = user_input
             if required_action in strategic_actions:
                 logger.info(f"🔍 [STRATEGIC] Using strategic discovery for {required_action}")
                 strategic_candidates = await self._strategic_query_discovery(user_input, intent)
                 candidates.extend(strategic_candidates)
             else:
                 # Standard search for simple queries
-                query_str = " ".join(primary_tokens).strip()
+                query_str = " ".join(primary_tokens).strip() or user_input
                 if not query_str:
                     query_str = user_input
             logger.debug(f"  Searching primary keywords: '{query_str}'")
@@ -366,7 +367,7 @@ class DiscoveryAgent:
             error = {
                 "type": "DISCOVERY_ERROR",
                 "message": f"Search failed: {str(e)}",
-                "context": {"keywords": keywords, "error": str(e)}
+                "context": {"keywords": primary_tokens, "error": str(e)}
             }
             logger.error(f"❌ {error['message']}")
             return {**state, "error_info": error}
@@ -1393,6 +1394,64 @@ class DiscoveryAgent:
                     if score > 0:
                         metric_candidates[col] = score
 
+            # Fallback: inject obvious numeric metrics when lexical match misses them
+            numeric_keyword_tokens = (
+                "umsatz",
+                "betrag",
+                "preis",
+                "brutto",
+                "netto",
+                "wert",
+                "amount",
+                "total",
+                "sum",
+                "revenue",
+                "sales",
+                "menge",
+                "quantity",
+                "qty",
+                "value",
+            )
+            non_numeric_tokens = (
+                "gruppe",
+                "kundengruppe",
+                "status",
+                "typ",
+                "category",
+                "klasse",
+                "code",
+                "position",
+                "matchcode",
+                "kontakt",
+                "adress",
+                "adresse",
+                "strasse",
+                "straße",
+                "name",
+                "nummer",
+                "nr",
+                "id",
+                "kennzeichen",
+                "customerid",
+                "kundennr",
+                "kundnr",
+                "kundenid",
+                "anrede",
+                "empfaenger",
+            )
+            for col in columns:
+                lower_col = (col or "").lower()
+                if any(token in lower_col for token in non_numeric_tokens):
+                    continue
+                if any(token in lower_col for token in numeric_keyword_tokens):
+                    metric_candidates[col] = max(metric_candidates.get(col, 0.0), 0.95)
+
+            # Purge obviously non-numeric fields that slipped through lexical scoring
+            for col in list(metric_candidates.keys()):
+                lower_col = (col or "").lower()
+                if any(token in lower_col for token in non_numeric_tokens):
+                    metric_candidates.pop(col, None)
+
             date_columns = [
                 col
                 for col, tokens in column_tokens_map.items()
@@ -1452,6 +1511,24 @@ class DiscoveryAgent:
                 existing = role_hints.dimensions.get(role)
                 if existing is None or (detail.estimated_rows or 0) > (existing.estimated_rows or 0):
                     role_hints.dimensions[role] = candidate_dimension
+
+            # Fallback: if entity keys identified but no dimension created, synthesize from this table
+            for role, keys in entity_keys.items():
+                if role in role_hints.dimensions or not keys:
+                    continue
+                label_cols = [
+                    col
+                    for col, col_tokens in column_tokens_map.items()
+                    if self._token_overlap(col_tokens, self.label_signal_tokens) > 0
+                ]
+                candidate_dimension = RoleHintDimension(
+                    role=role,
+                    table=table,
+                    estimated_rows=detail.estimated_rows,
+                    id_columns=keys[:3],
+                    label_columns=label_cols[:3],
+                )
+                role_hints.dimensions[role] = candidate_dimension
 
         fact_candidates.sort(
             key=lambda fc: (
@@ -1902,6 +1979,8 @@ class DiscoveryAgent:
     def _finalize_discovery_payload(self, state: BaseState) -> BaseState:
         """Validate and normalize discovery payload before handing off to downstream agents."""
         try:
+            clarification_triggered = False
+
             raw_details = state.get("relevant_table_details") or state.get("candidate_views") or []
             if not raw_details:
                 fallback_tables = state.get("relevant_tables") or []
@@ -1935,12 +2014,21 @@ class DiscoveryAgent:
                     state["error_info"] = {
                         "type": "DISCOVERY_EMPTY_TABLES",
                         "message": "Discovery found only empty tables for this request.",
+                        "suggestion": "Try specifying a different metric, table, or time window so I can target a table with data.",
                         "details": {
                             "candidates": [model.full_name for model in detail_models],
                         },
                     }
+                    intent_state = state.setdefault("intent", {})
+                    intent_state["needs_clarification"] = True
+                    intent_state["clarification_question"] = (
+                        "I only found tables without data for this topic. Could you clarify which business area or timeframe to inspect?"
+                    )
+                    intent_state["ambiguity_reason"] = "Discovery found only empty tables for the current intent."
+                    clarification_triggered = True
                     detail_models = []
-            if not detail_models:
+                    state["relevant_tables"] = []
+            if not detail_models and not clarification_triggered:
                 # As a fallback, use names already present in relevant_tables (without metadata)
                 detail_models = []
                 for name in state.get("relevant_tables", []) or []:
@@ -1966,16 +2054,27 @@ class DiscoveryAgent:
                 column_index=state.get("column_index") or {},
                 role_hints=role_hints,
             )
-
-            state["relevant_tables"] = payload.relevant_tables
-            state["schema_snippet"] = payload.schema_snippet or state.get("schema_snippet", "")
-            state["candidate_views"] = [view.model_dump() for view in payload.candidate_views]
-            state["relevant_table_details"] = [detail.model_dump() for detail in payload.relevant_table_details]
-            state["column_index"] = payload.column_index
-            state["discovery_role_hints"] = payload.role_hints.model_dump()
+            updates = {
+                "relevant_tables": payload.relevant_tables,
+                "schema_snippet": payload.schema_snippet or state.get("schema_snippet", ""),
+                "candidate_views": [view.model_dump() for view in payload.candidate_views],
+                "relevant_table_details": [detail.model_dump() for detail in payload.relevant_table_details],
+                "column_index": payload.column_index,
+                "discovery_role_hints": payload.role_hints.model_dump(),
+            }
+            logger.info("🧾 Discovery updates keys: %s", list(updates.keys()))
+            logger.info(
+                "🧾 Discovery payload validated: %d detail(s), %d fact candidates, %d dimensions",
+                len(payload.relevant_table_details),
+                len(payload.role_hints.fact_candidates),
+                len(payload.role_hints.dimensions),
+            )
+            logger.info("🧾 Discovery role hints payload: %s", updates["discovery_role_hints"])
+            state.update(updates)
+            return dict(state)
         except Exception as exc:
             logger.warning(f"⚠️ Discovery output validation failed: {exc}")
-        return state
+        return dict(state)
 
 
 # Exported function to create and run the agent

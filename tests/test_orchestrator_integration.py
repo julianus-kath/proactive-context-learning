@@ -164,6 +164,7 @@ class TestQueryOrchestrator:
             AnswerAgentInput,
             AnswerAgentOutput
         )
+        from langgraph_integration.contracts.response_envelope import ResponseEnvelope
         
         # Verify BaseState has all required fields
         assert "user_input" in BaseState.__annotations__
@@ -174,8 +175,151 @@ class TestQueryOrchestrator:
         assert "sql_query" in BaseState.__annotations__
         assert "exec_result" in BaseState.__annotations__
         assert "final_response" in BaseState.__annotations__
+
+        envelope = ResponseEnvelope.model_validate({"ok": True, "data": [{"id": 1}]})
+        assert envelope.data == [{"id": 1}]
         
         logger.info("✅ State contracts properly defined")
+
+    @pytest.mark.asyncio
+    async def test_health_check_short_circuit(self):
+        """Health check intents should bypass discovery and return health status envelope."""
+        from langgraph_integration.orchestrator import QueryOrchestrator
+        from langgraph_integration.contracts.state import BaseState
+
+        orchestrator = QueryOrchestrator()
+
+        orchestrator.mcp.get_health_status = AsyncMock(
+            return_value={"status": "ok", "components": {"db": "ok"}}
+        )
+
+        with patch.object(orchestrator, "_discovery_node", new_callable=AsyncMock) as mock_discovery:
+            result = await orchestrator.process_query("Is the system healthy?")
+            mock_discovery.assert_not_called()
+
+        assert result["health_status"]["status"] == "ok"
+        assert result["exec_result"] is None
+
+        health_state = await orchestrator._answer_health_node(
+            BaseState(user_input="Health?", intent={"operation": "health_check"})
+        )
+        exec_result = health_state.get("exec_result", {})
+        assert isinstance(exec_result, dict)
+        assert exec_result.get("data") == []
+        assert exec_result.get("row_count", 0) == 0
+
+    @pytest.mark.asyncio
+    async def test_discovery_empty_tables_routes_to_clarification(self):
+        """Discovery returning empty tables should skip join_sql and prompt for clarification."""
+        from langgraph_integration.orchestrator import QueryOrchestrator
+
+        orchestrator = QueryOrchestrator()
+
+        class FakeIntentGraph:
+            async def ainvoke(self, state):
+                return {
+                    "intent": {
+                        "operation": "query",
+                        "primary_entities": ["sales"],
+                        "keywords_for_discovery": ["sales"],
+                        "metrics": [],
+                    }
+                }
+
+        class FakeDiscoveryGraph:
+            async def ainvoke(self, state):
+                intent = dict(state.get("intent", {}))
+                intent["needs_clarification"] = True
+                intent["clarification_question"] = "Need a more specific business area or timeframe."
+                intent["ambiguity_reason"] = "Discovery found only empty tables."
+                state["intent"] = intent
+                state["relevant_tables"] = []
+                state["candidate_views"] = []
+                state["schema_snippet"] = ""
+                state["column_index"] = {}
+                state["error_info"] = {
+                    "type": "DISCOVERY_EMPTY_TABLES",
+                    "message": "Discovery found only empty tables.",
+                }
+                return state
+
+        orchestrator.intent_parser.build_subgraph = MagicMock(return_value=FakeIntentGraph())
+        orchestrator.discovery_agent.build_subgraph = MagicMock(return_value=FakeDiscoveryGraph())
+
+        async def fake_index(state):
+            return state
+
+        join_called = {"value": False}
+
+        async def fail_join(state):
+            join_called["value"] = True
+            raise AssertionError("join_sql should not run")
+
+        async def fake_answer(state):
+            return {**state, "final_response": "Need clarification"}
+
+        orchestrator._index_database_node = fake_index
+        orchestrator._join_sql_node = fail_join
+        orchestrator._answer_node = fake_answer
+
+        orchestrator.graph = orchestrator._build_graph()
+
+        result = await orchestrator.graph.ainvoke({"user_input": "Show missing sales data"})
+
+        orchestrator.discovery_agent.build_subgraph.assert_called_once()
+        assert join_called["value"] is False
+        assert result["final_response"] == "Need clarification"
+        assert result["intent"]["needs_clarification"] is True
+
+    @pytest.mark.asyncio
+    async def test_process_query_returns_clarify_envelope(self):
+        """process_query should return structured clarification envelope when intent parser flags ambiguity."""
+        from langgraph_integration.orchestrator import QueryOrchestrator
+
+        orchestrator = QueryOrchestrator()
+
+        class ClarifyIntentGraph:
+            async def ainvoke(self, state):
+                return {
+                    "intent": {
+                        "operation": "query",
+                        "needs_clarification": True,
+                        "clarification_question": "Which region should I analyze?",
+                        "ambiguity_reason": "Multiple regions found",
+                        "keywords_for_discovery": [],
+                    }
+                }
+
+        orchestrator.intent_parser.build_subgraph = MagicMock(return_value=ClarifyIntentGraph())
+
+        result = await orchestrator.process_query("Show sales numbers")
+
+        assert isinstance(result, dict)
+        assert result.get("clarify") is True
+        assert result.get("clarification_question") == "Which region should I analyze?"
+        assert result.get("final_response") == "Which region should I analyze?"
+
+    @pytest.mark.asyncio
+    async def test_index_database_loads_previous_exec_cache(self):
+        """index_database should hydrate previous_exec_result from in-memory cache."""
+        from langgraph_integration.orchestrator import QueryOrchestrator
+        from langgraph_integration.contracts.state import BaseState
+
+        orchestrator = QueryOrchestrator()
+        orchestrator.mcp.health_check = AsyncMock(return_value=True)
+        orchestrator.mcp_client.list_tables = AsyncMock(return_value=[])
+
+        orchestrator._previous_exec_cache = {
+            "exec_result": {"ok": True, "data": [{"value": 1}]},
+            "sql_query": "SELECT 1",
+            "sources": ["dbo.table1"],
+        }
+
+        result_state = await orchestrator._index_database_node(BaseState(user_input="hello"))
+
+        assert result_state.get("previous_exec_result") == {"ok": True, "data": [{"value": 1}]}
+        assert result_state.get("previous_sql") == "SELECT 1"
+        assert result_state.get("previous_sources") == ["dbo.table1"]
 
     @pytest.mark.asyncio
     async def test_orchestrator_with_mock_mcp(self):
@@ -212,17 +356,12 @@ class TestQueryOrchestrator:
         
         orchestrator = QueryOrchestrator()
         
-        # Create state with query intent
+        # Create state with query intent but skip LLM parsing to avoid network dependency
         state = BaseState(
             user_input="Show me customers",
-            intent={"operation": "query"},
-            messages=[],
-            session_described_tables={},
-            retry_count=0
+            intent={"operation": "query"}
         )
-        
-        # Parse intent
-        result = await orchestrator._parse_intent_node(state)
+        result = await orchestrator._route_operation_node(state)
         assert result["intent"]["operation"] == "query"
         logger.info("✅ Routing works for query operation")
 

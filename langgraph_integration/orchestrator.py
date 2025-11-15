@@ -29,8 +29,13 @@ import asyncio
 from typing import Dict, Any, List, Optional
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
+from pydantic import ValidationError
 
 from langgraph_integration.contracts.state import BaseState
+from langgraph_integration.contracts.response_envelope import (
+    ErrorInfo as ErrorInfoModel,
+    ResponseEnvelope,
+)
 from langgraph_integration.agents.intent_parser.agent import IntentParserAgent
 from langgraph_integration.agents.discovery.agent import DiscoveryAgent
 from langgraph_integration.agents.join_sql.agent import JoinPlanAndSQLAgent
@@ -135,6 +140,9 @@ class QueryOrchestrator:
         self.mcp_client = get_shared_mcp_tool()
         logger.info("✅ MCP Client initialized (Shared connection pool)")
 
+        # Cache last successful execution for interpretation follow-ups
+        self._previous_exec_cache: Dict[str, Any] = {}
+
         self.graph = self._build_graph()
 
     async def __aenter__(self):
@@ -154,16 +162,77 @@ class QueryOrchestrator:
         """Ensure error_info payloads are consistent dictionaries."""
         if not error:
             return None
-        if isinstance(error, dict):
-            return error
-        logger.warning(
-            "payload_type_violation: expected error_info dict, received %s",
-            type(error).__name__,
-        )
-        return {
-            "type": "UNKNOWN_ERROR",
-            "message": str(error),
-        }
+
+        try:
+            if isinstance(error, ErrorInfoModel):
+                return error.model_dump(exclude_none=True)
+            envelope = ErrorInfoModel.model_validate(error)
+            return envelope.model_dump(exclude_none=True)
+        except ValidationError as exc:
+            logger.warning(
+                "payload_type_violation: error_info validation failed (%s)",
+                exc,
+            )
+            raw_type = getattr(error, "type", None) or getattr(error, "__class__", type("Err", (), {})).__name__
+            raw_message = getattr(error, "message", None) or getattr(error, "error", None) or str(error)
+            fallback = {
+                "type": str(raw_type or "UNKNOWN_ERROR"),
+                "message": str(raw_message or "Unknown error"),
+            }
+            return ErrorInfoModel.model_validate(fallback).model_dump(exclude_none=True)
+        except Exception as exc:
+            logger.warning(
+                "payload_type_violation: expected error_info dict, received %s (%s)",
+                type(error).__name__,
+                exc,
+            )
+            return ErrorInfoModel(
+                type="UNKNOWN_ERROR",
+                message=str(error),
+            ).model_dump(exclude_none=True)
+
+    def _coerce_exec_result(self, payload: Any) -> Dict[str, Any]:
+        """Normalize exec_result payloads into ResponseEnvelope dictionaries."""
+        if isinstance(payload, ResponseEnvelope):
+            return payload.model_dump(exclude_none=True)
+
+        try:
+            envelope = ResponseEnvelope.model_validate(payload)
+            return envelope.model_dump(exclude_none=True)
+        except ValidationError as exc:
+            logger.warning(
+                "payload_type_violation: exec_result validation failed (%s)",
+                exc,
+            )
+            if isinstance(payload, dict):
+                fallback = {
+                    "ok": bool(payload.get("ok")),
+                    "data": payload.get("data") or payload.get("rows") or [],
+                    "row_count": payload.get("row_count"),
+                    "execution_time_ms": int(payload.get("execution_time_ms")) if isinstance(payload.get("execution_time_ms"), (int, float)) else payload.get("execution_time_ms"),
+                    "truncated": bool(payload.get("truncated", False)),
+                    "warnings": payload.get("warnings") or [],
+                    "error": payload.get("error"),
+                    "error_info": self._normalize_error_info(payload.get("error_info")),
+                }
+                envelope = ResponseEnvelope.model_validate(fallback)
+                return envelope.model_dump(exclude_none=True)
+        except Exception as exc:
+            logger.warning(
+                "payload_type_violation: expected exec_result dict, received %s (%s)",
+                type(payload).__name__,
+                exc,
+            )
+
+        # If we reach this point the payload was unusable; emit a safe default.
+        return ResponseEnvelope(
+            ok=False,
+            data=[],
+            error_info=ErrorInfoModel(
+                type="INVALID_EXEC_RESULT",
+                message="Execution result payload was malformed.",
+            ),
+        ).model_dump(exclude_none=True)
 
     async def ainvoke(self, input_state: Dict, **kwargs):
         """
@@ -176,7 +245,10 @@ class QueryOrchestrator:
         config = kwargs.pop("config", {})
         if "recursion_limit" not in config:
             config["recursion_limit"] = 500
-        return await self.graph.ainvoke(input_state, config=config, **kwargs)
+        result = await self.graph.ainvoke(input_state, config=config, **kwargs)
+        if isinstance(result, dict):
+            result.setdefault("answer", result.get("final_response", ""))
+        return result
 
     def _build_graph(self) -> StateGraph:
         """
@@ -302,7 +374,29 @@ class QueryOrchestrator:
 
         # ============= QUERY PIPELINE =============
         # Standard query flow: discovery → join_sql → validate_sql → exec_recovery → result_validator → (conditional) answer
-        graph.add_edge("discovery", "join_sql")
+        def route_discovery_result(state: BaseState) -> str:
+            intent = state.get("intent") or {}
+            if intent.get("needs_clarification"):
+                logger.info("🔍 [DISCOVERY_ROUTE] Clarification requested after discovery → answer")
+                return "answer"
+            if state.get("error_info"):
+                logger.info("🔍 [DISCOVERY_ROUTE] Error detected after discovery → answer_error")
+                return "answer_error"
+            relevant_tables = state.get("relevant_tables") or []
+            if not relevant_tables:
+                logger.info("🔍 [DISCOVERY_ROUTE] No relevant tables found → answer")
+                return "answer"
+            return "join_sql"
+
+        graph.add_conditional_edges(
+            "discovery",
+            route_discovery_result,
+            {
+                "join_sql": "join_sql",
+                "answer": "answer",
+                "answer_error": "answer_error",
+            }
+        )
         graph.add_edge("join_sql", "validate_sql")
         graph.add_edge("validate_sql", "exec_recovery")
         # 🆕 Phase 10a: After exec, validate result before answering
@@ -427,18 +521,25 @@ class QueryOrchestrator:
                 return result_state
 
             logger.info("📚 [INDEX_DATABASE] ✅ Database indexed, MCP available")
-            # Load last execution result for interpretation follow-ups (persisted on disk)
-            try:
-                cache_path = os.path.join("data", "last_exec_result.json")
-                if os.path.exists(cache_path):
-                    with open(cache_path, "r", encoding="utf-8") as f:
-                        payload = json.load(f)
-                    state["previous_exec_result"] = payload.get("exec_result")
-                    state["previous_sql"] = payload.get("sql_query")
-                    state["previous_sources"] = payload.get("sources") or []
-                    logger.info("📚 [INDEX_DATABASE] Loaded previous_exec_result for interpretation follow-ups")
-            except Exception as e:
-                logger.warning(f"📚 [INDEX_DATABASE] Could not load last_exec_result cache: {e}")
+            # Load last execution result for interpretation follow-ups (memory → disk)
+            cache = self._previous_exec_cache or {}
+            if cache:
+                state["previous_exec_result"] = cache.get("exec_result")
+                state["previous_sql"] = cache.get("sql_query")
+                state["previous_sources"] = cache.get("sources") or []
+                logger.info("📚 [INDEX_DATABASE] Loaded previous_exec_result from in-memory cache")
+            else:
+                try:
+                    cache_path = os.path.join("data", "last_exec_result.json")
+                    if os.path.exists(cache_path):
+                        with open(cache_path, "r", encoding="utf-8") as f:
+                            payload = json.load(f)
+                        state["previous_exec_result"] = payload.get("exec_result")
+                        state["previous_sql"] = payload.get("sql_query")
+                        state["previous_sources"] = payload.get("sources") or []
+                        logger.info("📚 [INDEX_DATABASE] Loaded previous_exec_result for interpretation follow-ups")
+                except Exception as e:
+                    logger.warning(f"📚 [INDEX_DATABASE] Could not load last_exec_result cache: {e}")
             # Preflight warm-up: make a tiny list_tables call to stabilize /mcp endpoint
             try:
                 logger.info("📚 [INDEX_DATABASE] Preflight: list_tables(page=1,page_size=1)")
@@ -625,6 +726,11 @@ class QueryOrchestrator:
         
         logger.info("🔍 [DISCOVERY] Starting DiscoveryAgent...")
         
+        # Clear prior error context when re-entering discovery for retries
+        if state.get("error_info"):
+            logger.info("🔍 [DISCOVERY] Clearing previous error_info before new discovery attempt")
+        state.pop("error_info", None)
+        
         # SURGICAL DEBUG: Show input state
         logger.info("🔍 [DISCOVERY] ━━━ INPUT STATE ━━━")
         logger.info(f"🔍 [DISCOVERY] Input keys: {list(state.keys())}")
@@ -684,6 +790,17 @@ class QueryOrchestrator:
                 "session_described_tables",
                 state.get("session_described_tables", {})
             )
+            if "relevant_table_details" in result:
+                state["relevant_table_details"] = result.get("relevant_table_details") or []
+            if "discovery_role_hints" in result:
+                state["discovery_role_hints"] = result.get("discovery_role_hints") or {}
+
+            state["discovery_result"] = {
+                "candidates_count": len(relevant_tables),
+                "relevant_tables": relevant_tables,
+                "role_hints": state.get("discovery_role_hints"),
+                "schema_snippet": schema_snippet,
+            }
 
             error = self._normalize_error_info(result.get("error_info"))
             if error:
@@ -725,9 +842,11 @@ class QueryOrchestrator:
         # Check what we have from discovery
         relevant_tables = state.get("relevant_tables", [])
         intent = state.get("intent", {})
+        role_hints = state.get("discovery_role_hints")
 
         logger.info(f"🔗 [JOIN_SQL] relevant_tables: {relevant_tables}")
         logger.info(f"🔗 [JOIN_SQL] intent: {intent}")
+        logger.info(f"🔗 [JOIN_SQL] discovery_role_hints keys: {list(role_hints.keys()) if isinstance(role_hints, dict) else role_hints}")
 
         if not relevant_tables:
             logger.warning("🔗 [JOIN_SQL] No relevant tables found")
@@ -1074,8 +1193,12 @@ class QueryOrchestrator:
             logger.info(f"⚡ [EXEC_RECOVERY] Output keys: {list(result.keys())}")
 
             # Extract outputs
-            exec_result = result.get("exec_result", {})
-            logger.info(f"⚡ [EXEC_RECOVERY] Setting state['exec_result'] = {exec_result} (type: {type(exec_result)})")
+            exec_result_raw = result.get("exec_result")
+            exec_result = self._coerce_exec_result(exec_result_raw)
+            logger.info(
+                "⚡ [EXEC_RECOVERY] Setting state['exec_result'] (normalized) keys: %s",
+                list(exec_result.keys()),
+            )
             state["exec_result"] = exec_result
             state["sql_query"] = result.get("sql_query", state.get("sql_query", ""))
             state["retry_count"] = result.get("retry_count", 0)
@@ -1085,7 +1208,7 @@ class QueryOrchestrator:
                 logger.error(f"⚡ [EXEC_RECOVERY] Error from exec_recovery: {error}")
                 state["error_info"] = error
 
-            if isinstance(exec_result, dict) and exec_result.get("ok"):
+            if exec_result.get("ok"):
                 logger.info(
                     f"⚡ [EXEC_RECOVERY] ✅ EXECUTION SUCCESS: "
                     f"{exec_result.get('row_count', 0)} rows in {exec_result.get('execution_time_ms', 0)}ms"
@@ -1094,10 +1217,10 @@ class QueryOrchestrator:
                 state["error_info"] = None
                 state.setdefault("intent", {})["operation"] = "query"
                 # Persist last successful result for interpretation follow-ups
+                sources = []
                 try:
                     os.makedirs("data", exist_ok=True)
                     # Derive source tables from join_plan/SQL
-                    sources = []
                     try:
                         jp = state.get("join_plan", {}) or {}
                         if isinstance(jp, dict):
@@ -1119,6 +1242,12 @@ class QueryOrchestrator:
                     logger.info("⚡ [EXEC_RECOVERY] Cached last_exec_result for interpretation agent")
                 except Exception as e:
                     logger.warning(f"⚡ [EXEC_RECOVERY] Failed to cache last_exec_result: {e}")
+                finally:
+                    self._previous_exec_cache = {
+                        "exec_result": exec_result,
+                        "sql_query": state.get("sql_query", ""),
+                        "sources": list(dict.fromkeys([s for s in sources if s])),
+                    }
             else:
                 logger.warning(f"⚡ [EXEC_RECOVERY] ❌ Execution failed, error_info set for answer agent")
 
@@ -1154,8 +1283,9 @@ class QueryOrchestrator:
             user_input = state.get("user_input", "")
             exec_result_raw = state.get("exec_result")
             logger.info(f"✨ [ANSWER] exec_result_raw from state: {exec_result_raw} (type: {type(exec_result_raw)})")
-            exec_result = state.get("exec_result", {}) or {}
-            logger.info(f"✨ [ANSWER] exec_result after default: {exec_result} (type: {type(exec_result)})")
+            exec_result = self._coerce_exec_result(exec_result_raw)
+            state["exec_result"] = exec_result
+            logger.info(f"✨ [ANSWER] exec_result normalized: {exec_result}")
             error_info = state.get("error_info")
             logger.info(f"✨ [ANSWER] exec_result present: {bool(exec_result)}")
             logger.info(f"✨ [ANSWER] exec_result type: {type(exec_result)}")
@@ -1209,7 +1339,7 @@ class QueryOrchestrator:
 
                 # Try to extract a scalar count if present in rows
                 count_value = None
-                rows = exec_result.get("rows") or exec_result.get("data") or []
+                rows = exec_result.get("data") or []
                 logger.info(f"✨ [ANSWER] rows/data: {rows}")
 
                 if isinstance(rows, list) and rows:
@@ -1343,6 +1473,10 @@ class QueryOrchestrator:
 
             # Extract outputs
             state["final_response"] = result.get("final_response", "No response generated")
+            if "clarify" in result:
+                state["clarify"] = result.get("clarify")
+            if result.get("clarification_question"):
+                state["clarification_question"] = result.get("clarification_question")
 
             logger.info("✅ Answer formatted")
             debug_logger.agent_exit("answer", before_state, dict(state))
@@ -1432,246 +1566,36 @@ class QueryOrchestrator:
 
     async def process_query(self, user_input: str) -> Dict[str, Any]:
         """
-        High-level interface: process a query and return the complete processing state.
-
-        Args:
-            user_input: User's natural language query
-
-        Returns:
-            Dict containing processing state including final_answer, intent, sql_query, etc.
+        High-level interface: delegate to the compiled LangGraph workflow so API consumers
+        observe the exact same behaviour as direct graph executions.
         """
         logger.info(f"📝 PROCESS_QUERY CALLED: {user_input[:100]}...")
-        logger.info("📝 Starting graph execution...")
-
-        # 🎯 COMPLETE AGENT PIPELINE: Intent → Discovery → SQL → Execution
-        logger.info("🎯 [PIPELINE] Starting complete agent workflow")
-
-        # Step 0: Parse intent
-        intent_subgraph = self.intent_parser.build_subgraph()
-        intent_result = await intent_subgraph.ainvoke(BaseState(user_input=user_input))
-        intent = intent_result.get("intent", {})
-        logger.info(f"🎯 [PIPELINE] Intent parsed: {intent}")
-
-        if intent.get("operation") == "health_check":
-            logger.info("🏥 [PIPELINE] Routing health_check directly to health formatter")
-            health_state = BaseState(
-                user_input=user_input,
-                intent=intent,
-                messages=[],
-            )
-            health_result = await self._answer_health_node(health_state)
+        initial_state: Dict[str, Any] = {
+            "user_input": user_input,
+            "conversation_history": [],
+        }
+        try:
+            result = await self.ainvoke(initial_state)
+            if isinstance(result, dict):
+                result.setdefault("final_response", result.get("final_answer"))
+                result.setdefault("final_answer", result.get("final_response"))
+            return result
+        except Exception as exc:
+            logger.error("❌ [PROCESS_QUERY] Graph execution failed: %s", exc, exc_info=True)
             return {
                 "user_input": user_input,
-                "intent": intent,
+                "intent": {},
                 "relevant_tables": [],
                 "candidate_views": [],
                 "sql_query": "",
                 "join_plan": {},
                 "exec_result": None,
-                "health_status": health_result.get("health_status"),
-                "error_info": health_result.get("error_info"),
-                "final_answer": health_result.get("final_response"),
-            }
-
-        # Check for clarification
-        if intent.get("needs_clarification", False):
-            clarification_question = intent.get("clarification_question", "Could you please clarify your request?")
-            return f"I need more information: {clarification_question}"
-
-        try:
-            # 🎯 FULL PIPELINE: Discovery → SQL Generation → Execution
-            logger.info("🎯 [FULL_PIPELINE] Starting complete agent workflow")
-
-            # Step 1: Discovery - Find relevant tables
-            logger.info("🎯 [FULL_PIPELINE] Step 1: Discovery")
-            discovery_input = BaseState(
-                user_input=user_input,
-                intent=intent,
-                messages=[],
-                session_described_tables={}
-            )
-
-            discovery_result = await self._discovery_node(discovery_input)
-            relevant_tables = discovery_result.get("relevant_tables", [])
-            candidate_views = discovery_result.get("candidate_views", [])
-
-            logger.info(f"🎯 [FULL_PIPELINE] Discovery found {len(relevant_tables)} tables, {len(candidate_views)} views")
-
-            if not relevant_tables:
-                return f"I couldn't find any relevant tables for your query '{user_input}'. This might be because the database uses different terminology than expected."
-
-            # Step 2: SQL Generation - Create queries from discovered tables
-            logger.info("🎯 [FULL_PIPELINE] Step 2: SQL Generation")
-            join_sql_input = BaseState(
-                user_input=user_input,
-                intent=intent,
-                relevant_tables=relevant_tables,
-                candidate_views=candidate_views,
-                messages=[],
-                session_described_tables={}
-            )
-
-            join_sql_result = await self._join_sql_node(join_sql_input)
-            sql_query = join_sql_result.get("sql_query", "")
-            join_plan = join_sql_result.get("join_plan", {})
-
-            logger.info(f"🎯 [FULL_PIPELINE] SQL generated: {len(sql_query)} chars")
-            logger.info(f"🎯 [FULL_PIPELINE] Join plan: {join_plan}")
-
-            if not sql_query:
-                return {
-                    "user_input": user_input,
-                    "intent": intent,
-                    "relevant_tables": relevant_tables,
-                    "candidate_views": candidate_views,
-                    "error_info": {"type": "SQL_GENERATION_ERROR", "message": "Could not generate SQL query"},
-                    "final_answer": f"I found relevant tables but couldn't generate a SQL query for '{user_input}'. The table structure might be too complex for automatic SQL generation."
-                }
-
-            # Step 3: Execution - Run the SQL and get results
-            logger.info("🎯 [FULL_PIPELINE] Step 3: SQL Execution")
-            exec_input = BaseState(
-                user_input=user_input,
-                intent=intent,
-                relevant_tables=relevant_tables,
-                candidate_views=candidate_views,
-                sql_query=sql_query,
-                join_plan=join_plan,
-                messages=[],
-                session_described_tables={}
-            )
-
-            exec_result = await self._exec_recovery_node(exec_input)
-            execution_result = exec_result.get("exec_result")
-            error_info = self._normalize_error_info(exec_result.get("error_info"))
-
-            logger.info(f"🎯 [FULL_PIPELINE] Execution completed: {execution_result}")
-            logger.info(f"🎯 [FULL_PIPELINE] Errors: {error_info}")
-
-            # Step 4: Format and return results
-            if error_info:
-                # Be robust to non-dict error_info
-                if isinstance(error_info, dict):
-                    msg = error_info.get('message', error_info.get('error', 'Unknown error'))
-                else:
-                    msg = str(error_info)
-                return {
-                    "user_input": user_input,
-                    "intent": intent,
-                    "relevant_tables": relevant_tables,
-                    "candidate_views": candidate_views,
-                    "sql_query": sql_query,
-                    "join_plan": join_plan,
-                    "error_info": error_info,
-                    "final_answer": f"I encountered an error executing the query: {msg}"
-                }
-
-            # If success but empty, try next candidates up to 2 more times
-            tried = set()
-            if join_plan and isinstance(join_plan, dict):
-                pt = join_plan.get("primary_table")
-                if pt:
-                    tried.add(pt)
-
-            attempts = 0
-            while (execution_result and execution_result.get("ok") and execution_result.get("row_count", 0) == 0 
-                   and attempts < 2 and relevant_tables):
-                # Remove already tried primary from candidates
-                filtered = []
-                for t in relevant_tables:
-                    tname = t if isinstance(t, str) else (t.get("full_name") or t.get("name", ""))
-                    if tname and tname not in tried:
-                        filtered.append(t)
-                if not filtered:
-                    break
-                # Reorder remaining candidates by quick COUNT(*) probe
-                try:
-                    names = [x if isinstance(x, str) else (x.get("full_name") or x.get("name", "")) for x in filtered]
-                    counts = await self._probe_candidate_counts([n for n in names if n])
-                    def sort_key(x):
-                        n = x if isinstance(x, str) else (x.get("full_name") or x.get("name", ""))
-                        return counts.get(n, 0)
-                    filtered.sort(key=sort_key, reverse=True)
-                except Exception:
-                    pass
-                relevant_tables = filtered
-
-                # Regenerate SQL with remaining candidates
-                join_sql_input = BaseState(
-                    user_input=user_input,
-                    intent=intent,
-                    relevant_tables=relevant_tables,
-                    candidate_views=candidate_views,
-                    messages=[],
-                    session_described_tables={}
-                )
-                join_sql_result = await self._join_sql_node(join_sql_input)
-                sql_query = join_sql_result.get("sql_query", "")
-                join_plan = join_sql_result.get("join_plan", {})
-                if join_plan and join_plan.get("primary_table"):
-                    tried.add(join_plan.get("primary_table"))
-
-                if not sql_query:
-                    break
-
-                exec_input = BaseState(
-                    user_input=user_input,
-                    intent=intent,
-                    relevant_tables=relevant_tables,
-                    candidate_views=candidate_views,
-                    sql_query=sql_query,
-                    join_plan=join_plan,
-                    messages=[],
-                    session_described_tables={}
-                )
-                exec_result = await self._exec_recovery_node(exec_input)
-                execution_result = exec_result.get("exec_result")
-                error_info = self._normalize_error_info(exec_result.get("error_info"))
-                attempts += 1
-                
-                # DEBUG: Log execution result structure
-                if execution_result:
-                    logger.debug(f"🔍 exec_result keys: {execution_result.keys()}")
-                    logger.debug(f"🔍 exec_result ok={execution_result.get('ok')}, row_count={execution_result.get('row_count')}, data length={len(execution_result.get('data', []))}")
-                
-                if error_info:
-                    break
-
-            if execution_result and execution_result.get("ok"):
-                # Format the actual data results
-                logger.info(f"✅ Formatting results: {execution_result.get('row_count')} rows")
-                final_answer = await self._format_execution_results(execution_result, intent, user_input)
-                return {
-                    "user_input": user_input,
-                    "intent": intent,
-                    "relevant_tables": relevant_tables,
-                    "candidate_views": candidate_views,
-                    "sql_query": sql_query,
-                    "join_plan": join_plan,
-                    "exec_result": execution_result,
-                    "final_answer": final_answer
-                }
-            else:
-                return {
-                    "user_input": user_input,
-                    "intent": intent,
-                    "relevant_tables": relevant_tables,
-                    "candidate_views": candidate_views,
-                    "sql_query": sql_query,
-                    "join_plan": join_plan,
-                    "exec_result": execution_result,
-                    "error_info": error_info,
-                    "final_answer": f"The query executed but returned no results for '{user_input}'."
-                }
-
-        except Exception as e:
-            logger.error(f"🎯 [FULL_PIPELINE] Pipeline failed: {e}")
-            import traceback
-            logger.error(f"🎯 [FULL_PIPELINE] Traceback: {traceback.format_exc()}")
-            return {
-                "user_input": user_input,
-                "error_info": {"type": "PROCESSING_ERROR", "message": str(e)},
-                "final_answer": f"I encountered an error processing your query '{user_input}': {str(e)}"
+                "error_info": {
+                    "type": "PIPELINE_ERROR",
+                    "message": str(exc),
+                },
+                "final_answer": "I ran into an internal error while processing your request.",
+                "final_response": "I ran into an internal error while processing your request.",
             }
 
     async def _format_execution_results(self, execution_result: Dict[str, Any], intent: Dict[str, Any], user_input: str) -> str:

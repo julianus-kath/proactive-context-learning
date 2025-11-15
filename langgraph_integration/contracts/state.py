@@ -70,6 +70,8 @@ class BaseState(TypedDict, total=False):
     candidate_views: List[Dict[str, Any]]  # Views matching intent, ranked
     # 🆕 PHASE 7.2: Indexed column names from Scout Catalog
     column_index: Dict[str, List[str]]  # {"dbo.table1": ["col1", "col2", ...], ...}
+    discovery_role_hints: Dict[str, Any]  # Structured hints for planner (fact/dim metadata)
+    discovery_result: Dict[str, Any]  # Summary info for downstream reporting
 
     # Join planning & SQL generation
     join_plan: Dict[str, Any]  # {strategy: "view"|"joins", path:[...], fk_hints:[...], ...}

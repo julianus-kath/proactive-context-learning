@@ -29,6 +29,7 @@ import json
 import re
 import asyncio
 import concurrent.futures
+import os
 from typing import Any, Dict, Optional, List, Literal
 
 from langchain_openai import ChatOpenAI
@@ -76,7 +77,27 @@ class IntentParserAgent:
             llm_model: LLM model name (e.g., "gpt-4o")
             llm_temp: Temperature for LLM (0.0 = deterministic)
         """
-        self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)  # Uses OPENAI_API_KEY from env
+        self.llm_model = llm_model
+        self.llm_temp = llm_temp
+        self.llm = None  # Initialize as None first
+
+        # Only initialize LLM if API key is available
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+        no_llm = os.getenv("NO_LLM", "").lower() in ("1", "true", "yes")
+        if api_key and not no_llm:
+            try:
+                self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)
+            except Exception as e:
+                logger.warning(f"🧠 [LLM_INIT] Failed to initialize LLM: {e}")
+        else:
+            logger.warning("🧠 [LLM_INIT] Skipping LLM initialization - no API key or NO_LLM set")
+
+    def _can_use_llm(self) -> bool:
+        """Check if LLM can be used (API key present and not explicitly disabled)."""
+        if self.llm is None:
+            logger.warning("🧠 [LLM_GUARD] LLM not initialized - skipping LLM calls")
+            return False
+        return True
 
     async def parse(self, user_input: str, messages: Optional[List[Dict[str, Any]]] = None) -> ParsedIntent:
         """Convenience method to parse intent directly without manual state management."""
@@ -209,6 +230,8 @@ Provide JSON with:
 Respond ONLY with JSON, no markdown blocks.
 """
         try:
+            if not self._can_use_llm():
+                raise ValueError("LLM not available - API key missing or disabled")
             response = await self.llm.ainvoke(prompt)
             response_text = self._strip_markdown_blocks(response.content.strip())
             analysis = json.loads(response_text)
@@ -277,6 +300,8 @@ Return JSON:
 Respond ONLY with JSON.
 """
         try:
+            if not self._can_use_llm():
+                raise ValueError("LLM not available - API key missing or disabled")
             response = await self.llm.ainvoke(prompt)
             response_text = self._strip_markdown_blocks(response.content.strip())
             classification = json.loads(response_text)
@@ -387,6 +412,8 @@ Respond ONLY with JSON.
         Respond ONLY with JSON.
         """
         try:
+            if not self._can_use_llm():
+                raise ValueError("LLM not available - API key missing or disabled")
             response = await self.llm.ainvoke(prompt)
             response_text = self._strip_markdown_blocks(response.content.strip())
             extracted = json.loads(response_text)
@@ -520,6 +547,8 @@ Return JSON:
 Keep the question clear and actionable.
 """
         try:
+            if not self._can_use_llm():
+                raise ValueError("LLM not available - API key missing or disabled")
             response = await self.llm.ainvoke(prompt)
             response_text = self._strip_markdown_blocks(response.content.strip())
             clarification = json.loads(response_text)
@@ -570,6 +599,8 @@ Keep the question clear and actionable.
         text = (user_input or "").lower()
         entities = [e.lower() for e in (intent.get("primary_entities") or [])]
         metrics = [m.lower() for m in (intent.get("metrics") or [])]
+        if any(m in ["sales", "umsatz", "revenue", "verkauf", "total_sales"] for m in metrics) and "sum" not in metrics:
+            metrics.append("sum")
 
         # Heuristic enrichment if metrics missing
         if not metrics:
@@ -591,8 +622,10 @@ Keep the question clear and actionable.
 
         # group_by detection for customers
         group_by = None
-        if any(e in ["customer", "customers", "kunde", "kunden"] for e in entities):
+        if any(e in ["customer", "customers", "kunde", "kunden", "client", "clients"] for e in entities):
             group_by = "customer"
+        elif any(e in ["product", "products", "produkt", "produkte", "artikel", "items"] for e in entities):
+            group_by = "product"
 
         # time granularity
         time_granularity = None
@@ -610,8 +643,20 @@ Keep the question clear and actionable.
             "sort them", "filter them", "group them", "format them", "explain these"
         ]):
             required_action = "interpret_previous"
-        if ("sum" in metrics or "total" in metrics or "umsatz" in text) and (group_by == "customer"):
+        metrics_lower = [m.lower() for m in metrics]
+        wants_sum = (
+            "sum" in metrics_lower
+            or "total" in metrics_lower
+            or "sales" in metrics_lower
+            or "revenue" in metrics_lower
+            or "umsatz" in text
+            or "verkauf" in text
+            or "sales" in text
+        )
+        if wants_sum and group_by == "customer":
             required_action = "topk_sum_by_customer" if ("top" in text or top_k) else "sum_by_customer"
+        elif wants_sum and group_by == "product":
+            required_action = "topk_sum_by_product" if ("top" in text or top_k) else "sum_by_product"
         elif ("count" in metrics) and any(m in text for m in ["october", "oktober", "january", "februar", "march", "april", "mai", "juni", "juli", "august", "september", "november", "dezember"]):
             required_action = "month_count"
         elif any(kw in text for kw in ["over the last", "last \d+ years", "last \d+ months", "entwickel", "trend"]):
@@ -635,7 +680,7 @@ Keep the question clear and actionable.
             required_action = "count"
 
         # Default top_k
-        if required_action in ["topk_sum_by_customer"] and top_k is None and "top" in text:
+        if required_action in ["topk_sum_by_customer", "topk_sum_by_product"] and top_k is None and "top" in text:
             top_k = 5
 
         # PHASE 6: Clarification loop for ambiguous queries
@@ -644,7 +689,13 @@ Keep the question clear and actionable.
         # Enrich discovery keywords for specific actions (kept within intent parsing)
         extra_keywords: list[str] = []
         try:
-            if required_action in ["topk_sum_by_customer", "sum_by_customer", "sum_with_period"]:
+            if required_action in [
+                "topk_sum_by_customer",
+                "sum_by_customer",
+                "topk_sum_by_product",
+                "sum_by_product",
+                "sum_with_period",
+            ]:
                 extra_keywords = [
                     # sales/revenue domain (DE/EN)
                     "umsatz", "verkauf", "vk", "rechnung", "rechnungen", "rechnungsposition", "position", "positionen",
@@ -660,6 +711,7 @@ Keep the question clear and actionable.
             "time_granularity": time_granularity,
             "extra_keywords": extra_keywords
         }
+
 
     def _format_message_history(self, messages: List[Dict[str, Any]], limit: int = 6) -> str:
         """Format recent conversation turns so LLM prompts have context."""

@@ -12,8 +12,13 @@ This is NOT an LLM agent - it's a deterministic checker.
 """
 
 import logging
+import re
 from typing import Any, Dict, List, Literal, Optional, TypedDict
 from dataclasses import dataclass
+
+from pydantic import ValidationError
+
+from langgraph_integration.contracts.response_envelope import ResponseEnvelope
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +89,7 @@ class ResultValidator:
             intent: Parsed intent from IntentParser
             discovery_results: Tables discovered
             sql_query: SQL query that was executed
-            exec_result: Result from execution {ok, rows, row_count, truncated, error}
+        exec_result: Result from execution {ok, data, row_count, truncated, error}
         
         Returns:
             ValidationResult with validity assessment and retry action (if needed)
@@ -92,9 +97,16 @@ class ResultValidator:
         logger.debug(f"🔍 [VALIDATE] Checking result for query: '{user_query[:50]}...'")
         
         # Extract useful data
+        try:
+            envelope = ResponseEnvelope.model_validate(exec_result)
+            exec_result = envelope.model_dump(exclude_none=True)
+        except ValidationError as exc:
+            logger.warning(f"🔍 [VALIDATE] exec_result normalization failed: {exc}")
+            exec_result = ResponseEnvelope(ok=False, data=[]).model_dump(exclude_none=True)
+
         ok = exec_result.get("ok", False)
-        row_count = exec_result.get("row_count", 0)
-        rows = exec_result.get("rows", [])
+        rows = exec_result.get("data") or []
+        row_count = exec_result.get("row_count", len(rows))
         truncated = exec_result.get("truncated", False)
         error = exec_result.get("error")
         
@@ -347,6 +359,16 @@ class ResultValidator:
             # 1. We have at least 2 non-NULL values (not mostly NULL)
             # 2. All non-NULL values are identical
             if len(values) >= 2 and len(set(str(v) for v in values)) == 1:
+                required_action = (intent.get("required_action") or "").lower()
+                if required_action in {
+                    "topk_sum_by_customer",
+                    "topk_sum_by_product",
+                    "sum_by_customer",
+                    "sum_by_product",
+                    "growth_analysis",
+                    "comparative_analysis",
+                }:
+                    continue
                 logger.warning(f"🔍 [VALIDATE] Suspicious pattern: all {col_name} values are identical (out of {len(rows)} rows)")
                 question = (
                     f"The column '{col_name}' contains the same value in all returned rows. "
@@ -384,11 +406,26 @@ class ResultValidator:
             
             # Extract column names (simple: split by comma)
             columns = set()
-            for col in select_clause.split(","):
-                col = col.strip()
-                # Remove aliases (AS xxx)
-                if " AS " in col.upper():
-                    col = col.split(" AS ")[0].strip()
+            for raw_col in select_clause.split(","):
+                col = raw_col.strip()
+                upper_col = col.upper()
+                alias = None
+
+                # Strip leading modifiers (TOP, DISTINCT, ALL)
+                if upper_col.startswith("TOP "):
+                    col = re.sub(r"^\s*TOP\s+\(?\d+\)?\s+", "", col, flags=re.IGNORECASE)
+                    upper_col = col.upper()
+                if upper_col.startswith("DISTINCT "):
+                    col = re.sub(r"^\s*DISTINCT\s+", "", col, flags=re.IGNORECASE)
+                    upper_col = col.upper()
+                if upper_col.startswith("ALL "):
+                    col = re.sub(r"^\s*ALL\s+", "", col, flags=re.IGNORECASE)
+                    upper_col = col.upper()
+
+                if " AS " in upper_col:
+                    alias_idx = upper_col.rfind(" AS ")
+                    alias = col[alias_idx + 4 :].strip().strip("[]")
+                    col = col[:alias_idx].strip()
                 # Remove function calls (COUNT(), MAX(), etc.)
                 if "(" in col:
                     col = col[col.rfind("(") + 1:col.rfind(")")]
@@ -396,9 +433,11 @@ class ResultValidator:
                 # Remove table prefix (e.g., "c.Name" -> "Name")
                 if "." in col:
                     col = col.split(".")[-1]
-                col = col.strip()
+                col = col.strip(" []")
                 if col and col != "*":
                     columns.add(col)
+                if alias:
+                    columns.add(alias.strip())
             
             return columns
         except Exception as e:
@@ -422,11 +461,20 @@ def build_result_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
         exec_result=state.get("exec_result", {})
     )
     
+    if "is_valid" not in validation and "valid" in validation:
+        validation["is_valid"] = bool(validation.get("valid"))
+    
     logger.info(f"🔍 [RESULT_VALIDATOR] Valid={validation.get('valid')}, Action={validation.get('retry_action')}")
     
     state["validation_result"] = validation
 
-    if validation.get("retry_action") == "ask_user":
+    retry_action = validation.get("retry_action")
+    if retry_action in {"try_next_candidate", "replan_with_aggregation", "replan_with_filter"}:
+        state["error_info"] = None
+        # Clear execution artifacts to avoid misleading downstream stages
+        state["exec_result"] = {}
+
+    if retry_action == "ask_user":
         intent = state.get("intent") or {}
         intent["operation"] = "clarify"
         intent["needs_clarification"] = True

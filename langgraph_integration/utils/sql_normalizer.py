@@ -79,14 +79,21 @@ def validate_mssql_syntax(sql: str) -> tuple[bool, str]:
     if not sql or not isinstance(sql, str):
         return False, "Empty or non-string SQL"
     
-    sql_upper = sql.upper().strip()
-    
-    # Must start with SELECT
-    if not sql_upper.startswith("SELECT"):
+    sql_stripped = sql.strip()
+    sql_upper = sql_stripped.upper()
+
+    if sql_upper.startswith("WITH"):
+        select_idx = sql_upper.find("SELECT")
+        if select_idx == -1:
+            return False, "CTE query missing SELECT statement"
+        effective_upper = sql_upper[select_idx:]
+    elif sql_upper.startswith("SELECT"):
+        effective_upper = sql_upper
+    else:
         return False, "Query must start with SELECT"
-    
-    # Should have FROM clause
-    if " FROM " not in sql_upper:
+
+    # Should have FROM clause (allowing newline/spacing variations)
+    if not re.search(r'\bFROM\b', effective_upper):
         return False, "Query must have FROM clause"
     
     # Reject DML statements (just in case)
