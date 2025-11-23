@@ -19,6 +19,9 @@ from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
 import atexit
 
+from langgraph_integration.contracts.response_envelope import ResponseEnvelope
+from pydantic import ValidationError
+
 # Load environment variables (project root first, then module-local .env)
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(REPO_ROOT, ".env"))
@@ -135,6 +138,38 @@ def _extract_json_from_text(content: str) -> Dict[str, Any]:
         problematic_section = json_str[max(0, e.pos-50):min(len(json_str), e.pos+50)]
         logger.error(f"[EXTRACT_JSON_ERROR] {error_details}\n   Context: ...{problematic_section}...")
         raise ValueError(f"{error_details}\n   Context: ...{problematic_section}...")
+
+
+def _content_to_envelope(content: List[Dict[str, Any]]) -> Dict[str, Any]:
+    payload: Any = None
+    if isinstance(content, list):
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "json":
+                payload = item.get("json")
+                break
+        if payload is None:
+            for item in content:
+                if isinstance(item, dict):
+                    text_value = item.get("text")
+                    if isinstance(text_value, str):
+                        try:
+                            payload = _extract_json_from_text(text_value)
+                            break
+                        except Exception:
+                            continue
+                elif isinstance(item, str):
+                    try:
+                        payload = json.loads(item)
+                        break
+                    except Exception:
+                        continue
+    if payload is None:
+        payload = {}
+    try:
+        envelope = ResponseEnvelope.model_validate(payload)
+    except ValidationError:
+        envelope = ResponseEnvelope.model_validate({})
+    return envelope.model_dump(exclude_none=True)
 
 
 class MCPDatabaseTool:
@@ -406,6 +441,10 @@ class MCPDatabaseTool:
                 debug_logger.tool_result(tool_name, None, error=error_msg, duration_ms=(time.time()-start_time)*1000)
             raise
     
+    async def _execute_query_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        content = await self.call_tool(tool_name, arguments)
+        return _content_to_envelope(content)
+    
     async def get_schema(self) -> List[Dict[str, Any]]:
         """
         Get the database schema.
@@ -415,17 +454,21 @@ class MCPDatabaseTool:
         """
         return await self.call_tool("get_schema", {})
     
-    async def query(self, sql: str) -> List[Dict[str, Any]]:
+    async def query(self, sql: str, limit: Optional[int] = None) -> Dict[str, Any]:
         """
         Execute a SQL query.
         
         Args:
             sql: SQL query to execute
+            limit: Optional row limit override
             
         Returns:
-            Query results from the MCP server
+            Standardized response envelope from the MCP server
         """
-        return await self.call_tool("query", {"sql": sql})
+        arguments: Dict[str, Any] = {"sql": sql}
+        if limit is not None:
+            arguments["limit"] = limit
+        return await self._execute_query_tool("query", arguments)
     
     async def get_table_info(self, table_name: str) -> List[Dict[str, Any]]:
         """
@@ -821,7 +864,7 @@ class MCPDatabaseTool:
         sql: str, 
         max_rows: Optional[int] = None, 
         timeout_ms: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
+    ) -> Dict[str, Any]:
         """
         Execute a bounded SQL query with safety controls (Phase 2/4 tool).
         
@@ -831,25 +874,17 @@ class MCPDatabaseTool:
             timeout_ms: Query timeout in milliseconds (default: 30000)
             
         Returns:
-            Query results with safety guarantees.
+            Standardized response envelope with safety guarantees.
         """
-        # Detect simple COUNT aggregate to avoid limit injection changing semantics.
         sql_lc = (sql or "").lower()
         is_simple_count = ("count(" in sql_lc) and (" group by " not in sql_lc)
-        
-        # Server expects 'limit', not 'max_rows'. Use correct key.
-        if is_simple_count:
-            # Use unbounded legacy 'query' for aggregate counts to avoid TOP injection
-            arguments = {"sql": sql}
-            return await self.call_tool("query", arguments)
-        
-        arguments = {"sql": sql}
-        if max_rows is not None:
+        tool_name = "query" if is_simple_count else "run_query"
+        arguments: Dict[str, Any] = {"sql": sql}
+        if not is_simple_count and max_rows is not None:
             arguments["limit"] = max_rows
         if timeout_ms is not None:
-            # Not supported by server; included for forward compatibility, server will ignore
             arguments["timeout_ms"] = timeout_ms
-        return await self.call_tool("query_bounded", arguments)
+        return await self._execute_query_tool(tool_name, arguments)
     
     async def call_tool_with_retry(
         self, 
@@ -960,10 +995,8 @@ async def execute_sql_query(sql: str) -> str:
     """
     tool = MCPDatabaseTool()
     try:
-        query_content = await tool.query(sql)
-        if query_content and len(query_content) > 0:
-            return query_content[0].get("text", "No results")
-        return "No results"
+        envelope = await tool.query(sql)
+        return json.dumps(envelope, indent=2)
     except Exception as e:
         return f"Error executing query: {str(e)}"
 
@@ -1004,15 +1037,13 @@ async def execute_sql_query_with_retry(sql: str, max_retries: int = 3) -> str:
     
     for attempt in range(max_retries):
         try:
-            query_content = await tool.query(sql)
-            if query_content and len(query_content) > 0:
-                return query_content[0].get("text", "No results")
-            return "No results"
+            envelope = await tool.query(sql)
+            return json.dumps(envelope, indent=2)
         except Exception as e:
             last_error = e
             logger.warning(f"Query attempt {attempt + 1}/{max_retries} failed: {e}")
             if attempt < max_retries - 1:
-                await asyncio.sleep(1 * (attempt + 1))  # Exponential backoff
+                await asyncio.sleep(1 * (attempt + 1))
     
     return f"Error executing query after {max_retries} attempts: {str(last_error)}"
 
@@ -1201,20 +1232,13 @@ async def get_all_schemas() -> List[str]:
         ORDER BY schema_name
         """
         
-        result_content = await tool.query(query)
-        if result_content and len(result_content) > 0:
-            result_text = result_content[0].get("text", "")
-            
-            # Parse result to extract schema names
-            import json
-            try:
-                result_data = json.loads(result_text)
-                if isinstance(result_data, list):
-                    return [row.get("schema_name", "") for row in result_data if row.get("schema_name")]
-            except json.JSONDecodeError:
-                pass
-        
-        # Fallback to default schema
+        envelope = await tool.query(query)
+        if isinstance(envelope, dict) and envelope.get("ok"):
+            rows = envelope.get("data") or []
+            if isinstance(rows, list):
+                schemas = [row.get("schema_name", "") for row in rows if isinstance(row, dict) and row.get("schema_name")]
+                if schemas:
+                    return schemas
         return ["public"]
     except Exception as e:
         logger.error(f"Error getting schemas: {e}")
@@ -1457,49 +1481,14 @@ async def query_bounded_mcp(
     """
     tool = MCPDatabaseTool()
     try:
-        content = await tool.query_bounded(sql, max_rows, timeout_ms)
-        if content and len(content) > 0:
-            result_text = content[0].get("text", "No results")
-            
-            # Try to extract actual row_count from the MCP JSON response
-            row_count = 1  # Default for COUNT queries and simple results
-            
-            try:
-                # Parse JSON from result to get actual row count
-                result_data = _extract_json_from_text(result_text)
-                logger.debug(f"[EXTRACT_DEBUG] Parsed JSON keys: {list(result_data.keys()) if isinstance(result_data, dict) else 'NOT A DICT'}")
-                logger.debug(f"[EXTRACT_DEBUG] Full parsed JSON: {result_data}")
-                
-                if isinstance(result_data, dict):
-                    # Look for row_count in various possible locations
-                    if "row_count" in result_data:
-                        row_count = result_data.get("row_count", 1)
-                        logger.debug(f"[EXTRACT_DEBUG] ✓ Found row_count at top level: {row_count}")
-                    elif "data" in result_data and isinstance(result_data["data"], dict):
-                        if "row_count" in result_data["data"]:
-                            row_count = result_data["data"].get("row_count", 1)
-                            logger.debug(f"[EXTRACT_DEBUG] ✓ Found row_count in data section: {row_count}")
-                        # For array results, count the items
-                        elif "rows" in result_data["data"] and isinstance(result_data["data"]["rows"], list):
-                            row_count = len(result_data["data"]["rows"])
-                            logger.debug(f"[EXTRACT_DEBUG] ✓ Counted rows in data.rows: {row_count}")
-                    else:
-                        # Fallback: check if we have 'rows' at top level
-                        if "rows" in result_data and isinstance(result_data["rows"], list):
-                            row_count = len(result_data["rows"])
-                            logger.debug(f"[EXTRACT_DEBUG] ✓ Counted rows at top level: {row_count}")
-                        else:
-                            logger.debug(f"[EXTRACT_DEBUG] ✗ No row_count or rows found. Keys available: {list(result_data.keys())}")
-                    
-                    logger.info(f"[ROW_COUNT_EXTRACTED] sql={sql[:80]}, extracted_row_count={row_count}")
-            except Exception as parse_err:
-                logger.error(f"[EXTRACT_ERROR] Could not extract row_count from MCP response: {parse_err}")
-                logger.error(f"[EXTRACT_ERROR] Result text (first 1000 chars): {result_text[:1000]}")
-                logger.error(f"[EXTRACT_ERROR] Result text (total length): {len(result_text)}")
-                # Fall back to 1 (safe default)
-                row_count = 1
-            
-            return (result_text, row_count)
+        envelope = await tool.query_bounded(sql, max_rows, timeout_ms)
+        if isinstance(envelope, dict):
+            row_count = envelope.get("row_count")
+            if not isinstance(row_count, (int, float)):
+                data = envelope.get("data") or []
+                row_count = len(data) if isinstance(data, list) else 0
+            formatted = json.dumps(envelope, indent=2)
+            return (formatted, int(row_count))
         return ("No results", 0)
     except Exception as e:
         logger.error(f"Error executing bounded query: {e}")

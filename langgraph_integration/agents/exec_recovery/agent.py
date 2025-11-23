@@ -23,6 +23,8 @@ from typing import Any, Dict, List, Optional, Literal
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
+from langgraph_integration.contracts.response_envelope import ResponseEnvelope
+from pydantic import ValidationError
 from langgraph_integration.contracts.state import BaseState, ExecAndRecoveryAgentInput, ExecAndRecoveryAgentOutput
 from langgraph_integration.mcp_client import get_shared_mcp_tool
 from langgraph_integration.prompts.repair import (
@@ -335,23 +337,17 @@ class ExecAndRecoveryAgent:
                     table_name = m2.group(1) if m2 else None
 
                     if table_name:
-                        # Probe columns
                         probe_sql = f"SELECT TOP 1 * FROM {table_name}"
                         col_result = await self.mcp.query_bounded(probe_sql, max_rows=1, timeout_ms=5000)
                         cols = []
-                        try:
-                            # Parse JSON block from text
-                            text = col_result[0].get("text", "") if col_result and isinstance(col_result[0], dict) else ""
-                            brace_idx = text.rfind('{')
-                            if brace_idx >= 0:
-                                data = _json.loads(text[brace_idx:])
-                                cols = data.get("columns") or []
-                                if not cols:
-                                    rows = data.get("rows") or []
-                                    if rows and isinstance(rows[0], dict):
-                                        cols = list(rows[0].keys())
-                        except Exception:
-                            cols = []
+                        if isinstance(col_result, dict) and col_result.get("ok"):
+                            candidate_cols = col_result.get("columns") or []
+                            if isinstance(candidate_cols, list):
+                                cols = [str(c) for c in candidate_cols]
+                            if not cols:
+                                rows = col_result.get("data") or []
+                                if rows and isinstance(rows[0], dict):
+                                    cols = list(rows[0].keys())
 
                         # Pick sum and group-by columns
                         def pick_sum_column(columns):
@@ -405,18 +401,14 @@ class ExecAndRecoveryAgent:
                                     # Probe customer columns
                                     c_res = await self.mcp.query_bounded(f"SELECT TOP 1 * FROM {cust_table}", max_rows=1, timeout_ms=5000)
                                     c_cols = []
-                                    try:
-                                        c_text = c_res[0].get("text", "") if c_res and isinstance(c_res[0], dict) else ""
-                                        bi = c_text.rfind('{')
-                                        if bi >= 0:
-                                            c_data = _json.loads(c_text[bi:])
-                                            c_cols = c_data.get("columns") or []
-                                            if not c_cols:
-                                                c_rows = c_data.get("rows") or []
-                                                if c_rows and isinstance(c_rows[0], dict):
-                                                    c_cols = list(c_rows[0].keys())
-                                    except Exception:
-                                        c_cols = []
+                                    if isinstance(c_res, dict) and c_res.get("ok"):
+                                        candidate = c_res.get("columns") or []
+                                        if isinstance(candidate, list):
+                                            c_cols = [str(c) for c in candidate]
+                                        if not c_cols:
+                                            c_rows = c_res.get("data") or []
+                                            if c_rows and isinstance(c_rows[0], dict):
+                                                c_cols = list(c_rows[0].keys())
 
                                     def pick_key(columns):
                                         lc = [c.lower() for c in columns]
@@ -503,16 +495,16 @@ class ExecAndRecoveryAgent:
                             if isinstance(cols_res, list) and cols_res:
                                 cols = [str(x) for x in cols_res if x]
                             else:
-                                # fallback probe
                                 probe = await self.mcp.query_bounded(f"SELECT TOP 1 * FROM {name}", max_rows=1, timeout_ms=5000)
                                 cols = []
-                                if probe and isinstance(probe[0], dict):
-                                    import json as _json
-                                    text = probe[0].get("text", "")
-                                    bi = text.rfind('{')
-                                    if bi >= 0:
-                                        data = _json.loads(text[bi:])
-                                        cols = data.get("columns") or (list((data.get("rows") or [{}])[0].keys()) if data.get("rows") else [])
+                                if isinstance(probe, dict) and probe.get("ok"):
+                                    probe_cols = probe.get("columns") or []
+                                    if isinstance(probe_cols, list):
+                                        cols = [str(x) for x in probe_cols if x]
+                                    if not cols:
+                                        probe_rows = probe.get("data") or []
+                                        if probe_rows and isinstance(probe_rows[0], dict):
+                                            cols = list(probe_rows[0].keys())
                         except Exception:
                             cols = []
                         col_index[name] = cols
@@ -795,165 +787,43 @@ class ExecAndRecoveryAgent:
 
     # Helper methods
 
-    def _parse_query_result(self, result: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Parse MCP query result (handles both bounded JSON and unbounded text formats)."""
-        content = ""
-
-        try:
-            logger.debug(f"Parsing query result: {result[:2] if result else 'None'}")
-            logger.debug(f"Result type: {type(result)}, length: {len(result) if result else 0}")
-
-            def failure(message: str) -> Dict[str, Any]:
-                return {
-                    "ok": False,
-                    "data": None,
-                    "row_count": 0,
-                    "execution_time_ms": 0,
-                    "truncated": False,
-                    "warnings": [],
-                    "error": message,
-                    "error_info": {"type": "QUERY_ERROR", "message": message},
-                }
-
-            # Handle case where MCP returns malformed response
-            if not result or len(result) == 0:
-                return failure("Empty result from MCP server")
-
-            # Handle case where result is a single string (error message)
-            if isinstance(result, str):
-                return failure(result)
-
-            first_result = result[0]
-            logger.debug(f"First result type: {type(first_result)}, value: {first_result}")
-
-            if isinstance(first_result, str):
-                # MCP returned a string error message
-                return failure(first_result)
-
-            if not isinstance(first_result, dict):
-                return failure(f"Unexpected result type: {type(first_result)}")
-
-            content = first_result.get("text", "")
-            logger.debug(f"Content type: {type(content)}, length: {len(content) if isinstance(content, str) else 'N/A'}")
-
-            # Try to parse as JSON first (for query_bounded responses). The server returns
-            # human-readable text plus a JSON block after 'Full response (JSON):'.
-            try:
-                text = content if isinstance(content, str) else str(content)
-                data = None
-                if isinstance(text, str):
-                    marker = "Full response (JSON):"
-                    if marker in text:
-                        json_part = text.split(marker, 1)[-1].strip()
-                        # In case there is leading text before '{', trim to first '{'
-                        brace_idx = json_part.find('{')
-                        if brace_idx >= 0:
-                            json_part = json_part[brace_idx:]
-                        data = json.loads(json_part)
-                    else:
-                        # Fallback: try parsing from the last '{' occurrence
-                        last_brace = text.rfind('{')
-                        if last_brace >= 0:
-                            json_part = text[last_brace:]
-                            data = json.loads(json_part)
-                else:
-                    data = content
-
-                if isinstance(data, dict):
-                    # This is a JSON response from query_bounded
-                    ok = data.get("ok", False)
-                    rows = data.get("rows", [])
-                    row_count = data.get("row_count", len(rows))
-                    execution_time_ms = data.get("execution_time_ms", 0)
-                    truncated = data.get("truncated", False)
-                    warnings = data.get("warnings", [])
-                    error = data.get("error")
-
-                    return {
-                        "ok": ok,
-                        "data": rows,
-                        "row_count": row_count,
-                        "execution_time_ms": execution_time_ms,
-                        "truncated": truncated,
-                        "warnings": warnings,
-                        "error": error,
-                        "error_info": None if not error else {"type": "QUERY_ERROR", "message": error},
-                    }
-            # If JSON not detected, fall through to parse as text below
-            except Exception:
-                # Not JSON or failed to extract JSON - handle as text-table format
-                logger.info("Received text table response from unbounded query, parsing manually...")
-
-            # Fallback: parse as text-table format (also used when JSON not detected without exception)
-            if not content or "Query execution failed" in content:
-                return failure(content or "Query execution failed")
-
-            # Parse the text table format
-            lines = content.strip().split('\n')
-            if len(lines) < 3:
-                return failure("Invalid table format")
-
-            # Extract row count from header
-            header_match = re.search(r'Query Results \((\d+) rows\)', lines[0])
-            if not header_match:
-                return failure("Could not parse row count")
-
-            row_count = int(header_match.group(1))
-
-            if row_count == 0:
-                return {
-                    "ok": True,
-                    "data": [],
-                    "row_count": 0,
-                    "execution_time_ms": 0,
-                    "truncated": False,
-                    "warnings": [],
-                    "error": None,
-                    "error_info": None,
-                }
-
-            # Find data rows (skip header and separator)
-            data_start = 2  # Skip "Query Results (X rows):" and blank line
-            if data_start >= len(lines):
-                return failure("No data rows found")
-
-            # Extract column headers
-            header_line = lines[data_start]
-            columns = [col.strip() for col in header_line.split('|')]
-
-            # Extract data rows
-            rows = []
-            for line in lines[data_start + 2:]:  # Skip headers and separator
-                if line.strip():
-                    values = [val.strip() for val in line.split('|')]
-                    if len(values) == len(columns):
-                        row_dict = {}
-                        for col, val in zip(columns, values):
-                            # Try to convert to number
-                            try:
-                                if '.' not in val:
-                                    row_dict[col] = int(val)
-                                else:
-                                    row_dict[col] = float(val)
-                            except ValueError:
-                                row_dict[col] = val
-                        rows.append(row_dict)
-
+    def _parse_query_result(self, result: Any) -> Dict[str, Any]:
+        def failure(message: str) -> Dict[str, Any]:
             return {
-                "ok": True,
-                "data": rows,
-                "row_count": len(rows),
-                "execution_time_ms": 0,  # Not provided in text format
+                "ok": False,
+                "data": [],
+                "row_count": 0,
+                "execution_time_ms": 0,
                 "truncated": False,
                 "warnings": [],
-                "error": None,
-                "error_info": None,
+                "error": message,
+                "error_info": {"type": "QUERY_ERROR", "message": message},
             }
 
-        except Exception as e:
-            logger.warning(f"Failed to parse query result: {e}")
-            logger.warning(f"Raw content: {content[:200]}...")
-            return failure(str(e))
+        try:
+            envelope = ResponseEnvelope.model_validate(result or {})
+        except ValidationError as exc:
+            logger.warning(f"Response envelope validation failed: {exc}")
+            return failure("Malformed execution result")
+
+        normalized = envelope.model_dump(exclude_none=True)
+        warnings = normalized.get("warnings") or []
+        normalized["warnings"] = [str(w) for w in warnings]
+        data_rows = normalized.get("data") or []
+        if not isinstance(data_rows, list):
+            data_rows = []
+        normalized["data"] = data_rows
+        normalized["rows"] = data_rows
+        if normalized.get("ok"):
+            normalized["error"] = None
+            normalized["error_info"] = None
+            return normalized
+
+        message = normalized.get("error") or normalized.get("error_info", {}).get("message") or "Query execution failed"
+        normalized["error"] = message
+        if not normalized.get("error_info"):
+            normalized["error_info"] = {"type": "QUERY_ERROR", "message": message}
+        return normalized
 
     def _extract_sql(self, text: str) -> str:
         """

@@ -257,6 +257,76 @@ class MCPTools:
             return obj
     
     @staticmethod
+    def _coerce_warnings(value: Any) -> List[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(v) for v in value if v is not None]
+        return [str(value)]
+    
+    @staticmethod
+    def _envelope_from_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+        safe = MCPTools._make_json_safe(payload or {})
+        rows = safe.get("rows")
+        if rows is None:
+            rows = safe.get("data")
+        if not isinstance(rows, list):
+            rows = []
+        execution_time = safe.get("execution_time_ms")
+        if execution_time is not None:
+            try:
+                execution_time = int(float(execution_time))
+            except Exception:
+                execution_time = None
+        row_count = safe.get("row_count")
+        if row_count is None:
+            row_count = len(rows)
+        if not isinstance(row_count, int):
+            try:
+                row_count = int(row_count)
+            except Exception:
+                row_count = len(rows)
+        truncated = bool(safe.get("truncated", False))
+        warnings = MCPTools._coerce_warnings(safe.get("warnings"))
+        if truncated:
+            warnings.append("RESULT_TRUNCATED")
+        if safe.get("redacted_columns"):
+            warnings.append("RESULT_REDACTED")
+        warnings = list(dict.fromkeys([w for w in warnings if w]))
+        error_value = safe.get("error") or safe.get("error_message")
+        ok_raw = safe.get("ok")
+        ok_flag = bool(ok_raw)
+        if isinstance(ok_raw, str):
+            ok_flag = ok_raw.strip().lower() in {"true", "1", "yes"}
+        envelope: Dict[str, Any] = {
+            "ok": ok_flag,
+            "data": rows,
+            "row_count": row_count,
+            "execution_time_ms": execution_time,
+            "truncated": truncated,
+            "warnings": warnings,
+            "error": error_value,
+            "error_info": None,
+        }
+        for key in ("columns", "metadata", "redacted_columns", "limit", "applied_limit"):
+            if safe.get(key) is not None:
+                envelope[key] = safe[key]
+        if envelope["ok"]:
+            envelope["error"] = None
+        else:
+            code = safe.get("error_code") or "QUERY_ERROR"
+            message = error_value or "Unknown error"
+            envelope["error_info"] = {"type": str(code), "message": str(message)}
+        return envelope
+    
+    @staticmethod
+    def _wrap_envelope(envelope: Dict[str, Any]) -> MCPToolResult:
+        return MCPToolResult(
+            content=[{"type": "json", "json": envelope}],
+            isError=not bool(envelope.get("ok"))
+        )
+    
+    @staticmethod
     def get_available_tools() -> List[MCPTool]:
         """Return list of available MCP tools."""
         return [
@@ -293,6 +363,32 @@ class MCPTools:
             MCPTool(
                 name="query_bounded",
                 description="Execute a bounded SELECT query with comprehensive safety controls (validation, row caps, timeout, redaction)",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "sql": {
+                            "type": "string",
+                            "description": "SQL SELECT query to execute"
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Maximum number of rows to return (default: 100, max: 1000)",
+                            "default": 100,
+                            "minimum": 1,
+                            "maximum": 1000
+                        },
+                        "enable_redaction": {
+                            "type": "boolean",
+                            "description": "Enable sensitive column redaction (default: true)",
+                            "default": True
+                        }
+                    },
+                    "required": ["sql"]
+                }
+            ),
+            MCPTool(
+                name="run_query",
+                description="Execute a bounded SELECT query and return a standardized response envelope",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -717,30 +813,30 @@ class MCPTools:
                 # Extract metrics from result if available and align success with response.ok
                 if result and hasattr(result, 'content') and result.content:
                     content = result.content[0]
-                    if isinstance(content, dict) and content.get('type') == 'text':
-                        text = content.get('text', '')
-                        # Attempt to parse JSON envelope from tool response
-                        try:
-                            payload = json.loads(text)
-                            if isinstance(payload, dict):
-                                # Align success with "ok" when present
-                                if 'ok' in payload:
-                                    metrics.success = bool(payload.get('ok', False))
-                                    if not metrics.success:
-                                        metrics.error_code = payload.get('error_code') or payload.get('code')
-                                        metrics.error_message = payload.get('error_message') or payload.get('error')
-                                # Common execution metrics from bounded query
-                                if 'row_count' in payload and isinstance(payload.get('row_count'), int):
-                                    metrics.row_count = payload['row_count']
-                                if bool(payload.get('truncated')):
-                                    metrics.truncated = True
-                        except Exception:
-                            # Fallback: extract row count heuristically from human text
-                            if 'rows' in text.lower():
-                                import re
-                                match = re.search(r'(\d+)\s+rows?', text, re.IGNORECASE)
-                                if match:
-                                    metrics.row_count = int(match.group(1))
+                    payload = None
+                    if isinstance(content, dict):
+                        if content.get('type') == 'json':
+                            payload = content.get('json')
+                        elif content.get('type') == 'text':
+                            text = content.get('text', '')
+                            try:
+                                payload = json.loads(text)
+                            except Exception:
+                                if 'rows' in text.lower():
+                                    import re
+                                    match = re.search(r'(\d+)\s+rows?', text, re.IGNORECASE)
+                                    if match:
+                                        metrics.row_count = int(match.group(1))
+                    if isinstance(payload, dict):
+                        if 'ok' in payload:
+                            metrics.success = bool(payload.get('ok', False))
+                            if not metrics.success:
+                                metrics.error_code = payload.get('error_code') or payload.get('code')
+                                metrics.error_message = payload.get('error_message') or payload.get('error')
+                        if isinstance(payload.get('row_count'), int):
+                            metrics.row_count = payload['row_count']
+                        if bool(payload.get('truncated')):
+                            metrics.truncated = True
                 
                 # Fallback: align success with isError flag when available
                 try:
@@ -785,105 +881,66 @@ class MCPTools:
     
     @staticmethod
     async def _query(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
-        """Execute a SQL query."""
-        sql = arguments.get("sql", "").strip()
-        limit = min(arguments.get("limit", 100), 1000)  # Cap at 1000 rows
-        
+        sql = (arguments.get("sql") or "").strip()
+        limit = min(arguments.get("limit", 100), 1000)
         if not sql:
-            return MCPToolResult(
-                content=[{
-                    "type": "text",
-                    "text": "SQL query is required"
-                }],
-                isError=True
-            )
-        
+            envelope = {
+                "ok": False,
+                "data": [],
+                "row_count": 0,
+                "execution_time_ms": None,
+                "truncated": False,
+                "warnings": [],
+                "error": "SQL query is required",
+                "error_info": {"type": "EMPTY_QUERY", "message": "SQL query is required"}
+            }
+            return MCPTools._wrap_envelope(envelope)
         try:
-            results = await db_manager.fetch(sql, limit=limit)
-            
-            if not results:
-                return MCPToolResult(
-                    content=[{
-                        "type": "text",
-                        "text": "Query executed successfully but returned no results."
-                    }]
-                )
-            
-            # Format results
-            result_text = f"Query Results ({len(results)} rows):\n\n"
-            
-            # Add column headers
-            if results:
-                columns = list(results[0].keys())
-                result_text += " | ".join(columns) + "\n"
-                result_text += "-" * (len(" | ".join(columns))) + "\n"
-                
-                # Add data rows
-                for row in results:
-                    row_values = [str(row.get(col, "")) for col in columns]
-                    result_text += " | ".join(row_values) + "\n"
-            
-            return MCPToolResult(
-                content=[{
-                    "type": "text",
-                    "text": result_text
-                }]
-            )
-            
-        except Exception as e:
-            return MCPToolResult(
-                content=[{
-                    "type": "text",
-                    "text": f"Query execution failed: {str(e)}"
-                }],
-                isError=True
-            )
+            rows = await db_manager.fetch(sql, limit=limit)
+            safe_rows = [MCPTools._make_json_safe(row) for row in (rows or [])]
+            columns = list(safe_rows[0].keys()) if safe_rows else []
+            payload = {
+                "ok": True,
+                "rows": safe_rows,
+                "columns": columns,
+                "row_count": len(safe_rows),
+                "execution_time_ms": None,
+                "truncated": False
+            }
+            envelope = MCPTools._envelope_from_payload(payload)
+            return MCPTools._wrap_envelope(envelope)
+        except Exception as exc:
+            payload = {
+                "ok": False,
+                "rows": [],
+                "row_count": 0,
+                "execution_time_ms": None,
+                "truncated": False,
+                "error_code": "QUERY_ERROR",
+                "error_message": str(exc)
+            }
+            envelope = MCPTools._envelope_from_payload(payload)
+            return MCPTools._wrap_envelope(envelope)
     
     @staticmethod
-    async def _query_bounded(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
-        """
-        Execute a bounded SQL query with comprehensive safety controls.
-        
-        This is the production-ready query tool that provides:
-        - Query validation (SELECT-only, single statement)
-        - Row cap injection (LIMIT/TOP)
-        - Timeout enforcement
-        - Column redaction
-        - Structured error responses
-        """
-        sql = arguments.get("sql", "").strip()
-        limit = arguments.get("limit", 100)
+    async def _run_query(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        sql = (arguments.get("sql") or "").strip()
+        limit = arguments.get("limit")
         enable_redaction = arguments.get("enable_redaction", True)
-        
         if not sql:
-            return MCPToolResult(
-                content=[{
-                    "type": "text",
-                    "text": json.dumps({
-                        "ok": False,
-                        "error_code": "EMPTY_QUERY",
-                        "error_message": "SQL query is required"
-                    }, cls=DecimalEncoder)
-                }],
-                isError=True
-            )
-        
+            envelope = {
+                "ok": False,
+                "data": [],
+                "row_count": 0,
+                "execution_time_ms": None,
+                "truncated": False,
+                "warnings": [],
+                "error": "SQL query is required",
+                "error_info": {"type": "EMPTY_QUERY", "message": "SQL query is required"}
+            }
+            return MCPTools._wrap_envelope(envelope)
         try:
-            # Log the incoming SQL query for monitoring
-            logger.info(f"🔍 QUERY_BOUNDED TOOL CALLED")
-            logger.info(f"📝 Original SQL Query: {sql}")
-            logger.info(f"📊 Requested limit: {limit}, Redaction: {enable_redaction}")
-            
-            # Diagnostic check for incomplete queries
-            sql_stripped = sql.strip()
-            if len(sql_stripped) <= 10:
-                logger.warning(f"🚨 POTENTIAL INCOMPLETE QUERY: Very short SQL detected ({len(sql_stripped)} chars)")
-                logger.warning(f"📋 This may indicate an issue in the calling agent workflow")
-            elif sql_stripped.upper() in ['SELECT', 'SELECT DISTINCT']:
-                logger.error(f"🚨 INCOMPLETE QUERY CONFIRMED: SQL is just '{sql_stripped}'")
-                logger.error(f"📋 Agent workflow is sending incomplete queries - investigate SQL generation")
-            
-            # Execute bounded query
+            logger.info("run_query start")
             response = await execute_bounded_query(
                 query=sql,
                 db_adapter=db_manager,
@@ -893,112 +950,27 @@ class MCPTools:
                 requested_limit=limit,
                 enable_redaction=enable_redaction
             )
-            
-            # Convert response to JSON and ensure it's JSON-safe (handles Decimals, datetime, etc.)
-            response_dict = response.to_dict()
-            response_dict = MCPTools._make_json_safe(response_dict)
-            
-            # Format as human-readable text + JSON
-            if response.ok:
-                # Log query results for debugging/monitoring
-                logger.info(f"✅ QUERY EXECUTED SUCCESSFULLY")
-                logger.info(f"📊 Results: {response.row_count} rows, {response.execution_time_ms}ms execution time")
-                if response.truncated:
-                    applied_limit = response.metadata.get('applied_limit') if response.metadata else None
-                    logger.info(f"⚠️ Results truncated to {applied_limit} rows")
-                if response.redacted_columns:
-                    logger.info(f"🔒 Redacted {len(response.redacted_columns)} sensitive columns")
-
-                # Log sample of results (truncated for log readability)
-                if response.rows and len(response.rows) > 0:
-                    sample_size = min(3, len(response.rows))  # Log first 3 rows max
-                    logger.info(f"📋 Sample results ({sample_size}/{len(response.rows)} rows):")
-                    for i, row in enumerate(response.rows[:sample_size]):
-                        # Create a truncated version for logging
-                        safe_row = MCPTools._make_json_safe(row) if row else {}
-                        # Truncate long values in log
-                        truncated_row = {}
-                        for k, v in safe_row.items():
-                            if isinstance(v, str) and len(v) > 50:
-                                truncated_row[k] = v[:47] + "..."
-                            else:
-                                truncated_row[k] = v
-                        logger.info(f"   Row {i+1}: {json.dumps(truncated_row, cls=DecimalEncoder)}")
-                elif response.row_count == 0:
-                    logger.info(f"📋 No rows returned (empty result set)")
-
-                result_text = f"✅ Query executed successfully\n\n"
-                result_text += f"Rows returned: {response.row_count}\n"
-                result_text += f"Execution time: {response.execution_time_ms}ms\n"
-
-                if response.truncated:
-                    applied_limit = response.metadata.get('applied_limit') if response.metadata else None
-                    result_text += f"⚠️ Results truncated (limit: {applied_limit})\n"
-
-                if response.redacted_columns:
-                    result_text += f"🔒 Redacted columns: {', '.join(response.redacted_columns)}\n"
-
-                columns_text = ', '.join(response.columns) if response.columns else "(no columns)"
-                result_text += f"\nColumns: {columns_text}\n\n"
-                
-                # Add sample rows (first 5)
-                if response.rows:
-                    result_text += "Sample rows:\n"
-                    for i, row in enumerate(response.rows[:5]):
-                        # Ensure each row is JSON-safe
-                        safe_row = MCPTools._make_json_safe(row) if row else {}
-                        result_text += f"  Row {i+1}: {json.dumps(safe_row, cls=DecimalEncoder)}\n"
-                    
-                    if len(response.rows) > 5:
-                        result_text += f"  ... and {len(response.rows) - 5} more rows\n"
-                
-                # Ensure response_dict is fully JSON-safe one more time before final dump
-                response_dict = MCPTools._make_json_safe(response_dict)
-                result_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
-                
-                return MCPToolResult(
-                    content=[{
-                        "type": "text",
-                        "text": result_text
-                    }],
-                    isError=False
-                )
-            else:
-                # Log query failure
-                logger.error(f"❌ QUERY FAILED")
-                logger.error(f"📊 Error: {response.error_code} - {response.error_message}")
-                logger.error(f"⏱️ Execution time: {response.execution_time_ms}ms")
-
-                # Error response
-                error_text = f"❌ Query failed\n\n"
-                error_text += f"Error code: {response.error_code}\n"
-                error_text += f"Error message: {response.error_message}\n"
-                error_text += f"Execution time: {response.execution_time_ms}ms\n"
-                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
-                
-                return MCPToolResult(
-                    content=[{
-                        "type": "text",
-                        "text": error_text
-                    }],
-                    isError=True
-                )
-                
-        except Exception as e:
-            import traceback
-            logger.error(f"Bounded query execution failed: {e}")
-            logger.error(f"Traceback: {traceback.format_exc()}")
-            return MCPToolResult(
-                content=[{
-                    "type": "text",
-                    "text": json.dumps({
-                        "ok": False,
-                        "error_code": "INTERNAL_ERROR",
-                        "error_message": f"Internal error: {str(e)}"
-                    }, cls=DecimalEncoder)
-                }],
-                isError=True
-            )
+            payload = response.to_dict()
+            payload["requested_limit"] = limit
+            envelope = MCPTools._envelope_from_payload(payload)
+            return MCPTools._wrap_envelope(envelope)
+        except Exception as exc:
+            logger.error("run_query failure: %s", exc, exc_info=True)
+            payload = {
+                "ok": False,
+                "rows": [],
+                "row_count": 0,
+                "execution_time_ms": None,
+                "truncated": False,
+                "error_code": "INTERNAL_ERROR",
+                "error_message": str(exc)
+            }
+            envelope = MCPTools._envelope_from_payload(payload)
+            return MCPTools._wrap_envelope(envelope)
+    
+    @staticmethod
+    async def _query_bounded(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
+        return await MCPTools._run_query(arguments, db_manager)
     
     @staticmethod
     async def _get_table_info(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
@@ -1224,44 +1196,90 @@ class MCPTools:
                 }],
                 isError=True
             )
-    
+
     @staticmethod
     async def _search_tables(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
         """Search tables by keyword (Phase 4) - Scout Mode aware with semantic ranking."""
-        query = arguments.get("query", "").strip()
+        query = (arguments.get("query") or "").strip()
         page = arguments.get("page", 1)
         page_size = arguments.get("page_size", 25)
         intent_data = arguments.get("intent_data")  # Extract intent data for semantic ranking
+
+        # 🔒 Early guard: empty or missing query should not trigger heavy discovery / catalog scans
+        if not query:
+            error_response = {
+                "ok": False,
+                "data": [],
+                "row_count": 0,
+                "execution_time_ms": None,
+                "truncated": False,
+                "warnings": [],
+                "error": "Search query is required",
+                "error_code": "EMPTY_QUERY",
+            }
+            error_text = (
+                "❌ search_tables failed\n\n"
+                f"Error: {error_response['error']}\n"
+                f"Error code: {error_response['error_code']}\n"
+                f"\n📊 Full response (JSON):\n"
+                f"{json.dumps(error_response, indent=2, cls=DecimalEncoder)}"
+            )
+            return MCPToolResult(
+                content=[{"type": "text", "text": error_text}],
+                isError=True,
+            )
 
         try:
             # Phase 1: Try Scout catalog first for instant results with NEW consolidated semantic search
             scout_runner = _get_scout_runner(db_manager)
             if scout_runner and scout_runner.is_ready():
                 logger.info(f"🔍 Using ScoutRunner.search() for '{query}' with intent-aware ranking")
-
                 # Use the NEW semantic search method from consolidated ScoutRunner
                 search_results = scout_runner.search(
                     query=query,
                     top_k=page_size,
                     intent_data=intent_data
                 )
-                
+
                 if search_results:
                     # Format results as MCP response
                     formatted_text = f"🔍 Search Results for '{query}'\n\n"
                     formatted_text += f"Total matches: {len(search_results)}\n\n"
-                    
+
                     for i, result in enumerate(search_results, 1):
                         formatted_text += f"{i}. {result['full_name']}\n"
-                        formatted_text += f"   Type: {result['type']}, Rows: {result['estimated_rows']}, Cols: {result['column_count']}\n"
-                        formatted_text += f"   Score: {result['relevance_score']:.3f}, Reasons: {', '.join(result['reasons'])}\n\n"
-                    
+                        formatted_text += (
+                            f"   Type: {result['type']}, "
+                            f"Rows: {result['estimated_rows']}, "
+                            f"Cols: {result['column_count']}\n"
+                        )
+                        formatted_text += (
+                            f"   Score: {result['relevance_score']:.3f}, "
+                            f"Reasons: {', '.join(result['reasons'])}\n\n"
+                        )
+
                     # Return both human-readable and JSON
-                    formatted_text += f"\n📊 Full response (JSON):\n{json.dumps({'ok': True, 'data': {'results': search_results}, 'page_info': {'page': page, 'page_size': page_size, 'total_items': len(search_results)}, 'execution_time_ms': 0, 'cached': True, 'source': 'scout_runner'}, indent=2)}"
-                    
+                    formatted_text += "\n📊 Full response (JSON):\n"
+                    formatted_text += json.dumps(
+                        {
+                            "ok": True,
+                            "data": {"results": search_results},
+                            "page_info": {
+                                "page": page,
+                                "page_size": page_size,
+                                "total_items": len(search_results),
+                            },
+                            "execution_time_ms": 0,
+                            "cached": True,
+                            "source": "scout_runner",
+                        },
+                        indent=2,
+                        cls=DecimalEncoder,
+                    )
+
                     return MCPToolResult(
                         content=[{"type": "text", "text": formatted_text}],
-                        isError=False
+                        isError=False,
                     )
                 else:
                     logger.warning(f"ScoutRunner.search() returned no results for '{query}'")
@@ -1272,75 +1290,90 @@ class MCPTools:
                 db_adapter=db_manager,
                 query=query,
                 page=page,
-                page_size=page_size
+                page_size=page_size,
             )
-            
+
             response_dict = response.to_dict()
             response_dict = MCPTools._make_json_safe(response_dict)
-            
+
             if response.ok:
                 # Format human-readable text - with defensive checks
                 if not isinstance(response_dict, dict) or "data" not in response_dict:
-                    logger.error(f"search_tables: response structure invalid")
+                    logger.error("search_tables: response structure invalid")
                     return MCPToolResult(
                         content=[{
                             "type": "text",
-                            "text": "Internal error: Response structure corrupted"
+                            "text": "Internal error: Response structure corrupted",
                         }],
-                        isError=True
+                        isError=True,
                     )
-                
+
                 data = response_dict["data"]
                 page_info = response_dict.get("page_info", {})
-                
-                result_text = f"🔍 Search Results for '{query}' (Page {page_info.get('page', 1)} of {page_info.get('total_pages', 1)})\n\n"
+
+                result_text = (
+                    f"🔍 Search Results for '{query}' "
+                    f"(Page {page_info.get('page', 1)} of {page_info.get('total_pages', 1)})\n\n"
+                )
                 result_text += f"Total matches: {page_info.get('total_items', 0)}\n\n"
-                
+
                 for result in data.get("results", []):
-                    result_text += f"• {result['full_name']} ({result['type']}) - Score: {result['relevance_score']}\n"
-                    result_text += f"  Columns: {result['column_count']}, Rows: ~{result['estimated_rows']:,}\n"
-                    if result.get('matched_columns'):
-                        result_text += f"  Matched columns: {', '.join(result['matched_columns'])}\n"
+                    result_text += (
+                        f"• {result['full_name']} ({result['type']}) "
+                        f"- Score: {result['relevance_score']}\n"
+                    )
+                    result_text += (
+                        f"  Columns: {result['column_count']}, "
+                        f"Rows: ~{result['estimated_rows']:,}\n"
+                    )
+                    if result.get("matched_columns"):
+                        result_text += (
+                            "  Matched columns: "
+                            f"{', '.join(result['matched_columns'])}\n"
+                        )
                     result_text += "\n"
-                
+
                 if page_info.get("has_next"):
-                    result_text += f"➡️ More results available (use page={page_info.get('page', 1) + 1})\n"
-                
+                    result_text += (
+                        f"➡️ More results available "
+                        f"(use page={page_info.get('page', 1) + 1})\n"
+                    )
+
                 result_text += f"\n⏱️ Execution time: {response.execution_time_ms:.2f}ms"
                 if response.cached:
                     result_text += " (cached)"
-                
-                result_text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
-                
+
+                result_text += "\n\n📊 Full response (JSON):\n"
+                result_text += json.dumps(
+                    response_dict, indent=2, cls=DecimalEncoder
+                )
+
                 return MCPToolResult(
-                    content=[{
-                        "type": "text",
-                        "text": result_text
-                    }],
-                    isError=False
+                    content=[{"type": "text", "text": result_text}],
+                    isError=False,
                 )
             else:
-                error_text = f"❌ search_tables failed\n\n"
+                error_text = "❌ search_tables failed\n\n"
                 error_text += f"Error: {response.error}\n"
                 error_text += f"Error code: {response.error_code}\n"
-                error_text += f"\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
-                
-                return MCPToolResult(
-                    content=[{
-                        "type": "text",
-                        "text": error_text
-                    }],
-                    isError=True
+                error_text += "\n📊 Full response (JSON):\n"
+                error_text += json.dumps(
+                    response_dict, indent=2, cls=DecimalEncoder
                 )
-                
+
+                return MCPToolResult(
+                    content=[{"type": "text", "text": error_text}],
+                    isError=True,
+                )
+
         except Exception as e:
             logger.error(f"search_tables failed: {e}")
             return MCPToolResult(
                 content=[{
                     "type": "text",
-                    "text": f"Internal error: {str(e)}"
+                    "text": f"Internal error: {str(e)}",
                 }],
-                isError=True
+                isError=True,
             )
     
     @staticmethod

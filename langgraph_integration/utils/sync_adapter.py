@@ -39,8 +39,23 @@ class SyncMCPClient:
     def list_relations(self, table_name: str) -> List[Dict[str, Any]]:
         return run_async(self._tool.list_relations(table_name))
 
-    def query(self, sql: str) -> List[Dict[str, Any]]:
-        return run_async(self._tool.query(sql))
+    def query(self, sql: str, limit: Optional[int] = None) -> tuple[List[str], List[List[Any]]]:
+        envelope = run_async(self._tool.query(sql, limit))
+        if not isinstance(envelope, dict):
+            return [], []
+        columns = envelope.get("columns") or []
+        data = envelope.get("data") or []
+        if not columns and isinstance(data, list) and data and isinstance(data[0], dict):
+            columns = list(data[0].keys())
+        columns_list = [str(c) for c in columns] if isinstance(columns, list) else []
+        rows_output: List[List[Any]] = []
+        if isinstance(data, list):
+            for row in data:
+                if isinstance(row, dict):
+                    rows_output.append([row.get(col) for col in columns_list])
+                elif isinstance(row, list):
+                    rows_output.append(row)
+        return columns_list, rows_output
 
     def query_bounded(
         self,

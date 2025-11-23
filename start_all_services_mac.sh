@@ -24,8 +24,9 @@ WHITE='\033[0;37m'
 NC='\033[0m' # No Color
 
 # Project root directory
-PROJECT_ROOT="/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code_cursor/proactive-context-learning/"
+PROJECT_ROOT="/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/"
 cd "$PROJECT_ROOT"
+export PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH}"
 
 # Log file for services
 LOG_DIR="$PROJECT_ROOT/logs"

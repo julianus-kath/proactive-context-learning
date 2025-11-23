@@ -26,6 +26,7 @@ import logging
 import json
 import os
 import asyncio
+import uuid
 from typing import Dict, Any, List, Optional
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
@@ -583,6 +584,8 @@ class QueryOrchestrator:
             return state
 
         logger.info("🧠 [PARSE_INTENT] 🚀 NODE CALLED - Starting intent parsing")
+        if not state.get("run_id"):
+            state = {**state, "run_id": str(uuid.uuid4())}
         debug_logger.agent_entry("parse_intent", dict(state))
         before_state = dict(state)
 
@@ -1674,24 +1677,21 @@ class QueryOrchestrator:
             sql = f"SELECT COUNT(*) AS c FROM {t}"
             try:
                 result = await self.mcp.query_bounded(sql, max_rows=1, timeout_ms=5000)
-                if isinstance(result, list) and result and isinstance(result[0], dict):
-                    # Extract JSON envelope if present
-                    import json
-                    text = result[0].get("text", "{}")
-                    payload = json.loads(text) if isinstance(text, str) and text.strip().startswith("{") else {}
-                    data = payload.get("data") or []
+                if isinstance(result, dict) and result.get("ok"):
+                    data = result.get("data") or []
                     if isinstance(data, list) and data:
                         row0 = data[0]
-                        c = 0
                         if isinstance(row0, dict):
-                            # pick first value
                             try:
-                                c = int(list(row0.values())[0])
+                                counts[t] = int(next(iter(row0.values())))
+                                continue
                             except Exception:
-                                c = 0
-                        counts[t] = c
+                                counts[t] = counts.get(t, 0)
+                                continue
+                    row_count = result.get("row_count")
+                    if isinstance(row_count, (int, float)):
+                        counts[t] = int(row_count)
                         continue
-                # Fallback if not in envelope shape
                 counts[t] = counts.get(t, 0)
             except Exception:
                 counts[t] = counts.get(t, 0)

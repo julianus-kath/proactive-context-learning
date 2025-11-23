@@ -1593,20 +1593,17 @@ class DiscoveryAgent:
             logger.debug(f"Row probe error for {table}: {exc}")
             return 0
 
-        if not result:
+        if not isinstance(result, dict) or not result.get("ok"):
             return 0
-        text = result[0].get("text", "")
-        try:
-            data = _extract_json_from_text(text)
-            if isinstance(data, dict):
-                row_count = data.get("row_count")
-                if isinstance(row_count, (int, float)):
-                    return int(row_count)
-                rows = data.get("rows")
-                if isinstance(rows, list) and rows:
-                    return len(rows)
-        except Exception as exc:
-            logger.debug(f"Unable to parse row probe result for {table}: {exc}")
+
+        row_count = result.get("row_count")
+        if isinstance(row_count, (int, float)) and row_count > 0:
+            return int(row_count)
+
+        rows = result.get("data")
+        if isinstance(rows, list) and rows:
+            return len(rows)
+
         return 0
 
     def _qualify_table_name(self, table: str) -> str:
@@ -1661,9 +1658,12 @@ class DiscoveryAgent:
         anchored to what the intent parser produced so we don't drift into unrelated
         domains (payroll tables, admin metadata, etc.).
         """
+        discovery_query = intent.get("discovery_query")
+        if discovery_query:
+            logger.info(f"📌 Using discovery query string: {discovery_query}")
+            return [discovery_query]
         base = [k for k in (intent.get("keywords_for_discovery") or []) if k]
         if not base and user_input:
-            # As a last resort, fall back to the raw query string once (no tokenisation).
             base = [user_input]
         logger.info(f"📌 Using intent keywords (exact): {base}")
         return base

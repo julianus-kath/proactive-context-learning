@@ -343,54 +343,39 @@ class JoinPlanAndSQLAgent:
             # Fallback: issue a TOP 1 probe and parse columns from the MCP JSON envelope
             probe_sql = f"SELECT TOP 1 * FROM {table_name}"
             result = await self.mcp.query_bounded(probe_sql, max_rows=1, timeout_ms=5000)
-            if not result or not isinstance(result, list) or not isinstance(result[0], dict):
-                return []
-            text = result[0].get("text", "")
-            if not isinstance(text, str):
-                return []
-            brace_idx = text.rfind('{')
-            if brace_idx < 0:
-                # Try sys catalog as a final fallback (works for tables and views)
-                try:
-                    # Split schema and object
-                    full = (table_name or "").strip()
-                    schema = None; obj = None
-                    if '.' in full:
-                        parts = full.split('.')
-                        schema = parts[-2]; obj = parts[-1]
-                    else:
-                        schema = 'dbo'; obj = full
-                    sys_sql = (
-                        "SELECT c.name AS col_name "
-                        "FROM sys.columns c "
-                        "JOIN sys.objects o ON c.object_id = o.object_id "
-                        "JOIN sys.schemas s ON o.schema_id = s.schema_id "
-                        f"WHERE s.name = '{schema}' AND o.name = '{obj}'"
-                    )
-                    sres = await self.mcp.query_bounded(sys_sql, max_rows=500, timeout_ms=5000)
-                    if isinstance(sres, list) and sres and isinstance(sres[0], dict):
-                        stext = sres[0].get("text", "")
-                        if isinstance(stext, str):
-                            sb = stext.rfind('{')
-                            if sb >= 0:
-                                import json as _json
-                                pdata = _json.loads(stext[sb:])
-                                rows = pdata.get("rows") or []
-                                if isinstance(rows, list) and rows and isinstance(rows[0], dict):
-                                    cols = [r.get("col_name") for r in rows if r.get("col_name")]
-                                    if cols:
-                                        return cols
-                except Exception:
-                    pass
-                return []
-            import json
-            data = json.loads(text[brace_idx:])
-            cols = data.get("columns") or []
-            if cols:
-                return cols
-            rows = data.get("rows") or []
-            if rows and isinstance(rows[0], dict):
-                return list(rows[0].keys())
+            if isinstance(result, dict) and result.get("ok"):
+                columns = result.get("columns") or []
+                if isinstance(columns, list) and columns:
+                    return [str(c) for c in columns if c]
+                rows = result.get("data") or []
+                if isinstance(rows, list) and rows and isinstance(rows[0], dict):
+                    return list(rows[0].keys())
+            # Try sys catalog as a final fallback (works for tables and views)
+            try:
+                full = (table_name or "").strip()
+                if '.' in full:
+                    parts = full.split('.')
+                    schema = parts[-2]
+                    obj = parts[-1]
+                else:
+                    schema = 'dbo'
+                    obj = full
+                sys_sql = (
+                    "SELECT c.name AS col_name "
+                    "FROM sys.columns c "
+                    "JOIN sys.objects o ON c.object_id = o.object_id "
+                    "JOIN sys.schemas s ON o.schema_id = s.schema_id "
+                    f"WHERE s.name = '{schema}' AND o.name = '{obj}'"
+                )
+                sres = await self.mcp.query_bounded(sys_sql, max_rows=500, timeout_ms=5000)
+                if isinstance(sres, dict) and sres.get("ok"):
+                    rows = sres.get("data") or []
+                    if isinstance(rows, list) and rows and isinstance(rows[0], dict):
+                        cols = [r.get("col_name") for r in rows if r.get("col_name")]
+                        if cols:
+                            return [str(c) for c in cols]
+            except Exception:
+                pass
             return []
         except Exception:
             return []

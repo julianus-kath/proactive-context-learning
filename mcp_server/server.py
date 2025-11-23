@@ -215,6 +215,8 @@ async def mcp_endpoint(
                 result = await MCPTools._query(tool_args, db_manager)
             elif tool_name == "query_bounded":
                 result = await MCPTools._query_bounded(tool_args, db_manager)
+            elif tool_name == "run_query":
+                result = await MCPTools._run_query(tool_args, db_manager)
             elif tool_name == "get_column_index":
                 result = await MCPTools._get_column_index(tool_args, db_manager)
             elif tool_name == "list_relations":
