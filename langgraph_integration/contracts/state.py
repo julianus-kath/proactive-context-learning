@@ -46,6 +46,18 @@ class ParsedIntent(TypedDict, total=False):
     
     # Confidence score [0.0..1.0] that intent parsing is correct
     confidence: float
+    
+    # Analytic template classification (e.g., "COUNT_ENTITY", "TOP_K_BY_METRIC", "PERIOD_COMPARISON")
+    # Enables specialized SQL generation for common query archetypes
+    analytic_template: Optional[str]
+    
+    # Required action for SQL generation (e.g., "sum_with_period", "topk_sum_by_customer")
+    # Aligned with JoinPlanAndSQLAgent routing
+    required_action: Optional[str]
+    
+    # Template-specific parameters (e.g., {"metric": "profit_margin", "top_k": 10, "group_by": "product"})
+    # Populated when analytic_template is set
+    template_params: Optional[Dict[str, Any]]
 
 
 class BaseState(TypedDict, total=False):
@@ -91,6 +103,12 @@ class BaseState(TypedDict, total=False):
     retry_count: int  # Number of retry attempts
     session_described_tables: Optional[Dict[str, Any]]  # Cache of described table metadata
     health_status: Dict[str, Any]  # {ok, db_connected, tables_count, views_count, ...}
+
+    # 🆕 PHASE 10b: Retry & candidate tracking (prevent infinite loops)
+    tried_candidate_tables: List[str]  # Tables we've already attempted and failed on
+    retry_attempt_count: int  # Number of retries on current candidate set
+    max_retries_per_candidate_set: int  # Circuit breaker threshold (e.g., 2)
+    skip_tables: List[str]  # Tables to skip in discovery filter (passed to subgraph)
 
     # Deprecated/legacy (for backward compat during migration)
     schema: Optional[str]  # Full schema (deprecated; use schema_snippet)

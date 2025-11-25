@@ -212,12 +212,19 @@ class JoinPlanAndSQLAgent:
 
         intent = state.get("intent", {}) or {}
         fk_hints = state.get("fk_hints", []) or []
-        role_hints_payload = state.get("discovery_role_hints") or {}
+        raw_role_hints = state.get("discovery_role_hints") or {}
+
+        # Normalize payload: MCP sometimes returns fact_candidates/dimensions as stringified dicts.
+        try:
+            normalized_role_hints = self._normalize_role_hints_payload(raw_role_hints)
+        except Exception as exc:
+            logger.warning(f"⚠️ Failed to normalize discovery role hints payload: {exc}")
+            normalized_role_hints = raw_role_hints if isinstance(raw_role_hints, dict) else {}
 
         try:
-            role_hints = DiscoveryRoleHints.model_validate(role_hints_payload)
+            role_hints = DiscoveryRoleHints.model_validate(normalized_role_hints)
         except Exception as exc:
-            logger.warning(f"⚠️ Unable to parse discovery role hints: {exc}")
+            logger.warning(f"⚠️ Unable to parse discovery role hints after normalization: {exc}")
             role_hints = DiscoveryRoleHints()
 
         fact_candidate = self._select_fact_candidate(role_hints, intent)
@@ -408,6 +415,22 @@ class JoinPlanAndSQLAgent:
             intent = state.get("intent", {})
             metrics = intent.get("metrics", [])
             required_action = (intent.get("required_action") or "").lower()
+
+            # Route based on analytic template if present
+            analytic_template = intent.get("analytic_template")
+            if analytic_template:
+                logger.info(f"🎯 [TEMPLATE] Routing to template generator: {analytic_template}")
+                if analytic_template == "COUNT_ENTITY":
+                    return await self._generate_count_entity_sql(state)
+                elif analytic_template == "TOP_K_BY_METRIC":
+                    return await self._generate_top_k_by_metric_sql(state)
+                elif analytic_template == "PERIOD_COMPARISON":
+                    return await self._generate_period_comparison_sql(state)
+
+            # Handle ranked_metrics (derived metrics like profit_margin with ranking)
+            if required_action == "ranked_metrics":
+                logger.info(f"🔨 [SQL_GEN] Routing to ranked metrics generator (derived metrics with ranking)")
+                return await self._generate_ranked_metrics_sql(state)
 
             template_actions = {
                 "topk_sum_by_customer",
@@ -1071,19 +1094,19 @@ class JoinPlanAndSQLAgent:
     def _extract_table_names_from_sql(self, sql: str) -> List[str]:
         """
         Extract all table names referenced in a SQL query.
-        
+
         Finds tables in FROM and JOIN clauses.
         Handles [schema].[table] and schema.table formats.
         """
         import re
         table_names = []
-        
+
         try:
             # Pattern to match table names in FROM and JOIN clauses
             # Matches: FROM|JOIN schema.table or schema.[table] or [schema].[table]
             pattern = r'(?:FROM|JOIN)\s+(?:\[?[\w_]+\]?\.)?(?:\[?[\w_]+\]?)'
             matches = re.finditer(pattern, sql, re.IGNORECASE)
-            
+
             for match in matches:
                 text = match.group(0)
                 # Extract the table part after FROM/JOIN and any whitespace
@@ -1094,9 +1117,9 @@ class JoinPlanAndSQLAgent:
                     table_names.append(table_part)
         except Exception as e:
             logger.warning(f"Failed to extract table names from SQL: {e}")
-        
+
         return table_names
-    
+
     def _extract_cte_names(self, sql: str, select_idx: int) -> Set[str]:
         """
         Extract names of CTEs declared before the main SELECT statement.
@@ -1114,11 +1137,11 @@ class JoinPlanAndSQLAgent:
             if normalized:
                 names.add(normalized)
         return names
-    
+
     def _normalize_table_name(self, table_name: str) -> str:
         """
         Normalize a table name for comparison.
-        
+
         Handles:
         - schema.table vs just table
         - [schema].[table] vs schema.table
@@ -1133,12 +1156,12 @@ class JoinPlanAndSQLAgent:
     async def _validate_sql_node(self, state: BaseState) -> BaseState:
         """
         Perform comprehensive SQL syntax validation with re-planning support.
-        
+
         CRITICAL NEW FEATURE (Phase 11): Table name validation against discovered tables.
-        
+
         Enhanced validation checks:
         - Starts with SELECT
-        - Has FROM clause  
+        - Has FROM clause
         - Has column list (not just "SELECT")
         - Valid MSSQL keywords
         - Balanced parentheses/quotes
@@ -1214,17 +1237,17 @@ class JoinPlanAndSQLAgent:
 
             # 🚨🚨🚨 PHASE 11 CRITICAL FIX: Validate all table names exist in discovery results
             logger.info("🔍 Phase 11: Validating table names against discovered tables...")
-            
+
             sql_tables = self._extract_table_names_from_sql(sql)
             logger.info(f"📊 Tables referenced in SQL: {sql_tables}")
-            
+
             # Get discovered tables from state
             discovered_tables = set()
-            
+
             # Add relevant_tables
             for t in (state.get("relevant_tables") or []):
                 discovered_tables.add(self._normalize_table_name(t))
-            
+
             # Add candidate_views
             for cv in (state.get("candidate_views") or []):
                 if isinstance(cv, str):
@@ -1233,9 +1256,9 @@ class JoinPlanAndSQLAgent:
                     name = cv.get("table_name") or cv.get("name") or cv.get("full_name")
                     if name:
                         discovered_tables.add(self._normalize_table_name(name))
-            
+
             logger.info(f"✅ Discovered tables pool: {discovered_tables}")
-            
+
             # Validate each SQL table is in the discovered set
             unknown_tables = []
             for sql_table in sql_tables:
@@ -1244,18 +1267,18 @@ class JoinPlanAndSQLAgent:
                 if normalized in cte_names:
                     logger.info(f"  ✅ Table '{sql_table}' resolved via CTE definition")
                     continue
-                
+
                 # Check exact match
                 if normalized in discovered_tables:
                     logger.info(f"  ✅ Table '{sql_table}' found in discovered tables")
                     continue
-                
+
                 # Check partial match (just the table name without schema)
                 if '.' in normalized:
                     table_only = normalized.split('.')[-1]
                 else:
                     table_only = normalized
-                
+
                 # Look for partial matches
                 found = False
                 for discovered in discovered_tables:
@@ -1263,11 +1286,11 @@ class JoinPlanAndSQLAgent:
                         logger.info(f"  ✅ Table '{sql_table}' matched as '{discovered}'")
                         found = True
                         break
-                
+
                 if not found:
                     unknown_tables.append(sql_table)
                     logger.warning(f"  ❌ Table '{sql_table}' NOT FOUND in discovered tables")
-            
+
             if unknown_tables:
                 raise ValueError(
                     f"SQL references unknown tables: {', '.join(unknown_tables)}. "
@@ -2383,6 +2406,250 @@ class JoinPlanAndSQLAgent:
         sql += f" GROUP BY {group_col} ORDER BY total_revenue DESC"
         return sql
 
+    async def _generate_ranked_metrics_sql(self, state: BaseState) -> BaseState:
+        """
+        Generate SQL for ranked derived metrics (profit_margin, ROI, contribution_margin, etc.).
+
+        For profit_margin, builds a query that:
+        - Joins price and cost tables
+        - Aggregates by product
+        - Calculates (price - cost) / price
+        - Orders by the metric descending
+        - Limits to top_k
+        """
+        logger.info("🔨 [RANKED_METRICS] Generating SQL for ranked derived metrics")
+
+        intent = state.get("intent", {}) or {}
+        metrics = [m.lower() for m in (intent.get("metrics") or [])]
+        group_by_hint = (intent.get("group_by") or "").lower()
+        top_k = intent.get("top_k") or 10
+        join_plan = state.get("join_plan") or {}
+        relevant_tables = state.get("relevant_tables", [])
+        column_index = state.get("column_index", {}) or {}
+
+        try:
+            # Detect which derived metric is requested
+            if "profit_margin" in metrics:
+                sql = self._build_profit_margin_query(
+                    join_plan, group_by_hint, top_k, relevant_tables, column_index
+                )
+            elif "roi" in metrics:
+                sql = self._build_roi_query(
+                    join_plan, group_by_hint, top_k, relevant_tables, column_index
+                )
+            elif "contribution_margin" in metrics:
+                sql = self._build_contribution_margin_query(
+                    join_plan, group_by_hint, top_k, relevant_tables, column_index
+                )
+            else:
+                logger.warning(f"⚠️ Unknown derived metric in {metrics}, falling back to simple top-k query")
+                sql = f"SELECT TOP {top_k} * FROM {join_plan.get('fact_table', relevant_tables[0])}"
+
+            logger.info(f"🔨 [RANKED_METRICS] Generated SQL: {sql}")
+            state["sql_query"] = sql
+            join_plan["required_action"] = "ranked_metrics_computed"
+            state["join_plan"] = join_plan
+            return state
+
+        except Exception as exc:
+            logger.error(f"❌ [RANKED_METRICS] Error generating ranked metrics SQL: {exc}", exc_info=True)
+            return {
+                **state,
+                "error_info": {
+                    "type": "RANKED_METRICS_ERROR",
+                    "message": f"Failed to generate ranked metrics query: {str(exc)}"
+                }
+            }
+
+    def _build_profit_margin_query(self, join_plan: Dict[str, Any], group_by_hint: str, top_k: int,
+                                   relevant_tables: List[str], column_index: Dict[str, List[str]]) -> str:
+        """
+        Build SQL for profit margin calculation: (price - cost) / price
+        Assumes price comes from KHKArtikelKunden and cost from KHKArtikelbewertungMEKHistorie
+        """
+        price_table = None
+        cost_table = None
+        price_col = None
+        cost_col = None
+        product_key = "AuspraegungID"
+        product_col = "Artikelnummer"
+
+        for table in relevant_tables:
+            table_lower = table.lower()
+            cols = column_index.get(table, []) or []
+            cols_lower = [str(c).lower() for c in cols]
+
+            if "preis" in table_lower or "kunden" in table_lower:
+                if price_table is None:
+                    price_table = table
+                    if "einzelpreis" in cols_lower:
+                        price_col = "Einzelpreis"
+                    elif any("preis" in str(c).lower() for c in cols):
+                        price_col = next(c for c in cols if "preis" in str(c).lower())
+
+            if "bewertung" in table_lower or "ek" in table_lower:
+                if cost_table is None:
+                    cost_table = table
+                    if "mittlererek" in cols_lower:
+                        cost_col = "MittlererEK"
+                    elif any("ek" in str(c).lower() for c in cols):
+                        cost_col = next(c for c in cols if "ek" in str(c).lower())
+
+        if not price_table or not price_col:
+            price_table = join_plan.get("fact_table", relevant_tables[0])
+            price_col = "Einzelpreis"
+
+        if not cost_table or not cost_col:
+            cost_table = relevant_tables[1] if len(relevant_tables) > 1 else price_table
+            cost_col = "MittlererEK"
+
+        if price_table == cost_table:
+            sql = (
+                f"SELECT TOP {top_k}\n"
+                f"    {product_col},\n"
+                f"    AVG(CAST({price_col} AS FLOAT)) AS avg_price,\n"
+                f"    AVG(CAST({cost_col} AS FLOAT)) AS avg_cost,\n"
+                f"    CAST((AVG(CAST({price_col} AS FLOAT)) - AVG(CAST({cost_col} AS FLOAT))) / NULLIF(AVG(CAST({price_col} AS FLOAT)), 0) * 100 AS DECIMAL(10, 2)) AS profit_margin_pct\n"
+                f"FROM {price_table}\n"
+                f"WHERE {price_col} IS NOT NULL AND {cost_col} IS NOT NULL\n"
+                f"GROUP BY {product_col}\n"
+                f"ORDER BY profit_margin_pct DESC"
+            )
+        else:
+            sql = (
+                f"SELECT TOP {top_k}\n"
+                f"    p.{product_col},\n"
+                f"    AVG(CAST(p.{price_col} AS FLOAT)) AS avg_price,\n"
+                f"    AVG(CAST(c.{cost_col} AS FLOAT)) AS avg_cost,\n"
+                f"    CAST((AVG(CAST(p.{price_col} AS FLOAT)) - AVG(CAST(c.{cost_col} AS FLOAT))) / NULLIF(AVG(CAST(p.{price_col} AS FLOAT)), 0) * 100 AS DECIMAL(10, 2)) AS profit_margin_pct\n"
+                f"FROM {price_table} p\n"
+                f"INNER JOIN {cost_table} c ON p.{product_key} = c.{product_key} AND p.Artikelnummer = c.Artikelnummer AND p.Mandant = c.Mandant\n"
+                f"WHERE p.{price_col} IS NOT NULL AND c.{cost_col} IS NOT NULL\n"
+                f"GROUP BY p.{product_col}\n"
+                f"ORDER BY profit_margin_pct DESC"
+            )
+
+        return sql
+
+    def _build_roi_query(self, join_plan: Dict[str, Any], group_by_hint: str, top_k: int,
+                        relevant_tables: List[str], column_index: Dict[str, List[str]]) -> str:
+        """Build SQL for ROI calculation (simplified)"""
+        fact_table = join_plan.get("fact_table", relevant_tables[0])
+        return f"SELECT TOP {top_k} * FROM {fact_table}"
+
+    def _build_contribution_margin_query(self, join_plan: Dict[str, Any], group_by_hint: str, top_k: int,
+                                        relevant_tables: List[str], column_index: Dict[str, List[str]]) -> str:
+        """Build SQL for contribution margin calculation (simplified)"""
+        fact_table = join_plan.get("fact_table", relevant_tables[0])
+        return f"SELECT TOP {top_k} * FROM {fact_table}"
+
+    async def _generate_count_entity_sql(self, state: BaseState) -> BaseState:
+        """
+        Template generator for COUNT_ENTITY queries.
+
+        Used for questions like "How many customers do we have?"
+        """
+        intent = state.get("intent", {})
+        join_plan = state.get("join_plan", {})
+        template_params = intent.get("template_params", {})
+
+        entity = template_params.get("entity", "rows")
+        fact_table = join_plan.get("fact_table")
+
+        if not fact_table:
+            relevant_tables = state.get("relevant_tables", [])
+            fact_table = relevant_tables[0] if relevant_tables else "dbo.table"
+
+        filters = intent.get("filters", [])
+        where_conditions = self._build_where_conditions(filters) if filters else []
+        where_clause = f"WHERE {' AND '.join(where_conditions)}" if where_conditions else ""
+
+        sql = f"SELECT COUNT(DISTINCT *) AS {entity}_count\nFROM {fact_table}\n{where_clause}".strip()
+
+        state["sql_query"] = sql
+        logger.info(f"🎯 [TEMPLATE] COUNT_ENTITY SQL generated: {sql[:100]}...")
+        return state
+
+    async def _generate_top_k_by_metric_sql(self, state: BaseState) -> BaseState:
+        """
+        Template generator for TOP_K_BY_METRIC queries.
+
+        Used for questions like "Which products have the highest profit margins?"
+        """
+        intent = state.get("intent", {})
+        join_plan = state.get("join_plan", {})
+        template_params = intent.get("template_params", {})
+
+        metric = template_params.get("metric", "value")
+        group_by = template_params.get("group_by", "id")
+        top_k = template_params.get("top_k", 10)
+        order = template_params.get("order", "desc")
+
+        fact_table = join_plan.get("fact_table")
+        if not fact_table:
+            relevant_tables = state.get("relevant_tables", [])
+            fact_table = relevant_tables[0] if relevant_tables else "dbo.table"
+
+        filters = intent.get("filters", [])
+        where_conditions = self._build_where_conditions(filters) if filters else []
+        where_clause = f"WHERE {' AND '.join(where_conditions)}" if where_conditions else ""
+
+        sql = f"""SELECT TOP {top_k}
+    {group_by},
+    COUNT(*) AS record_count,
+    AVG(CAST({metric} AS FLOAT)) AS avg_{metric}
+FROM {fact_table}
+{where_clause}
+GROUP BY {group_by}
+ORDER BY avg_{metric} {order.upper()}""".strip()
+
+        state["sql_query"] = sql
+        logger.info(f"🎯 [TEMPLATE] TOP_K_BY_METRIC SQL generated: {sql[:100]}...")
+        return state
+
+    async def _generate_period_comparison_sql(self, state: BaseState) -> BaseState:
+        """
+        Template generator for PERIOD_COMPARISON queries.
+
+        Used for questions like "Compare sales in Q1 vs Q2"
+        """
+        intent = state.get("intent", {})
+        join_plan = state.get("join_plan", {})
+        template_params = intent.get("template_params", {})
+
+        metric = template_params.get("metric", "COUNT(*)")
+        group_by = template_params.get("group_by")
+        time_window = template_params.get("time_window", {})
+
+        fact_table = join_plan.get("fact_table")
+        if not fact_table:
+            relevant_tables = state.get("relevant_tables", [])
+            fact_table = relevant_tables[0] if relevant_tables else "dbo.table"
+
+        periods = template_params.get("periods", [])
+        if not periods or not time_window:
+            logger.warning("🎯 [TEMPLATE] PERIOD_COMPARISON: missing periods or time_window, falling back to generic query")
+            sql = f"SELECT TOP 1000 * FROM {fact_table}"
+        else:
+            start = time_window.get("start")
+            end = time_window.get("end")
+            where_clause = ""
+            if start and end:
+                where_clause = f"WHERE order_date >= '{start}' AND order_date <= '{end}'"
+
+            group_by_clause = f"GROUP BY {group_by}" if group_by else ""
+            sql = f"""SELECT
+    {group_by or 'COUNT(*) AS count'},
+    {metric} AS metric_value
+FROM {fact_table}
+{where_clause}
+{group_by_clause}
+ORDER BY metric_value DESC""".strip()
+
+        state["sql_query"] = sql
+        logger.info(f"🎯 [TEMPLATE] PERIOD_COMPARISON SQL generated: {sql[:100]}...")
+        return state
+
 
 # Exported function to create the agent
 async def create_join_sql_agent(
@@ -2472,12 +2739,71 @@ async def create_join_sql_agent(
 def build_join_sql_graph():
     """
     Build and return the join SQL agent graph for LangGraph Studio.
-    
+
     This is a synchronous function that can be called by langgraph dev CLI.
     All node functions remain async and will be properly awaited by LangGraph at runtime.
-    
+
     Returns:
         Compiled StateGraph for the join SQL agent
     """
     agent = JoinPlanAndSQLAgent()
     return agent.build_subgraph()
+    def _normalize_role_hints_payload(self, payload: Any) -> Dict[str, Any]:
+        """Normalize discovery_role_hints payload into structured dicts.
+
+        The MCP discovery tool sometimes returns `fact_candidates` and `dimensions`
+        as stringified Python dicts (e.g. "{'table': 'KHKVKBelege', ...}").
+        This helper converts those into real dicts so that `DiscoveryRoleHints`
+        can be parsed deterministically.
+        """
+        if not isinstance(payload, dict):
+            return {}
+
+        import ast
+
+        # Normalize fact candidates
+        raw_facts = payload.get("fact_candidates") or []
+        norm_facts: List[Dict[str, Any]] = []
+        for item in raw_facts:
+            if isinstance(item, dict):
+                norm_facts.append(item)
+            elif isinstance(item, str):
+                try:
+                    parsed = ast.literal_eval(item)
+                    if isinstance(parsed, dict):
+                        norm_facts.append(parsed)
+                    else:
+                        logger.debug("[ROLE_HINTS] Ignoring non-dict fact_candidate parsed from string: %r", parsed)
+                except Exception as exc:
+                    logger.debug("[ROLE_HINTS] Failed to parse fact_candidate string %r: %s", item, exc)
+
+        # Normalize dimensions (mapping role -> dict)
+        raw_dims = payload.get("dimensions") or {}
+        norm_dims: Dict[str, Dict[str, Any]] = {}
+        if isinstance(raw_dims, dict):
+            for key, val in raw_dims.items():
+                if isinstance(val, dict):
+                    norm_dims[key] = val
+                elif isinstance(val, str):
+                    try:
+                        parsed = ast.literal_eval(val)
+                        if isinstance(parsed, dict):
+                            norm_dims[key] = parsed
+                        else:
+                            logger.debug(
+                                "[ROLE_HINTS] Ignoring non-dict dimension parsed from string for key %s: %r",
+                                key,
+                                parsed,
+                            )
+                    except Exception as exc:
+                        logger.debug(
+                            "[ROLE_HINTS] Failed to parse dimension string for key %s: %r (%s)",
+                            key,
+                            val,
+                            exc,
+                        )
+
+        normalized = dict(payload)
+        normalized["fact_candidates"] = norm_facts
+        normalized["dimensions"] = norm_dims
+        return normalized

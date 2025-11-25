@@ -309,7 +309,8 @@ class QueryOrchestrator:
             - "schema_query": Discover tables/views and explain schema
             - "health_check": Check system health
             - "execute_direct": Execute pre-written SQL
-            - "query" (default): Full query pipeline
+            - "query" (default): Full query pipeline *TODO Default?
+            #TODO CHAT with the agent
             """
             intent = state.get("intent", {})
             operation = intent.get("operation", "query")
@@ -373,7 +374,7 @@ class QueryOrchestrator:
             }
         )
 
-        # ============= QUERY PIPELINE =============
+        # ============= QUERY PIPELINE ============= TODO Still up to date?
         # Standard query flow: discovery → join_sql → validate_sql → exec_recovery → result_validator → (conditional) answer
         def route_discovery_result(state: BaseState) -> str:
             intent = state.get("intent") or {}
@@ -403,11 +404,10 @@ class QueryOrchestrator:
         # 🆕 Phase 10a: After exec, validate result before answering
         graph.add_edge("exec_recovery", "result_validator")
         
-        # 🆕 Phase 10a: Conditional routing from result_validator based on validation outcome
+        # 🆕 Phase 10a: Conditional routing from result_validator based on validation outcome TODO explain this?
         def route_validation_result(state: BaseState) -> str:
             """
             Route based on validation result.
-            
             Retry actions:
             - accept: validation passed, proceed to answer
             - try_next_candidate: validation failed, try next discovery candidate
@@ -420,11 +420,38 @@ class QueryOrchestrator:
             
             logger.info(f"🚦 [VALIDATION_ROUTE] retry_action={retry_action}")
             
+            # 🆕 Circuit breaker: stop retrying after max attempts
+            retry_attempt = state.get("retry_attempt_count", 0)
+            max_retries = state.get("max_retries_per_candidate_set", 2)
+            
+            if retry_attempt >= max_retries:
+                logger.warning(
+                    f"🚦 [VALIDATION] Max retries exceeded "
+                    f"({retry_attempt}/{max_retries}), routing to 'answer'"
+                )
+                state.setdefault("error_info", {})
+                state["error_info"].update({
+                    "type": "MAX_RETRIES_EXCEEDED",
+                    "message": (
+                        "All discovery candidates have been tried but the query "
+                        "could not be executed successfully."
+                    ),
+                })
+                return "answer"
+            
             if retry_action == "try_next_candidate":
-                logger.info("🔄 Validation: Trying next discovery candidate")
+                state["retry_attempt_count"] = retry_attempt + 1
+                logger.info(
+                    f"🔄 Validation: Trying next candidate "
+                    f"(attempt {state['retry_attempt_count']}/{max_retries})"
+                )
                 return "discovery"
             elif retry_action in ["replan_with_aggregation", "replan_with_filter"]:
-                logger.info(f"🔄 Validation: Replanning with {retry_action}")
+                state["retry_attempt_count"] = retry_attempt + 1
+                logger.info(
+                    f"🔄 Validation: Replanning with {retry_action} "
+                    f"(attempt {state['retry_attempt_count']}/{max_retries})"
+                )
                 return "join_sql"
             elif retry_action == "ask_user":
                 logger.info("❓ Validation: Asking user for clarification")
@@ -464,7 +491,7 @@ class QueryOrchestrator:
         return compiled
 
     # Legacy-simple intent parser for tests and quick routes
-    def _simple_intent_parser(self, text: str) -> Dict[str, Any]:
+    def _simple_intent_parser(self, text: str) -> Dict[str, Any]: #TODO remove?
         t = (text or "").lower()
         intent: Dict[str, Any] = {"operation": "query", "primary_entities": [], "entities": [], "metrics": [], "filters": []}
         # Health
@@ -561,11 +588,11 @@ class QueryOrchestrator:
             debug_logger.agent_exit("index_database", before_state, dict(result_state))
             return result_state
 
-    async def _parse_intent_node(self, state: BaseState) -> BaseState:
+    async def _parse_intent_node(self, state: BaseState) -> BaseState: #TODO Why is this in the query orhcestrator?
         """
         Parse user intent using LangGraph subgraph with agentic reasoning (Phase 9.1).
 
-        🆕 Phase 9.1: IntentParserAgent is now a FULL LangGraph subgraph
+        IntentParserAgent is now a FULL LangGraph subgraph
         - Multi-step reasoning instead of single LLM call
         - Built-in error recovery and fallbacks
         - Conditional routing for ambiguous queries
@@ -729,6 +756,21 @@ class QueryOrchestrator:
         
         logger.info("🔍 [DISCOVERY] Starting DiscoveryAgent...")
         
+        # 🆕 Track retry attempts and pass skip list to discovery
+        retry_attempt = state.get("retry_attempt_count", 0)
+        max_retries = state.get("max_retries_per_candidate_set", 2)
+        tried = state.get("tried_candidate_tables", [])
+        
+        if retry_attempt > 0:
+            logger.info(
+                f"🔍 [DISCOVERY] Retry attempt #{retry_attempt}/{max_retries} "
+                f"(tried={tried})"
+            )
+        
+        # Pass the skip list to discovery so it filters out tried candidates
+        if tried:
+            state["skip_tables"] = tried
+        
         # Clear prior error context when re-entering discovery for retries
         if state.get("error_info"):
             logger.info("🔍 [DISCOVERY] Clearing previous error_info before new discovery attempt")
@@ -783,6 +825,20 @@ class QueryOrchestrator:
                 logger.info(f"🔍 [DISCOVERY]   📊 Top 3 tables: {relevant_tables[:3]}")
             else:
                 logger.warning(f"🔍 [DISCOVERY]   ⚠️  NO relevant_tables returned!")
+            
+            # 🆕 Track which candidate is being tried on this cycle
+            if relevant_tables:
+                first_table = relevant_tables[0]
+                table_name = (
+                    first_table.get("full_name")
+                    if isinstance(first_table, dict)
+                    else str(first_table)
+                )
+                tried = state.get("tried_candidate_tables", [])
+                if table_name not in tried:
+                    tried.append(table_name)
+                    state["tried_candidate_tables"] = tried
+                    logger.info(f"🔍 [DISCOVERY] Marking candidate as tried: {table_name}")
             
             # Update state with outputs
             state["relevant_tables"] = relevant_tables
@@ -1576,6 +1632,11 @@ class QueryOrchestrator:
         initial_state: Dict[str, Any] = {
             "user_input": user_input,
             "conversation_history": [],
+            # 🆕 Retry & candidate tracking (prevent infinite loops)
+            "tried_candidate_tables": [],
+            "retry_attempt_count": 0,
+            "max_retries_per_candidate_set": 2,
+            "skip_tables": [],
         }
         try:
             result = await self.ainvoke(initial_state)

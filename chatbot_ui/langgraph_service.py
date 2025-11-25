@@ -7,9 +7,10 @@ import os
 import sys
 import asyncio
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, ValidationError
 import uvicorn
 from dotenv import load_dotenv
@@ -66,16 +67,20 @@ class ConversationRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     final_response: str
+    exec_result: Optional[Dict[str, Any]] = None
+    sql_query: Optional[str] = None
+    sources: Optional[list] = None
+    error_info: Optional[Dict[str, Any]] = None
     status: str = "success"
 
 class ConversationResponse(BaseModel):
-    final_response: str = None
-    operation: str = None  # "query" or "clarify"
-    clarification: str = None
-    clarify: bool = False  # For backward compatibility
-    question: str = None   # For clarification questions
-    response: str = None   # For final responses
-    messages: list = []    # Updated conversation history
+    final_response: Optional[str] = None
+    operation: Optional[str] = None
+    clarification: Optional[str] = None
+    clarify: bool = False
+    question: Optional[str] = None
+    response: Optional[str] = None
+    messages: Optional[list] = None
     status: str = "success"
 
 class ErrorResponse(BaseModel):
@@ -135,7 +140,7 @@ async def process_query(request: QueryRequest = Body(...)):
         request: QueryRequest containing user_input and api_key
         
     Returns:
-        QueryResponse with the final_response
+        QueryResponse with the final_response and optional details
     """
     global orchestrator
     
@@ -153,53 +158,87 @@ async def process_query(request: QueryRequest = Body(...)):
         raise HTTPException(status_code=503, detail="Multi-agent orchestrator not initialized")
     
     try:
-        print(f"📝 Processing query: {request.user_input[:100]}...")
-        print(f"📝 Orchestrator object: {type(orchestrator)}")
-
-        # Process the query through multi-agent orchestrator
-        print("📝 Calling orchestrator.process_query...")
-        orchestrator_result = await orchestrator.process_query(request.user_input.strip())
-        print(f"📝 Got response: {str(orchestrator_result)[:100]}...")
-
-        response_text = orchestrator_result
-        if isinstance(orchestrator_result, dict):
-            exec_payload = orchestrator_result.get("exec_result")
-            if exec_payload is not None:
-                try:
-                    envelope = ResponseEnvelope.model_validate(exec_payload)
-                    orchestrator_result["exec_result"] = envelope.model_dump(exclude_none=True)
-                except ValidationError as exc:
-                    logger.warning("payload_type_violation: exec_result invalid in API wrapper (%s)", exc)
-                    orchestrator_result["exec_result"] = ResponseEnvelope(ok=False, data=[]).model_dump(exclude_none=True)
-
-            error_payload = orchestrator_result.get("error_info")
-            if error_payload:
-                try:
-                    normalized_error = ErrorInfoModel.model_validate(error_payload)
-                    orchestrator_result["error_info"] = normalized_error.model_dump(exclude_none=True)
-                except ValidationError as exc:
-                    logger.warning("payload_type_violation: error_info invalid in API wrapper (%s)", exc)
-                    orchestrator_result["error_info"] = ErrorInfoModel(
-                        type="UNKNOWN_ERROR",
-                        message=str(error_payload),
-                    ).model_dump(exclude_none=True)
-
-            response_text = orchestrator_result.get("final_answer") or orchestrator_result.get("final_response")
-            if not response_text:
-                logger.warning("payload_type_violation: orchestrator returned dict without final response")
-                response_text = str(orchestrator_result)
-        else:
-            response_text = str(orchestrator_result)
-
-        print(f"✅ Query processed successfully")
+        logger.info(f"📝 Processing query: {request.user_input[:100]}...")
         
-        return QueryResponse(
+        # Process the query through multi-agent orchestrator
+        orchestrator_result = await orchestrator.process_query(request.user_input.strip())
+        logger.info(f"📝 Orchestrator completed, result type: {type(orchestrator_result)}")
+
+        # Ensure result is a dict
+        if not isinstance(orchestrator_result, dict):
+            logger.warning(f"⚠️  Orchestrator returned non-dict: {type(orchestrator_result)}")
+            orchestrator_result = {"final_response": str(orchestrator_result)}
+
+        # Normalize exec_result
+        exec_result_data = None
+        exec_payload = orchestrator_result.get("exec_result")
+        if exec_payload is not None:
+            try:
+                envelope = ResponseEnvelope.model_validate(exec_payload)
+                exec_result_data = envelope.model_dump(exclude_none=True)
+                logger.debug(f"✅ exec_result normalized successfully")
+            except ValidationError as exc:
+                logger.warning(f"⚠️  exec_result validation failed: {exc}")
+                exec_result_data = ResponseEnvelope(ok=False, data=[]).model_dump(exclude_none=True)
+
+        # Normalize error_info
+        error_info_data = None
+        error_payload = orchestrator_result.get("error_info")
+        if error_payload:
+            try:
+                normalized_error = ErrorInfoModel.model_validate(error_payload)
+                error_info_data = normalized_error.model_dump(exclude_none=True)
+                logger.debug(f"✅ error_info normalized successfully")
+            except ValidationError as exc:
+                logger.warning(f"⚠️  error_info validation failed: {exc}")
+                error_info_data = ErrorInfoModel(
+                    type="UNKNOWN_ERROR",
+                    message=str(error_payload),
+                ).model_dump(exclude_none=True)
+
+        # Extract final response (required)
+        response_text = (
+            orchestrator_result.get("final_answer") 
+            or orchestrator_result.get("final_response")
+        )
+        
+        if not response_text:
+            logger.error("❌ No final_response or final_answer in orchestrator result")
+            response_text = "I processed your query but couldn't generate a response. Please check the server logs."
+
+        # Extract optional fields
+        sql_query = orchestrator_result.get("sql_query")
+        sources = orchestrator_result.get("relevant_tables", [])
+        
+        logger.info(f"✅ Query processed successfully, response length: {len(response_text)}")
+        
+        # Ensure sources is JSON-serializable
+        if sources and not isinstance(sources, list):
+            sources = list(sources) if hasattr(sources, '__iter__') and not isinstance(sources, str) else []
+        
+        # Create response with JSON-safe values
+        response = QueryResponse(
             final_response=response_text,
+            exec_result=exec_result_data,
+            sql_query=sql_query,
+            sources=sources or [],
+            error_info=error_info_data,
             status="success"
         )
         
+        # Ensure all fields are JSON-serializable before returning
+        try:
+            jsonable_encoder(response.model_dump(exclude_none=True))
+        except Exception as e:
+            logger.error(f"⚠️  Response may not be fully JSON-serializable: {e}")
+        
+        return response
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as e:
-        print(f"❌ Error processing query: {e}")
+        logger.exception(f"❌ CRITICAL: Error processing query: {e}")
         raise HTTPException(
             status_code=500, 
             detail=f"Error processing query: {str(e)}"
@@ -232,7 +271,7 @@ async def process_conversation(request: ConversationRequest = Body(...)):
         raise HTTPException(status_code=503, detail="Multi-agent orchestrator not initialized")
     
     try:
-        print(f"📝 Processing conversation with {len(request.messages)} messages...")
+        logger.info(f"📝 Processing conversation with {len(request.messages)} messages...")
         
         # Extract the last user message from conversation
         last_user_message = ""
@@ -244,37 +283,48 @@ async def process_conversation(request: ConversationRequest = Body(...)):
         if not last_user_message:
             raise HTTPException(status_code=400, detail="No user message found in conversation")
         
-        print(f"📝 Last user message: {last_user_message[:100]}...")
+        logger.info(f"📝 Last user message: {last_user_message[:100]}...")
         
         # Process through multi-agent orchestrator
         result = await orchestrator.process_query(last_user_message)
 
-        if isinstance(result, dict):
-            exec_payload = result.get("exec_result")
-            if exec_payload is not None:
-                try:
-                    envelope = ResponseEnvelope.model_validate(exec_payload)
-                    result["exec_result"] = envelope.model_dump(exclude_none=True)
-                except ValidationError as exc:
-                    logger.warning("payload_type_violation: exec_result invalid in conversation API (%s)", exc)
-                    result["exec_result"] = ResponseEnvelope(ok=False, data=[]).model_dump(exclude_none=True)
+        # Ensure result is a dict
+        if not isinstance(result, dict):
+            logger.warning(f"⚠️  Orchestrator returned non-dict: {type(result)}")
+            result = {"final_response": str(result)}
 
-            error_payload = result.get("error_info")
-            if error_payload:
-                try:
-                    normalized_error = ErrorInfoModel.model_validate(error_payload)
-                    result["error_info"] = normalized_error.model_dump(exclude_none=True)
-                except ValidationError as exc:
-                    logger.warning("payload_type_violation: error_info invalid in conversation API (%s)", exc)
-                    result["error_info"] = ErrorInfoModel(
-                        type="UNKNOWN_ERROR",
-                        message=str(error_payload),
-                    ).model_dump(exclude_none=True)
+        # Normalize exec_result
+        exec_payload = result.get("exec_result")
+        if exec_payload is not None:
+            try:
+                envelope = ResponseEnvelope.model_validate(exec_payload)
+                result["exec_result"] = envelope.model_dump(exclude_none=True)
+            except ValidationError as exc:
+                logger.warning(f"⚠️  exec_result validation failed in conversation: {exc}")
+                result["exec_result"] = ResponseEnvelope(ok=False, data=[]).model_dump(exclude_none=True)
 
-        print(f"✅ Conversation processed successfully")
+        # Normalize error_info
+        error_payload = result.get("error_info")
+        if error_payload:
+            try:
+                normalized_error = ErrorInfoModel.model_validate(error_payload)
+                result["error_info"] = normalized_error.model_dump(exclude_none=True)
+            except ValidationError as exc:
+                logger.warning(f"⚠️  error_info validation failed in conversation: {exc}")
+                result["error_info"] = ErrorInfoModel(
+                    type="UNKNOWN_ERROR",
+                    message=str(error_payload),
+                ).model_dump(exclude_none=True)
 
-        # Extract the final answer from the orchestrator result
-        final_response = result.get("final_answer", "I couldn't process your query. Please try again.")
+        logger.info(f"✅ Conversation processed successfully")
+
+        # Extract the final answer from the orchestrator result (with safe fallback)
+        final_response = (
+            result.get("final_answer") 
+            or result.get("final_response")
+            or "I couldn't process your query. Please try again."
+        )
+        
         is_clarify = bool(result.get("clarify"))
         clarification_question = result.get("clarification_question")
 
@@ -282,8 +332,11 @@ async def process_conversation(request: ConversationRequest = Body(...)):
         updated_messages = request.messages.copy()
         updated_messages.append({"role": "assistant", "content": final_response})
 
+        # Ensure messages are JSON-serializable
+        updated_messages = jsonable_encoder(updated_messages)
+
         # Return response (orchestrator handles all operations internally)
-        return ConversationResponse(
+        response = ConversationResponse(
             final_response=final_response,
             operation="clarify" if is_clarify else "query",
             clarify=is_clarify,
@@ -294,8 +347,13 @@ async def process_conversation(request: ConversationRequest = Body(...)):
             status="success"
         )
         
+        return response
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as e:
-        print(f"❌ Error processing conversation: {e}")
+        logger.exception(f"❌ CRITICAL: Error processing conversation: {e}")
         raise HTTPException(
             status_code=500, 
             detail=f"Error processing conversation: {str(e)}"

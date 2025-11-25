@@ -35,6 +35,7 @@ from typing import Any, Dict, Optional, List, Literal
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 from langgraph_integration.contracts.state import BaseState, ParsedIntent
+from langgraph_integration.agents.intent_parser.templates import infer_template_and_action
 
 logger = logging.getLogger(__name__)
 
@@ -433,6 +434,21 @@ Respond ONLY with JSON.
             # Derived action hints for downstream agents (discovery/planning/execution)
             derived = self._derive_action_hints(state.get("user_input", ""), intent)
             intent.update(derived)
+            
+            # Infer analytic template using comprehensive template-based classifier
+            template_name, required_action, template_params = infer_template_and_action(
+                user_input=state.get("user_input", ""),
+                primary_entities=intent.get("primary_entities", []),
+                metrics=intent.get("metrics", []),
+                filters=intent.get("filters", []),
+                time_window=intent.get("time_window")
+            )
+            if template_name:
+                intent["analytic_template"] = template_name
+                intent["template_params"] = template_params
+                intent["required_action"] = required_action
+                logger.info(f"🎯 [TEMPLATE] Inferred template: {template_name}, action: {required_action}, params: {template_params}")
+            
             # Expand keywords with German translations and related terms
             base_keywords = intent.get("keywords_for_discovery", [])
             expanded_keywords = self._expand_keywords_with_translations(base_keywords, intent.get("primary_entities", []))
@@ -587,20 +603,116 @@ Keep the question clear and actionable.
                 return matches[0].strip()
         return text
 
+    def _detect_derived_metrics(self, text: str, metrics: List[str]) -> List[str]:
+        """
+        Detect derived metrics (profit_margin, ROI, contribution_margin, etc.)
+        that require computation from base columns rather than direct selection.
+        
+        Returns list of derived metric names to append to metrics.
+        """
+        derived = []
+        text_lower = text.lower()
+        
+        profit_keywords = ["profit margin", "profit_margin", "marge", "margin", "profitabilität", "profitability"]
+        if any(kw in text_lower for kw in profit_keywords) and "profit_margin" not in metrics:
+            derived.append("profit_margin")
+        
+        roi_keywords = ["roi", "return on investment", "return-on-investment", "rentabilität"]
+        if any(kw in text_lower for kw in roi_keywords) and "roi" not in metrics:
+            derived.append("roi")
+        
+        contrib_keywords = ["contribution margin", "contribution_margin", "deckungsbeitrag"]
+        if any(kw in text_lower for kw in contrib_keywords) and "contribution_margin" not in metrics:
+            derived.append("contribution_margin")
+        
+        cogs_keywords = ["cogs margin", "cogs_margin", "cost margin"]
+        if any(kw in text_lower for kw in cogs_keywords) and "cogs_margin" not in metrics:
+            derived.append("cogs_margin")
+        
+        return derived
+
+    def _detect_analytic_template(self, user_input: str, intent: dict) -> tuple[Optional[str], Optional[Dict[str, Any]]]:
+        """
+        Detect if the user query matches a known analytic template archetype.
+        
+        Templates:
+        - COUNT_ENTITY: "How many X do we have?"
+        - TOP_K_BY_METRIC: "Which X have the highest/lowest Y?"
+        - PERIOD_COMPARISON: "Compare X vs Y across time periods"
+        
+        Returns:
+            (template_name, template_params) or (None, None) if no template matches
+        """
+        user_lower = user_input.lower()
+        metrics = intent.get("metrics", [])
+        entities = intent.get("primary_entities", [])
+        
+        en_count_keywords = ["how many", "count", "total", "number of"]
+        de_count_keywords = ["wie viele", "wie viel", "insgesamt", "gesamt"]
+        
+        en_topk_keywords = ["highest", "lowest", "top", "most", "best", "worst", "largest", "biggest", "smallest"]
+        de_topk_keywords = ["höchsten", "höchste", "niedrigsten", "niedrigste", "top", "beste", "besten", "größten", "kleinsten"]
+        
+        en_comparison_keywords = ["compare", "versus", "vs", "between", "difference", "vs.", "compared to"]
+        de_comparison_keywords = ["vergleich", "versus", "gegenüber", "zwischen", "unterschied", "im vergleich"]
+        
+        en_derived_metrics = ["profit margin", "roi", "contribution margin", "revenue per", "cost per", "ratio"]
+        de_derived_metrics = ["gewinn", "gewinnmarge", "marge", "beitrag", "rentabilität", "rendite"]
+        
+        has_count_keyword = any(kw in user_lower for kw in en_count_keywords + de_count_keywords)
+        has_topk_keyword = any(kw in user_lower for kw in en_topk_keywords + de_topk_keywords)
+        has_comparison_keyword = any(kw in user_lower for kw in en_comparison_keywords + de_comparison_keywords)
+        has_derived_metric = any(dm in user_lower for dm in en_derived_metrics + de_derived_metrics)
+        
+        required_action = intent.get("required_action", "").lower()
+        top_k = intent.get("top_k")
+        group_by = intent.get("group_by")
+        
+        if has_count_keyword and not has_topk_keyword and not has_comparison_keyword:
+            return ("COUNT_ENTITY", {
+                "entity": entities[0] if entities else "rows"
+            })
+        
+        if (has_topk_keyword or required_action == "ranked_metrics") and (group_by or entities):
+            template_params = {
+                "metric": metrics[0] if metrics else (entities[0] if entities else "value"),
+                "group_by": group_by or (entities[0] if entities else None),
+                "top_k": top_k or 10,
+                "order": "desc" if has_topk_keyword and not any(x in user_lower for x in ["lowest", "niedrigsten"]) else "asc"
+            }
+            return ("TOP_K_BY_METRIC", template_params)
+        
+        if has_comparison_keyword and intent.get("time_window"):
+            time_window = intent.get("time_window", {})
+            return ("PERIOD_COMPARISON", {
+                "periods": intent.get("filters", []),
+                "metric": metrics[0] if metrics else "count",
+                "group_by": group_by,
+                "time_window": time_window
+            })
+        
+        return (None, None)
+
     def _derive_action_hints(self, user_input: str, intent: dict) -> dict:
         """Derive structured action hints from user input and extracted intent.
 
         Produces fields to guide discovery and planning:
-        - required_action: one of ["count", "topk_sum_by_customer", "sum_with_period", "trend_series", "month_count", "interpret_previous"]
-        - group_by: e.g., "customer"
+        - required_action: one of ["count", "topk_sum_by_customer", "sum_with_period", "trend_series", "month_count", "ranked_metrics", "interpret_previous"]
+        - group_by: e.g., "customer" or "product"
         - top_k: integer if applicable
         - time_granularity: "year"|"month" for trends
         """
         text = (user_input or "").lower()
         entities = [e.lower() for e in (intent.get("primary_entities") or [])]
         metrics = [m.lower() for m in (intent.get("metrics") or [])]
+        
         if any(m in ["sales", "umsatz", "revenue", "verkauf", "total_sales"] for m in metrics) and "sum" not in metrics:
             metrics.append("sum")
+
+        # Detect derived metrics (profit margin, ROI, contribution margin, etc.)
+        derived_metrics = self._detect_derived_metrics(text, metrics)
+        if derived_metrics:
+            metrics.extend(derived_metrics)
 
         # Heuristic enrichment if metrics missing
         if not metrics:
@@ -611,16 +723,22 @@ Keep the question clear and actionable.
             if any(k in text for k in ["average", "avg", "mean", "durchschnitt", "mittelwert"]):
                 metrics.append("avg")
 
-        # top_k detection
+        # Detect ranking keywords (highest, top, most, best, largest, biggest, smallest, lowest)
+        ranking_keywords = ["highest", "top", "most", "best", "largest", "biggest", "smallest", "lowest", "best performing", "worst performing"]
+        has_ranking_keyword = any(kw in text for kw in ranking_keywords)
+
+        # top_k detection - enhanced with ranking keywords
         top_k = None
         try:
             m = re.search(r"top\s+(\d{1,3})", text)
             if m:
                 top_k = int(m.group(1))
+            elif has_ranking_keyword and top_k is None:
+                top_k = 10
         except Exception:
             top_k = None
 
-        # group_by detection for customers
+        # group_by detection for customers and products
         group_by = None
         if any(e in ["customer", "customers", "kunde", "kunden", "client", "clients"] for e in entities):
             group_by = "customer"
@@ -643,7 +761,15 @@ Keep the question clear and actionable.
             "sort them", "filter them", "group them", "format them", "explain these"
         ]):
             required_action = "interpret_previous"
+        
         metrics_lower = [m.lower() for m in metrics]
+        
+        # NEW: Handle derived metrics with ranking (profit_margin, roi, contribution_margin, etc.)
+        if has_ranking_keyword and group_by and any(dm in metrics_lower for dm in ["profit_margin", "roi", "contribution_margin", "margin", "cogs_margin"]):
+            required_action = "ranked_metrics"
+            if top_k is None:
+                top_k = 10
+        
         wants_sum = (
             "sum" in metrics_lower
             or "total" in metrics_lower
@@ -653,35 +779,39 @@ Keep the question clear and actionable.
             or "verkauf" in text
             or "sales" in text
         )
-        if wants_sum and group_by == "customer":
-            required_action = "topk_sum_by_customer" if ("top" in text or top_k) else "sum_by_customer"
-        elif wants_sum and group_by == "product":
-            required_action = "topk_sum_by_product" if ("top" in text or top_k) else "sum_by_product"
-        elif ("count" in metrics) and any(m in text for m in ["october", "oktober", "january", "februar", "march", "april", "mai", "juni", "juli", "august", "september", "november", "dezember"]):
-            required_action = "month_count"
-        elif any(kw in text for kw in ["over the last", "last \d+ years", "last \d+ months", "entwickel", "trend"]):
-            required_action = "trend_series"
-        elif any(kw in text for kw in ["growth", "wachstum", "increase", "gewachsen", "entwicklung"]) and any(kw in text for kw in ["over", "last", "years", "jahre", "time"]):
-            required_action = "growth_analysis"
-        elif any(kw in text for kw in ["productivity", "produktivität", "performance", "leistung", "efficiency", "effizienz"]) and any(kw in text for kw in ["department", "abteilung", "bereich", "by department"]):
-            required_action = "department_productivity"
-        elif any(kw in text for kw in ["vs", "versus", "compared", "comparison", "vergleich", "gegenüber", "gegen", "quarter", "quartal"]):
-            required_action = "comparative_analysis"
-        # NEW: SUM/TOTAL + temporal period (e.g., "sales from Sept to Oct", "improved from Sept to Oct")
-        elif ("sum" in metrics or "total" in metrics or "umsatz" in text or "verkauf" in text or "sales" in text) and \
-             any(m in text for m in ["october", "oktober", "january", "februar", "march", "april", "mai", "juni", "juli", "august", "september", "november", "dezember", "january", "february"]):
-            required_action = "sum_with_period"
-        # Temporal queries with words like "improved", "changed", "from X to Y"
-        elif any(k in text for k in ["improved", "changed", "growth", "increased", "decreased", "from", "between"]) and \
-             any(m in text for m in ["october", "oktober", "september", "juni", "juli", "august", "januar", "februar", "march", "april", "mai", "november", "dezember"]):
-            # Even without explicit sum/sales keywords, temporal with period indicators suggests time-series aggregation
-            required_action = "sum_with_period"
-        elif "count" in metrics or "how many" in text or "wie viele" in text:
-            required_action = "count"
+        
+        if required_action is None:
+            if wants_sum and group_by == "customer":
+                required_action = "topk_sum_by_customer" if ("top" in text or top_k or has_ranking_keyword) else "sum_by_customer"
+            elif wants_sum and group_by == "product":
+                required_action = "topk_sum_by_product" if ("top" in text or top_k or has_ranking_keyword) else "sum_by_product"
+            elif ("count" in metrics) and any(m in text for m in ["october", "oktober", "january", "februar", "march", "april", "mai", "juni", "juli", "august", "september", "november", "dezember"]):
+                required_action = "month_count"
+            elif any(kw in text for kw in ["over the last", "last \\d+ years", "last \\d+ months", "entwickel", "trend"]):
+                required_action = "trend_series"
+            elif any(kw in text for kw in ["growth", "wachstum", "increase", "gewachsen", "entwicklung"]) and any(kw in text for kw in ["over", "last", "years", "jahre", "time"]):
+                required_action = "growth_analysis"
+            elif any(kw in text for kw in ["productivity", "produktivität", "performance", "leistung", "efficiency", "effizienz"]) and any(kw in text for kw in ["department", "abteilung", "bereich", "by department"]):
+                required_action = "department_productivity"
+            elif any(kw in text for kw in ["vs", "versus", "compared", "comparison", "vergleich", "gegenüber", "gegen", "quarter", "quartal"]):
+                required_action = "comparative_analysis"
+            # NEW: SUM/TOTAL + temporal period (e.g., "sales from Sept to Oct", "improved from Sept to Oct")
+            elif ("sum" in metrics or "total" in metrics or "umsatz" in text or "verkauf" in text or "sales" in text) and \
+                 any(m in text for m in ["october", "oktober", "january", "februar", "march", "april", "mai", "juni", "juli", "august", "september", "november", "dezember", "january", "february"]):
+                required_action = "sum_with_period"
+            # Temporal queries with words like "improved", "changed", "from X to Y"
+            elif any(k in text for k in ["improved", "changed", "growth", "increased", "decreased", "from", "between"]) and \
+                 any(m in text for m in ["october", "oktober", "september", "juni", "juli", "august", "januar", "februar", "march", "april", "mai", "november", "dezember"]):
+                required_action = "sum_with_period"
+            elif "count" in metrics or "how many" in text or "wie viele" in text:
+                required_action = "count"
 
-        # Default top_k
-        if required_action in ["topk_sum_by_customer", "topk_sum_by_product"] and top_k is None and "top" in text:
-            top_k = 5
+        # Ensure top_k is set for ranking queries
+        if required_action in ["topk_sum_by_customer", "topk_sum_by_product", "ranked_metrics"] and top_k is None:
+            if has_ranking_keyword or "top" in text:
+                top_k = 10
+            elif required_action == "topk_sum_by_customer" or required_action == "topk_sum_by_product":
+                top_k = 5
 
         # PHASE 6: Clarification loop for ambiguous queries
         needs_clarification = self._check_needs_clarification(text, entities, metrics, required_action)

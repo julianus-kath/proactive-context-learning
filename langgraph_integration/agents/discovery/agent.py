@@ -620,6 +620,30 @@ class DiscoveryAgent:
             logger.info(f"Unable to log candidate preview: {exc}")
         
         try:
+            # 🆕 Filter out candidates that have already been tried
+            skip_tables = set(state.get("skip_tables", []) or [])
+            
+            def candidate_name(c: dict) -> str:
+                return (
+                    c.get("full_name")
+                    or c.get("table_name")
+                    or c.get("name")
+                    or ""
+                )
+            
+            if skip_tables:
+                before_skip = len(candidates)
+                candidates = [
+                    c for c in candidates
+                    if candidate_name(c) not in skip_tables
+                ]
+                after_skip = len(candidates)
+                logger.info(
+                    f"🔍 [DISCOVERY] Filtering candidates: "
+                    f"{before_skip} → {after_skip} "
+                    f"(skipping {len(skip_tables)} tried: {list(skip_tables)})"
+                )
+            
             # Filter by confidence threshold
             filtered = [c for c in candidates if c.get("score", 0) >= MIN_SCORE]
             
@@ -787,6 +811,20 @@ class DiscoveryAgent:
             selected = filtered[:sel_limit]
             if not selected:
                 selected = sorted(candidates, key=rank_key, reverse=True)[:sel_limit]
+            
+            # 🆕 Check if all candidates have been exhausted (tried + skipped)
+            if not selected:
+                logger.warning("🔍 All candidates exhausted, none left to try.")
+                state.setdefault("error_info", {})
+                state["error_info"].update({
+                    "type": "NO_CANDIDATES_LEFT",
+                    "message": (
+                        "All discovered candidates have been tried and no more "
+                        "valid tables remain for this query."
+                    )
+                })
+                state["no_candidates_left"] = True
+                return state
 
             # Intent-specific post-prune ordering tweaks
             try:

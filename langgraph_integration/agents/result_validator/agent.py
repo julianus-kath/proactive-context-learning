@@ -367,6 +367,7 @@ class ResultValidator:
                     "sum_by_product",
                     "growth_analysis",
                     "comparative_analysis",
+                    "ranked_metrics",
                 }:
                     continue
                 logger.warning(f"🔍 [VALIDATE] Suspicious pattern: all {col_name} values are identical (out of {len(rows)} rows)")
