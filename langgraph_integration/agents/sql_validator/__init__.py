@@ -1,0 +1,1 @@
+"""Validator Agent - formats results and explanations."""
