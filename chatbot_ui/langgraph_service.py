@@ -63,6 +63,7 @@ class QueryRequest(BaseModel):
 
 class ConversationRequest(BaseModel):
     messages: list  # [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+    conversation_id: Optional[str] = None  # Optional conversation identifier
     api_key: str
 
 class QueryResponse(BaseModel):
@@ -284,9 +285,14 @@ async def process_conversation(request: ConversationRequest = Body(...)):
             raise HTTPException(status_code=400, detail="No user message found in conversation")
         
         logger.info(f"📝 Last user message: {last_user_message[:100]}...")
+        logger.info(f"📝 Conversation ID: {request.conversation_id}")
         
-        # Process through multi-agent orchestrator
-        result = await orchestrator.process_query(last_user_message)
+        # Process through multi-agent orchestrator with full conversation context
+        result = await orchestrator.process_query(
+            user_input=last_user_message,
+            messages=request.messages,
+            conversation_id=request.conversation_id
+        )
 
         # Ensure result is a dict
         if not isinstance(result, dict):

@@ -40,7 +40,7 @@ from langgraph_integration.contracts.response_envelope import (
 from langgraph_integration.agents.intent_parser.agent import IntentParserAgent
 from langgraph_integration.agents.discovery.agent import DiscoveryAgent
 from langgraph_integration.agents.join_sql.agent import JoinPlanAndSQLAgent
-from langgraph_integration.agents.sql_validator.agent import create_sql_validator_agent
+from langgraph_integration.agents.sql_validator.agent import SQLValidatorAgent
 from langgraph_integration.agents.exec_recovery.agent import ExecAndRecoveryAgent
 from langgraph_integration.agents.result_validator.agent import build_result_validator_node
 from langgraph_integration.agents.answer.agent import AnswerAgent
@@ -119,9 +119,9 @@ class QueryOrchestrator:
         )
         logger.info("✅ JoinPlanAndSQLAgent initialized (Views-first, MSSQL)")
 
-        # 🆕 Phase 9: SQLValidatorAgent for pre-execution validation and repair (lazy init)
-        self.sql_validator_agent = None
-        logger.info("✅ SQLValidatorAgent registered (AST validation, auto-repair)")
+        # 🆕 Phase 9: SQLValidatorAgent for pre-execution validation and repair
+        self.sql_validator_agent = SQLValidatorAgent(llm_model=llm_model, max_repair_attempts=max_retries)
+        logger.info("✅ SQLValidatorAgent initialized (AST validation, auto-repair)")
         
         self.exec_recovery_agent = ExecAndRecoveryAgent(
             llm_model=llm_model,
@@ -332,15 +332,22 @@ class QueryOrchestrator:
                 logger.info("🚦 [ROUTE_TO_OPERATION] ❌ Error detected, routing to answer_error")
                 return "answer_error"
 
-            # THIRD PRIORITY: Route by operation type
+            # THIRD PRIORITY: Route by required_action (refinement/interpretation)
             result = None
-            # Follow-up interpretation path
             try:
                 required_action = intent.get("required_action")
-                if required_action == "interpret_previous" and (state.get("previous_exec_result") or state.get("exec_result")):
+                if required_action == "refine_previous":
+                    logger.info("🚦 [ROUTE_TO_OPERATION] 🔄 Refinement query detected → discovery")
+                    target_tables = intent.get("target_tables", [])
+                    if target_tables:
+                        logger.info(f"🚦 [ROUTE_TO_OPERATION]    Target tables: {target_tables}")
+                        state["forced_tables"] = target_tables
+                    return "discovery"
+                elif required_action == "interpret_previous" and (state.get("previous_exec_result") or state.get("exec_result")):
                     logger.info("🚦 [ROUTE_TO_OPERATION] 🎯 Follow-up interpretation detected → interpret")
                     return "interpret"
-            except Exception:
+            except Exception as e:
+                logger.warning(f"🚦 [ROUTE_TO_OPERATION] Error checking required_action: {e}")
                 pass
             if operation == "clarify":
                 result = "answer"
@@ -955,10 +962,6 @@ class QueryOrchestrator:
             state["validation_result"] = {"is_valid": False, "error_type": "no_sql"}
             debug_logger.agent_exit("validate_sql", before_state, dict(state))
             return state
-
-        # Ensure SQL validator is initialized
-        if not self.sql_validator_agent:
-            self.sql_validator_agent = await create_sql_validator_agent(llm_model="gpt-4o")
 
         # Run SQLValidatorAgent
         try:
@@ -1623,15 +1626,28 @@ class QueryOrchestrator:
     # Reason: Naive regex caused double-keyword-extraction problem
     # See: CHANGES_SUMMARY.md "Intent Parsing Architecture Gap"
 
-    async def process_query(self, user_input: str) -> Dict[str, Any]:
+    async def process_query(
+        self,
+        user_input: str,
+        messages: Optional[List[Dict[str, str]]] = None,
+        conversation_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
         High-level interface: delegate to the compiled LangGraph workflow so API consumers
         observe the exact same behaviour as direct graph executions.
+        
+        Args:
+            user_input: The current user message/query
+            messages: List of conversation messages [{"role": "user"|"assistant", "content": "..."}]
+            conversation_id: Optional conversation identifier for tracking
         """
         logger.info(f"📝 PROCESS_QUERY CALLED: {user_input[:100]}...")
+        logger.info(f"📝 Conversation ID: {conversation_id}, Messages count: {len(messages) if messages else 0}")
+        
         initial_state: Dict[str, Any] = {
             "user_input": user_input,
-            "conversation_history": [],
+            "messages": messages or [],
+            "conversation_id": conversation_id or "",
             # 🆕 Retry & candidate tracking (prevent infinite loops)
             "tried_candidate_tables": [],
             "retry_attempt_count": 0,

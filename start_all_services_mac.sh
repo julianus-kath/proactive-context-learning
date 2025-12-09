@@ -209,11 +209,14 @@ echo -e "${GREEN}✅ MCP_SERVER_URL is configured: ${MCP_SERVER_URL}${NC}"
 # Feature toggles
 # ============================================
 # Enable/disable LangGraph Studio (default: off to avoid interference)
-ENABLE_STUDIO="${ENABLE_STUDIO:-0}"
+ENABLE_STUDIO="${ENABLE_STUDIO:-1}"
+
+# Enable Cloudflare tunnel for Studio (default: disabled for local-only access)
+ENABLE_STUDIO_TUNNEL="${ENABLE_STUDIO_TUNNEL:-1}"
 
 # Auto-open debugger in new terminal (default: off, shows instructions instead)
 # Set to 1 to automatically open a new terminal with debugger output
-AUTO_OPEN_DEBUGGER="${AUTO_OPEN_DEBUGGER:-0}"
+AUTO_OPEN_DEBUGGER="${AUTO_OPEN_DEBUGGER:-1}"
 
 # Debugger PID (will be set if debugger starts)
 DEBUG_PID=""
@@ -378,7 +381,13 @@ PY
 
         # Start langgraph dev server (uses langgraph.json config for build_graph reference)
         cd "$PROJECT_ROOT"
-        nohup langgraph dev --port 2024 --no-reload --tunnel > "$LOG_DIR/langgraph_studio.log" 2>&1 &
+        STUDIO_ARGS="--port 2024 --no-reload"
+        if [ "$ENABLE_STUDIO_TUNNEL" = "1" ]; then
+            STUDIO_ARGS="$STUDIO_ARGS --tunnel"
+        else
+            STUDIO_ARGS="$STUDIO_ARGS --host 127.0.0.1"
+        fi
+        nohup langgraph dev $STUDIO_ARGS > "$LOG_DIR/langgraph_studio.log" 2>&1 &
         STUDIO_PID=$!
         echo -e "${GREEN}✅ LangGraph Studio started (PID: $STUDIO_PID)${NC}"
 
@@ -401,16 +410,21 @@ PY
             tail -n 80 "$LOG_DIR/langgraph_studio.log" 2>/dev/null || true
         fi
 
-        # Extract tunnel URL from logs
-        sleep 3  # Give it a moment to write the tunnel info to logs
-        TUNNEL_URL=$(grep "Studio UI:" "$LOG_DIR/langgraph_studio.log" 2>/dev/null | sed 's/.*\[\[0-9;]*m//g' | sed 's/\[\[0-9;]*m.*//g' | grep -o 'https://[^ ]*')
+        if [ "$ENABLE_STUDIO_TUNNEL" = "1" ]; then
+            # Extract tunnel URL from logs
+            sleep 3  # Give it a moment to write the tunnel info to logs
+            TUNNEL_URL=$(grep "Studio UI:" "$LOG_DIR/langgraph_studio.log" 2>/dev/null | sed 's/.*\[\[0-9;]*m//g' | sed 's/\[\[0-9;]*m.*//g' | grep -o 'https://[^ ]*')
 
-        if [ -n "$TUNNEL_URL" ]; then
-            STUDIO_URL="$TUNNEL_URL"
-            echo -e "${GREEN}✅ LangGraph Studio tunnel URL: ${STUDIO_URL}${NC}"
+            if [ -n "$TUNNEL_URL" ]; then
+                STUDIO_URL="$TUNNEL_URL"
+                echo -e "${GREEN}✅ LangGraph Studio tunnel URL: ${STUDIO_URL}${NC}"
+            else
+                STUDIO_URL="http://localhost:2024"
+                echo -e "${YELLOW}⚠️  Could not extract tunnel URL, using localhost${NC}"
+            fi
         else
             STUDIO_URL="http://localhost:2024"
-            echo -e "${YELLOW}⚠️  Could not extract tunnel URL, using localhost${NC}"
+            echo -e "${GREEN}ℹ️  LangGraph Studio running locally at ${STUDIO_URL}${NC}"
         fi
     else
         echo -e "${YELLOW}⚠️  LangGraph CLI not available, skipping Studio${NC}"

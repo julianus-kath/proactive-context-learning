@@ -276,7 +276,7 @@ Respond ONLY with JSON, no markdown blocks.
         conversation_context = self._format_message_history(state.get("messages", []))
 
         prompt = f"""
-Based on this query analysis, classify the exact operation type.
+Based on this query analysis, classify the exact operation type and detect if this is a refinement of a previous query.
 
 Conversation history (most recent last):
 {conversation_context or "<none>"}
@@ -284,18 +284,26 @@ Conversation history (most recent last):
 Current user query: "{user_input}"
 Initial Analysis: {json.dumps(analysis)}
 
+IMPORTANT: Detect refinement queries:
+- If the user mentions a table/view name in their message (e.g., "Look in KHKArtikelLagerbewegungen"), and there was a previous assistant message that discussed tables or asked where to look, treat this as a "refine_previous" action.
+- If the message refers back to the previous query with "that", "those", "the previous", etc., it's likely a refinement.
+- Extract any table names the user explicitly mentions (target_tables).
+
 Classify into one of:
 - "query": Normal data retrieval (SELECT queries)
 - "schema_query": Database structure questions (SHOW TABLES, DESCRIBE)
 - "health_check": System status questions
 - "clarify": Ambiguous or needs clarification
+- "interpret_previous": Follow-up question about previous results (no new query)
 
 Return JSON:
 {{
   "operation": "query",
   "confidence": 0.9,
   "reasoning": "Brief explanation",
-  "alternative_operations": ["query"]  // If multiple possibilities
+  "required_action": "query",  // or "refine_previous", "interpret_previous"
+  "target_tables": ["TableName1", "TableName2"],  // Tables the user explicitly mentioned
+  "alternative_operations": ["query"]
 }}
 
 Respond ONLY with JSON.
@@ -312,10 +320,14 @@ Respond ONLY with JSON.
                 "operation": classification.get("operation", "query"),
                 "operation_confidence": classification.get("confidence", 0.5),
                 "classification_reasoning": classification.get("reasoning", ""),
-                "alternative_operations": classification.get("alternative_operations", [])
+                "alternative_operations": classification.get("alternative_operations", []),
+                "required_action": classification.get("required_action", "query"),
+                "target_tables": classification.get("target_tables", [])
             })
 
             logger.info(f"🧠 [CLASSIFY] Classified as: {intent['operation']} (confidence: {intent.get('operation_confidence')})")
+            if intent.get("required_action") == "refine_previous":
+                logger.info(f"🧠 [CLASSIFY] 🔄 Detected refinement query with target tables: {intent.get('target_tables')}")
             return {**state, "intent": intent}
 
         except Exception as e:

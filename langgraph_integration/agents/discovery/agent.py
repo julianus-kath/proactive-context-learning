@@ -222,6 +222,41 @@ class DiscoveryAgent:
         
         user_input = state.get("user_input", "")
         intent = state.get("intent", {})
+        forced_tables = state.get("forced_tables", [])
+        
+        # 🔄 Check for refinement: If forced_tables are specified, use them directly
+        if forced_tables:
+            logger.info(f"🔍 [REFINEMENT] Using forced_tables: {forced_tables}")
+            # Directly use these tables as candidates instead of searching
+            candidates = [{"table_name": t, "full_name": t, "is_forced": True} for t in forced_tables]
+            state["relevant_tables"] = candidates
+            state["candidate_views"] = []
+            
+            # Still need to fetch column index and schema for these tables
+            try:
+                schema_snippets = []
+                for table_name in forced_tables:
+                    desc = await self.mcp.describe_table(table_name)
+                    if desc:
+                        schema_snippets.append(f"**{table_name}**: {desc[:200]}...")
+                state["schema_snippet"] = "\n".join(schema_snippets) or f"Table(s): {', '.join(forced_tables)}"
+                
+                # Fetch column index
+                column_index = {}
+                for table_name in forced_tables:
+                    try:
+                        cols = await self.mcp.get_columns(table_name)
+                        if cols:
+                            column_index[table_name] = cols
+                    except Exception:
+                        pass
+                state["column_index"] = column_index
+            except Exception as e:
+                logger.warning(f"🔍 [REFINEMENT] Could not fetch schema for forced tables: {e}")
+                state["schema_snippet"] = f"Table(s): {', '.join(forced_tables)}"
+            
+            logger.info(f"🔍 [REFINEMENT] ✅ Using {len(forced_tables)} forced table(s)")
+            return state
         
         # Extract search keywords
         primary_tokens = self._extract_keywords(user_input, intent)

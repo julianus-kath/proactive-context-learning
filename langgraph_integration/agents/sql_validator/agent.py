@@ -35,15 +35,10 @@ class SQLValidatorAgent:
         self.llm_model = llm_model
         self.max_repair_attempts = max_repair_attempts
         self.llm = ChatOpenAI(model=llm_model, temperature=0.0)
-        self.mcp = None
+        self.mcp = get_shared_mcp_tool()
 
         # Build the validation graph
         self.graph = self._build_validation_graph()
-
-    async def initialize(self):
-        """Initialize MCP client."""
-        if not self.mcp:
-            self.mcp = get_shared_mcp_tool()
 
     def _build_validation_graph(self) -> StateGraph:
         """Build the SQL validation graph with repair loop."""
@@ -86,8 +81,6 @@ class SQLValidatorAgent:
 
     async def __call__(self, state: BaseState) -> BaseState:
         """Main entry point for SQL validation."""
-        await self.initialize()
-
         # Initialize repair attempt counter
         if "repair_attempts" not in state:
             state["repair_attempts"] = 0
@@ -580,13 +573,3 @@ class SQLValidatorAgent:
 
         return state
 
-
-# Export function for LangGraph
-async def create_sql_validator_agent(
-    llm_model: str = "gpt-4o",
-    max_repair_attempts: int = 2
-) -> SQLValidatorAgent:
-    """Factory function to create SQLValidatorAgent instance."""
-    agent = SQLValidatorAgent(llm_model=llm_model, max_repair_attempts=max_repair_attempts)
-    await agent.initialize()
-    return agent
