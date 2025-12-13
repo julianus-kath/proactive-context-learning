@@ -6,8 +6,15 @@ Tests that the 4 specialized agents are properly composed and working together.
 
 import asyncio
 import logging
-import pytest
+import os
+import sys
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)
@@ -137,6 +144,24 @@ class TestQueryOrchestrator:
         assert orchestrator is not None
         assert orchestrator.discovery_agent is not None
         logger.info("✅ Factory function creates orchestrator correctly")
+
+    def test_create_query_orchestrator_respects_env_overrides(self, monkeypatch):
+        from langgraph_integration import orchestrator as orch_module
+
+        captured = {}
+
+        class DummyOrchestrator:
+            def __init__(self, **kwargs):
+                captured.update(kwargs)
+
+        monkeypatch.setenv("OPENAI_MODEL", "gpt-4")
+        monkeypatch.setenv("LANGGRAPH_LLM_TEMP", "0.35")
+        monkeypatch.setattr(orch_module, "QueryOrchestrator", DummyOrchestrator)
+
+        orch_module.create_query_orchestrator()
+
+        assert captured["llm_model"] == "gpt-4"
+        assert captured["llm_temp"] == 0.35
 
     @pytest.mark.asyncio
     async def test_get_orchestrator_singleton(self):

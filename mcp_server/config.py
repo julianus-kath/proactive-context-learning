@@ -22,7 +22,7 @@ class MCPServerConfig:
     """Configuration for the MCP server."""
     
     # Database dialect selection
-    db_dialect: DatabaseDialect = os.getenv("DB_DIALECT", "mssql")  # postgres | mssql
+    db_dialect: DatabaseDialect = os.getenv("DB_DIALECT", "postgres")  # postgres | mssql
     
     # PostgreSQL configuration (dev mode)
     postgres_host: str = os.getenv("POSTGRES_HOST", "localhost")

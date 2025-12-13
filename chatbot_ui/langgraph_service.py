@@ -7,11 +7,11 @@ import os
 import sys
 import asyncio
 import logging
-from typing import Dict, Any, Optional
-from fastapi import FastAPI, HTTPException, Body
+from typing import Dict, Any, Optional, List
+from fastapi import FastAPI, HTTPException, Body, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, Field
 import uvicorn
 from dotenv import load_dotenv
 
@@ -59,12 +59,12 @@ app.add_middleware(
 # Request/Response models
 class QueryRequest(BaseModel):
     user_input: str
-    api_key: str
+    api_key: Optional[str] = None
 
 class ConversationRequest(BaseModel):
-    messages: list  # [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
-    conversation_id: Optional[str] = None  # Optional conversation identifier
-    api_key: str
+    messages: list
+    conversation_id: Optional[str] = None
+    api_key: Optional[str] = None
 
 class QueryResponse(BaseModel):
     final_response: str
@@ -84,6 +84,22 @@ class ConversationResponse(BaseModel):
     messages: Optional[list] = None
     status: str = "success"
 
+class AgentInvokeRequest(BaseModel):
+    state: Dict[str, Any] = Field(default_factory=dict, description="Partial LangGraph state passed to the target agent")
+    options: Optional[Dict[str, Any]] = Field(default=None, description="Optional execution options (state overrides, dry-run flags, etc.)")
+    api_key: Optional[str] = None
+
+class AgentInvokeResponse(BaseModel):
+    ok: bool
+    agent: str
+    data: List[Dict[str, Any]] = Field(default_factory=list)
+    row_count: Optional[int] = None
+    execution_time_ms: Optional[int] = None
+    truncated: bool = False
+    warnings: List[str] = Field(default_factory=list)
+    error: Optional[str] = None
+    error_info: Optional[Dict[str, Any]] = None
+
 class ErrorResponse(BaseModel):
     error: str
     status: str = "error"
@@ -102,6 +118,12 @@ class DebugLogsResponse(BaseModel):
 orchestrator = None
 debug_logger = None
 logger = logging.getLogger(__name__)
+
+
+def _validate_api_key(provided_key: Optional[str]):
+    expected_api_key = os.getenv("API_KEY", "supersecretapikey")
+    if provided_key != expected_api_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
 
 @app.on_event("startup")
 async def startup_event():
@@ -133,7 +155,7 @@ async def health_check():
     }
 
 @app.post("/process_query", response_model=QueryResponse)
-async def process_query(request: QueryRequest = Body(...)):
+async def process_query(request: QueryRequest = Body(...), api_key_header: Optional[str] = Header(default=None, alias="X-API-Key")):
     """
     Process a user query through the multi-agent orchestrator.
     

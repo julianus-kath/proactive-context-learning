@@ -612,9 +612,9 @@ class MCPDatabaseTool:
                 
                 # Extract tables and pagination info
                 tables = payload.get("data", {}).get("tables", [])
-                page_info = payload.get("data", {}).get("page_info", {})
-                total_items = page_info.get("total_items", len(tables))
-                total_pages = page_info.get("total_pages", 1)
+                page_info = payload.get("page_info") or payload.get("data", {}).get("page_info", {})
+                total_items = page_info.get("total_items", len(tables)) if page_info else len(tables)
+                total_pages = page_info.get("total_pages", 1) if page_info else 1
                 
                 # Log scout mode operation with CORRECT total_items
                 if debug_logger:
@@ -1120,8 +1120,8 @@ async def index_database() -> Dict[str, Any]:
             
             # Extract tables and page info
             tables_list = payload.get("data", {}).get("tables", [])
-            page_info = payload.get("data", {}).get("page_info", {})
-            total_items = page_info.get("total_items", len(tables_list))
+            page_info = payload.get("page_info") or payload.get("data", {}).get("page_info", {})
+            total_items = page_info.get("total_items", len(tables_list)) if page_info else len(tables_list)
             
             logger.debug(f"   Found {len(tables_list)} tables on current page")
             logger.debug(f"   Page info: {page_info}")
@@ -1129,11 +1129,11 @@ async def index_database() -> Dict[str, Any]:
             index = {
                 "status": "SUCCESS",
                 "tables": {},
-                "total_tables": total_items,  # Use actual total, not content_items count!
+                "total_tables": total_items,
                 "indexed_at": None,
                 "page_info": {
-                    "total_pages": page_info.get("total_pages", 1),
-                    "current_page": page_info.get("page", 1)
+                    "total_pages": page_info.get("total_pages", 1) if page_info else 1,
+                    "current_page": page_info.get("page", 1) if page_info else 1
                 }
             }
             

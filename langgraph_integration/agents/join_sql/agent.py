@@ -2747,7 +2747,7 @@ def build_join_sql_graph():
         Compiled StateGraph for the join SQL agent
     """
     agent = JoinPlanAndSQLAgent()
-    return agent.build_subgraph()
+    return agent.build_subgraph() #TODO CHECK WHY NOT USED
     def _normalize_role_hints_payload(self, payload: Any) -> Dict[str, Any]:
         """Normalize discovery_role_hints payload into structured dicts.
 

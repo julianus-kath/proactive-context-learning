@@ -27,6 +27,8 @@ import json
 import os
 import asyncio
 import uuid
+import copy
+import time
 from typing import Dict, Any, List, Optional
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
@@ -1858,6 +1860,106 @@ class QueryOrchestrator:
             logger.error(f"🔧 Local semantic search failed: {e}")
             return []
 
+    async def invoke_agent(self, agent_name: str, state: Optional[BaseState] = None, options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        normalized_name = (agent_name or "").strip().lower()
+        if not normalized_name:
+            raise ValueError("agent_name is required")
+        handler = self._get_agent_handler(normalized_name)
+        if handler is None:
+            raise ValueError(f"Unknown agent '{agent_name}'")
+        state_payload: BaseState = copy.deepcopy(state or {})
+        if options and isinstance(options, dict):
+            overrides = options.get("state_overrides")
+            if isinstance(overrides, dict):
+                for key, value in overrides.items():
+                    state_payload[key] = copy.deepcopy(value)
+            extra = {k: v for k, v in options.items() if k != "state_overrides"}
+            if extra:
+                state_payload["agent_options"] = copy.deepcopy(extra)
+        before_snapshot: BaseState = copy.deepcopy(state_payload)
+        start = time.perf_counter()
+        result_state = await handler(state_payload)
+        if not isinstance(result_state, dict):
+            raise ValueError(f"Agent '{normalized_name}' returned invalid state")
+        normalized_state: BaseState = copy.deepcopy(result_state)
+        exec_envelope: Optional[Dict[str, Any]] = None
+        if normalized_state.get("exec_result") is not None:
+            normalized_state["exec_result"] = self._coerce_exec_result(normalized_state.get("exec_result"))
+            exec_envelope = normalized_state.get("exec_result")
+        error_info = self._normalize_error_info(normalized_state.get("error_info"))
+        if error_info:
+            normalized_state["error_info"] = error_info
+        data = []
+        row_count = None
+        truncated = False
+        exec_error = None
+        exec_ok = True
+        if exec_envelope:
+            data = exec_envelope.get("data") or []
+            row_count = exec_envelope.get("row_count")
+            truncated = bool(exec_envelope.get("truncated", False))
+            exec_error = exec_envelope.get("error")
+            exec_ok = bool(exec_envelope.get("ok", True))
+        delta = self._compute_state_delta(before_snapshot, normalized_state)
+        elapsed_ms = int((time.perf_counter() - start) * 1000)
+        warnings = normalized_state.get("warnings") or []
+        if not isinstance(warnings, list):
+            warnings = [str(warnings)]
+        overall_ok = exec_ok and not bool(error_info)
+        return {
+            "agent": normalized_name,
+            "ok": overall_ok,
+            "data": data,
+            "row_count": row_count,
+            "execution_time_ms": elapsed_ms,
+            "truncated": truncated,
+            "warnings": warnings,
+            "error": exec_error,
+            "error_info": error_info,
+            "input_state": before_snapshot,
+            "output_state": normalized_state,
+            "state_delta": delta,
+        }
+
+    def _get_agent_handler(self, normalized_name: str):
+        mapping = {
+            "intent_parser": self._parse_intent_node,
+            "parse_intent": self._parse_intent_node,
+            "discovery": self._discovery_node,
+            "join_sql": self._join_sql_node,
+            "sql_validator": self._validate_sql_node,
+            "validate_sql": self._validate_sql_node,
+            "exec_recovery": self._exec_recovery_node,
+            "execution": self._exec_recovery_node,
+            "result_validator": self._result_validator_async,
+            "interpretation": self._interpret_node,
+            "interpret": self._interpret_node,
+            "answer": self._answer_node,
+        }
+        return mapping.get(normalized_name)
+
+    async def _result_validator_async(self, state: BaseState) -> BaseState:
+        return build_result_validator_node(state)
+
+    def _compute_state_delta(self, before_state: BaseState, after_state: BaseState) -> Dict[str, Any]:
+        delta = {
+            "added": {},
+            "removed": [],
+            "updated": {},
+        }
+        for key, value in after_state.items():
+            if key not in before_state:
+                delta["added"][key] = value
+            elif before_state[key] != value:
+                delta["updated"][key] = {
+                    "before": before_state[key],
+                    "after": value,
+                }
+        for key in before_state.keys():
+            if key not in after_state:
+                delta["removed"].append(key)
+        return delta
+
 
 # ============= Factory and export functions =============
 
@@ -1883,9 +1985,18 @@ def create_query_orchestrator(
     Returns:
         Initialized QueryOrchestrator instance
     """
+    env_model = os.getenv("LANGGRAPH_LLM_MODEL") or os.getenv("OPENAI_MODEL")
+    final_model = env_model.strip() if env_model and env_model.strip() else llm_model
+    env_temp = os.getenv("LANGGRAPH_LLM_TEMP") or os.getenv("OPENAI_TEMPERATURE")
+    final_temp = llm_temp
+    if env_temp is not None and str(env_temp).strip() != "":
+        try:
+            final_temp = float(env_temp)
+        except ValueError:
+            logger.warning("Invalid LLM temperature '%s'. Using default %s", env_temp, llm_temp)
     return QueryOrchestrator(
-        llm_model=llm_model,
-        llm_temp=llm_temp,
+        llm_model=final_model,
+        llm_temp=final_temp,
         max_joins=max_joins,
         max_retries=max_retries,
         row_limit=row_limit,

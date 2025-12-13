@@ -3,11 +3,12 @@
 # Mac Machine Startup Script - Web UI + LangGraph Service
 # =============================================================================
 # This script starts the Web UI and LangGraph service on Mac.
-# It does NOT start the MCP server - that runs on Windows.
+# It does NOT start the MCP server; it only communicates with whatever MCP_SERVER_URL points to.
+# The MCP server can run either on Windows (remote) or locally on the Mac.
 #
 # Prerequisites:
-# 1. Windows MCP server must be running (start_mcp_server_windows.bat)
-# 2. .env file must be configured with MCP_SERVER_URL pointing to Windows
+# 1. MCP server (Windows or local) must be running
+# 2. .env file must be configured with MCP_SERVER_URL pointing to the desired MCP server (Windows or local)
 # =============================================================================
 
 set -e  # Exit on any error
@@ -84,20 +85,21 @@ echo -e "${YELLOW}   Killing ALL langchain/langgraph processes...${NC}"
 # Kill by process names (most aggressive)
 kill_by_name "langchain"
 kill_by_name "langgraph"
-kill_by_name "uvicorn"
+#kill_by_name "uvicorn"
 
 # Kill Python processes that might be our services
 kill_by_name "langgraph_service"
 kill_by_name "web_app"
 
-# Kill known ports (Web UI, LangGraph Studio, LangGraph Service)
+# Kill known ports (Web UI, LangGraph Studio, LangGraph Service, Eval Service)
 kill_port 3000
 kill_port 2024
 kill_port 5001
+kill_port 7001
 
 # Final verification - list any remaining Python processes on our ports
 echo -e "${YELLOW}   Verifying ports are clear...${NC}"
-for port in 3000 2024 5001; do
+for port in 3000 2024 5001 7001; do
     if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "${RED}   ⚠️  Port $port still in use, forcing hard kill...${NC}"
         kill_port $port
@@ -140,15 +142,17 @@ cleanup() {
     # Kill all LangChain/LangGraph related processes
     kill_by_name "langchain"
     kill_by_name "langgraph"
-    kill_by_name "uvicorn"
+    #kill_by_name "uvicorn"
     kill_by_name "langgraph_service"
     kill_by_name "web_app"
     kill_by_name "debug_langgraph_comprehensive"
+    kill_by_name "eval.service"
 
     # Kill services on known ports (NOT 8000 - that's on Windows)
     kill_port 3000  # Web UI
     kill_port 2024  # LangGraph Studio
     kill_port 5001  # LangGraph Service
+    kill_port 7001  # Evaluation & Tracking Service
 
     echo -e "${GREEN}✅ All Mac services stopped${NC}"
     exit 0
@@ -175,8 +179,8 @@ if [ ! -f ".env" ]; then
     echo "Please create .env file from .env.mac template:"
     echo "  1. Copy .env.mac to .env"
     echo "  2. Update OPENAI_API_KEY with your API key"
-    echo "  3. Update MCP_SERVER_URL with your Windows IP (e.g., http://10.255.152.48:8000)"
-    echo "  4. Ensure MCP_API_KEY matches Windows MCP server"
+    echo "  3. Update MCP_SERVER_URL with either your Windows MCP server (e.g., http://10.255.152.48:8000) or local MCP server (e.g., http://localhost:8000)"
+    echo "  4. Ensure MCP_API_KEY matches your MCP server configuration"
     echo ""
     exit 1
 fi
@@ -214,23 +218,33 @@ ENABLE_STUDIO="${ENABLE_STUDIO:-1}"
 # Enable Cloudflare tunnel for Studio (default: disabled for local-only access)
 ENABLE_STUDIO_TUNNEL="${ENABLE_STUDIO_TUNNEL:-1}"
 
+# Enable/disable Evaluation & Tracking Service (default: enabled)
+ENABLE_EVAL="${ENABLE_EVAL:-1}"
+
 # Auto-open debugger in new terminal (default: off, shows instructions instead)
 # Set to 1 to automatically open a new terminal with debugger output
 AUTO_OPEN_DEBUGGER="${AUTO_OPEN_DEBUGGER:-1}"
 
 # Debugger PID (will be set if debugger starts)
 DEBUG_PID=""
+EVAL_PID=""
 if [ "$ENABLE_STUDIO" = "1" ]; then
     echo -e "${YELLOW}🔧 Feature toggle: LangGraph Studio is ENABLED (ENABLE_STUDIO=1)${NC}"
 else
     echo -e "${YELLOW}🔧 Feature toggle: LangGraph Studio is DISABLED (set ENABLE_STUDIO=1 to enable)${NC}"
 fi
 
+if [ "$ENABLE_EVAL" = "1" ]; then
+    echo -e "${YELLOW}🔧 Feature toggle: Evaluation & Tracking Service is ENABLED (ENABLE_EVAL=1)${NC}"
+else
+    echo -e "${YELLOW}🔧 Feature toggle: Evaluation & Tracking Service is DISABLED (set ENABLE_EVAL=1 to enable)${NC}"
+fi
+
 # ============================================
-# Check Windows MCP Server Connection
+# Check MCP Server Connection
 # ============================================
 echo ""
-echo -e "${BLUE}🔍 Checking Windows MCP Server connection...${NC}"
+echo -e "${BLUE}🔍 Checking MCP Server connection...${NC}"
 
 # Parse MCP server URL
 MCP_HOST=$(echo $MCP_SERVER_URL | sed -e 's|^[^/]*//||' -e 's|:.*||')
@@ -246,8 +260,8 @@ if command -v nc &> /dev/null; then
     else
         echo -e "${RED}❌ Cannot connect to MCP server${NC}"
         echo -e "${YELLOW}💡 Please check:${NC}"
-        echo -e "   1. Windows MCP server is running: start_mcp_server_windows.bat"
-        echo -e "   2. Windows firewall allows port ${MCP_PORT}"
+        echo -e "   1. MCP server is running"
+        echo -e "   2. Firewall allows port ${MCP_PORT}"
         echo -e "   3. IP address is correct: ${MCP_HOST}"
         echo -e "   4. Both machines are on the same network"
         exit 1
@@ -258,7 +272,7 @@ else
         echo -e "${GREEN}✅ MCP server is reachable${NC}"
     else
         echo -e "${RED}❌ Cannot connect to MCP server${NC}"
-        echo -e "${YELLOW}💡 Please start Windows MCP server first${NC}"
+        echo -e "${YELLOW}💡 Please ensure your MCP server is running${NC}"
         exit 1
     fi
 fi
@@ -281,11 +295,11 @@ if [ "$HTTP_CODE" = "200" ]; then
     echo -e "${GREEN}✅ MCP server health check passed${NC}"
 elif [ "$HTTP_CODE" = "401" ]; then
     echo -e "${RED}❌ MCP server authentication failed${NC}"
-    echo -e "${YELLOW}💡 Check MCP_API_KEY in .env matches Windows MCP server${NC}"
+    echo -e "${YELLOW}💡 Check MCP_API_KEY in .env matches your MCP server configuration${NC}"
     exit 1
 elif [ -z "$HTTP_CODE" ]; then
     echo -e "${RED}❌ MCP server is not responding${NC}"
-    echo -e "${YELLOW}💡 Please start Windows MCP server: start_mcp_server_windows.bat${NC}"
+    echo -e "${YELLOW}💡 Please ensure your MCP server is running and reachable${NC}"
     exit 1
 else
     echo -e "${YELLOW}⚠️  MCP server returned status code: ${HTTP_CODE}${NC}"
@@ -293,7 +307,7 @@ else
 fi
 
 echo ""
-echo -e "${GREEN}✅ Windows MCP server is ready${NC}"
+echo -e "${GREEN}✅ MCP server is ready${NC}"
 
 # ============================================
 # Install Dependencies
@@ -520,6 +534,35 @@ wait_for_service "http://localhost:3000" "Web UI" || {
     cleanup
 }
 
+# Start Evaluation & Tracking Service (Optional)
+if [ "$ENABLE_EVAL" = "1" ]; then
+    echo ""
+    echo -e "${YELLOW}📊 Starting Evaluation & Tracking Service (Port 7001) - Benchmark & Artifact Tracking...${NC}"
+    cd "$PROJECT_ROOT"
+
+    if [ ! -f "eval/service.py" ]; then
+        echo -e "${YELLOW}⚠️  eval/service.py not found, skipping evaluation service${NC}"
+        EVAL_PID=""
+    else
+        # Clear old logs
+        > "$LOG_DIR/eval_service.log"
+
+        nohup python3 -m eval.service > "$LOG_DIR/eval_service.log" 2>&1 &
+        EVAL_PID=$!
+        echo -e "${GREEN}✅ Evaluation & Tracking Service started (PID: $EVAL_PID)${NC}"
+
+        # Wait for Eval Service to be ready
+        wait_for_service "http://localhost:7001/health" "Evaluation Service" || {
+            echo -e "${YELLOW}⚠️  Evaluation Service failed to start (non-critical)${NC}"
+            EVAL_PID=""
+        }
+    fi
+else
+    echo ""
+    echo -e "${YELLOW}📊 Evaluation & Tracking Service is DISABLED (ENABLE_EVAL=0). Skipping Eval Service startup.${NC}"
+    EVAL_PID=""
+fi
+
 # ============================================
 # All services started successfully
 # ============================================
@@ -542,13 +585,19 @@ echo -e "  🤖 LangGraph (Orchestrator): http://localhost:5001"
 if [ -n "$STUDIO_URL" ]; then
     echo -e "  📊 LangGraph Studio: ${STUDIO_URL} (Graph Visualization)"
 fi
-echo -e "  🗄️  MCP Server:       ${MCP_SERVER_URL} (Windows)"
+if [ -n "$EVAL_PID" ]; then
+    echo -e "  📊 Eval Service:     http://localhost:7001 (Benchmark & Artifact Tracking)"
+fi
+echo -e "  🗄️  MCP Server:       ${MCP_SERVER_URL}"
 echo ""
 echo -e "${BLUE}Logs:${NC}"
 echo -e "  Web UI:             tail -f $LOG_DIR/web_ui.log"
 echo -e "  LangGraph Service:  tail -f $LOG_DIR/langgraph.log"
 if [ -n "$STUDIO_URL" ]; then
     echo -e "  LangGraph Studio:   tail -f $LOG_DIR/langgraph_studio.log"
+fi
+if [ -n "$EVAL_PID" ]; then
+    echo -e "  Eval Service:       tail -f $LOG_DIR/eval_service.log"
 fi
 if [ -n "$DEBUG_PID" ]; then
     echo -e "  LangGraph Debugger: tail -f $LOG_DIR/langgraph_debugger.log"

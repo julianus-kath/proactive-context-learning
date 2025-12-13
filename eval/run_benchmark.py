@@ -1,0 +1,253 @@
+"""
+Benchmark Runner CLI
+Executes the fixed query catalog against the LangGraph service.
+Usage: python -m eval.run_benchmark --dataset eval/datasets/cockpit_queries.jsonl --run-name northwind_v1 --target http://localhost:5001
+"""
+
+import os
+import sys
+import json
+import time
+import argparse
+import asyncio
+import subprocess
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, Any, List, Optional
+import httpx
+from dotenv import load_dotenv
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Load environment variables
+project_root = Path(__file__).parent.parent
+load_dotenv(project_root / ".env")
+
+from eval.eval_client import EvalClient
+
+
+def get_git_commit() -> Optional[str]:
+    """Get current git commit hash."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=Path(__file__).parent.parent,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return result.stdout.strip() if result.returncode == 0 else None
+    except Exception:
+        return None
+
+
+def get_environment_info() -> Dict[str, str]:
+    """Collect environment metadata."""
+    return {
+        "python_version": sys.version.split()[0],
+        "machine": os.uname().nodename,
+        "platform": sys.platform,
+        "cwd": os.getcwd(),
+    }
+
+
+async def run_benchmark(
+    dataset_path: str,
+    run_name: str,
+    target_url: str,
+    eval_service_url: Optional[str] = None,
+):
+    """Execute benchmark against LangGraph service."""
+    dataset_path = Path(dataset_path)
+    if not dataset_path.exists():
+        print(f"❌ Dataset not found: {dataset_path}")
+        return
+
+    print(f"📊 Loading benchmark dataset: {dataset_path}")
+    queries = []
+    with open(dataset_path) as f:
+        for line in f:
+            if line.strip():
+                queries.append(json.loads(line))
+
+    print(f"✅ Loaded {len(queries)} queries")
+
+    run_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{run_name}"
+    run_dir = Path(__file__).parent / "runs" / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    manifest = {
+        "run_id": run_id,
+        "run_name": run_name,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "git_commit": get_git_commit(),
+        "dataset_path": str(dataset_path),
+        "mcp_server_url": os.getenv("MCP_SERVER_URL", "unknown"),
+        "model": os.getenv("OPENAI_MODEL", "gpt-4"),
+        "prompt_versions": {},
+        "environment": get_environment_info(),
+        "total_queries": len(queries),
+        "completed_queries": 0,
+        "failed_queries": 0,
+    }
+
+    print(f"🚀 Starting run: {run_id}")
+    print(f"📁 Results will be saved to: {run_dir}")
+
+    if eval_service_url:
+        eval_client = EvalClient(eval_service_url)
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.post(
+                    f"{eval_service_url}/runs",
+                    json=manifest,
+                )
+                if response.status_code != 200:
+                    print(f"⚠️  Could not register run with eval service: {response.status_code}")
+        except Exception as e:
+            print(f"⚠️  Eval service unavailable: {e}")
+            eval_client = None
+    else:
+        eval_client = None
+
+    results = {}
+    completed = 0
+    failed = 0
+
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        for i, query in enumerate(queries, 1):
+            query_id = query["id"]
+            question = query["question"]
+            print(f"\n[{i}/{len(queries)}] {query_id}: {question[:60]}...")
+
+            start_time = time.time()
+            try:
+                api_key = os.getenv("API_KEY", "supersecretapikey")
+                response = await client.post(
+                    f"{target_url}/process_query",
+                    json={"user_input": question, "api_key": api_key},
+                    headers={"X-Eval-Run-Id": run_id, "X-Eval-Query-Id": query_id},
+                )
+
+                if response.status_code != 200:
+                    raise Exception(f"HTTP {response.status_code}: {response.text}")
+
+                result = response.json()
+                latency_ms = int((time.time() - start_time) * 1000)
+
+                artifact = {
+                    "query_id": query_id,
+                    "question": question,
+                    "status": "success",
+                    "final_answer_text": result.get("final_response", ""),
+                    "sql_generated": [],
+                    "sql_executed": [],
+                    "tables_used": [],
+                    "row_count": None,
+                    "latency_ms_total": latency_ms,
+                    "retries": 0,
+                }
+
+                if "exec_result" in result and result["exec_result"]:
+                    artifact["tables_used"] = result["exec_result"].get("tables_used", [])
+                    artifact["sql_executed"] = [result["exec_result"].get("sql_query", "")]
+                    rows = result["exec_result"].get("rows", [])
+                    artifact["row_count"] = len(rows)
+                    artifact["result_preview"] = rows[:20]
+
+                results[query_id] = artifact
+                completed += 1
+                print(f"   ✅ Success ({latency_ms}ms)")
+
+                if eval_client:
+                    await eval_client.save_query_artifact(run_id, query_id, artifact)
+
+            except Exception as e:
+                latency_ms = int((time.time() - start_time) * 1000)
+                artifact = {
+                    "query_id": query_id,
+                    "question": question,
+                    "status": "failed",
+                    "error": str(e),
+                    "latency_ms_total": latency_ms,
+                    "sql_executed": [],
+                    "tables_used": [],
+                }
+                results[query_id] = artifact
+                failed += 1
+                print(f"   ❌ Failed: {e}")
+
+                if eval_client:
+                    await eval_client.save_query_artifact(run_id, query_id, artifact)
+
+    manifest["completed_queries"] = completed
+    manifest["failed_queries"] = failed
+
+    manifest_file = run_dir / "run_manifest.json"
+    manifest_file.write_text(json.dumps(manifest, indent=2))
+
+    results_file = run_dir / "results.json"
+    results_file.write_text(json.dumps(results, indent=2))
+
+    summary = {
+        "run_id": run_id,
+        "total_queries": len(queries),
+        "successful": completed,
+        "failed": failed,
+        "success_rate": f"{(completed/len(queries)*100):.1f}%",
+        "results_dir": str(run_dir),
+    }
+
+    summary_file = run_dir / "summary.json"
+    summary_file.write_text(json.dumps(summary, indent=2))
+
+    print(f"\n{'='*60}")
+    print(f"📋 BENCHMARK COMPLETE")
+    print(f"{'='*60}")
+    print(f"Run ID: {run_id}")
+    print(f"Total Queries: {len(queries)}")
+    print(f"Successful: {completed} ({(completed/len(queries)*100):.1f}%)")
+    print(f"Failed: {failed}")
+    print(f"Results saved to: {run_dir}")
+    print(f"{'='*60}")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Execute benchmark queries against LangGraph service"
+    )
+    parser.add_argument(
+        "--dataset",
+        default="eval/datasets/cockpit_queries.jsonl",
+        help="Path to benchmark dataset (JSONL format)",
+    )
+    parser.add_argument(
+        "--run-name",
+        default="benchmark_run",
+        help="Name for this benchmark run",
+    )
+    parser.add_argument(
+        "--target",
+        default="http://localhost:5001",
+        help="LangGraph service URL",
+    )
+    parser.add_argument(
+        "--eval-service",
+        default=None,
+        help="Evaluation service URL (optional, e.g., http://localhost:7001)",
+    )
+
+    args = parser.parse_args()
+
+    asyncio.run(
+        run_benchmark(
+            dataset_path=args.dataset,
+            run_name=args.run_name,
+            target_url=args.target,
+            eval_service_url=args.eval_service,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()
