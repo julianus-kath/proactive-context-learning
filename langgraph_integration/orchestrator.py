@@ -1633,6 +1633,7 @@ class QueryOrchestrator:
         user_input: str,
         messages: Optional[List[Dict[str, str]]] = None,
         conversation_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         High-level interface: delegate to the compiled LangGraph workflow so API consumers
@@ -1640,8 +1641,9 @@ class QueryOrchestrator:
         
         Args:
             user_input: The current user message/query
-            messages: List of conversation messages [{"role": "user"|"assistant", "content": "..."}]
+            messages: List of conversation messages ["role": ...]
             conversation_id: Optional conversation identifier for tracking
+            metadata: Optional additional state fields to merge (e.g., eval IDs)
         """
         logger.info(f"📝 PROCESS_QUERY CALLED: {user_input[:100]}...")
         logger.info(f"📝 Conversation ID: {conversation_id}, Messages count: {len(messages) if messages else 0}")
@@ -1656,6 +1658,10 @@ class QueryOrchestrator:
             "max_retries_per_candidate_set": 2,
             "skip_tables": [],
         }
+        if metadata and isinstance(metadata, dict):
+            for key, value in metadata.items():
+                if value is not None:
+                    initial_state[key] = value
         try:
             result = await self.ainvoke(initial_state)
             if isinstance(result, dict):

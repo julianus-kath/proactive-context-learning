@@ -19,6 +19,8 @@ import logging
 import asyncio
 import concurrent.futures
 import re
+import time
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Literal
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
@@ -259,14 +261,13 @@ class ExecAndRecoveryAgent:
 
             # Call MCP query_bounded with safety parameters
             timeout_ms = self.query_timeout_seconds * 1000
-            result = await self.mcp.query_bounded(
+            parsed = await self._query_with_recording(
+                state,
                 sql,
+                label="execute_query",
                 max_rows=self.row_limit,
-                timeout_ms=int(timeout_ms)
+                timeout_ms=timeout_ms,
             )
-
-            # Parse result
-            parsed = self._parse_query_result(result)
 
             if parsed.get("ok"):
                 logger.info(f"✅ Query executed: {parsed.get('row_count', 0)} rows, {parsed.get('execution_time_ms', 0)}ms")
@@ -378,8 +379,13 @@ class ExecAndRecoveryAgent:
                             )
                             try:
                                 timeout_ms = self.query_timeout_seconds * 1000
-                                agg_res = await self.mcp.query_bounded(agg_sql, max_rows=self.row_limit, timeout_ms=int(timeout_ms))
-                                agg_parsed = self._parse_query_result(agg_res)
+                                agg_parsed = await self._query_with_recording(
+                                    state,
+                                    agg_sql,
+                                    label="auto_aggregate_topk",
+                                    max_rows=self.row_limit,
+                                    timeout_ms=timeout_ms,
+                                )
                                 if agg_parsed.get("ok") and agg_parsed.get("row_count", 0) > 0:
                                     logger.info("🔁 Replaced exploratory SELECT * with aggregated TOP-K SUM result")
                                     state["sql_query"] = agg_sql
@@ -443,8 +449,13 @@ class ExecAndRecoveryAgent:
                                         )
                                         try:
                                             timeout_ms = self.query_timeout_seconds * 1000
-                                            j_res = await self.mcp.query_bounded(j_sql, max_rows=self.row_limit, timeout_ms=int(timeout_ms))
-                                            j_parsed = self._parse_query_result(j_res)
+                                            j_parsed = await self._query_with_recording(
+                                                state,
+                                                j_sql,
+                                                label="auto_aggregate_join",
+                                                max_rows=self.row_limit,
+                                                timeout_ms=timeout_ms,
+                                            )
                                             if j_parsed.get("ok") and j_parsed.get("row_count", 0) > 0:
                                                 logger.info("🔁 Replaced exploratory SELECT * with aggregated TOP-K SUM via heuristic customer join")
                                                 state["sql_query"] = j_sql
@@ -547,8 +558,13 @@ class ExecAndRecoveryAgent:
                             agg_sql += " ORDER BY (SELECT NULL)"
                         try:
                             timeout_ms = self.query_timeout_seconds * 1000
-                            ares = await self.mcp.query_bounded(agg_sql, max_rows=self.row_limit, timeout_ms=int(timeout_ms))
-                            aparsed = self._parse_query_result(ares)
+                            aparsed = await self._query_with_recording(
+                                state,
+                                agg_sql,
+                                label="auto_aggregate_catalog",
+                                max_rows=self.row_limit,
+                                timeout_ms=timeout_ms,
+                            )
                             if aparsed.get("ok") and aparsed.get("row_count", 0) > 0:
                                 state["sql_query"] = agg_sql
                                 state["exec_result"] = aparsed
@@ -786,6 +802,73 @@ class ExecAndRecoveryAgent:
         return state
 
     # Helper methods
+
+    async def _query_with_recording(
+        self,
+        state: BaseState,
+        sql: str,
+        *,
+        label: str,
+        max_rows: Optional[int] = None,
+        timeout_ms: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        rows = max_rows if max_rows is not None else self.row_limit
+        timeout = int(timeout_ms if timeout_ms is not None else self.query_timeout_seconds * 1000)
+        start = time.perf_counter()
+        try:
+            result = await self.mcp.query_bounded(sql, max_rows=rows, timeout_ms=timeout)
+            parsed = self._parse_query_result(result)
+        except Exception as exc:
+            duration_ms = (time.perf_counter() - start) * 1000
+            failure = {"ok": False, "row_count": 0, "error": str(exc)}
+            self._record_tool_execution(
+                state,
+                sql=sql,
+                parsed=failure,
+                duration_ms=duration_ms,
+                stage=label,
+                attempt=state.get("retry_count", 0),
+            )
+            raise
+        duration_ms = (time.perf_counter() - start) * 1000
+        self._record_tool_execution(
+            state,
+            sql=sql,
+            parsed=parsed,
+            duration_ms=duration_ms,
+            stage=label,
+            attempt=state.get("retry_count", 0),
+        )
+        return parsed
+
+    @staticmethod
+    def _record_tool_execution(
+        state: BaseState,
+        *,
+        sql: str,
+        parsed: Dict[str, Any],
+        duration_ms: float,
+        stage: str,
+        attempt: int,
+    ) -> None:
+        if not sql:
+            return
+        entry = {
+            "sql": sql,
+            "ok": bool(parsed.get("ok")),
+            "row_count": parsed.get("row_count"),
+            "execution_time_ms": int(duration_ms),
+            "stage": stage,
+            "attempt": attempt,
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+        }
+        if parsed.get("error"):
+            entry["error"] = parsed.get("error")
+        calls = state.get("executed_tool_calls")
+        if not isinstance(calls, list):
+            calls = []
+        calls.append(entry)
+        state["executed_tool_calls"] = calls
 
     def _parse_query_result(self, result: Any) -> Dict[str, Any]:
         def failure(message: str) -> Dict[str, Any]:

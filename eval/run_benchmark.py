@@ -26,6 +26,53 @@ load_dotenv(project_root / ".env")
 from eval.eval_client import EvalClient
 
 
+def first_non_empty_str(*candidates: Optional[str]) -> str:
+    for candidate in candidates:
+        if isinstance(candidate, str):
+            trimmed = candidate.strip()
+            if trimmed:
+                return trimmed
+    return ""
+
+
+def merge_unique_strings(*sources: Any) -> List[str]:
+    merged: List[str] = []
+    for source in sources:
+        if not source:
+            continue
+        values = source if isinstance(source, list) else [source]
+        for value in values:
+            if isinstance(value, str):
+                trimmed = value.strip()
+                if trimmed and trimmed not in merged:
+                    merged.append(trimmed)
+    return merged
+
+
+def artifact_validation_errors(artifact: Dict[str, Any]) -> List[str]:
+    reasons = []
+    final_answer = (artifact.get("final_answer_text") or "").lower()
+    failure_phrases = (
+        "internal error",
+        "please provide correct data",
+        "please execute a relevant query",
+    )
+    if any(phrase in final_answer for phrase in failure_phrases):
+        reasons.append("invalid_final_answer")
+    sql_entries = artifact.get("sql_executed") or []
+    has_sql = any(isinstance(entry, str) and entry.strip() for entry in sql_entries)
+    if not has_sql:
+        reasons.append("missing_sql")
+    tables_used = artifact.get("tables_used") or []
+    if not tables_used:
+        reasons.append("missing_tables")
+    row_count = artifact.get("row_count")
+    preview = artifact.get("result_preview") or []
+    if row_count is None and not preview:
+        reasons.append("missing_results")
+    return reasons
+
+
 def get_git_commit() -> Optional[str]:
     """Get current git commit hash."""
     try:
@@ -146,18 +193,62 @@ async def run_benchmark(
                     "row_count": None,
                     "latency_ms_total": latency_ms,
                     "retries": 0,
+                    "result_preview": [],
                 }
 
-                if "exec_result" in result and result["exec_result"]:
-                    artifact["tables_used"] = result["exec_result"].get("tables_used", [])
-                    artifact["sql_executed"] = [result["exec_result"].get("sql_query", "")]
-                    rows = result["exec_result"].get("rows", [])
-                    artifact["row_count"] = len(rows)
+                exec_result_payload = result.get("exec_result")
+                rows: List[Dict[str, Any]] = []
+                row_count = None
+                metadata: Dict[str, Any] = {}
+                metadata_tables: Any = []
+                if isinstance(exec_result_payload, dict) and exec_result_payload:
+                    data_rows = exec_result_payload.get("data")
+                    if not isinstance(data_rows, list):
+                        data_rows = exec_result_payload.get("rows") or []
+                    rows = data_rows if isinstance(data_rows, list) else []
+                    row_count = exec_result_payload.get("row_count")
+                    raw_metadata = exec_result_payload.get("metadata")
+                    if isinstance(raw_metadata, dict):
+                        metadata = raw_metadata
+                        metadata_tables = metadata.get("tables_used") or metadata.get("tables") or []
+                else:
+                    metadata_tables = []
+
+                if row_count is None and rows:
+                    row_count = len(rows)
+
+                if rows:
                     artifact["result_preview"] = rows[:20]
+                artifact["row_count"] = row_count
+
+                sources = result.get("sources") or result.get("relevant_tables")
+                exec_tables = None
+                if isinstance(exec_result_payload, dict):
+                    exec_tables = exec_result_payload.get("tables_used") or exec_result_payload.get("tables")
+                artifact["tables_used"] = merge_unique_strings(sources, exec_tables, metadata_tables)
+
+                sql_query = first_non_empty_str(
+                    result.get("sql_query"),
+                    result.get("state", {}).get("sql_query") if isinstance(result.get("state"), dict) else None,
+                    exec_result_payload.get("sql_query") if isinstance(exec_result_payload, dict) else None,
+                    exec_result_payload.get("query") if isinstance(exec_result_payload, dict) else None,
+                    metadata.get("sql_query") if isinstance(exec_result_payload, dict) and isinstance(exec_result_payload.get("metadata"), dict) else None,
+                )
+                if sql_query:
+                    artifact["sql_generated"] = [sql_query]
+                    artifact["sql_executed"] = [sql_query]
+
+                validation_errors = artifact_validation_errors(artifact)
+                if validation_errors:
+                    artifact["status"] = "failed"
+                    artifact["failure_reasons"] = validation_errors
+                    failed += 1
+                    print(f"   ❌ Failed validation: {', '.join(validation_errors)}")
+                else:
+                    completed += 1
+                    print(f"   ✅ Success ({latency_ms}ms)")
 
                 results[query_id] = artifact
-                completed += 1
-                print(f"   ✅ Success ({latency_ms}ms)")
 
                 if eval_client:
                     await eval_client.save_query_artifact(run_id, query_id, artifact)

@@ -103,6 +103,9 @@ class BaseState(TypedDict, total=False):
     retry_count: int  # Number of retry attempts
     session_described_tables: Optional[Dict[str, Any]]  # Cache of described table metadata
     health_status: Dict[str, Any]  # {ok, db_connected, tables_count, views_count, ...}
+    eval_run_id: Optional[str]
+    eval_query_id: Optional[str]
+    executed_tool_calls: List[Dict[str, Any]]
 
     # 🆕 PHASE 10b: Retry & candidate tracking (prevent infinite loops)
     tried_candidate_tables: List[str]  # Tables we've already attempted and failed on
