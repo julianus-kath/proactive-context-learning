@@ -445,6 +445,71 @@ class MCPDatabaseTool:
         content = await self.call_tool(tool_name, arguments)
         return _content_to_envelope(content)
     
+    def _parse_tool_json(self, content: List[Dict[str, Any]]) -> Dict[str, Any]:
+        if not isinstance(content, list) or not content:
+            return {}
+        for item in content:
+            if isinstance(item, dict):
+                if item.get("type") == "json" and isinstance(item.get("json"), dict):
+                    return item.get("json", {}) or {}
+                text_value = item.get("text")
+                if isinstance(text_value, str):
+                    try:
+                        return _extract_json_from_text(text_value)
+                    except Exception:
+                        try:
+                            return json.loads(text_value)
+                        except Exception:
+                            continue
+            elif isinstance(item, str):
+                try:
+                    parsed = json.loads(item)
+                    if isinstance(parsed, dict):
+                        return parsed
+                except Exception:
+                    continue
+        return {}
+
+    async def catalog_status(self, catalog_dir: Optional[str] = None) -> Dict[str, Any]:
+        arguments: Dict[str, Any] = {}
+        if catalog_dir:
+            arguments["catalog_dir"] = catalog_dir
+        content = await self.call_tool("scout_catalog_diagnostics", arguments)
+        payload = self._parse_tool_json(content)
+        return payload if isinstance(payload, dict) else {}
+
+    async def get_catalog(
+        self,
+        include_tables: bool = True,
+        include_views: bool = True,
+        include_relationships: bool = False,
+        max_tables: Optional[int] = None
+    ) -> Optional[Dict[str, Any]]:
+        arguments: Dict[str, Any] = {
+            "include_tables": include_tables,
+            "include_views": include_views,
+            "include_relationships": include_relationships,
+        }
+        if max_tables is not None:
+            arguments["max_tables"] = max_tables
+        content = await self.call_tool("scout_catalog_get", arguments)
+        payload = self._parse_tool_json(content)
+        if isinstance(payload, dict):
+            catalog = payload.get("catalog")
+            if isinstance(catalog, dict):
+                return catalog
+            if payload.get("ok") and ("tables" in payload or "views" in payload):
+                return payload
+        return None
+
+    async def build_catalog(self, wait_for_completion: bool = True) -> Dict[str, Any]:
+        arguments = {"wait_for_completion": wait_for_completion}
+        content = await self.call_tool("scout_catalog_refresh", arguments)
+        payload = self._parse_tool_json(content)
+        if isinstance(payload, dict):
+            return payload
+        return {"ok": False, "error": "Malformed build_catalog response"}
+    
     async def get_schema(self) -> List[Dict[str, Any]]:
         """
         Get the database schema.

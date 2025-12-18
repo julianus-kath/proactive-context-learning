@@ -47,6 +47,7 @@ from langgraph_integration.agents.exec_recovery.agent import ExecAndRecoveryAgen
 from langgraph_integration.agents.result_validator.agent import build_result_validator_node
 from langgraph_integration.agents.answer.agent import AnswerAgent
 from langgraph_integration.agents.interpretation.agent import InterpretationAgent
+from langgraph_integration.concept_mapper import ConceptMapper
 from langgraph_integration.mcp_client import get_shared_mcp_tool
 from langgraph_integration.debug_logger import get_debug_logger
 
@@ -101,6 +102,7 @@ class QueryOrchestrator:
         """
         self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)
         self.mcp = get_shared_mcp_tool()
+        self.concept_mapper = ConceptMapper()
 
         # Initialize specialized agents
         logger.info("🚀 Initializing multi-agent orchestrator (Phase 9)...")
@@ -269,6 +271,7 @@ class QueryOrchestrator:
         # For ainvoke() compatibility, register nodes as their native async methods
         graph.add_node("index_database", self._index_database_node)
         graph.add_node("parse_intent", self._parse_intent_node)
+        graph.add_node("concept_mapping", self._concept_mapping_node)
         graph.add_node("route_operation", self._route_operation_node)
 
         # Agent nodes (main flow) - register async implementations directly
@@ -292,7 +295,8 @@ class QueryOrchestrator:
         # Initial path: index → parse → route
         graph.add_edge(START, "index_database")
         graph.add_edge("index_database", "parse_intent")
-        graph.add_edge("parse_intent", "route_operation")
+        graph.add_edge("parse_intent", "concept_mapping")
+        graph.add_edge("concept_mapping", "route_operation")
 
         # ============= CONDITIONAL ROUTING FROM route_operation =============
         # Based on operation type, route to appropriate handler
@@ -527,22 +531,112 @@ class QueryOrchestrator:
             intent["keywords_for_discovery"] = list(dict.fromkeys(kws))
         return intent
 
+    # ============= Catalog Management =============
+
+    async def _get_or_build_catalog(self) -> Optional[Dict[str, Any]]:
+        """
+        Get or build Scout catalog (idempotent).
+        
+        Attempts (in order):
+        1. Fetch via MCP tool (scout_catalog_get)
+        2. Load from local cache (data/catalog/scout_catalog.json)
+        3. Trigger MCP rebuild and refetch
+        
+        Raises exception if all fail, never returns None/empty.
+        """
+        logger.info("📚 [CATALOG] Attempting to load/build Scout catalog...")
+
+        def _entity_len(collection: Any) -> int:
+            if isinstance(collection, dict):
+                return len(collection)
+            if isinstance(collection, list):
+                return len(collection)
+            return 0
+
+        def _catalog_ready(payload: Any) -> bool:
+            if not isinstance(payload, dict):
+                return False
+            return (_entity_len(payload.get("tables")) + _entity_len(payload.get("views"))) > 0
+        
+        # Try 1: Fetch via MCP tool
+        try:
+            logger.info("📚 [CATALOG] Attempt 1: Fetching via MCP (scout_catalog_get)...")
+            catalog = await self.mcp.get_catalog(include_tables=True, include_views=True)
+            if _catalog_ready(catalog):
+                table_count = _entity_len(catalog.get("tables"))
+                view_count = _entity_len(catalog.get("views"))
+                logger.info(f"📚 [CATALOG] ✅ Loaded from MCP: {table_count} tables, {view_count} views")
+                return catalog
+            logger.info("📚 [CATALOG] Attempt 1 returned empty payload")
+        except AttributeError:
+            logger.warning("📚 [CATALOG] MCP client missing get_catalog(); falling back to cache")
+        except Exception as e:
+            logger.debug(f"📚 [CATALOG] Remote fetch failed: {e}")
+        
+        # Try 2: Load from file cache
+        try:
+            logger.info("📚 [CATALOG] Attempt 2: Trying to load from file cache...")
+            catalog_path = "data/catalog/scout_catalog.json"
+            if os.path.exists(catalog_path):
+                with open(catalog_path, 'r', encoding='utf-8') as f:
+                    catalog = json.load(f)
+                if _catalog_ready(catalog):
+                    table_count = _entity_len(catalog.get("tables"))
+                    view_count = _entity_len(catalog.get("views"))
+                    logger.info(f"📚 [CATALOG] ✅ Loaded from file: {table_count} tables, {view_count} views")
+                    return catalog
+        except Exception as e:
+            logger.debug(f"📚 [CATALOG] File load failed: {e}")
+        
+        # Try 3: Build via MCP then refetch
+        try:
+            logger.info("📚 [CATALOG] Attempt 3: Building catalog via MCP...")
+            build_result = await self.mcp.build_catalog(wait_for_completion=True)
+            if not (isinstance(build_result, dict) and build_result.get("ok")):
+                raise RuntimeError(build_result.get("error") if isinstance(build_result, dict) else "Catalog rebuild failed")
+            catalog = await self.mcp.get_catalog(include_tables=True, include_views=True)
+            if _catalog_ready(catalog):
+                table_count = _entity_len(catalog.get("tables"))
+                view_count = _entity_len(catalog.get("views"))
+                logger.info(f"📚 [CATALOG] ✅ Built successfully: {table_count} tables, {view_count} views")
+                return catalog
+            raise RuntimeError("Catalog rebuild completed but no catalog was returned")
+        except AttributeError:
+            logger.warning("📚 [CATALOG] MCP client missing build_catalog(); cannot trigger rebuild")
+        except Exception as e:
+            logger.warning(f"📚 [CATALOG] Build attempt failed: {e}")
+        
+        # All attempts failed
+        logger.error("📚 [CATALOG] ❌ All catalog loading strategies failed")
+        raise RuntimeError(
+            "Scout/Catalog initialization failed. "
+            "Tried: MCP fetch, file load, and MCP build. "
+            "Ensure MCP server is running and database is accessible."
+        )
+
     # ============= Core node implementations =============
 
     async def _index_database_node(self, state: BaseState) -> BaseState:
         """
-        Load Scout catalog and verify MCP availability.
+        HARD PREREQUISITE: Load Scout catalog and verify MCP availability.
         
-        This ensures discovery will have access to semantic ranking and metadata.
+        This node MUST ensure:
+        1. MCP is healthy
+        2. Scout/Catalog exists and is ready
+        
+        If either fails, the entire pipeline is blocked (no silent degradation).
+        Discovery depends on this working.
         """
         debug_logger.agent_entry("index_database", dict(state))
         before_state = dict(state)
         
-        logger.info("📚 [INDEX_DATABASE] Indexing database...")
+        logger.info("📚 [INDEX_DATABASE] ════════════════════════════════════════")
+        logger.info("📚 [INDEX_DATABASE] HARD PREREQUISITE CHECK: Scout/Catalog")
+        logger.info("📚 [INDEX_DATABASE] ════════════════════════════════════════")
 
         try:
             # Check MCP health
-            logger.info("📚 [INDEX_DATABASE] Checking MCP availability...")
+            logger.info("📚 [INDEX_DATABASE] Step 1/2: Checking MCP availability...")
             logger.info(f"📚 [INDEX_DATABASE] MCP URL: {getattr(self.mcp, 'mcp_url', 'unknown')}")
             is_healthy = await self.mcp.health_check()
             logger.info(f"📚 [INDEX_DATABASE] Health check result: {is_healthy}")
@@ -550,14 +644,40 @@ class QueryOrchestrator:
             if not is_healthy:
                 error = {
                     "type": "MCP_UNAVAILABLE",
-                    "message": "MCP server is not responding"
+                    "message": "MCP server is not responding. Database access is unavailable."
                 }
-                logger.error(f"📚 [INDEX_DATABASE] ❌ {error['message']}")
+                logger.error(f"📚 [INDEX_DATABASE] ❌ HARD BLOCK: {error['message']}")
                 result_state = {**state, "error_info": error}
                 debug_logger.agent_exit("index_database", before_state, dict(result_state))
                 return result_state
 
-            logger.info("📚 [INDEX_DATABASE] ✅ Database indexed, MCP available")
+            logger.info("📚 [INDEX_DATABASE] ✅ MCP health check passed")
+            
+            # NEW: Verify Scout/Catalog is ready (HARD REQUIREMENT)
+            logger.info("📚 [INDEX_DATABASE] Step 2/2: Verifying Scout/Catalog readiness...")
+            try:
+                # Attempt to get catalog or build it if missing
+                catalog = await self._get_or_build_catalog()
+                if not catalog:
+                    raise ValueError("Catalog is empty or not available")
+                
+                table_count = len(catalog.get("tables", {}))
+                view_count = len(catalog.get("views", {}))
+                logger.info(f"📚 [INDEX_DATABASE] ✅ Catalog ready: {table_count} tables, {view_count} views")
+                state["catalog"] = catalog
+                
+            except Exception as e:
+                error = {
+                    "type": "CATALOG_NOT_READY",
+                    "message": f"Scout/Catalog is not available: {str(e)}. Discovery requires this to function.",
+                    "error": str(e)
+                }
+                logger.error(f"📚 [INDEX_DATABASE] ❌ HARD BLOCK: {error['message']}")
+                result_state = {**state, "error_info": error}
+                debug_logger.agent_exit("index_database", before_state, dict(result_state))
+                return result_state
+
+            logger.info("📚 [INDEX_DATABASE] ✅ All prerequisites satisfied, pipeline may proceed")
             # Load last execution result for interpretation follow-ups (memory → disk)
             cache = self._previous_exec_cache or {}
             if cache:
@@ -715,6 +835,33 @@ class QueryOrchestrator:
             result_state = {**state, "error_info": error}
             debug_logger.agent_exit("parse_intent", before_state, dict(result_state))
             return result_state
+
+    async def _concept_mapping_node(self, state: BaseState) -> BaseState:
+        if state.get("error_info"):
+            return state
+        intent = state.get("intent", {}) or {}
+        catalog = state.get("catalog") or {}
+        mapped = self.concept_mapper.map(state.get("user_input", ""), intent, catalog.get("concepts"))
+        state["inferred_concepts"] = mapped.get("concepts") or []
+        state["seed_tables"] = mapped.get("seed_tables") or []
+        state["concept_hints"] = {
+            "kpi_expressions": mapped.get("kpi_expressions") or {},
+            "time_field_hints": mapped.get("time_field_hints") or [],
+            "join_hints": mapped.get("join_hints") or {},
+        }
+        log_payload = state.get("discovery_log") or {}
+        log_payload.update({
+            "query": state.get("user_input", ""),
+            "keywords": intent.get("keywords_for_discovery") or [],
+            "concepts": state["inferred_concepts"],
+            "seed_tables": state["seed_tables"],
+            "kpi_expressions": state["concept_hints"].get("kpi_expressions"),
+            "time_field_hints": state["concept_hints"].get("time_field_hints"),
+            "concept_explanations": mapped.get("explanations") or [],
+        })
+        log_payload.setdefault("events", [])
+        state["discovery_log"] = log_payload
+        return state
 
     async def _route_operation_node(self, state: BaseState) -> BaseState:
         """
@@ -877,8 +1024,26 @@ class QueryOrchestrator:
                 logger.error(f"🔍 [DISCOVERY]    message: {error.get('message')}")
                 state["error_info"] = error
 
-            logger.info(f"🔍 [DISCOVERY] ✅ DISCOVERY COMPLETE: {len(relevant_tables)} table(s) found")
-            logger.info(f"🔍 [DISCOVERY] ✅ State is ready for JOIN_SQL node")
+            # FIX: Fail loud if discovery returns zero candidates
+            if not relevant_tables and not state.get("error_info"):
+                error_msg = (
+                    "Discovery could not find any relevant tables for this query. "
+                    f"Keywords attempted: {keywords}. "
+                    "This could be because: (1) keywords don't match any table names, "
+                    "(2) Scout/Catalog is not initialized, or (3) MCP is unavailable."
+                )
+                logger.error(f"🔍 [DISCOVERY] ❌ FAIL LOUD: {error_msg}")
+                state["error_info"] = {
+                    "type": "DISCOVERY_NO_CANDIDATES",
+                    "message": error_msg,
+                    "keywords_attempted": keywords,
+                    "tables_found": 0,
+                }
+            elif not relevant_tables and state.get("error_info"):
+                logger.error(f"🔍 [DISCOVERY] ❌ ZERO CANDIDATES + PRIOR ERROR")
+            else:
+                logger.info(f"🔍 [DISCOVERY] ✅ DISCOVERY COMPLETE: {len(relevant_tables)} table(s) found")
+                logger.info(f"🔍 [DISCOVERY] ✅ State is ready for JOIN_SQL node")
             debug_logger.agent_exit("discovery", before_state, dict(state))
             return state
 
@@ -1382,6 +1547,40 @@ class QueryOrchestrator:
                 logger.info(f"✨ [ANSWER] ✅ Clarification response generated")
                 debug_logger.agent_exit("answer", before_state, dict(state))
                 return state
+
+            # FIX 2: HARD GROUNDING GATE - Prevent ungrounded answers
+            # Check if we have meaningful execution results for a data query
+            operation = intent.get("operation", "query")
+            is_data_query = operation == "query"
+            
+            if is_data_query:
+                exec_result = state.get("exec_result") or {}
+                exec_ok = exec_result.get("ok", False) if isinstance(exec_result, dict) else False
+                exec_error = exec_result.get("error") if isinstance(exec_result, dict) else None
+                sql_query = state.get("sql_query", "").strip()
+                
+                # Hard gate: if no successful SQL execution for a data query, fail with structure error
+                if not exec_ok or not sql_query or exec_error:
+                    logger.warning(f"✨ [ANSWER] ⚠️  GROUNDING GATE ACTIVATED: Data query without valid execution")
+                    logger.warning(f"✨   exec_ok={exec_ok}, has_sql={bool(sql_query)}, exec_error={exec_error}")
+                    
+                    # Set error state instead of producing ungrounded answer
+                    error_msg = exec_error or "Query execution failed or produced no valid SQL"
+                    state["error_info"] = {
+                        "type": "UNGROUNDED_RESPONSE_PREVENTED",
+                        "message": f"Cannot answer this query: {error_msg}. Please try a more specific question.",
+                    }
+                    state["final_response"] = (
+                        "I wasn't able to retrieve the information needed to answer your question. "
+                        "This could be because:\n"
+                        "• The query was too vague\n"
+                        "• The requested data doesn't exist in the database\n"
+                        "• The relevant tables couldn't be identified\n\n"
+                        "Please try rephrasing your question with more specific details."
+                    )
+                    logger.warning(f"✨ [ANSWER] ✅ Ungrounded response prevented, error state returned")
+                    debug_logger.agent_exit("answer", before_state, dict(state))
+                    return state
 
             # Fast return: if we have a successful exec_result, optionally synthesize a concise count answer
             if isinstance(exec_result, dict) and exec_result.get("ok", False):

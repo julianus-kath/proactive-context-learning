@@ -72,6 +72,7 @@ class QueryResponse(BaseModel):
     sql_query: Optional[str] = None
     sources: Optional[list] = None
     error_info: Optional[Dict[str, Any]] = None
+    discovery_log: Optional[Dict[str, Any]] = None
     status: str = "success"
 
 class ConversationResponse(BaseModel):
@@ -232,12 +233,20 @@ async def process_query(request: QueryRequest = Body(...), api_key_header: Optio
         # Extract optional fields
         sql_query = orchestrator_result.get("sql_query")
         sources = orchestrator_result.get("relevant_tables", [])
+        discovery_log = orchestrator_result.get("discovery_log")
         
         logger.info(f"✅ Query processed successfully, response length: {len(response_text)}")
         
         # Ensure sources is JSON-serializable
         if sources and not isinstance(sources, list):
             sources = list(sources) if hasattr(sources, '__iter__') and not isinstance(sources, str) else []
+        
+        if discovery_log is not None and not isinstance(discovery_log, dict):
+            try:
+                discovery_log = dict(discovery_log)
+            except Exception:
+                logger.warning("⚠️  discovery_log was not a dict; coercing to string payload")
+                discovery_log = {"raw": str(discovery_log)}
         
         # Create response with JSON-safe values
         response = QueryResponse(
@@ -246,6 +255,7 @@ async def process_query(request: QueryRequest = Body(...), api_key_header: Optio
             sql_query=sql_query,
             sources=sources or [],
             error_info=error_info_data,
+            discovery_log=discovery_log,
             status="success"
         )
         

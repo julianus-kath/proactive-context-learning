@@ -76,6 +76,13 @@ class BaseState(TypedDict, total=False):
     # Produced by IntentParserAgent (semantic, LLM-based), consumed by Discovery & others
     intent: ParsedIntent  # Structured: operation, entities, metrics, filters, clean keywords
 
+    # Catalog + concept mediation
+    catalog: Dict[str, Any]
+    inferred_concepts: List[str]
+    seed_tables: List[str]
+    concept_hints: Dict[str, Any]
+    discovery_log: Dict[str, Any]
+
     # Discovery phase outputs
     relevant_tables: List[str]  # ["dbo.sales_orders", "dbo.order_items", ...]
     schema_snippet: str  # Compact schema description (≤3 tables/views)

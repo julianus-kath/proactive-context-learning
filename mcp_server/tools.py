@@ -7,6 +7,7 @@ Phase 6: Added structured logging and observability.
 
 import logging
 import json
+from pathlib import Path
 from typing import Dict, Any, List
 from decimal import Decimal
 from datetime import datetime, date
@@ -42,6 +43,27 @@ def _get_scout_runner(db_manager):
             logger.warning(f"Failed to initialize Scout Runner: {e}")
             return None
     return _scout_runner
+
+
+_concept_descriptor_cache = None
+
+
+def _load_concept_descriptors() -> List[Dict[str, Any]]:
+    global _concept_descriptor_cache
+    if _concept_descriptor_cache is not None:
+        return _concept_descriptor_cache
+    concepts_path = Path(__file__).resolve().parent.parent / "data" / "concepts.json"
+    if concepts_path.exists():
+        try:
+            with concepts_path.open("r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+            concepts = payload.get("concepts") or []
+            _concept_descriptor_cache = [c for c in concepts if isinstance(c, dict)]
+            return _concept_descriptor_cache
+        except Exception as exc:
+            logger.debug("Failed to load concept descriptors: %s", exc)
+    _concept_descriptor_cache = []
+    return _concept_descriptor_cache
 
 
 async def _search_tables_from_catalog(catalog: Dict[str, Any], query: str, page: int, page_size: int, intent_data: Dict[str, Any] = None) -> MCPToolResult:
@@ -730,6 +752,35 @@ class MCPTools:
                     "required": []
                 }
             ),
+            MCPTool(
+                name="scout_catalog_get",
+                description="Fetch the latest Scout catalog (tables, views, relationships) for orchestrator readiness without filesystem access.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "include_tables": {
+                            "type": "boolean",
+                            "description": "Include table metadata (default: true)",
+                            "default": True
+                        },
+                        "include_views": {
+                            "type": "boolean",
+                            "description": "Include view metadata (default: true)",
+                            "default": True
+                        },
+                        "include_relationships": {
+                            "type": "boolean",
+                            "description": "Include relationship graph data (default: false)",
+                            "default": False
+                        },
+                        "max_tables": {
+                            "type": "integer",
+                            "description": "Optional cap on number of tables returned"
+                        }
+                    },
+                    "required": []
+                }
+            ),
         ]
     
     @staticmethod
@@ -798,6 +849,8 @@ class MCPTools:
                     result = await MCPTools._scout_catalog_diagnostics(arguments, db_manager)
                 elif tool_name == "scout_catalog_refresh":
                     result = await MCPTools._scout_catalog_refresh(arguments, db_manager)
+                elif tool_name == "scout_catalog_get":
+                    result = await MCPTools._scout_catalog_get(arguments, db_manager)
                 else:
                     metrics.success = False
                     metrics.error_code = "UNKNOWN_TOOL"
@@ -2117,6 +2170,79 @@ class MCPTools:
                 isError=True
             )
     
+    @staticmethod
+    async def _scout_catalog_get(arguments: Dict[str, Any], db_manager=None) -> MCPToolResult:
+        """Return the cached Scout catalog so clients can verify readiness via MCP."""
+        runner = _get_scout_runner(db_manager)
+        if runner is None:
+            response = {"ok": False, "error": "Scout runner not available"}
+            return MCPToolResult(content=[{"type": "text", "text": json.dumps(response, cls=DecimalEncoder)}], isError=True)
+
+        catalog = runner.get_catalog()
+        if not catalog:
+            response = {"ok": False, "error": "Catalog not ready"}
+            return MCPToolResult(content=[{"type": "text", "text": json.dumps(response, cls=DecimalEncoder)}], isError=True)
+
+        include_tables = bool(arguments.get("include_tables", True))
+        include_views = bool(arguments.get("include_views", True))
+        include_relationships = bool(arguments.get("include_relationships", False))
+        max_tables = arguments.get("max_tables")
+
+        def _slice_entities(data, limit):
+            if not limit or limit <= 0:
+                return data
+            if isinstance(data, dict):
+                return {k: v for k, v in list(data.items())[:limit]}
+            if isinstance(data, list):
+                return data[:limit]
+            return data
+
+        def _entity_len(data):
+            if isinstance(data, dict):
+                return len(data)
+            if isinstance(data, list):
+                return len(data)
+            return 0
+
+        response_catalog: Dict[str, Any] = {}
+        tables = catalog.get("tables")
+        views = catalog.get("views")
+        relationships = catalog.get("relationships")
+
+        if include_tables and tables is not None:
+            response_catalog["tables"] = _slice_entities(tables, max_tables)
+        if include_views and views is not None:
+            response_catalog["views"] = views
+        if include_relationships and relationships is not None:
+            response_catalog["relationships"] = relationships
+
+        if not response_catalog:
+            response_catalog = catalog
+
+        concepts = _load_concept_descriptors()
+        if concepts:
+            response_catalog["concepts"] = concepts
+
+        stats = getattr(getattr(runner, "store", None), "get_stats", lambda: {})()
+        tables_count = _entity_len(tables)
+        views_count = _entity_len(views)
+        relationships_count = _entity_len(relationships)
+
+        response = {
+            "ok": True,
+            "catalog": response_catalog,
+            "metadata": {
+                "tables": tables_count,
+                "views": views_count,
+                "relationships": relationships_count,
+                "stats": stats,
+            }
+        }
+
+        return MCPToolResult(
+            content=[{"type": "text", "text": json.dumps(response, cls=DecimalEncoder)}]
+        )
+
     @staticmethod
     async def _scout_catalog_diagnostics(arguments: Dict[str, Any], db_manager=None) -> MCPToolResult:
         """

@@ -17,7 +17,7 @@ import asyncio
 import concurrent.futures
 import difflib
 import re
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
@@ -223,6 +223,8 @@ class DiscoveryAgent:
         user_input = state.get("user_input", "")
         intent = state.get("intent", {})
         forced_tables = state.get("forced_tables", [])
+        seed_tables = state.get("seed_tables", []) or []
+        discovery_log = self._get_discovery_log(state)
         
         # 🔄 Check for refinement: If forced_tables are specified, use them directly
         if forced_tables:
@@ -260,6 +262,11 @@ class DiscoveryAgent:
         
         # Extract search keywords
         primary_tokens = self._extract_keywords(user_input, intent)
+        discovery_log["search_keywords"] = primary_tokens
+        discovery_log.setdefault("events", []).append({
+            "stage": "keyword_extraction",
+            "tokens": primary_tokens,
+        })
         
         if not primary_tokens:
             error = {
@@ -337,6 +344,22 @@ class DiscoveryAgent:
                     seen.add(table_name)
                     unique_candidates.append(c)
             
+            if seed_tables:
+                seed_candidates = self._build_seed_candidates(seed_tables, state)
+                injected = []
+                for cand in seed_candidates:
+                    name = cand.get("full_name") or cand.get("table_name") or ""
+                    if name and name not in seen:
+                        seen.add(name)
+                        unique_candidates.append(cand)
+                        injected.append(name)
+                if injected:
+                    logger.info(f"🔍 Added {len(injected)} concept seed tables to candidates")
+                    discovery_log.setdefault("events", []).append({
+                        "stage": "seed_injection",
+                        "tables": injected,
+                    })
+
             # Minimal targeted enrichment: ensure customer master candidate is present for customer + sum intents
             try:
                 entities = [e.lower() for e in (intent.get("primary_entities") or [])]
@@ -380,9 +403,22 @@ class DiscoveryAgent:
             if not unique_candidates or not has_meaningful_matches:
                 logger.warning(f"⚠️  No semantically relevant tables/views found for keywords: {', '.join(primary_tokens)}")
                 logger.info(f"   Found {len(unique_candidates)} candidates, but none with semantic relevance > 0.05")
-                # Trigger clarification by returning empty candidates
-                state["candidate_views"] = []
-                return state
+                fallback_candidates, fallback_source = self._fallback_candidates_from_concepts(state, seen)
+                if fallback_candidates:
+                    unique_candidates = fallback_candidates
+                    logger.info(f"🔄 Using fallback candidates from {fallback_source}")
+                    discovery_log.setdefault("events", []).append({
+                        "stage": "fallback_candidates",
+                        "source": fallback_source,
+                        "tables": [c.get("full_name") or c.get("table_name") for c in fallback_candidates],
+                    })
+                else:
+                    discovery_log.setdefault("events", []).append({
+                        "stage": "fallback_candidates",
+                        "source": "none",
+                    })
+                    state["candidate_views"] = []
+                    return state
             
             logger.info(f"✅ Found {len(unique_candidates)} candidate tables/views")
 
@@ -393,6 +429,10 @@ class DiscoveryAgent:
                 score = cand.get('relevance_score', 0)
                 rows = cand.get('estimated_rows', 0)
                 logger.info(f"  {i+1:2d}. {name} | score={score:.3f} | rows={rows}")
+            discovery_log.setdefault("events", []).append({
+                "stage": "search_results",
+                "count": len(unique_candidates),
+            })
 
             # Store candidates in state for next node
             state["candidate_views"] = unique_candidates
@@ -602,6 +642,18 @@ class DiscoveryAgent:
             # Log top 3
             for i, c in enumerate(scored[:3]):
                 logger.debug(f"  #{i+1}: {c.get('table_name', c.get('name', ''))} (score={c['score']:.3f})")
+            log_payload = self._get_discovery_log(state)
+            log_payload.setdefault("events", []).append({
+                "stage": "rank",
+                "count": len(scored),
+                "top": [
+                    {
+                        "table": c.get("table_name") or c.get("name"),
+                        "score": round(float(c.get("score", 0)), 3),
+                    }
+                    for c in scored[:5]
+                ],
+            })
             
             state["candidate_views"] = scored
             return state
@@ -904,6 +956,17 @@ class DiscoveryAgent:
                 score = c.get('score', 0)
                 rows = c.get('estimated_rows', 0)
                 logger.info(f"  {i+1}. {name} | score={score:.3f} | rows={rows} | FINAL")
+            log_payload = self._get_discovery_log(state)
+            log_payload.setdefault("events", []).append({
+                "stage": "selection",
+                "tables": [
+                    {
+                        "table": c.get("table_name") or c.get("name"),
+                        "score": round(float(c.get("score", 0)), 3),
+                    }
+                    for c in selected
+                ],
+            })
             
             state["candidate_views"] = selected
             return state
@@ -1272,6 +1335,11 @@ class DiscoveryAgent:
             except Exception:
                 pass
             
+            log_payload = self._get_discovery_log(state)
+            log_payload.setdefault("events", []).append({
+                "stage": "schema_snippet",
+                "tables": relevant_tables,
+            })
             state["relevant_tables"] = relevant_tables
             state["relevant_table_details"] = relevant_table_details
             state["schema_snippet"] = schema_snippet
@@ -1341,6 +1409,101 @@ class DiscoveryAgent:
             return self._finalize_discovery_payload(state)
     
     # Helper methods
+    
+    def _get_discovery_log(self, state: BaseState) -> Dict[str, Any]:
+        log = state.get("discovery_log")
+        if not isinstance(log, dict):
+            log = {}
+        log.setdefault("events", [])
+        state["discovery_log"] = log
+        return log
+
+    def _catalog_tables(self, state: BaseState) -> Dict[str, Any]:
+        catalog = state.get("catalog")
+        if isinstance(catalog, dict):
+            tables = catalog.get("tables")
+            if isinstance(tables, dict):
+                return tables
+        return {}
+
+    def _match_catalog_entry(self, catalog_tables: Dict[str, Any], table_name: str) -> Optional[Dict[str, Any]]:
+        if table_name in catalog_tables:
+            return catalog_tables[table_name]
+        lowered = table_name.lower()
+        for key, value in catalog_tables.items():
+            if str(key).lower() == lowered:
+                return value
+        return None
+
+    def _build_seed_candidates(self, tables: List[str], state: BaseState) -> List[Dict[str, Any]]:
+        catalog_tables = self._catalog_tables(state)
+        candidates: List[Dict[str, Any]] = []
+        for raw in tables:
+            if not raw:
+                continue
+            qualified = self._qualify_table_name(raw)
+            meta = self._match_catalog_entry(catalog_tables, qualified)
+            candidate = {
+                "table_name": qualified,
+                "full_name": qualified,
+                "relevance_score": 0.45,
+                "has_rows": True,
+                "estimated_rows": (meta or {}).get("row_count") or (meta or {}).get("estimated_rows"),
+                "column_count": (meta or {}).get("column_count"),
+                "fk_count": (meta or {}).get("fk_count"),
+                "is_view": bool((meta or {}).get("type") == "view"),
+                "columns": (meta or {}).get("columns") or [],
+                "concept_seed": True,
+            }
+            candidates.append(candidate)
+        return candidates
+
+    def _central_catalog_candidates(self, state: BaseState, seen: Set[str], limit: int = 5) -> List[Dict[str, Any]]:
+        catalog_tables = self._catalog_tables(state)
+        scored: List[Tuple[float, str, Dict[str, Any]]] = []
+        for name, meta in catalog_tables.items():
+            if not name or name in seen:
+                continue
+            fk_score = self._to_number(meta.get("fk_count"))
+            row_score = self._to_number(meta.get("row_count") or meta.get("estimated_rows"))
+            column_score = self._to_number(meta.get("column_count"))
+            score = (fk_score * 0.4) + (row_score * 0.0001) + (column_score * 0.05)
+            scored.append((score, name, meta))
+        scored.sort(key=lambda item: item[0], reverse=True)
+        candidates: List[Dict[str, Any]] = []
+        for score, name, meta in scored[:limit]:
+            candidates.append({
+                "table_name": name,
+                "full_name": name,
+                "relevance_score": max(min(score, 1.0), 0.3),
+                "has_rows": True,
+                "estimated_rows": meta.get("row_count") or meta.get("estimated_rows"),
+                "column_count": meta.get("column_count"),
+                "fk_count": meta.get("fk_count"),
+                "is_view": bool(meta.get("type") == "view"),
+                "columns": meta.get("columns") or [],
+                "fallback_reason": "catalog_centrality",
+            })
+        return candidates
+
+    def _fallback_candidates_from_concepts(self, state: BaseState, seen: Set[str]) -> Tuple[List[Dict[str, Any]], str]:
+        seed_candidates: List[Dict[str, Any]] = []
+        for cand in self._build_seed_candidates(state.get("seed_tables", []) or [], state):
+            name = cand.get("full_name") or cand.get("table_name")
+            if name and name not in seen:
+                seed_candidates.append(cand)
+        if seed_candidates:
+            return seed_candidates, "concept_seed"
+        catalog_candidates = self._central_catalog_candidates(state, seen)
+        if catalog_candidates:
+            return catalog_candidates, "catalog_centrality"
+        return [], ""
+
+    def _to_number(self, value: Any) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
     
     def _split_tokens(self, value: Optional[str]) -> List[str]:
         if not value:
@@ -2144,6 +2307,10 @@ class DiscoveryAgent:
             )
             logger.info("🧾 Discovery role hints payload: %s", updates["discovery_role_hints"])
             state.update(updates)
+            log_payload = self._get_discovery_log(state)
+            log_payload["final_tables"] = updates["relevant_tables"]
+            log_payload["final_schema"] = updates["schema_snippet"]
+            state["discovery_log"] = log_payload
             return dict(state)
         except Exception as exc:
             logger.warning(f"⚠️ Discovery output validation failed: {exc}")

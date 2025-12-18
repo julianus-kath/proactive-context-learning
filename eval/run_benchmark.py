@@ -50,26 +50,62 @@ def merge_unique_strings(*sources: Any) -> List[str]:
 
 
 def artifact_validation_errors(artifact: Dict[str, Any]) -> List[str]:
+    """
+    Validate that a query artifact meets success criteria.
+    
+    A query is FAILED if ANY of these conditions are true:
+    1. final_answer contains error phrases
+    2. No SQL was executed (sql_executed is empty or only contains empty strings)
+    3. No tables were used (indicates discovery failure or fallback to sample data)
+    4. No results returned (row_count is None AND no result_preview)
+    5. Grounding gate was activated (UNGROUNDED_RESPONSE_PREVENTED in error)
+    
+    This ensures we catch silent failures where the system continues but produces garbage.
+    """
     reasons = []
+    
     final_answer = (artifact.get("final_answer_text") or "").lower()
+    
+    # Check 1: Error phrases in response (explicit failure signals)
     failure_phrases = (
         "internal error",
         "please provide correct data",
         "please execute a relevant query",
+        "wasn't able to retrieve",
+        "too vague",
+        "ungrounded",
+        "retrieval failed",
     )
     if any(phrase in final_answer for phrase in failure_phrases):
         reasons.append("invalid_final_answer")
+    
+    # Check 2: No valid SQL executed (empty string or empty list)
     sql_entries = artifact.get("sql_executed") or []
-    has_sql = any(isinstance(entry, str) and entry.strip() for entry in sql_entries)
+    has_sql = any(
+        isinstance(entry, str) and entry.strip() and entry.strip() != ""
+        for entry in sql_entries
+    )
     if not has_sql:
         reasons.append("missing_sql")
+    
+    # Check 3: No tables were used (indicates discovery failure or fallback)
     tables_used = artifact.get("tables_used") or []
     if not tables_used:
         reasons.append("missing_tables")
+    
+    # Check 4: No results returned
     row_count = artifact.get("row_count")
     preview = artifact.get("result_preview") or []
     if row_count is None and not preview:
         reasons.append("missing_results")
+    
+    # Check 5: Grounding gate was activated
+    error_info = artifact.get("error_info")
+    if isinstance(error_info, dict):
+        error_type = error_info.get("type", "")
+        if "UNGROUNDED" in error_type or "NO_SQL" in error_type:
+            reasons.append("grounding_gate_activated")
+    
     return reasons
 
 
@@ -194,6 +230,8 @@ async def run_benchmark(
                     "latency_ms_total": latency_ms,
                     "retries": 0,
                     "result_preview": [],
+                    "error_info": None,
+                    "discovery_log": None,
                 }
 
                 exec_result_payload = result.get("exec_result")
@@ -238,6 +276,12 @@ async def run_benchmark(
                     artifact["sql_generated"] = [sql_query]
                     artifact["sql_executed"] = [sql_query]
 
+                error_info_payload = result.get("error_info")
+                if not error_info_payload and isinstance(exec_result_payload, dict):
+                    error_info_payload = exec_result_payload.get("error_info")
+                artifact["error_info"] = error_info_payload
+                artifact["discovery_log"] = result.get("discovery_log")
+
                 validation_errors = artifact_validation_errors(artifact)
                 if validation_errors:
                     artifact["status"] = "failed"
@@ -263,6 +307,8 @@ async def run_benchmark(
                     "latency_ms_total": latency_ms,
                     "sql_executed": [],
                     "tables_used": [],
+                    "error_info": {"type": "CLIENT_EXCEPTION", "message": str(e)},
+                    "discovery_log": None,
                 }
                 results[query_id] = artifact
                 failed += 1

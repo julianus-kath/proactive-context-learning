@@ -29,6 +29,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from mcp_server.catalog_store import CatalogStore
 from mcp_server.catalog_builders.mssql import MSSQLCatalogBuilder
+from mcp_server.catalog_builders.postgres import PostgresCatalogBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -234,10 +235,7 @@ class ScoutRunner:
         logger.info("🏗️ Starting catalog build...")
 
         try:
-            # Create catalog builder
-            builder = MSSQLCatalogBuilder(self.db_adapter)
-
-            # Build catalog directly (no thread pool needed since we're already async)
+            builder = self._get_catalog_builder()
             catalog_data = await builder.build_catalog()
 
             # Store catalog
