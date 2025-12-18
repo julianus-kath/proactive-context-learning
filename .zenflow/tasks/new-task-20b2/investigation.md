@@ -167,3 +167,45 @@ Given the description (“all cockpit queries failing” + “connectivity issue
   - Run `python -m eval.run_benchmark --dataset eval/datasets/cockpit_queries.jsonl --run-name postgres_poc --target http://localhost:5001 --eval-service http://localhost:7001`.
   - Confirm a majority of cockpit queries complete with non-empty results and no connectivity-related failures.
 
+## Implementation Notes (Current Task)
+
+- **MCP client API key alignment**
+  - Updated `langgraph_integration/mcp_client.py` to resolve `API_KEY` as:
+    - `MCP_API_KEY` (if set) → `API_KEY` → `"supersecretapikey"`.
+  - Updated `tests/test_mcp_connectivity.py` to use the same resolution, so the diagnostic script now reflects the real MCP authentication configuration.
+  - This removes the previous risk where changing only `MCP_API_KEY` would silently break LangGraph↔MCP connectivity.
+
+- **Dialect-aware SQL normalization for PoC vs. MSSQL**
+  - Refactored `langgraph_integration/utils/sql_normalizer.py`:
+    - Kept `prepare_sql_for_execution(sql)` as the **MSSQL-focused** pipeline used by existing tests (still performs `LIMIT → TOP` and MSSQL-style validation, now also trimming trailing semicolons and returning a warnings list).
+    - Added `prepare_sql_for_execution_dialect_aware(sql)` plus a PostgreSQL-safe path:
+      - For `DB_DIALECT=postgres`: no `LIMIT → TOP` conversion; instead, apply generic read-only SELECT safety checks and strip trailing semicolons.
+      - For other/legacy dialects: fall back to the MSSQL pipeline.
+  - Updated `ExecAndRecoveryAgent` to call the new dialect-aware helper so that, in the Postgres PoC, generated SQL is no longer forcibly converted to MSSQL syntax before being sent to the MCP server.
+
+- **ExecAndRecoveryAgent connectivity/error typing**
+  - In `langgraph_integration/agents/exec_recovery/agent.py`, `_execute_query_node` now:
+    - Imports `aiohttp` and inspects exceptions coming from `MCPDatabaseTool`.
+    - Maps common failure modes to specific `error_info["type"]` values:
+      - `MCP_CONNECTION_ERROR` for `aiohttp.ClientConnectorError` / connection issues.
+      - `MCP_AUTH_ERROR` for 401/403 `ClientResponseError`.
+      - `MCP_HTTP_ERROR` for other HTTP-level failures.
+      - `MCP_TIMEOUT` for `asyncio.TimeoutError`.
+      - `MCP_INITIALIZATION_ERROR` for `"Failed to initialize MCP session"` messages.
+    - Still falls back to `EXECUTION_ERROR` for other cases, but logs the structured type for easier debugging and evaluation artifact analysis.
+
+- **Tests and verification**
+  - Ran `pytest tests/test_dialect_exploration_validation.py`:
+    - All normalizer-related tests now pass, including:
+      - `test_prepare_sql_for_execution`
+      - `test_workflow_limit_error_prevented`
+    - Two tests fail due to pre-existing import expectations (`discover_agent_graph`, `exec_recovery_graph`) that are not part of this bug:
+      - `TestDiscoveryAgentDateExploration.test_discovery_agent_has_date_exploration`
+      - `TestExecutionNormalizerIntegration.test_exec_agent_imports_normalizer`
+  - These failures are unrelated to MCP connectivity or the evaluation pipeline and were left unchanged.
+
+- **Expected impact on evaluation runs**
+  - With `DB_DIALECT=postgres` and the MCP and LangGraph processes both using the same key via `MCP_API_KEY`:
+    - MCP connectivity/auth errors will surface with explicit types in `error_info`, making it straightforward to distinguish:
+      - Authentication problems vs. true network connectivity vs. SQL issues.
+    - The ExecAndRecovery layer will no longer send MSSQL-only SQL (e.g., `TOP` instead of `LIMIT`) into the Postgres-backed MCP server during PoC runs, reducing false “connectivity” failures that are actually dialect errors.

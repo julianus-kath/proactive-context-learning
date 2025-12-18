@@ -29,7 +29,8 @@ load_dotenv()
 
 # Configuration
 MCP_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8000")
-API_KEY = os.getenv("API_KEY", "supersecretapikey")
+# Prefer MCP-specific key, fall back to generic API_KEY, then default
+API_KEY = os.getenv("MCP_API_KEY") or os.getenv("API_KEY", "supersecretapikey")
 
 logger = logging.getLogger(__name__)
 

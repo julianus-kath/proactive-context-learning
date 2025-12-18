@@ -22,6 +22,7 @@ import re
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Literal
+import aiohttp
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
@@ -33,7 +34,7 @@ from langgraph_integration.prompts.repair import (
     SQL_REPAIR_PROMPT,
     QUERY_SIMPLIFICATION
 )
-from langgraph_integration.utils.sql_normalizer import prepare_sql_for_execution
+from langgraph_integration.utils.sql_normalizer import prepare_sql_for_execution_dialect_aware
 
 logger = logging.getLogger(__name__)
 
@@ -246,10 +247,10 @@ class ExecAndRecoveryAgent:
             return state
 
         try:
-            # Step 1: Normalize SQL dialect and validate
+            # Step 1: Normalize SQL dialect and validate (dialect-aware)
             # This catches edge cases where LLM generates LIMIT instead of TOP
             try:
-                normalized_sql, normalization_warnings = prepare_sql_for_execution(sql)
+                normalized_sql, normalization_warnings = prepare_sql_for_execution_dialect_aware(sql)
                 if normalization_warnings:
                     for warning in normalization_warnings:
                         logger.info(f"⚠️  {warning}")
@@ -307,14 +308,30 @@ class ExecAndRecoveryAgent:
             return {**state, "error_info": error}
 
         except Exception as e:
+            message = str(e)
+            error_type = "EXECUTION_ERROR"
+
+            # Classify common MCP connectivity/authentication failures for clearer diagnostics
+            if isinstance(e, aiohttp.ClientConnectorError) or "ClientConnectorError" in message:
+                error_type = "MCP_CONNECTION_ERROR"
+            elif isinstance(e, aiohttp.ClientResponseError):
+                if getattr(e, "status", None) in (401, 403):
+                    error_type = "MCP_AUTH_ERROR"
+                else:
+                    error_type = "MCP_HTTP_ERROR"
+            elif isinstance(e, asyncio.TimeoutError) or "TimeoutError" in message:
+                error_type = "MCP_TIMEOUT"
+            elif "Failed to initialize MCP session" in message:
+                error_type = "MCP_INITIALIZATION_ERROR"
+
             error = {
-                "type": "EXECUTION_ERROR",
-                "message": f"Query execution failed: {str(e)}",
-                "error": str(e),
+                "type": error_type,
+                "message": f"Query execution failed: {message}",
+                "error": message,
                 "stage": "execute",
-                "sql": sql[:200]
+                "sql": sql[:200],
             }
-            logger.error(f"❌ {error['message']}")
+            logger.error(f"❌ {error['type']}: {error['message']}")
             return {**state, "error_info": error}
 
     async def _check_result_node(self, state: BaseState) -> BaseState:

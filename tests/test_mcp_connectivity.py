@@ -22,7 +22,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8000")
-API_KEY = os.getenv("API_KEY", "supersecretapikey")
+# Prefer MCP-specific key, fall back to generic API_KEY, then default
+API_KEY = os.getenv("MCP_API_KEY") or os.getenv("API_KEY", "supersecretapikey")
 
 class Colors:
     GREEN = '\033[92m'
