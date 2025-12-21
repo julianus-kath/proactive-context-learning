@@ -339,6 +339,20 @@ Respond ONLY with JSON.
                 "target_tables": classification.get("target_tables", [])
             })
 
+            # Hard guard: avoid routing clearly analytic business questions
+            # into clarification. If the LLM chose "clarify" but the text
+            # looks like an analytic data query, override to "query" so that
+            # downstream extraction and discovery can proceed.
+            try:
+                op = intent.get("operation")
+                if op == "clarify" and self._looks_like_analytic_query(user_input):
+                    logger.info("🧠 [CLASSIFY] Overriding LLM operation 'clarify' → 'query' for analytic business question")
+                    intent["operation"] = "query"
+                    intent["classification_reasoning"] = f"{intent.get('classification_reasoning', '')} | Overridden to 'query' based on analytic heuristic"
+            except Exception:
+                # Heuristic override is best-effort; never fail classification on it
+                pass
+
             logger.info(f"🧠 [CLASSIFY] Classified as: {intent['operation']} (confidence: {intent.get('operation_confidence')})")
             if intent.get("required_action") == "refine_previous":
                 logger.info(f"🧠 [CLASSIFY] 🔄 Detected refinement query with target tables: {intent.get('target_tables')}")
@@ -628,6 +642,59 @@ Keep the question clear and actionable.
             if matches:
                 return matches[0].strip()
         return text
+
+    def _looks_like_analytic_query(self, user_input: str) -> bool:
+        """
+        Heuristic: detect clearly analytic business questions that should be
+        treated as data queries rather than clarification, even if the LLM
+        misclassifies them.
+        """
+        text = (user_input or "").lower()
+
+        metric_tokens = [
+            "total",
+            "sum",
+            "revenue",
+            "sales",
+            "growth",
+            "growth rate",
+            "trend",
+            "average",
+            "avg",
+            "how many",
+            "count",
+            "percentage",
+            "percent",
+        ]
+        entity_tokens = [
+            "customer",
+            "customers",
+            "kunde",
+            "kunden",
+            "product",
+            "products",
+            "produkt",
+            "produkte",
+            "artikel",
+            "order",
+            "orders",
+            "auftrag",
+            "bestellung",
+            "employee",
+            "employees",
+            "mitarbeiter",
+            "supplier",
+            "suppliers",
+            "lieferant",
+            "lieferanten",
+            "inventory",
+            "stock",
+        ]
+
+        has_metric = any(tok in text for tok in metric_tokens)
+        has_entity = any(tok in text for tok in entity_tokens)
+
+        return has_metric and has_entity
 
     def _detect_derived_metrics(self, text: str, metrics: List[str]) -> List[str]:
         """
