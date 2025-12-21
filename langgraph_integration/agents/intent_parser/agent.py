@@ -331,26 +331,21 @@ Respond ONLY with JSON.
             return {**state, "intent": intent}
 
         except Exception as e:
-            # IMPORTANT: If the LLM is unavailable, we should still treat
-            # clearly-analytic business questions as normal data queries
-            # instead of forcing a clarification loop. Fall back to a
-            # heuristic classification of "query" so that downstream
-            # extraction and discovery can proceed.
-            logger.warning(f"🧠 [CLASSIFY] LLM classification failed: {e}. Falling back to heuristic 'query' operation.")
+            logger.warning(f"🧠 [CLASSIFY] LLM classification failed: {e}. Requesting clarification.")
             intent = state.get("intent", {}) or {}
             intent.setdefault("primary_entities", [])
             intent.setdefault("metrics", [])
             intent.setdefault("filters", [])
-            intent["operation"] = intent.get("operation") or "query"
-            intent["operation_confidence"] = intent.get("operation_confidence", 0.6)
-            intent["classification_reasoning"] = intent.get(
-                "classification_reasoning",
-                "LLM unavailable; defaulted to data query operation"
+            intent["operation"] = "clarify"
+            intent["operation_confidence"] = 0.0
+            intent["classification_reasoning"] = "Unable to classify intent from query"
+            intent["needs_clarification"] = True
+            intent["clarification_question"] = intent.get(
+                "clarification_question",
+                "Kannst du genauer beschreiben, welche Information du benötigst?"
             )
-            # Do NOT mark needs_clarification here – let validate_intent
-            # decide based on extracted entities/keywords.
-            intent.setdefault("needs_clarification", False)
-            intent["keywords_for_discovery"] = (intent.get("keywords_for_discovery") or [])[:10]
+            intent["ambiguity_reason"] = intent.get("ambiguity_reason", "Operation classification failed")
+            intent["keywords_for_discovery"] = intent.get("keywords_for_discovery", [])[:10]
             return {**state, "intent": intent}
 
     async def _extract_entities_node(self, state: BaseState) -> BaseState:
@@ -430,15 +425,8 @@ Respond ONLY with JSON.
         Respond ONLY with JSON.
         """
         try:
-            # If the LLM is not available (e.g., OPENAI_API_KEY missing), fall
-            # back to a deterministic heuristic extractor so that clearly
-            # analytic cockpit questions still produce entities/keywords.
             if not self._can_use_llm():
-                logger.info("🧠 [EXTRACT] LLM unavailable, using heuristic extractor")
-                intent = self._extract_entities_heuristic(user_input, analysis, intent)
-                logger.info(f"🧠 [EXTRACT/HEURISTIC] Entities: {intent.get('primary_entities')}, Keywords: {intent.get('keywords_for_discovery')}")
-                return {**state, "intent": intent}
-
+                raise ValueError("LLM not available - API key missing or disabled")
             response = await self.llm.ainvoke(prompt)
             response_text = self._strip_markdown_blocks(response.content.strip())
             extracted = json.loads(response_text)
@@ -626,117 +614,6 @@ Keep the question clear and actionable.
             if matches:
                 return matches[0].strip()
         return text
-
-    def _extract_entities_heuristic(self, user_input: str, analysis: Dict[str, Any], intent: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Lightweight, deterministic extractor used when the LLM is not available.
-
-        Goal: For clearly analytic cockpit-style questions, produce:
-        - primary_entities: stable business nouns (customers, products, orders, employees, etc.)
-        - metrics: coarse measures (count, revenue, inventory, trend)
-        - keywords_for_discovery: seed terms for Scout/Discovery
-        - extraction_confidence: reasonable confidence so we don't fall into clarify
-        """
-        text = (user_input or "").lower()
-
-        primary_entities: List[str] = list(intent.get("primary_entities") or [])
-        metrics: List[str] = list(intent.get("metrics") or [])
-
-        def add_entity(canonical: str, *tokens: str) -> None:
-            if any(tok in text for tok in tokens):
-                if canonical not in primary_entities:
-                    primary_entities.append(canonical)
-
-        # Entity heuristics (EN + DE variants)
-        add_entity("customers", "customer", "customers", "kunde", "kunden", "client", "clients")
-        add_entity("products", "product", "products", "produkt", "produkte", "artikel", "items")
-        add_entity("orders", "order", "orders", "auftrag", "bestellung")
-        add_entity("employees", "employee", "employees", "mitarbeiter", "sales representative", "salesrep", "sales rep")
-        add_entity("suppliers", "supplier", "suppliers", "lieferant", "lieferanten", "vendor", "vendors")
-        add_entity("shippers", "shipper", "shippers", "versand", "spediteur")
-        add_entity("categories", "category", "categories", "kategorie", "kategorien")
-        add_entity("inventory", "inventory", "stock", "bestand", "reorder", "reorder level", "lagerbestand")
-
-        # Treat product names like 'Chai' in a reorder question as product context
-        if "reorder" in text or "reordered" in text or "reorder level" in text:
-            if "products" not in primary_entities:
-                primary_entities.append("products")
-
-        # Metric heuristics
-        if any(kw in text for kw in ["how many", "count", "anzahl", "number of"]):
-            if "count" not in metrics:
-                metrics.append("count")
-
-        if any(kw in text for kw in ["total", "sum", "gesamt", "summe", "umsatz", "revenue", "sales"]):
-            if "revenue" not in metrics:
-                metrics.append("revenue")
-
-        if any(kw in text for kw in ["inventory", "stock", "reorder", "reorder level", "units in stock"]):
-            if "inventory" not in metrics:
-                metrics.append("inventory")
-
-        if any(kw in text for kw in ["growth", "year-over-year", "year over year", "yoy", "trend", "entwicklung"]):
-            if "trend" not in metrics:
-                metrics.append("trend")
-            if "count" not in metrics:
-                metrics.append("count")
-
-        # Basic time-window detection for year mentions (e.g., 2024)
-        time_window = intent.get("time_window")
-        if time_window is None:
-            year_match = re.search(r"(20\\d{2})", text)
-            if year_match:
-                year = year_match.group(1)
-                time_window = {
-                    "period": f"year_{year}",
-                    "start": None,
-                    "end": None,
-                }
-
-        # Seed discovery keywords from entities + metric hints
-        base_keywords: List[str] = []
-        base_keywords.extend(primary_entities)
-        for metric in metrics:
-            if metric not in base_keywords:
-                base_keywords.append(metric)
-
-        # Apply translation/expansion helper
-        expanded_keywords = self._expand_keywords_with_translations(base_keywords, primary_entities)
-
-        # Update intent
-        intent.update(
-            {
-                "primary_entities": primary_entities[:3],
-                "metrics": metrics[:5],
-                "filters": intent.get("filters") or [],
-                "time_window": time_window,
-                "keywords_for_discovery": expanded_keywords[:10],
-                "extraction_confidence": 0.8 if primary_entities or expanded_keywords else 0.5,
-                "raw_query": user_input,
-            }
-        )
-
-        # Derived action hints for downstream agents
-        derived = self._derive_action_hints(user_input, intent)
-        intent.update(derived)
-
-        # Template classification (pure heuristic, no LLM)
-        template_name, required_action, template_params = infer_template_and_action(
-            user_input=user_input,
-            primary_entities=intent.get("primary_entities", []),
-            metrics=intent.get("metrics", []),
-            filters=intent.get("filters", []),
-            time_window=intent.get("time_window"),
-        )
-        if template_name:
-            intent["analytic_template"] = template_name
-            intent["template_params"] = template_params
-            intent["required_action"] = required_action
-            logger.info(
-                f"🎯 [TEMPLATE/HEURISTIC] Inferred template: {template_name}, action: {required_action}, params: {template_params}"
-            )
-
-        return intent
 
     def _detect_derived_metrics(self, text: str, metrics: List[str]) -> List[str]:
         """
