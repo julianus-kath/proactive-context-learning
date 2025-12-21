@@ -443,6 +443,20 @@ class QueryOrchestrator:
                     "🚦 [VALIDATION] Global plan budget exceeded "
                     f"({plan_attempt}/{max_plans}), routing to 'answer'"
                 )
+                 # Convert into a clarification-style failure to avoid burning more tokens
+                intent = state.get("intent") or {}
+                intent["operation"] = "clarify"
+                intent["needs_clarification"] = True
+                intent["clarification_question"] = intent.get(
+                    "clarification_question",
+                    "This question requires a complex analytic query and I could not find a stable plan within a safe number of attempts. Could you narrow down the scope or specify the main metric you care about?"
+                )
+                intent["ambiguity_reason"] = intent.get(
+                    "ambiguity_reason",
+                    "Maximum planning retries exceeded; query was too broad or complex for an automatic plan."
+                )
+                state["intent"] = intent
+
                 state.setdefault("error_info", {})
                 state["error_info"].update({
                     "type": "MAX_RETRIES_EXCEEDED",
@@ -1903,9 +1917,9 @@ class QueryOrchestrator:
             "skip_tables": [],
             # 🆕 Global orchestration budgets (logical stop conditions)
             "plan_attempt_count": 0,
-            "max_total_plans": 6,
+            "max_total_plans": 4,
             "exec_attempt_count": 0,
-            "max_exec_attempts": 6,
+            "max_exec_attempts": 4,
         }
         if metadata and isinstance(metadata, dict):
             for key, value in metadata.items():
