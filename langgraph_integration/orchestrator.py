@@ -106,6 +106,8 @@ class QueryOrchestrator:
 
         # Initialize specialized agents
         logger.info("🚀 Initializing multi-agent orchestrator (Phase 9)...")
+        logger.warning("ORCH_CF_FIX_ACTIVE version=cf_fix2 recursion_limit_default=1500 "
+                       "max_total_plans=6 max_exec_attempts=6")
         
         # 🆕 Phase 9: IntentParserAgent for semantic parsing (fixes double-keyword-extraction)
         self.intent_parser = IntentParserAgent(llm_model=llm_model, llm_temp=llm_temp)
