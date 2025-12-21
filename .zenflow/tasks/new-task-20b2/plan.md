@@ -58,3 +58,14 @@ Deepen the implementation to address the remaining benchmark failures and prepar
 4. Timeout & Client Robustness for Long-Running Queries (Q8)
    - Correlate Q8’s CLIENT_EXCEPTION timeout with internal graph stages to see where the pipeline stalls.
    - Introduce clearer server-side timeout/error reporting so the benchmark client receives a structured error (with `error_info.type`) instead of a bare timeout, and ensure this behavior is consistent across dialects.
+
+### [x] Step: Recursion Fixes
+<!-- chat-id: 1908a16b-4dd3-48ee-bbbd-b607183a1da6 -->
+
+Recursion Loop Fixes (Q1, Q2, Q9, Q8)
+
+Instrument the orchestration graph around result_validator, discovery, and join_sql to pinpoint where the graph cycles and why retry_action keeps sending control back into the pipeline.
+Tighten retry policies:
+Make the distinction between “try next candidate” vs “replan” vs “give up” explicit.
+Enforce a strict maximum number of discovery/plan cycles per query (independent of LangGraph’s global recursion_limit) and surface a clear MAX_RETRIES_EXCEEDED error instead of hitting GRAPH_RECURSION_LIMIT.
+Ensure this logic is dialect-neutral so the same policy applies when we switch the MCP connector to MSSQL.
