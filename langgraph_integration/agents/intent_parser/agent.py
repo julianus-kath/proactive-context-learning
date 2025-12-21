@@ -82,16 +82,30 @@ class IntentParserAgent:
         self.llm_temp = llm_temp
         self.llm = None  # Initialize as None first
 
-        # Only initialize LLM if API key is available
-        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+        # LLM is a hard requirement for this agent in normal operation.
+        # If NO_LLM is explicitly set, we keep LLM disabled (for tests only).
         no_llm = os.getenv("NO_LLM", "").lower() in ("1", "true", "yes")
-        if api_key and not no_llm:
-            try:
-                self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)
-            except Exception as e:
-                logger.warning(f"🧠 [LLM_INIT] Failed to initialize LLM: {e}")
-        else:
-            logger.warning("🧠 [LLM_INIT] Skipping LLM initialization - no API key or NO_LLM set")
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+
+        if no_llm:
+            logger.warning("🧠 [LLM_INIT] NO_LLM set – intent parser running in test mode without LLM")
+            return
+
+        if not api_key:
+            # Hard failure: OPENAI_API_KEY must be present in real deployments.
+            raise RuntimeError(
+                "OPENAI_API_KEY is required but not set. "
+                "Ensure your .env contains OPENAI_API_KEY and it is loaded into the environment."
+            )
+
+        try:
+            self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)
+        except Exception as e:
+            # Fail fast if the model cannot be initialized with the provided key.
+            raise RuntimeError(
+                f"Failed to initialize LLM model '{llm_model}'. "
+                f"Check OPENAI_API_KEY and network connectivity. Original error: {e}"
+            ) from e
 
     def _can_use_llm(self) -> bool:
         """Check if LLM can be used (API key present and not explicitly disabled)."""
