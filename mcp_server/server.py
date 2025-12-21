@@ -234,6 +234,9 @@ async def mcp_endpoint(
                 result = await MCPTools._describe_view(tool_args, db_manager)
             elif tool_name == "scout_catalog_diagnostics":
                 result = await MCPTools._scout_catalog_diagnostics(tool_args, db_manager)
+            elif tool_name == "scout_catalog_get":
+                # New tool: expose consolidated Scout catalog over MCP
+                result = await MCPTools._scout_catalog_get(tool_args, db_manager)
             elif tool_name == "scout_catalog_refresh":
                 result = await MCPTools._scout_catalog_refresh(tool_args, db_manager)
             else:

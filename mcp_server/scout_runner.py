@@ -267,6 +267,27 @@ class ScoutRunner:
             logger.error(f"❌ Catalog build failed after {build_duration:.1f}s: {e}")
             return False
 
+    def _get_catalog_builder(self):
+        """
+        Select appropriate catalog builder based on database dialect.
+
+        Uses PostgresCatalogBuilder for postgres and MSSQLCatalogBuilder for mssql.
+        """
+        dialect = getattr(self.db_adapter, "dialect", None)
+        if isinstance(dialect, str):
+            dialect = dialect.lower()
+
+        if dialect == "postgres":
+            logger.info("📘 Using PostgresCatalogBuilder for Scout catalog")
+            return PostgresCatalogBuilder(self.db_adapter)
+        if dialect == "mssql":
+            logger.info("📙 Using MSSQLCatalogBuilder for Scout catalog")
+            return MSSQLCatalogBuilder(self.db_adapter)
+
+        # Fallback: default to Postgres builder but log a warning
+        logger.warning(f"Unknown dialect '{dialect}' in ScoutRunner; defaulting to PostgresCatalogBuilder")
+        return PostgresCatalogBuilder(self.db_adapter)
+
 
 
     def get_catalog(self) -> Optional[Dict[str, Any]]:

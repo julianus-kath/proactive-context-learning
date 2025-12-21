@@ -1,0 +1,19 @@
+{
+  "run_id": "20251221_110942_postgres_poc_fix",
+  "run_name": "postgres_poc_fix",
+  "timestamp": "2025-12-21T10:09:42.456655Z",
+  "git_commit": "fef1fb07d51205bb75f6bdf7eba01122584e977d",
+  "dataset_path": "eval/datasets/cockpit_queries.jsonl",
+  "mcp_server_url": "http://localhost:8000",
+  "model": "gpt-4",
+  "prompt_versions": {},
+  "environment": {
+    "python_version": "3.11.2",
+    "machine": "MacBookPro",
+    "platform": "darwin",
+    "cwd": "/private/var/folders/0v/gfnycml53110tbl3dj5jlwr80000gn/T/zenflow/worktrees/new-task-20b2"
+  },
+  "total_queries": 12,
+  "completed_queries": 6,
+  "failed_queries": 6
+}
