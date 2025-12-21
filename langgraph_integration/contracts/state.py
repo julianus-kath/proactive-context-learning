@@ -126,6 +126,11 @@ class BaseState(TypedDict, total=False):
     exec_attempt_count: int  # Number of execution/recovery cycles attempted
     max_exec_attempts: int  # Max allowed execution attempts before giving up
 
+    total_llm_calls: int  # Total number of LLM calls across all agents
+    max_llm_calls: int  # Global LLM call budget
+    total_graph_cycles: int  # Number of validation-driven cycles back to discovery/join_sql
+    max_graph_cycles: int  # Max allowed graph cycles before giving up
+
     # Deprecated/legacy (for backward compat during migration)
     schema: Optional[str]  # Full schema (deprecated; use schema_snippet)
     database_index: Optional[Dict]  # Deprecated

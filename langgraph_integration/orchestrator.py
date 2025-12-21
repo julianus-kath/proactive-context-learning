@@ -241,6 +241,46 @@ class QueryOrchestrator:
             ),
         ).model_dump(exclude_none=True)
 
+    def _check_llm_budget(self, state: BaseState, stage: str) -> BaseState:
+        """
+        Increment global LLM call counter and enforce max_llm_calls budget.
+        If the budget is exceeded, mark error_info and set clarify intent.
+        """
+        max_calls = state.get("max_llm_calls", 0) or 20
+        total_calls = state.get("total_llm_calls", 0)
+        if total_calls >= max_calls:
+            logger.warning(
+                "🧠 [BUDGET] LLM call budget exceeded at stage '%s' (%s/%s)",
+                stage,
+                total_calls,
+                max_calls,
+            )
+            intent = state.get("intent") or {}
+            intent["operation"] = "clarify"
+            intent["needs_clarification"] = True
+            intent["clarification_question"] = intent.get(
+                "clarification_question",
+                "This question would require more model calls than allowed in the current safety budget. Could you narrow down the scope?",
+            )
+            intent["ambiguity_reason"] = intent.get(
+                "ambiguity_reason",
+                "LLM call budget exceeded while trying to answer this question.",
+            )
+            state["intent"] = intent
+            state.setdefault("error_info", {})
+            state["error_info"].update(
+                {
+                    "type": "LLM_BUDGET_EXCEEDED",
+                    "message": "Global LLM call budget exceeded for this query.",
+                    "stage": stage,
+                    "total_llm_calls": total_calls,
+                }
+            )
+            return state
+
+        state["total_llm_calls"] = total_calls + 1
+        return state
+
     async def ainvoke(self, input_state: Dict, **kwargs):
         """
         Invoke the orchestrator graph with sensible defaults.
@@ -803,6 +843,13 @@ class QueryOrchestrator:
             logger.info(f"🧠 [PARSE_INTENT] Query: \"{user_input}\"")
             logger.info("🧠 [PARSE_INTENT] Building IntentParserAgent subgraph...")
 
+            # LLM budget check
+            state = self._check_llm_budget(state, "parse_intent")
+            if state.get("error_info") and state.get("intent", {}).get("needs_clarification"):
+                logger.warning("🧠 [PARSE_INTENT] Exiting early due to LLM budget exhaustion")
+                debug_logger.agent_exit("parse_intent", before_state, dict(state))
+                return state
+
             # 🆕 Phase 9.1: Build and invoke intent parsing subgraph
             intent_subgraph = self.intent_parser.build_subgraph()
             logger.info("🧠 [PARSE_INTENT] ✅ Subgraph built, invoking...")
@@ -989,6 +1036,13 @@ class QueryOrchestrator:
             logger.warning("🔍 [DISCOVERY] This will cause discovery to use fallback extraction and get 943 candidates!")
 
         try:
+            # LLM budget check
+            state = self._check_llm_budget(state, "discovery")
+            if state.get("error_info") and state.get("intent", {}).get("needs_clarification"):
+                logger.warning("🔍 [DISCOVERY] Exiting early due to LLM budget exhaustion")
+                debug_logger.agent_exit("discovery", before_state, dict(state))
+                return state
+
             # Build and run discovery subgraph
             discovery_graph = self.discovery_agent.build_subgraph()
 
@@ -1127,6 +1181,13 @@ class QueryOrchestrator:
 
         # Delegate to JoinPlanAndSQLAgent subgraph for robust planning and SQL generation
         try:
+            # LLM budget check
+            state = self._check_llm_budget(state, "join_sql")
+            if state.get("error_info") and state.get("intent", {}).get("needs_clarification"):
+                logger.warning("🔗 [JOIN_SQL] Exiting early due to LLM budget exhaustion")
+                debug_logger.agent_exit("join_sql", before_state, dict(state))
+                return state
+
             join_graph = self.join_sql_agent.build_subgraph()
             join_result = await join_graph.ainvoke(state)
             sql_query = join_result.get("sql_query", "")
@@ -1169,6 +1230,13 @@ class QueryOrchestrator:
 
         # Run SQLValidatorAgent
         try:
+            # LLM budget check
+            state = self._check_llm_budget(state, "validate_sql")
+            if state.get("error_info") and state.get("intent", {}).get("needs_clarification"):
+                logger.warning("🔍 [VALIDATE_SQL] Exiting early due to LLM budget exhaustion")
+                debug_logger.agent_exit("validate_sql", before_state, dict(state))
+                return state
+
             validation_state = await self.sql_validator_agent(state)
             state.update(validation_state)
 
@@ -1449,6 +1517,13 @@ class QueryOrchestrator:
         state["exec_attempt_count"] = exec_attempt + 1
 
         try:
+            # LLM budget check (ExecAndRecoveryAgent uses LLM for repair/simplification)
+            state = self._check_llm_budget(state, "exec_recovery")
+            if state.get("error_info") and state.get("intent", {}).get("needs_clarification"):
+                logger.warning("⚡ [EXEC_RECOVERY] Exiting early due to LLM budget exhaustion")
+                debug_logger.agent_exit("exec_recovery", before_state, dict(state))
+                return state
+
             # Build and run exec_recovery subgraph
             exec_recovery_graph = self.exec_recovery_agent.build_subgraph()
 
@@ -1567,6 +1642,13 @@ class QueryOrchestrator:
         logger.info("✨ Running AnswerAgent...")
 
         try:
+            # LLM budget check (AnswerAgent uses LLM for formatting)
+            state = self._check_llm_budget(state, "answer")
+            if state.get("error_info") and state.get("intent", {}).get("needs_clarification"):
+                logger.warning("✨ [ANSWER] Exiting early due to LLM budget exhaustion")
+                debug_logger.agent_exit("answer", before_state, dict(state))
+                return state
+
             # DEBUG: Log what we received
             user_input = state.get("user_input", "")
             exec_result_raw = state.get("exec_result")

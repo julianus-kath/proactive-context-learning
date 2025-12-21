@@ -155,6 +155,30 @@ async def health_check():
         "agents": ["IntentParserAgent", "DiscoveryAgent", "JoinPlanAndSQLAgent", "ExecAndRecoveryAgent", "AnswerAgent"]
     }
 
+
+@app.get("/debug/config")
+async def debug_config():
+    """
+    Debug endpoint exposing key orchestrator configuration.
+    Used to verify that the running service is using the expected control-flow settings.
+    """
+    if orchestrator is None:
+        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+
+    # We can't introspect recursion_limit from LangGraph at runtime,
+    # but we can return the orchestrator's known defaults and budgets.
+    state_defaults = {
+        "max_total_plans": 4,
+        "max_exec_attempts": 4,
+        "max_llm_calls": 20,
+        "max_graph_cycles": 10,
+    }
+    return {
+        "status": "ok",
+        "version": "cf_fix2",
+        "defaults": state_defaults,
+    }
+
 @app.post("/process_query", response_model=QueryResponse)
 async def process_query(request: QueryRequest = Body(...), api_key_header: Optional[str] = Header(default=None, alias="X-API-Key")):
     """
