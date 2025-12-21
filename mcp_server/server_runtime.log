@@ -20432,3 +20432,78 @@ INFO:     127.0.0.1:56596 - "GET /health HTTP/1.1" 200 OK
 INFO:     127.0.0.1:56598 - "POST /mcp HTTP/1.1" 200 OK
 2025-12-21 12:18:58,280 - mcp_server.server - INFO - MCP call: tools/call
 INFO:     127.0.0.1:56600 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56649 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56651 - "GET /health HTTP/1.1" 200 OK
+2025-12-21 12:20:18,035 - mcp_server.server - INFO - MCP call: tools/call
+2025-12-21 12:20:18,037 - mcp_server.catalog_store - INFO - ✅ Catalog loaded: 22,193 bytes, age=0.7h, TTL=168h
+INFO:     127.0.0.1:56653 - "POST /mcp HTTP/1.1" 200 OK
+2025-12-21 12:20:18,041 - mcp_server.server - INFO - MCP call: tools/call
+INFO:     127.0.0.1:56655 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56661 - "GET /health HTTP/1.1" 200 OK
+2025-12-21 12:20:23,388 - mcp_server.server - INFO - MCP call: tools/call
+2025-12-21 12:20:23,389 - mcp_server.catalog_store - INFO - ✅ Catalog loaded: 22,193 bytes, age=0.7h, TTL=168h
+INFO:     127.0.0.1:56663 - "POST /mcp HTTP/1.1" 200 OK
+2025-12-21 12:20:23,393 - mcp_server.server - INFO - MCP call: tools/call
+INFO:     127.0.0.1:56665 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56674 - "GET /health HTTP/1.1" 200 OK
+2025-12-21 12:20:28,285 - mcp_server.server - INFO - MCP call: tools/call
+2025-12-21 12:20:28,286 - mcp_server.catalog_store - INFO - ✅ Catalog loaded: 22,193 bytes, age=0.7h, TTL=168h
+INFO:     127.0.0.1:56676 - "POST /mcp HTTP/1.1" 200 OK
+2025-12-21 12:20:28,293 - mcp_server.server - INFO - MCP call: tools/call
+INFO:     127.0.0.1:56678 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56684 - "GET /health HTTP/1.1" 200 OK
+2025-12-21 12:20:33,531 - mcp_server.server - INFO - MCP call: tools/call
+2025-12-21 12:20:33,532 - mcp_server.catalog_store - INFO - ✅ Catalog loaded: 22,193 bytes, age=0.7h, TTL=168h
+INFO:     127.0.0.1:56686 - "POST /mcp HTTP/1.1" 200 OK
+2025-12-21 12:20:33,538 - mcp_server.server - INFO - MCP call: tools/call
+INFO:     127.0.0.1:56688 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56708 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56710 - "GET /health HTTP/1.1" 200 OK
+2025-12-21 12:22:08,180 - mcp_server.server - INFO - MCP call: tools/call
+2025-12-21 12:22:08,182 - mcp_server.catalog_store - INFO - ✅ Catalog loaded: 22,193 bytes, age=0.8h, TTL=168h
+INFO:     127.0.0.1:56712 - "POST /mcp HTTP/1.1" 200 OK
+2025-12-21 12:22:08,188 - mcp_server.server - INFO - MCP call: tools/call
+INFO:     127.0.0.1:56714 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56721 - "GET /health HTTP/1.1" 200 OK
+2025-12-21 12:22:14,896 - mcp_server.server - INFO - MCP call: tools/call
+2025-12-21 12:22:14,897 - mcp_server.catalog_store - INFO - ✅ Catalog loaded: 22,193 bytes, age=0.8h, TTL=168h
+INFO:     127.0.0.1:56723 - "POST /mcp HTTP/1.1" 200 OK
+2025-12-21 12:22:14,902 - mcp_server.server - INFO - MCP call: tools/call
+INFO:     127.0.0.1:56725 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56732 - "GET /health HTTP/1.1" 200 OK
+2025-12-21 12:22:21,513 - mcp_server.server - INFO - MCP call: tools/call
+2025-12-21 12:22:21,515 - mcp_server.catalog_store - INFO - ✅ Catalog loaded: 22,193 bytes, age=0.8h, TTL=168h
+INFO:     127.0.0.1:56734 - "POST /mcp HTTP/1.1" 200 OK
+2025-12-21 12:22:21,522 - mcp_server.server - INFO - MCP call: tools/call
+INFO:     127.0.0.1:56736 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56742 - "GET /health HTTP/1.1" 200 OK
+2025-12-21 12:22:28,430 - mcp_server.server - INFO - MCP call: tools/call
+2025-12-21 12:22:28,431 - mcp_server.catalog_store - INFO - ✅ Catalog loaded: 22,193 bytes, age=0.8h, TTL=168h
+INFO:     127.0.0.1:56744 - "POST /mcp HTTP/1.1" 200 OK
+2025-12-21 12:22:28,436 - mcp_server.server - INFO - MCP call: tools/call
+INFO:     127.0.0.1:56746 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56760 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56762 - "GET /health HTTP/1.1" 200 OK
+2025-12-21 12:23:12,167 - mcp_server.server - INFO - MCP call: tools/call
+2025-12-21 12:23:12,168 - mcp_server.catalog_store - INFO - ✅ Catalog loaded: 22,193 bytes, age=0.8h, TTL=168h
+INFO:     127.0.0.1:56764 - "POST /mcp HTTP/1.1" 200 OK
+2025-12-21 12:23:12,172 - mcp_server.server - INFO - MCP call: tools/call
+INFO:     127.0.0.1:56766 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56772 - "GET /health HTTP/1.1" 200 OK
+2025-12-21 12:23:19,037 - mcp_server.server - INFO - MCP call: tools/call
+2025-12-21 12:23:19,038 - mcp_server.catalog_store - INFO - ✅ Catalog loaded: 22,193 bytes, age=0.8h, TTL=168h
+INFO:     127.0.0.1:56774 - "POST /mcp HTTP/1.1" 200 OK
+2025-12-21 12:23:19,044 - mcp_server.server - INFO - MCP call: tools/call
+INFO:     127.0.0.1:56776 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56782 - "GET /health HTTP/1.1" 200 OK
+2025-12-21 12:23:26,126 - mcp_server.server - INFO - MCP call: tools/call
+2025-12-21 12:23:26,128 - mcp_server.catalog_store - INFO - ✅ Catalog loaded: 22,193 bytes, age=0.8h, TTL=168h
+INFO:     127.0.0.1:56784 - "POST /mcp HTTP/1.1" 200 OK
+2025-12-21 12:23:26,137 - mcp_server.server - INFO - MCP call: tools/call
+INFO:     127.0.0.1:56786 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56793 - "GET /health HTTP/1.1" 200 OK
+2025-12-21 12:23:33,035 - mcp_server.server - INFO - MCP call: tools/call
+2025-12-21 12:23:33,037 - mcp_server.catalog_store - INFO - ✅ Catalog loaded: 22,193 bytes, age=0.8h, TTL=168h
+INFO:     127.0.0.1:56795 - "POST /mcp HTTP/1.1" 200 OK
+2025-12-21 12:23:33,041 - mcp_server.server - INFO - MCP call: tools/call
+INFO:     127.0.0.1:56797 - "POST /mcp HTTP/1.1" 200 OK
