@@ -209,3 +209,16 @@ Given the description (“all cockpit queries failing” + “connectivity issue
     - MCP connectivity/auth errors will surface with explicit types in `error_info`, making it straightforward to distinguish:
       - Authentication problems vs. true network connectivity vs. SQL issues.
     - The ExecAndRecovery layer will no longer send MSSQL-only SQL (e.g., `TOP` instead of `LIMIT`) into the Postgres-backed MCP server during PoC runs, reducing false “connectivity” failures that are actually dialect errors.
+
+## Advanced Evaluation Stability & Semantics Updates
+
+- **MCP `/health` endpoint reliability**
+  - Fixed a bug in `mcp_server/server.py` where the `/health` fallback path referenced `datetime` without importing it; this caused the endpoint to raise an internal error and return HTTP 500 even when the database was reachable.
+  - With `from datetime import datetime` added, `langgraph_integration.mcp_client.MCPDatabaseTool.health_check()` now correctly reports MCP availability based purely on HTTP 200, unblocking the orchestrator’s `index_database` node and evaluation runs that previously failed with generic “MCP unavailable” connectivity errors.
+
+- **Scout health semantics for Postgres vs. MSSQL**
+  - Updated `mcp_server/health.py` so that health reporting no longer assumes ScoutRunner is the only valid catalog backend:
+    - When a `ScoutRunner` is present (_MSSQL or Postgres via `ScoutRunner`_), health exposes detailed catalog metrics and may set overall status to `building_catalog` or `catalog_unavailable` if the catalog is not yet valid.
+    - When no `ScoutRunner` is present but the Phase 3 `SchemaCatalog` is initialized on `DatabaseAdapter` (e.g., Postgres PoC), the health endpoint now reports a `scout_catalog` component with `status: "healthy"` and `backend: "SchemaCatalog"` instead of `status: "not_initialized"` / `health["status"] = "scout_not_initialized"`.
+    - Only when neither ScoutRunner nor SchemaCatalog is available does the endpoint report `scout_not_initialized`, and even then it preserves the separate database connectivity status.
+  - This decouples catalog readiness messaging from the MSSQL-only startup path and ensures inventory/health-style queries see a consistent “catalog is ready” signal on both Postgres (SchemaCatalog + PostgresCatalogBuilder) and MSSQL (ScoutRunner), removing misleading “scout not initialized” messages when a catalog actually exists.

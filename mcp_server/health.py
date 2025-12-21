@@ -45,6 +45,9 @@ async def get_health_status(db_manager=None) -> Dict[str, Any]:
     try:
         # Database connectivity check
         db_healthy = False
+        dialect: Optional[str] = None
+        has_schema_catalog = False
+
         if db_manager:
             try:
                 # Simple connectivity test
@@ -53,13 +56,21 @@ async def get_health_status(db_manager=None) -> Dict[str, Any]:
             except Exception as e:
                 logger.warning(f"Database health check failed: {e}")
 
+            # Inspect dialect and Phase 3 SchemaCatalog presence
+            dialect = getattr(db_manager, "dialect", None)
+            if isinstance(dialect, str):
+                dialect = dialect.lower()
+            has_schema_catalog = getattr(db_manager, "catalog", None) is not None
+
         health["components"]["database"] = {
             "status": "healthy" if db_healthy else "unhealthy",
-            "connectivity": db_healthy
+            "connectivity": db_healthy,
+            "dialect": dialect or "unknown",
         }
 
-        # Scout Mode health
+        # Scout / catalog health
         if _scout_runner_ref:
+            # Full ScoutRunner-based catalog (primarily MSSQL, but supports Postgres too)
             scout_health = _scout_runner_ref.get_health_status()
 
             health["components"]["scout_catalog"] = {
@@ -73,21 +84,53 @@ async def get_health_status(db_manager=None) -> Dict[str, Any]:
                 "last_build_duration": scout_health.get("last_build_duration", 0),
                 "last_build_time": scout_health.get("last_build_time"),
                 "compressed_size_mb": round(scout_health.get("compressed_size", 0) / (1024*1024), 2) if scout_health.get("compressed_size") else None,
-                "compression_ratio": scout_health.get("compression_ratio")
+                "compression_ratio": scout_health.get("compression_ratio"),
+                "backend": "ScoutRunner",
             }
 
-            # Overall status
+            # Overall status reflects catalog readiness when ScoutRunner is present
             if not scout_health.get("catalog_valid") and scout_health.get("build_in_progress"):
                 health["status"] = "building_catalog"
             elif not scout_health.get("catalog_valid"):
                 health["status"] = "catalog_unavailable"
+
+        elif has_schema_catalog:
+            # Phase 3 SchemaCatalog is available (e.g., Postgres dev mode)
+            # Treat this as a healthy catalog backend even without ScoutRunner.
+            summary: Dict[str, Any] = {}
+            try:
+                if hasattr(db_manager, "get_catalog_summary"):
+                    summary = db_manager.get_catalog_summary() or {}
+            except Exception as e:
+                logger.warning(f"SchemaCatalog summary retrieval failed: {e}")
+
+            table_count = (
+                summary.get("table_count")
+                or summary.get("tables")
+                or summary.get("tables_count")
+            )
+
+            health["components"]["scout_catalog"] = {
+                "status": "healthy",
+                "catalog_exists": True,
+                "catalog_valid": True,
+                "backend": "SchemaCatalog",
+                "dialect": dialect or "unknown",
+                "table_count": table_count,
+            }
+            # Overall health remains driven by DB + generic status; do not downgrade
+
         else:
+            # No ScoutRunner and no SchemaCatalog – catalog not initialized
             health["components"]["scout_catalog"] = {
                 "status": "not_initialized",
                 "catalog_exists": False,
-                "catalog_valid": False
+                "catalog_valid": False,
             }
-            health["status"] = "scout_not_initialized"
+            # Only mark overall status as scout_not_initialized if database itself is reachable;
+            # otherwise leave it as unhealthy/error.
+            if db_healthy:
+                health["status"] = "scout_not_initialized"
 
         # Cache hit metrics (if available)
         if _scout_runner_ref:

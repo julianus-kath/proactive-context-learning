@@ -37,7 +37,8 @@ Implement the bug fix.
 
 If blocked or uncertain, ask the user for direction.
 
-### [ ] Step: Advanced Evaluation Stability & Semantics
+### [x] Step: Advanced Evaluation Stability & Semantics
+<!-- chat-id: 9443fb1a-ea06-48b6-a86a-247ae69b564e -->
 
 Deepen the implementation to address the remaining benchmark failures and prepare for MSSQL as the primary target:
 

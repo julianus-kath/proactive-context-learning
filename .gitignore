@@ -64,3 +64,10 @@ cache/
 # OS specific files
 .DS_Store
 Thumbs.db
+
+# Node / frontend artifacts
+node_modules/
+dist/
+build/
+.cache/
+*.log

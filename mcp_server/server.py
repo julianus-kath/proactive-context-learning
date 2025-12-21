@@ -5,6 +5,7 @@ MCP Database Server - FastAPI implementation
 import os
 import asyncio
 import logging
+from datetime import datetime
 from fastapi import FastAPI, HTTPException, Depends, Header, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
