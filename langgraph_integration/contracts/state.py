@@ -120,6 +120,12 @@ class BaseState(TypedDict, total=False):
     max_retries_per_candidate_set: int  # Circuit breaker threshold (e.g., 2)
     skip_tables: List[str]  # Tables to skip in discovery filter (passed to subgraph)
 
+    # Global orchestration budgets (logical stop conditions, independent of graph recursion_limit)
+    plan_attempt_count: int  # Number of full plan/validate cycles attempted
+    max_total_plans: int  # Max allowed plan/validation cycles before giving up
+    exec_attempt_count: int  # Number of execution/recovery cycles attempted
+    max_exec_attempts: int  # Max allowed execution attempts before giving up
+
     # Deprecated/legacy (for backward compat during migration)
     schema: Optional[str]  # Full schema (deprecated; use schema_snippet)
     database_index: Optional[Dict]  # Deprecated

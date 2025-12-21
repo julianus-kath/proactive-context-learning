@@ -243,13 +243,13 @@ class QueryOrchestrator:
         """
         Invoke the orchestrator graph with sensible defaults.
         
-        Sets default recursion_limit=500 if not provided (needed because
+        Sets default recursion_limit=1500 if not provided (needed because
         subgraphs, nested agent calls, and internal tool invocations
         consume many recursion steps across the call stack).
         """
         config = kwargs.pop("config", {})
         if "recursion_limit" not in config:
-            config["recursion_limit"] = 500
+            config["recursion_limit"] = 1500
         result = await self.graph.ainvoke(input_state, config=config, **kwargs)
         if isinstance(result, dict):
             result.setdefault("answer", result.get("final_response", ""))
@@ -432,8 +432,29 @@ class QueryOrchestrator:
             retry_action = validation.get("retry_action", "accept")
             
             logger.info(f"🚦 [VALIDATION_ROUTE] retry_action={retry_action}")
-            
-            # 🆕 Circuit breaker: stop retrying after max attempts
+
+            # 🆕 Global plan budget: stop after too many plan/validate cycles
+            plan_attempt = state.get("plan_attempt_count", 0)
+            max_plans = state.get("max_total_plans", 6)
+            if plan_attempt >= max_plans:
+                logger.warning(
+                    "🚦 [VALIDATION] Global plan budget exceeded "
+                    f"({plan_attempt}/{max_plans}), routing to 'answer'"
+                )
+                state.setdefault("error_info", {})
+                state["error_info"].update({
+                    "type": "MAX_RETRIES_EXCEEDED",
+                    "message": (
+                        "The system attempted multiple discovery and planning cycles "
+                        "but could not produce a stable query plan."
+                    ),
+                })
+                return "answer"
+            # Increment plan attempt count when we're about to take a retry action
+            if retry_action in ("try_next_candidate", "replan_with_aggregation", "replan_with_filter"):
+                state["plan_attempt_count"] = plan_attempt + 1
+
+            # 🆕 Circuit breaker: stop retrying per candidate set
             retry_attempt = state.get("retry_attempt_count", 0)
             max_retries = state.get("max_retries_per_candidate_set", 2)
             
@@ -1389,6 +1410,28 @@ class QueryOrchestrator:
         if error_info:
             logger.warning("⚡ [EXEC_RECOVERY] ⚠️  Prior error detected, will attempt recovery")
 
+        # Global execution budget: stop after too many exec attempts
+        exec_attempt = state.get("exec_attempt_count", 0)
+        max_exec = state.get("max_exec_attempts", 6)
+        if exec_attempt >= max_exec:
+            logger.warning(
+                "⚡ [EXEC_RECOVERY] Global execution budget exceeded "
+                f"({exec_attempt}/{max_exec}), skipping exec_recovery and routing to answer"
+            )
+            state.setdefault("error_info", {})
+            state["error_info"].update({
+                "type": "MAX_EXEC_ATTEMPTS_EXCEEDED",
+                "message": (
+                    "The system attempted to execute or repair the query multiple times "
+                    "but could not complete execution safely."
+                ),
+            })
+            debug_logger.agent_exit("exec_recovery", before_state, dict(state))
+            return state
+
+        # Increment execution attempt count
+        state["exec_attempt_count"] = exec_attempt + 1
+
         try:
             # Build and run exec_recovery subgraph
             exec_recovery_graph = self.exec_recovery_agent.build_subgraph()
@@ -1856,17 +1899,43 @@ class QueryOrchestrator:
             "retry_attempt_count": 0,
             "max_retries_per_candidate_set": 2,
             "skip_tables": [],
+            # 🆕 Global orchestration budgets (logical stop conditions)
+            "plan_attempt_count": 0,
+            "max_total_plans": 6,
+            "exec_attempt_count": 0,
+            "max_exec_attempts": 6,
         }
         if metadata and isinstance(metadata, dict):
             for key, value in metadata.items():
                 if value is not None:
                     initial_state[key] = value
         try:
-            result = await self.ainvoke(initial_state)
+            # Server-side timeout for full orchestration to avoid client-level timeouts.
+            # Use the same query_timeout_seconds as an upper bound for now.
+            timeout_s = max(self.query_timeout_seconds, 60)
+            import asyncio as _asyncio
+            result = await _asyncio.wait_for(self.ainvoke(initial_state), timeout=timeout_s)
             if isinstance(result, dict):
                 result.setdefault("final_response", result.get("final_answer"))
                 result.setdefault("final_answer", result.get("final_response"))
             return result
+        except TimeoutError:
+            logger.error("❌ [PROCESS_QUERY] Orchestrator timed out before completion", exc_info=True)
+            return {
+                "user_input": user_input,
+                "intent": {},
+                "relevant_tables": [],
+                "candidate_views": [],
+                "sql_query": "",
+                "join_plan": {},
+                "exec_result": None,
+                "error_info": {
+                    "type": "SERVER_TIMEOUT",
+                    "message": "The server took too long to compute a plan or execute the query.",
+                },
+                "final_answer": "This request took too long to complete. Please narrow down the question or try again with a smaller scope.",
+                "final_response": "This request took too long to complete. Please narrow down the question or try again with a smaller scope.",
+            }
         except Exception as exc:
             logger.error("❌ [PROCESS_QUERY] Graph execution failed: %s", exc, exc_info=True)
             return {
