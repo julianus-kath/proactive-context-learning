@@ -30,6 +30,8 @@ class MCPServerConfig:
     postgres_database: str = os.getenv("POSTGRES_DATABASE", "synthetic_erp_data")
     postgres_user: str = os.getenv("POSTGRES_USER", "postgres")
     postgres_password: str = os.getenv("POSTGRES_PASSWORD", "")
+    # Default schema name for PostgreSQL (used for lightweight MSSQL→Postgres translation)
+    postgres_schema: str = os.getenv("POSTGRES_SCHEMA", "public")
     
     # SQL Server configuration (production mode)
     mssql_server: str = os.getenv("MSSQL_SERVER", "")

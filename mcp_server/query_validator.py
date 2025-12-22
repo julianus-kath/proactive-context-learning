@@ -26,6 +26,8 @@ from typing import Tuple, Optional, Literal
 from dataclasses import dataclass
 from enum import Enum
 
+from mcp_server.config import config
+
 logger = logging.getLogger(__name__)
 
 
@@ -381,11 +383,27 @@ class QueryValidator:
                 top_match.group(1),
             )
 
+        # Map common MSSQL schema prefixes to the configured Postgres schema
+        default_schema = getattr(config, "postgres_schema", "public")
+        # Handle dbo.<table> or [dbo].<table> before bracket normalization
+        query = re.sub(
+            r'\b\[dbo\]\.',
+            f'{default_schema}.',
+            query,
+            flags=re.IGNORECASE,
+        )
+        query = re.sub(
+            r'\bdbo\.',
+            f'{default_schema}.',
+            query,
+            flags=re.IGNORECASE,
+        )
+
         if "[" in query or "]" in query:
-            # Convert SQL Server bracket identifiers to Postgres-compatible quoting.
-            # Example: [dbo].[order_details] -> "dbo"."order_details"
-            query = query.replace("[", "\"").replace("]", "\"")
-            logger.info("Normalized SQL Server bracket identifiers to Postgres quotes")
+            # Convert SQL Server bracket identifiers to unquoted Postgres identifiers.
+            # Example: public.[order_details] -> public.order_details
+            query = re.sub(r'\[([^\]]+)\]', r'\1', query)
+            logger.info("Normalized SQL Server bracket identifiers to Postgres style")
 
         # Check if query already has LIMIT (after any normalization)
         limit_match = re.search(r'\bLIMIT\s+(\d+)', query, re.IGNORECASE)
