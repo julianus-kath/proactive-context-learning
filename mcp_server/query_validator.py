@@ -383,27 +383,21 @@ class QueryValidator:
                 top_match.group(1),
             )
 
+        if "[" in query or "]" in query:
+            # Convert SQL Server bracket identifiers to unquoted Postgres identifiers.
+            # Example: public.[order_details] -> public.order_details
+            query = re.sub(r'\[([^\]]+)\]', r'\1', query)
+            logger.info("Normalized SQL Server bracket identifiers to Postgres style")
+
         # Map common MSSQL schema prefixes to the configured Postgres schema
+        # After bracket normalization, patterns like dbo.order_details are easy to match.
         default_schema = getattr(config, "postgres_schema", "public")
-        # Handle dbo.<table> or [dbo].<table> before bracket normalization
-        query = re.sub(
-            r'\b\[dbo\]\.',
-            f'{default_schema}.',
-            query,
-            flags=re.IGNORECASE,
-        )
         query = re.sub(
             r'\bdbo\.',
             f'{default_schema}.',
             query,
             flags=re.IGNORECASE,
         )
-
-        if "[" in query or "]" in query:
-            # Convert SQL Server bracket identifiers to unquoted Postgres identifiers.
-            # Example: public.[order_details] -> public.order_details
-            query = re.sub(r'\[([^\]]+)\]', r'\1', query)
-            logger.info("Normalized SQL Server bracket identifiers to Postgres style")
 
         # Check if query already has LIMIT (after any normalization)
         limit_match = re.search(r'\bLIMIT\s+(\d+)', query, re.IGNORECASE)
