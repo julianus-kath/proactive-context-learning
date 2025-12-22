@@ -103,6 +103,11 @@ class QueryOrchestrator:
         self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)
         self.mcp = get_shared_mcp_tool()
         self.concept_mapper = ConceptMapper()
+        # Persist core configuration for downstream nodes and helpers
+        self.max_joins = max_joins
+        self.max_retries = max_retries
+        self.row_limit = row_limit
+        self.query_timeout_seconds = query_timeout_seconds
 
         # Initialize specialized agents
         logger.info("🚀 Initializing multi-agent orchestrator (Phase 9)...")
