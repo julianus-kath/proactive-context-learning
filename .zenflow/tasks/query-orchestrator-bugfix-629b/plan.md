@@ -104,3 +104,515 @@ Implement the task according to the technical specification and general engineer
    - What was implemented
    - How the solution was tested
    - The biggest issues or challenges encountered
+
+### [x] Step: Improving Agent Responses
+<!-- chat-id: 1d001e9b-d241-401a-84a7-e8c117632797 -->
+
+We have fixed some underlying internal bugs involving the pipeline error we were receiving before. Now the agent graph actually runs through and provides useful internal workings which are visible in the logs. 
+
+However the final response is still unsatisfactory. I can see i nthe logs that its working correctly, however the final response is still:
+
+
+
+  "final_response": "I processed your query but couldn't generate a response. Please check the server logs.",
+
+I want to solve this with you now.
+
+Here is the output from my most recent run:
+
+(.venv) (base) ➜  mcp_server git:(evaluation_H1_H2) ✗ curl -s -X POST http://localhost:5001/process_query \
+  -H 'Content-Type: application/json' \
+  -d '{"user_input":"When will the product Chai need to be reordered based on current stock levels and sales velocity?","api_key":"supersecretapikey"}' \
+  | jq
+
+{
+  "final_response": "I processed your query but couldn't generate a response. Please check the server logs.",
+  "exec_result": {
+    "ok": false,
+    "data": [],
+    "row_count": 0,
+    "truncated": false,
+    "warnings": []
+  },
+  "sql_query": "SELECT TOP 1000 [dbo].[order_details].[order_id] AS product_name, SUM([dbo].[order_details].[quantity]) AS total_metric\nFROM [dbo].[order_details]\nGROUP BY [dbo].[order_details].[order_id]\nORDER BY total_metric DESC",
+  "sources": [
+    "order_details",
+    "orders",
+    "customers"
+  ],
+  "error_info": {
+    "type": "LLM_BUDGET_EXCEEDED",
+    "message": "Global LLM call budget exceeded for this query.",
+    "stage": "answer",
+    "total_llm_calls": 20
+  },
+  "discovery_log": {
+    "query": "When will the product Chai need to be reordered based on current stock levels and sales velocity?",
+    "keywords": [
+      "products",
+      "stock_levels",
+      "sales_velocity",
+      "reorder",
+      "produkt",
+      "produkte",
+      "artikel",
+      "item",
+      "khk",
+      "adressen"
+    ],
+    "concepts": [
+      "revenue",
+      "inventory_reorder",
+      "category_trends"
+    ],
+    "seed_tables": [
+      "dbo.Orders",
+      "dbo.[Order Details]",
+      "dbo.Customers",
+      "dbo.Products",
+      "dbo.Suppliers",
+      "dbo.Categories"
+    ],
+    "kpi_expressions": {
+      "revenue": "SUM([Order Details].UnitPrice * [Order Details].Quantity * (1 - [Order Details].Discount))",
+      "inventory_reorder": "CASE WHEN Products.UnitsInStock + Products.UnitsOnOrder < Products.ReorderLevel THEN 1 ELSE 0 END",
+      "category_trends": "SUM([Order Details].UnitPrice * [Order Details].Quantity * (1 - [Order Details].Discount))"
+    },
+    "time_field_hints": [
+      "dbo.Orders.OrderDate",
+      "dbo.Orders.RequiredDate",
+      "dbo.Orders.ShippedDate"
+    ],
+    "concept_explanations": [
+      "revenue: Total sales value based on order line items. Supports revenue growth/decline, MoM trend, and sales concentration questions.",
+      "inventory_reorder: Evaluates products where units in stock are near reorder levels or below open demand.",
+      "category_trends: Tracks product category movement over time to detect spikes or declines."
+    ],
+    "events": [
+      {
+        "stage": "keyword_extraction",
+        "tokens": [
+          "products",
+          "stock_levels",
+          "sales_velocity",
+          "reorder",
+          "produkt",
+          "produkte",
+          "artikel",
+          "item",
+          "khk",
+          "adressen"
+        ]
+      },
+      {
+        "stage": "seed_injection",
+        "tables": [
+          "[dbo].[Orders]",
+          "[dbo].[Order Details]",
+          "[dbo].[Customers]",
+          "[dbo].[Products]",
+          "[dbo].[Suppliers]",
+          "[dbo].[Categories]"
+        ]
+      },
+      {
+        "stage": "search_results",
+        "count": 14
+      },
+      {
+        "stage": "rank",
+        "count": 14,
+        "top": [
+          {
+            "table": "customers",
+            "score": 0.625
+          },
+          {
+            "table": "products",
+            "score": 0.625
+          },
+          {
+            "table": "categories",
+            "score": 0.402
+          },
+          {
+            "table": "territories",
+            "score": 0.393
+          },
+          {
+            "table": "employee_territories",
+            "score": 0.393
+          }
+        ]
+      },
+      {
+        "stage": "selection",
+        "tables": [
+          {
+            "table": "order_details",
+            "score": 0.265
+          },
+          {
+            "table": "orders",
+            "score": 0.348
+          },
+          {
+            "table": "customers",
+            "score": 0.625
+          }
+        ]
+      },
+      {
+        "stage": "schema_snippet",
+        "tables": [
+          "order_details",
+          "orders",
+          "customers"
+        ]
+      },
+      {
+        "stage": "keyword_extraction",
+        "tokens": [
+          "products",
+          "stock_levels",
+          "sales_velocity",
+          "reorder",
+          "produkt",
+          "produkte",
+          "artikel",
+          "item",
+          "khk",
+          "adressen"
+        ]
+      },
+      {
+        "stage": "seed_injection",
+        "tables": [
+          "[dbo].[Orders]",
+          "[dbo].[Order Details]",
+          "[dbo].[Customers]",
+          "[dbo].[Products]",
+          "[dbo].[Suppliers]",
+          "[dbo].[Categories]"
+        ]
+      },
+      {
+        "stage": "search_results",
+        "count": 14
+      },
+      {
+        "stage": "rank",
+        "count": 14,
+        "top": [
+          {
+            "table": "customers",
+            "score": 0.625
+          },
+          {
+            "table": "products",
+            "score": 0.625
+          },
+          {
+            "table": "categories",
+            "score": 0.402
+          },
+          {
+            "table": "territories",
+            "score": 0.393
+          },
+          {
+            "table": "employee_territories",
+            "score": 0.393
+          }
+        ]
+      },
+      {
+        "stage": "selection",
+        "tables": [
+          {
+            "table": "order_details",
+            "score": 0.265
+          },
+          {
+            "table": "orders",
+            "score": 0.348
+          },
+          {
+            "table": "customers",
+            "score": 0.625
+          }
+        ]
+      },
+      {
+        "stage": "schema_snippet",
+        "tables": [
+          "order_details",
+          "orders",
+          "customers"
+        ]
+      },
+      {
+        "stage": "keyword_extraction",
+        "tokens": [
+          "products",
+          "stock_levels",
+          "sales_velocity",
+          "reorder",
+          "produkt",
+          "produkte",
+          "artikel",
+          "item",
+          "khk",
+          "adressen"
+        ]
+      },
+      {
+        "stage": "seed_injection",
+        "tables": [
+          "[dbo].[Orders]",
+          "[dbo].[Order Details]",
+          "[dbo].[Customers]",
+          "[dbo].[Products]",
+          "[dbo].[Suppliers]",
+          "[dbo].[Categories]"
+        ]
+      },
+      {
+        "stage": "search_results",
+        "count": 14
+      },
+      {
+        "stage": "rank",
+        "count": 14,
+        "top": [
+          {
+            "table": "customers",
+            "score": 0.625
+          },
+          {
+            "table": "products",
+            "score": 0.625
+          },
+          {
+            "table": "categories",
+            "score": 0.402
+          },
+          {
+            "table": "territories",
+            "score": 0.393
+          },
+          {
+            "table": "employee_territories",
+            "score": 0.393
+          }
+        ]
+      },
+      {
+        "stage": "selection",
+        "tables": [
+          {
+            "table": "order_details",
+            "score": 0.265
+          },
+          {
+            "table": "orders",
+            "score": 0.348
+          },
+          {
+            "table": "customers",
+            "score": 0.625
+          }
+        ]
+      },
+      {
+        "stage": "schema_snippet",
+        "tables": [
+          "order_details",
+          "orders",
+          "customers"
+        ]
+      },
+      {
+        "stage": "keyword_extraction",
+        "tokens": [
+          "products",
+          "stock_levels",
+          "sales_velocity",
+          "reorder",
+          "produkt",
+          "produkte",
+          "artikel",
+          "item",
+          "khk",
+          "adressen"
+        ]
+      },
+      {
+        "stage": "seed_injection",
+        "tables": [
+          "[dbo].[Orders]",
+          "[dbo].[Order Details]",
+          "[dbo].[Customers]",
+          "[dbo].[Products]",
+          "[dbo].[Suppliers]",
+          "[dbo].[Categories]"
+        ]
+      },
+      {
+        "stage": "search_results",
+        "count": 14
+      },
+      {
+        "stage": "rank",
+        "count": 14,
+        "top": [
+          {
+            "table": "customers",
+            "score": 0.625
+          },
+          {
+            "table": "products",
+            "score": 0.625
+          },
+          {
+            "table": "categories",
+            "score": 0.402
+          },
+          {
+            "table": "territories",
+            "score": 0.393
+          },
+          {
+            "table": "employee_territories",
+            "score": 0.393
+          }
+        ]
+      },
+      {
+        "stage": "selection",
+        "tables": [
+          {
+            "table": "order_details",
+            "score": 0.265
+          },
+          {
+            "table": "orders",
+            "score": 0.348
+          },
+          {
+            "table": "customers",
+            "score": 0.625
+          }
+        ]
+      },
+      {
+        "stage": "schema_snippet",
+        "tables": [
+          "order_details",
+          "orders",
+          "customers"
+        ]
+      },
+      {
+        "stage": "keyword_extraction",
+        "tokens": [
+          "products",
+          "stock_levels",
+          "sales_velocity",
+          "reorder",
+          "produkt",
+          "produkte",
+          "artikel",
+          "item",
+          "khk",
+          "adressen"
+        ]
+      },
+      {
+        "stage": "seed_injection",
+        "tables": [
+          "[dbo].[Orders]",
+          "[dbo].[Order Details]",
+          "[dbo].[Customers]",
+          "[dbo].[Products]",
+          "[dbo].[Suppliers]",
+          "[dbo].[Categories]"
+        ]
+      },
+      {
+        "stage": "search_results",
+        "count": 14
+      },
+      {
+        "stage": "rank",
+        "count": 14,
+        "top": [
+          {
+            "table": "customers",
+            "score": 0.625
+          },
+          {
+            "table": "products",
+            "score": 0.625
+          },
+          {
+            "table": "categories",
+            "score": 0.402
+          },
+          {
+            "table": "territories",
+            "score": 0.393
+          },
+          {
+            "table": "employee_territories",
+            "score": 0.393
+          }
+        ]
+      },
+      {
+        "stage": "selection",
+        "tables": [
+          {
+            "table": "order_details",
+            "score": 0.265
+          },
+          {
+            "table": "orders",
+            "score": 0.348
+          },
+          {
+            "table": "customers",
+            "score": 0.625
+          }
+        ]
+      },
+      {
+        "stage": "schema_snippet",
+        "tables": [
+          "order_details",
+          "orders",
+          "customers"
+        ]
+      }
+    ],
+    "search_keywords": [
+      "products",
+      "stock_levels",
+      "sales_velocity",
+      "reorder",
+      "produkt",
+      "produkte",
+      "artikel",
+      "item",
+      "khk",
+      "adressen"
+    ],
+    "final_tables": [
+      "order_details",
+      "orders",
+      "customers"
+    ],
+    "final_schema": "order_details: order_id (smallint), product_id (smallint), unit_price (real), quantity (smallint), discount (real)\norders: order_id (smallint), customer_id (character varying), employee_id (smallint), order_date (date), required_date (date), shipped_date (date), ship_via (smallint), freight (real), ship_name (character varying), ship_address (character varying), ... and 4 more columns\ncustomers: customer_id (character varying), company_name (character varying), contact_name (character varying), contact_title (character varying), address (character varying), city (character varying), region (character varying), postal_code (character varying), country (character varying), phone (character varying), ... and 1 more columns"
+  },
+  "status": "success"
+}

@@ -1655,7 +1655,42 @@ class QueryOrchestrator:
             # LLM budget check (AnswerAgent uses LLM for formatting)
             state = self._check_llm_budget(state, "answer")
             if state.get("error_info") and state.get("intent", {}).get("needs_clarification"):
-                logger.warning("✨ [ANSWER] Exiting early due to LLM budget exhaustion")
+                # Global LLM budget exhausted – provide a deterministic, user-friendly message
+                intent = state.get("intent") or {}
+                error_info = state.get("error_info") or {}
+                err_type = str(error_info.get("type", "LLM_BUDGET_EXCEEDED"))
+                stage = error_info.get("stage") or "answer"
+                total_calls = error_info.get("total_llm_calls")
+
+                clarification_question = intent.get(
+                    "clarification_question",
+                    "Could you narrow down the scope of your question?",
+                )
+                ambiguity_reason = intent.get(
+                    "ambiguity_reason",
+                    "LLM call budget exceeded while trying to answer this question.",
+                )
+
+                details: List[str] = []
+                if stage:
+                    details.append(f"stage: {stage}")
+                if isinstance(total_calls, int):
+                    details.append(f"model calls used: {total_calls}")
+                detail_suffix = f" ({', '.join(details)})" if details else ""
+
+                state["final_response"] = (
+                    "I couldn't finish processing your request because the model call "
+                    "budget for this query was reached"
+                    f"{detail_suffix}. "
+                    f"Reason: {ambiguity_reason} "
+                    f"Suggestion: {clarification_question}"
+                )
+
+                logger.warning(
+                    "✨ [ANSWER] Exiting early due to LLM budget exhaustion (%s)%s",
+                    err_type,
+                    f" at {stage}" if stage else "",
+                )
                 debug_logger.agent_exit("answer", before_state, dict(state))
                 return state
 
