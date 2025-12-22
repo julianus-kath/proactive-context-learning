@@ -26,6 +26,8 @@ from typing import Tuple, Optional, Literal
 from dataclasses import dataclass
 from enum import Enum
 
+from mcp_server.config import config
+
 logger = logging.getLogger(__name__)
 
 
@@ -356,7 +358,54 @@ class QueryValidator:
         Returns:
             ValidationResult with modified query
         """
-        # Check if query already has LIMIT
+        # Normalize occasional SQL Server–style syntax that may appear when
+        # upstream agents generate MSSQL-flavoured SQL (TOP / [dbo].[table]):
+        #
+        # 1) Strip SELECT TOP n and treat it as a user-specified limit
+        # 2) Convert [schema].[name] brackets to Postgres-style quotes
+        top_match = re.search(r'\bSELECT\s+TOP\s+(\d+)\s+', query, re.IGNORECASE)
+        if top_match:
+            try:
+                top_limit = int(top_match.group(1))
+                if top_limit < limit:
+                    limit = top_limit
+            except Exception:
+                top_limit = None  # best-effort; fall back to existing limit
+            # Remove the TOP clause from the SELECT
+            query = re.sub(
+                r'\bSELECT\s+TOP\s+\d+\s+',
+                'SELECT ',
+                query,
+                flags=re.IGNORECASE,
+            )
+            logger.info(
+                "Normalized SQL Server TOP clause for Postgres (TOP %s)",
+                top_match.group(1),
+            )
+
+        # Map common MSSQL schema prefixes to the configured Postgres schema
+        default_schema = getattr(config, "postgres_schema", "public")
+        # Handle dbo.<table> or [dbo].<table> before bracket normalization
+        query = re.sub(
+            r'\b\[dbo\]\.',
+            f'{default_schema}.',
+            query,
+            flags=re.IGNORECASE,
+        )
+        query = re.sub(
+            r'\bdbo\.',
+            f'{default_schema}.',
+            query,
+            flags=re.IGNORECASE,
+        )
+
+        if "[" in query or "]" in query:
+            # Convert SQL Server bracket identifiers to unquoted Postgres identifiers.
+            # Example: public.[order_details] -> public.order_details
+            query = re.sub(r'\[([^\]]+)\]', r'\1', query)
+            logger.info("Normalized SQL Server bracket identifiers to Postgres style")
+
+        # Check if query already has LIMIT (after any normalization)
         limit_match = re.search(r'\bLIMIT\s+(\d+)', query, re.IGNORECASE)
         
         if limit_match:

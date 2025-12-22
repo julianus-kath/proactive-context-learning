@@ -246,13 +246,29 @@ async def process_query(request: QueryRequest = Body(...), api_key_header: Optio
 
         # Extract final response (required)
         response_text = (
-            orchestrator_result.get("final_answer") 
+            orchestrator_result.get("final_answer")
             or orchestrator_result.get("final_response")
         )
-        
+
         if not response_text:
             logger.error("❌ No final_response or final_answer in orchestrator result")
-            response_text = "I processed your query but couldn't generate a response. Please check the server logs."
+            # Prefer a normalized error message if available
+            if error_info_data and isinstance(error_info_data, dict):
+                response_text = (
+                    error_info_data.get("message")
+                    or f"An error occurred: {error_info_data.get('type', 'UNKNOWN_ERROR')}"
+                )
+            else:
+                raw_error = orchestrator_result.get("error_info")
+                if isinstance(raw_error, dict):
+                    response_text = raw_error.get("message") or str(raw_error)
+                elif raw_error:
+                    response_text = str(raw_error)
+                else:
+                    response_text = (
+                        "I processed your query but couldn't generate a response. "
+                        "Please check the server logs."
+                    )
 
         # Extract optional fields
         sql_query = orchestrator_result.get("sql_query")
