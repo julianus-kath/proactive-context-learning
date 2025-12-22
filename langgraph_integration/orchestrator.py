@@ -34,7 +34,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
 from pydantic import ValidationError
 
-from langgraph_integration.contracts.state import BaseState
+from langgraph_integration.contracts.state import BaseState, merge_error_info
 from langgraph_integration.contracts.response_envelope import (
     ErrorInfo as ErrorInfoModel,
     ResponseEnvelope,
@@ -267,14 +267,14 @@ class QueryOrchestrator:
                 "LLM call budget exceeded while trying to answer this question.",
             )
             state["intent"] = intent
-            state.setdefault("error_info", {})
-            state["error_info"].update(
+            merge_error_info(
+                state,
                 {
                     "type": "LLM_BUDGET_EXCEEDED",
                     "message": "Global LLM call budget exceeded for this query.",
                     "stage": stage,
                     "total_llm_calls": total_calls,
-                }
+                },
             )
             return state
 
@@ -496,15 +496,16 @@ class QueryOrchestrator:
                     "Maximum planning retries exceeded; query was too broad or complex for an automatic plan."
                 )
                 state["intent"] = intent
-
-                state.setdefault("error_info", {})
-                state["error_info"].update({
-                    "type": "MAX_RETRIES_EXCEEDED",
-                    "message": (
-                        "The system attempted multiple discovery and planning cycles "
-                        "but could not produce a stable query plan."
-                    ),
-                })
+                merge_error_info(
+                    state,
+                    {
+                        "type": "MAX_RETRIES_EXCEEDED",
+                        "message": (
+                            "The system attempted multiple discovery and planning cycles "
+                            "but could not produce a stable query plan."
+                        ),
+                    },
+                )
                 return "answer"
             # Increment plan attempt count when we're about to take a retry action
             if retry_action in ("try_next_candidate", "replan_with_aggregation", "replan_with_filter"):
@@ -519,14 +520,16 @@ class QueryOrchestrator:
                     f"🚦 [VALIDATION] Max retries exceeded "
                     f"({retry_attempt}/{max_retries}), routing to 'answer'"
                 )
-                state.setdefault("error_info", {})
-                state["error_info"].update({
-                    "type": "MAX_RETRIES_EXCEEDED",
-                    "message": (
-                        "All discovery candidates have been tried but the query "
-                        "could not be executed successfully."
-                    ),
-                })
+                merge_error_info(
+                    state,
+                    {
+                        "type": "MAX_RETRIES_EXCEEDED",
+                        "message": (
+                            "All discovery candidates have been tried but the query "
+                            "could not be executed successfully."
+                        ),
+                    },
+                )
                 return "answer"
             
             if retry_action == "try_next_candidate":
@@ -1502,14 +1505,16 @@ class QueryOrchestrator:
                 "⚡ [EXEC_RECOVERY] Global execution budget exceeded "
                 f"({exec_attempt}/{max_exec}), skipping exec_recovery and routing to answer"
             )
-            state.setdefault("error_info", {})
-            state["error_info"].update({
-                "type": "MAX_EXEC_ATTEMPTS_EXCEEDED",
-                "message": (
-                    "The system attempted to execute or repair the query multiple times "
-                    "but could not complete execution safely."
-                ),
-            })
+            merge_error_info(
+                state,
+                {
+                    "type": "MAX_EXEC_ATTEMPTS_EXCEEDED",
+                    "message": (
+                        "The system attempted to execute or repair the query multiple times "
+                        "but could not complete execution safely."
+                    ),
+                },
+            )
             debug_logger.agent_exit("exec_recovery", before_state, dict(state))
             return state
 

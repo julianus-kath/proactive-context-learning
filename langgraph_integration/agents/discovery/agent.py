@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
-from langgraph_integration.contracts.state import BaseState, DiscoveryAgentOutput
+from langgraph_integration.contracts.state import BaseState, DiscoveryAgentOutput, merge_error_info
 from langgraph_integration.contracts.discovery_models import (
     DiscoveryCandidate,
     DiscoveryOutput,
@@ -902,14 +902,16 @@ class DiscoveryAgent:
             # 🆕 Check if all candidates have been exhausted (tried + skipped)
             if not selected:
                 logger.warning("🔍 All candidates exhausted, none left to try.")
-                state.setdefault("error_info", {})
-                state["error_info"].update({
-                    "type": "NO_CANDIDATES_LEFT",
-                    "message": (
-                        "All discovered candidates have been tried and no more "
-                        "valid tables remain for this query."
-                    )
-                })
+                merge_error_info(
+                    state,
+                    {
+                        "type": "NO_CANDIDATES_LEFT",
+                        "message": (
+                            "All discovered candidates have been tried and no more "
+                            "valid tables remain for this query."
+                        ),
+                    },
+                )
                 state["no_candidates_left"] = True
                 return state
 

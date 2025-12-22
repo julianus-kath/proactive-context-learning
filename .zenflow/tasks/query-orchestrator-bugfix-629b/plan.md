@@ -49,9 +49,50 @@ Rule of thumb for step size: each step should represent a coherent unit of work 
 
 Save to `{@artifacts_path}/plan.md`. If the feature is trivial and doesn't warrant this breakdown, keep the Implementation step below as is.
 
+Yes. state.py is exactly where the contract mismatch is coming from.
+
+What the file says (and why you’re still getting NoneType ... update)
+	•	In BaseState, you currently define:
+
+error_info: Dict[str, Any]  # {type, message, context, suggestion}
+
+That implies “always a dict”.
+	•	But multiple agent outputs (and your own runtime logs) clearly allow None:
+
+error_info: Optional[Dict[str, Any]]
+
+And your log shows:
+
+"error_info": null
+
+So the state contract is inconsistent: the graph allows None, but parts of the orchestrator treat it as a dict and call .update(...) → crash.
+
+What to change in state.py (minimum fix)
+
+Make BaseState.error_info optional to match reality:
+
+error_info: Optional[Dict[str, Any]]
+
+What to change in the orchestrator (still required)
+
+Even after fixing typing, you must normalize before update everywhere you do state["error_info"].update(...):
+
+error_info = state.get("error_info")
+if not isinstance(error_info, dict):
+    error_info = {}
+error_info.update({...})
+state["error_info"] = error_info
+
+Best practice (so this never returns)
+
+Create a single helper (e.g., set_error(state, type, message, **meta)) and use it everywhere. That prevents future regressions and removes duplicated normalization logic.
+
+If you want, paste the relevant orchestrator sections (or point me at the file), and I’ll tell you the exact minimal diff to implement set_error(...) and replace the current .update(...) call sites.
+
 ---
 
-### [ ] Step: Implementation
+### [x] Step: Implementation
+<!-- chat-id: 20562910-f1f6-4d90-a4e2-649319ad1d77 -->
 
 Implement the task according to the technical specification and general engineering best practices.
 

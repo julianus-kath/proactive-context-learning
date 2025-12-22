@@ -229,6 +229,18 @@ class TestStateContracts:
         assert input_state["schema_snippet"]
         assert "column_index" in input_state
 
+    def test_merge_error_info_handles_none(self):
+        """merge_error_info should handle None gracefully"""
+        from langgraph_integration.contracts.state import BaseState, merge_error_info
+
+        state: BaseState = {"error_info": None}
+        merge_error_info(state, {"type": "TEST_ERROR", "message": "Test message"})
+
+        error_info = state.get("error_info")
+        assert isinstance(error_info, dict)
+        assert error_info.get("type") == "TEST_ERROR"
+        assert error_info.get("message") == "Test message"
+
 
 class TestEndToEndScenarios:
     """Integration tests for end-to-end scenarios"""
