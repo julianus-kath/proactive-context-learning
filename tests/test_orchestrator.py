@@ -58,6 +58,14 @@ async def test_orchestrator_graph_build(orchestrator):
     logger.info("✅ Orchestrator graph compiled successfully")
 
 
+def test_orchestrator_has_timeout_attr(self):
+    from langgraph_integration.orchestrator import QueryOrchestrator
+
+    orch = QueryOrchestrator(query_timeout_seconds=42)
+    assert hasattr(orch, "query_timeout_seconds")
+    assert orch.query_timeout_seconds == 42
+
+
 @pytest.mark.asyncio
 async def test_simple_intent_parser(orchestrator):
     """Test simple intent parser."""

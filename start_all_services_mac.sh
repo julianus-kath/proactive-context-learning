@@ -1,5 +1,4 @@
 #!/bin/bash
-# =============================================================================
 # Mac Machine Startup Script - Web UI + LangGraph Service
 # =============================================================================
 # This script starts the Web UI and LangGraph service on Mac.
@@ -188,7 +187,9 @@ fi
 echo -e "${GREEN}✅ .env file found${NC}"
 
 # Load environment variables
-export $(cat .env | grep -v '^#' | grep -v '^$' | xargs)
+set -a
+source .env
+set +a
 
 # Check if OPENAI_API_KEY is set
 if [ -z "$OPENAI_API_KEY" ] || [ "$OPENAI_API_KEY" = "your_openai_api_key_here" ]; then
