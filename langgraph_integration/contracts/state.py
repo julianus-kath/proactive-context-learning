@@ -98,7 +98,11 @@ class BaseState(TypedDict, total=False):
 
     # Execution & recovery
     exec_result: Dict[str, Any]  # {ok, data, row_count, execution_time_ms, truncated, warnings}
-    error_info: Dict[str, Any]  # {type, message, context, suggestion}
+    # NOTE: error_info is optional at runtime; many agents omit it or explicitly
+    #       set it to None when clearing prior errors. The orchestrator and
+    #       agents must therefore treat it as Optional[Dict[str, Any]] and
+    #       normalize before mutating.
+    error_info: Optional[Dict[str, Any]]  # {type, message, context, suggestion}
 
     # 🆕 PHASE 10a: Result validation (catch silent failures)
     validation_result: Dict[str, Any]  # {valid, issue, suggestion, retry_action}
@@ -261,3 +265,20 @@ class AnswerAgentOutput(TypedDict, total=False):
     """
 
     final_response: str
+
+
+def merge_error_info(state: BaseState, payload: Dict[str, Any]) -> None:
+    """
+    Safely merge error information into the state.
+
+    Normalizes BaseState["error_info"] so that callers can update it even when
+    previous nodes left it unset or explicitly set it to None.
+    """
+    existing = state.get("error_info")
+    if not isinstance(existing, dict):
+        existing = {}
+
+    if isinstance(payload, dict):
+        existing.update(payload)
+
+    state["error_info"] = existing
