@@ -71,9 +71,13 @@ def canonical_table_name(raw_name: str, dialect: str, schema: str) -> str:
         schema_part = None
         table_part = parts[0]
 
-    # Whitespace-normalized, lowercased table token (no underscore guessing).
+    # Whitespace-normalized, identifier-safe table token:
+    # - collapse internal whitespace to a single space
+    # - lowercase
+    # - replace spaces with underscore so the result can be safely used as an
+    #   unquoted identifier in SQL when needed.
     table_norm = re.sub(r"\s+", " ", table_part.strip())
-    table_clean = table_norm.lower()
+    table_clean = table_norm.lower().replace(" ", "_")
 
     # Schema: for Postgres, always use the configured logical default schema;
     # for MSSQL, prefer the explicit schema if present, otherwise the provided

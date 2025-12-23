@@ -13,8 +13,8 @@ from langgraph_integration.utils.canonical_names import (
 def test_canonical_table_name_bracketed_to_postgres_public():
     # Explicit dialect/schema should drive canonicalisation, independent of env.
     result = canonical_table_name("[dbo].[Order Details]", dialect="postgres", schema="public")
-    # Syntactic normalisation only: schema + lowercased, whitespace-normalised table.
-    assert result == "public.order details"
+    # Syntactic, identifier-safe normalisation: schema + lowercased, whitespace→underscore.
+    assert result == "public.order_details"
 
 
 def test_canonical_table_name_dbo_prefix_to_postgres():
@@ -30,7 +30,7 @@ def test_canonical_table_name_simple_table_uses_default_schema():
 
 def test_canonical_table_name_mssql_bracketed_keeps_dbo_schema():
     result = canonical_table_name("[dbo].[Order Details]", dialect="mssql", schema="dbo")
-    assert result == "dbo.order details"
+    assert result == "dbo.order_details"
 
 
 def test_canonicalize_table_list_deduplicates_equivalent_syntactic_forms():
