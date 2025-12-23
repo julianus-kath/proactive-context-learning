@@ -122,10 +122,10 @@ Cache discovery/join outputs, detect redundant loops, and short-circuit when nea
    - If `llm_usage["total"]` is within 1–2 of `max_llm_calls`, short-circuit nodes that would require LLM calls (e.g., further discovery/join retries) and route toward deterministic paths (validation/exec/answer fallback).
 
 Verification:
-- Re-run a known “bad” query from the benchmark (high prior LLM usage):
-  - Confirm discovery runs at most once per unchanged fingerprint.
-  - Confirm join does not regenerate identical SQL more than once.
-  - Inspect `llm_usage` and `loop_events` in benchmark artifacts to validate reduced loops and fewer `LLM_BUDGET_EXCEEDED` at `stage=answer`.
+- Re-run a known “bad” query from the benchmark (high prior LLM usage, e.g. the “Chai reorder” query above):
+  - Confirm discovery runs at most once per unchanged fingerprint (even if `discovery` node_entry_counts are >1, `llm_usage["discovery"]` should stay low and `discovery_cache_hit` / `discovery_budget_short_circuit` events should be present).
+  - Confirm join does not regenerate identical SQL more than once (multiple `join_sql` node entries should mostly be covered by `join_inputs_cache_hit` / `join_budget_short_circuit` loop events, with `llm_usage["join"]` staying low).
+  - Inspect `llm_usage` and `loop_events` in benchmark artifacts to validate that most residual budget usage now comes from validation/repair (`llm_usage["repair"]`) rather than from repeated discovery/join loops, and that `LLM_BUDGET_EXCEEDED` at `stage=answer` is rare.
 
 ### [ ] Step: Phase 3 — Deterministic Answer Fallback
 
@@ -136,10 +136,12 @@ Ensure users receive a meaningful answer when SQL execution succeeds, even with 
      - Use `_format_execution_results` (or a new small helper) to build `final_response` and `final_answer` without calling LLM when deterministic mode is enabled or budget is exhausted.
      - Ensure there is a clear, config-controlled path where `exec_result.ok` and `row_count > 0` results in deterministic rendering even if some budget remains, so behavior is predictable.
    - Set `answer_mode` in state (e.g., `"deterministic_from_data"` vs `"llm"`).
-2. Handle `LLM_BUDGET_EXCEEDED` gracefully:
+2. Handle `LLM_BUDGET_EXCEEDED` and planner/repair exhaustion gracefully:
    - If an LLM call is blocked at stage `answer` but `exec_result` has data:
      - Fall back to deterministic rendering and clear/adjust `error_info` to indicate a degraded but valid answer (e.g., `type="LLM_BUDGET_EXCEEDED_DEGRADED_ANSWER"`).
-   - If there is no data, return a diagnostic message indicating:
+   - If there is no data but we have strong structural signals (e.g., required KPI tables missing from `final_tables`, or domain guardrails like `PRODUCT_MAPPING_ERROR` fired in Phase 4):
+     - Prefer a **specific, domain-aware** diagnostic over the generic `UNGROUNDED_RESPONSE_PREVENTED` message, indicating which tables/concepts were missing and what the user can change.
+   - If there is no data and no structural hints, return a generic but safe diagnostic message indicating:
      - Missing tables or unresolved concepts.
      - Suggested user actions (“narrow scope to X”, etc.).
 3. Ensure grounding and safety gates remain intact:
@@ -149,7 +151,9 @@ Verification:
 - Run `pytest tests/test_orchestrator_result_validator_integration.py tests/test_complete_system.py`.
 - Add or adapt a test where `max_llm_calls` is artificially low but SQL execution succeeds:
   - Assert `final_response` contains tabular data and summary text without answer-node LLM usage.
-- In a benchmark rerun, confirm that queries with successful SQL execution always yield a data-based `final_response` even when `error_info.type == "LLM_BUDGET_EXCEEDED"`.
+- Add a test mirroring the “Chai reorder” shape where joins or required tables are intentionally mis-specified:
+  - Assert the system returns a **specific** diagnostic (e.g., about missing `products` table or bad product mapping) rather than a generic ungrounded-response message.
+- In a benchmark rerun, confirm that queries with successful SQL execution always yield a data-based `final_response` even when `error_info.type == "LLM_BUDGET_EXCEEDED"`, and that purely structural failures produce clear, targeted diagnostics.
 
 ### [ ] Step: Phase 4 — KPI-Driven Table Selection Guardrails
 
@@ -159,17 +163,21 @@ Use KPI expressions to enforce required tables and add product-domain sanity che
    - In `langgraph_integration/concept_mapper.py` (or related module), parse KPI expression strings for table-qualified identifiers (e.g., `Products.`, `OrderDetails.`).
    - Map these to canonical table names (e.g., `public.products`, `public.order_details`) and store in state as `required_tables_from_kpi`.
 2. Enforce required tables during discovery/join:
-   - In discovery agent (`langgraph_integration/agents/discovery/agent.py`), ensure `required_tables_from_kpi` are present in `final_tables` when applicable (or flagged if missing from catalog).
-   - In join planning (`langgraph_integration/agents/join_sql/agent.py`), ensure required tables are included as fact or dimension tables; if not, bias selection or surface a deterministic error (`DIMENSION_MISSING` with clearer guidance).
+   - In discovery agent (`langgraph_integration/agents/discovery/agent.py`), ensure `required_tables_from_kpi` are present in `final_tables` when applicable (or flagged if missing from catalog). For the `inventory_reorder` KPI specifically, require inclusion of the `products` table (and any other tables referenced in its expression).
+   - In join planning (`langgraph_integration/agents/join_sql/agent.py`), ensure required tables are included as fact or dimension tables; if not, bias selection or surface a deterministic error (`DIMENSION_MISSING` with clearer guidance) **before** spending more cycles on execution/repair.
 3. Add domain guardrails for product semantics:
-   - Implement `validate_product_semantics(sql: str, state: BaseState)` (e.g., in join agent or a small helper) to detect obviously wrong mappings like `order_details.order_id AS product_name` when intent/entities mention “product”.
-   - If triggered, set a structured validation error (`PRODUCT_MAPPING_ERROR`) and route back to join with hints forcing inclusion of the products table/product_id column.
+   - Implement `validate_product_semantics(sql: str, state: BaseState)` (e.g., in join agent or a small helper) to detect obviously wrong mappings like `order_details.order_id AS product_name` when intent/entities mention “product” or KPIs reference `Products.`.
+   - If triggered, set a structured validation error (`PRODUCT_MAPPING_ERROR`) and either:
+     - Route back to join with hints forcing inclusion of the `products` table/product_id column, or
+     - Short-circuit with a clear diagnostic if the catalog cannot satisfy the required mapping (e.g., no `products` table exists).
 
 Verification:
 - Add/extend tests for KPI/concept-driven queries (including the “Chai reorder” scenario):
-  - Assert `relevant_tables` / `final_tables` include the products table.
-  - Assert final SQL joins orders, order_details, and products, and filters by product (e.g., `products.product_name = 'Chai'`).
-- Manually run the “Chai reorder” query via eval or service and confirm no `order_id AS product_name` pattern appears.
+  - Assert `relevant_tables` / `final_tables` include the products table whenever `inventory_reorder` (or other `Products.` KPIs) are active.
+  - Assert final SQL joins orders, order_details, and products, and filters by product (e.g., `products.product_name = 'Chai'`), **never** projecting `order_id` as `product_name`.
+- Manually run the “Chai reorder” query via eval or service and confirm:
+  - No `order_id AS product_name` pattern appears in the generated SQL.
+  - The user receives either a correct data-backed reorder answer or a targeted diagnostic explaining which product/inventory tables are missing or inconsistent.
 
 ### [ ] Step: Phase 5 — Early Identifier Canonicalization
 
