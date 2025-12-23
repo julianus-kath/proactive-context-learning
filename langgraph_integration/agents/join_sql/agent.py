@@ -2564,7 +2564,11 @@ class JoinPlanAndSQLAgent:
         where_conditions = self._build_where_conditions(filters) if filters else []
         where_clause = f"WHERE {' AND '.join(where_conditions)}" if where_conditions else ""
 
-        sql = f"SELECT COUNT(DISTINCT *) AS {entity}_count\nFROM {fact_table}\n{where_clause}".strip()
+        # COUNT_ENTITY is used for questions like "How many customers do we have?"
+        # Using COUNT(*) is safe and portable across MSSQL/Postgres. If we later
+        # want to count distinct keys, we can derive the PK from discovery
+        # metadata, but COUNT(*) is correct for simple cardinality questions.
+        sql = f"SELECT COUNT(*) AS {entity}_count\nFROM {fact_table}\n{where_clause}".strip()
 
         state["sql_query"] = sql
         logger.info(f"🎯 [TEMPLATE] COUNT_ENTITY SQL generated: {sql[:100]}...")
