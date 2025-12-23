@@ -51,6 +51,23 @@ If the feature is trivial and doesn't warrant full specification, update this wo
 
 Save to `{@artifacts_path}/plan.md`.
 
+### [ ] Step: Step 0 — Pre-flight Configuration
+
+Define configuration knobs and ensure they are wired into orchestrator/config loading.
+
+1. Add or confirm environment/config defaults:
+   - `MAX_LLM_CALLS` (existing, keep behavior).
+   - `LLM_BUDGET_SAFETY_MARGIN` (default `2`, used in budget-aware routing).
+   - `DB_DIALECT` and `DB_DEFAULT_SCHEMA` (used by canonicalization; default to current behavior, e.g., `mssql`/`dbo` or `postgres`/`public` depending on deployment).
+2. Ensure these config values are accessible to:
+   - Orchestrator (for budget checks and routing).
+   - Canonicalization utilities (Phase 5).
+3. (Optional) Create or document a feature branch for this work (outside this repo automation).
+
+Verification:
+- System starts cleanly with and without the new env vars set.
+- Existing behavior is unchanged when env vars are not provided (backward compatible defaults).
+
 ### [ ] Step: Phase 1 — Instrumentation
 
 Implement LLM usage accounting and loop diagnostics.
@@ -58,13 +75,21 @@ Implement LLM usage accounting and loop diagnostics.
 1. Extend `langgraph_integration/contracts/state.py`:
    - Add optional fields: `llm_usage`, `node_entry_counts`, `loop_events`, `answer_mode`.
    - Add optional fields for loop helpers: `discovery_cache`, `last_sql_query`, `last_join_plan`, `required_tables_from_kpi`.
+   - Keep all new fields Optional in the type definitions and initialize them lazily at runtime (e.g., with `or {}`) to maintain backward compatibility.
+   - Preserve and continue populating `total_llm_calls` so existing tests and consumers remain valid; treat it as a derived summary from `llm_usage["total"]`.
 2. Update orchestrator (`langgraph_integration/orchestrator.py`):
    - Increment `node_entry_counts` on each node entry (intent, discovery, join_sql, sql_validator, exec_recovery, result_validator, answer).
-   - Centralize LLM call accounting (e.g., in `_check_llm_budget` / wrapper) to bump `llm_usage[node]` and `llm_usage["total"]`.
+   - Define a single accounting rule for LLM usage (Phase 1): **count per orchestrator subgraph invocation**:
+     - Each time the orchestrator invokes an agent subgraph that may use an LLM internally (intent, discovery, join_sql, sql_validator, exec_recovery, result_validator, answer), increment `llm_usage[node_name]` by 1 and `llm_usage["total"]` by 1.
+     - Implement this in a centralized helper or wrapper (e.g., around `_check_llm_budget` / node dispatch) so the rule is consistent and low-overhead.
+   - Keep `total_llm_calls` in sync with `llm_usage["total"]` to avoid conflicting counters.
    - Emit structured debug logs via `debug_logger` when:
      - A node spends a call (include node, reason, retry_action, loop-related flags).
      - Budget is near / exceeds `max_llm_calls`.
 3. Ensure `process_query` return payload includes `llm_usage`, `node_entry_counts`, and `loop_events`, and update `eval/run_benchmark.py` to persist them onto each query artifact.
+   - Optionally add a simple `graph_cycles`/`graph_iterations` counter if available from LangGraph primitives.
+   - Extend benchmark reporting to emit a per-query table with at least:
+     - `query_id | total_calls | intent | discovery | join | repair | answer | discovery_entries | join_entries | same_tables_suppressed | same_sql_suppressed`.
 
 Verification:
 - Run `pytest tests/test_orchestrator.py tests/test_orchestrator_integration.py`.
@@ -79,6 +104,11 @@ Cache discovery/join outputs, detect redundant loops, and short-circuit when nea
 
 1. Implement discovery caching in orchestrator:
    - Add `discovery_cache` to state, storing a fingerprint (user_input, intent, skip_tables/tried_candidate_tables) and last discovery result (`relevant_tables`, `final_tables`, role hints).
+   - Define a precise discovery fingerprint and store it alongside the cached payload:
+     - Normalized `user_input` (e.g., stripped/lowercased).
+     - `intent.operation` and any selected concept IDs (if present).
+     - `sorted(skip_tables)` and `sorted(tried_candidate_tables)`.
+     - Canonicalized `seed_tables` (once Phase 5 is in place; until then, include current `seed_tables` representation).
    - Before re-entering discovery, compare fingerprint; if unchanged, reuse cached discovery result and avoid an LLM call.
 2. Add redundant loop guards:
    - Track `last_discovery_final_tables` and `last_sql_query` in state.
@@ -99,10 +129,9 @@ Verification:
 Ensure users receive a meaningful answer when SQL execution succeeds, even with zero remaining LLM budget.
 
 1. Extend answer node (`langgraph_integration/agents/answer/agent.py` or orchestrator `_answer_node`):
-   - When `exec_result.ok` and `row_count > 0`, and either:
-     - Budget is exhausted, or
-     - A config flag prefers deterministic mode,
-     - Use `_format_execution_results` (or a new small helper) to build `final_response` and `final_answer` without calling LLM.
+   - When `exec_result.ok` and `row_count > 0` (independent of current budget state), prefer deterministic rendering:
+     - Use `_format_execution_results` (or a new small helper) to build `final_response` and `final_answer` without calling LLM when deterministic mode is enabled or budget is exhausted.
+     - Ensure there is a clear, config-controlled path where `exec_result.ok` and `row_count > 0` results in deterministic rendering even if some budget remains, so behavior is predictable.
    - Set `answer_mode` in state (e.g., `"deterministic_from_data"` vs `"llm"`).
 2. Handle `LLM_BUDGET_EXCEEDED` gracefully:
    - If an LLM call is blocked at stage `answer` but `exec_result` has data:
