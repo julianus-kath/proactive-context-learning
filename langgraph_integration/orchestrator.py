@@ -1945,13 +1945,34 @@ class QueryOrchestrator:
         return state
 
     def _qualify_table_name(self, table_name: str) -> str:
-        """Ensure table name is schema-qualified for MSSQL."""
-        if '.' in table_name:
-            # Already qualified
-            return table_name
-        else:
-            # Add default schema qualification for MSSQL
-            return f"OLLuisiDiener.dbo.{table_name}"
+        """
+        Ensure table name is schema-qualified in a dialect-aware way.
+
+        - Postgres: <schema>.<table> (schema from db_default_schema, default "public")
+        - MSSQL: <database>.<schema>.<table> (database from env, default "OLLuisiDiener")
+        - Already-qualified names are returned as-is.
+        """
+        raw = (table_name or "").strip()
+        if not raw:
+            return raw
+        # If the name is already qualified (schema.table or db.schema.table), leave it alone.
+        if "." in raw:
+            return raw
+
+        dialect = (getattr(self, "db_dialect", "") or "").lower()
+        default_schema = (getattr(self, "db_default_schema", "") or "").strip() or (
+            "public" if dialect == "postgres" else "dbo"
+        )
+
+        if dialect == "postgres":
+            return f"{default_schema}.{raw}"
+
+        if dialect == "mssql":
+            db_name = (os.getenv("DB_MSSQL_DATABASE") or "").strip() or "OLLuisiDiener"
+            return f"{db_name}.{default_schema}.{raw}"
+
+        # Fallback: use schema.table form
+        return f"{default_schema}.{raw}"
 
     def _select_best_table_or_view_for_query(self, tables, views, intent: Dict[str, Any]) -> str:
         """
@@ -3030,7 +3051,8 @@ async def _format_execution_results(
         for t in table_names:
             if not t:
                 continue
-            sql = f"SELECT COUNT(*) AS c FROM {t}"
+            qualified_t = self._qualify_table_name(str(t))
+            sql = f"SELECT COUNT(*) AS c FROM {qualified_t}"
             try:
                 result = await self.mcp.query_bounded(sql, max_rows=1, timeout_ms=5000)
                 if isinstance(result, dict) and result.get("ok"):

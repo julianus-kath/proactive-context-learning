@@ -332,7 +332,7 @@ class JoinPlanAndSQLAgent:
         return state
 
     async def _probe_columns(self, table_name: str) -> List[str]:
-        """Probe a table/view for its column names using a small SELECT TOP 1 *."""
+        """Probe a table/view for its column names using a small, dialect-aware SELECT."""
         try:
             # Prefer MCP get_column_index (faster, structured)
             try:
@@ -347,8 +347,14 @@ class JoinPlanAndSQLAgent:
             except Exception:
                 pass
 
-            # Fallback: issue a TOP 1 probe and parse columns from the MCP JSON envelope
-            probe_sql = f"SELECT TOP 1 * FROM {table_name}"
+            # Fallback: issue a small probe and parse columns from the MCP JSON envelope.
+            # Use LIMIT for Postgres and TOP for MSSQL to avoid dialect leakage.
+            import os as _os
+            dialect = (_os.getenv("DB_DIALECT") or "").strip().lower()
+            if dialect in {"postgres", "postgresql"}:
+                probe_sql = f"SELECT * FROM {table_name} LIMIT 1"
+            else:
+                probe_sql = f"SELECT TOP 1 * FROM {table_name}"
             result = await self.mcp.query_bounded(probe_sql, max_rows=1, timeout_ms=5000)
             if isinstance(result, dict) and result.get("ok"):
                 columns = result.get("columns") or []
