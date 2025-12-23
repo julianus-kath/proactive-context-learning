@@ -209,6 +209,269 @@ Verification:
   - No double-schema artifacts like `[dbo].[dbo].[Suppliers]`.
 - Run a discovery-heavy benchmark subset and confirm logs show only canonical names (`public.*`) and no `[dbo].*` on Postgres.
 
+### [x] Step: Additional Syntax Cleansiung
+<!-- chat-id: 9e32a1da-dd53-453f-ab10-4a9f89773a30 -->
+
+Summary of what the logs show (with concrete examples)
+
+1) The API returns “execution failed / no rows”, but the MCP server clearly executes and returns rows
+
+Symptom in API response:
+	•	exec_result.ok = false
+	•	row_count = 0
+	•	data = []
+
+But MCP server log for the same request:
+	•	Executes successfully and returns rows:
+
+Example (MCP):
+	•	Input SQL (still MSSQL-ish):
+	•	SELECT TOP 1000 [public].[order_details]...
+	•	MCP normalizes and runs:
+	•	SELECT public.order_details.order_id AS product_name, SUM(public.order_details.quantity) AS total_metric FROM public.order_details ... LIMIT 1000
+	•	Result:
+	•	✅ QUERY EXECUTION COMPLETED
+	•	📊 Results: 100 rows ... Truncated: True
+
+Conclusion: there is a mismatch between the MCP execution result and what the web API returns (results are being dropped/overwritten or a different executor path is being used later).
+
+⸻
+
+2) You still have a “dialect leakage” path that sends MSSQL syntax to Postgres (TOP, dbo, brackets)
+
+Your Postgres container log contains many failures where Postgres is receiving MSSQL syntax directly.
+
+Examples (Postgres container):
+	•	MSSQL TOP sent to Postgres:
+	•	ERROR: syntax error at or near "1000" at character 12
+	•	STATEMENT: SELECT TOP 1000 ...
+	•	MSSQL schema dbo.* sent to Postgres:
+	•	ERROR: relation "dbo.customers" does not exist
+	•	STATEMENT: ... FROM dbo.customers
+	•	Bracket identifiers also appear in these failing statements:
+	•	FROM [dbo].[order_details]
+
+Conclusion: you have at least one execution/probing path that bypasses MCP normalization and hits Postgres directly.
+
+⸻
+
+3) There is an invalid query being generated: COUNT(DISTINCT *)
+
+Postgres container log:
+	•	ERROR: syntax error at or near "*" at character 23
+	•	STATEMENT: SELECT COUNT(DISTINCT *) AS customers_count FROM customers
+
+Conclusion: some part of the pipeline (profiling/validator/recovery) is issuing an invalid “distinct star” query. This can poison “exec ok” signals even if the main query succeeds.
+
+⸻
+
+4) Wrong query semantics: the system generates a query unrelated to “reorder Chai”
+
+From the API response:
+
+Generated SQL:
+
+SELECT TOP 1000 [public].[order_details].[order_id] AS product_name,
+       SUM([public].[order_details].[quantity]) AS total_metric
+FROM [public].[order_details]
+GROUP BY [public].[order_details].[order_id]
+ORDER BY total_metric DESC
+
+Problems:
+	•	order_id AS product_name is wrong mapping.
+	•	Query computes “top orders by quantity”, not “when to reorder product Chai”.
+
+Discovery output also shows table/schema inconsistencies:
+	•	sources: public.order_details, public.orders, public.customers, dbo.products
+	•	final_schema snippet only lists order_details, orders, customers (no products columns), so join planner can’t build reorder logic.
+
+Conclusion: join/SQL planning is missing the products table/columns needed for stock/reorder computations.
+
+⸻
+
+5) “dbo” resolution mismatch in Postgres mode is still present
+
+In the API discovery log:
+	•	seed injection includes [dbo].[...] tables
+	•	final tables include dbo.products
+
+But MCP catalog warmup reports “14 tables” in Postgres Northwind (typically under public, not dbo).
+
+Conclusion: your discovery seeds/templates still push dbo.* in Postgres mode, and your new canonicalization/resolver policy won’t “bridge” dbo→public unless you enable explicit schema aliasing or make seeds dialect-aware.
+
+⸻
+
+One-paragraph diagnosis you can paste to a coding agent
+
+The logs show two main issues: (1) MCP successfully normalizes and executes the generated SQL on Postgres (returns ~100 rows), but the web API response still reports exec_result.ok=false and row_count=0, implying results are being dropped/overwritten or another executor/probing path is deciding failure. (2) There is dialect leakage: Postgres container receives MSSQL SQL (SELECT TOP ..., [dbo].*, brackets) and even invalid COUNT(DISTINCT *), causing repeated DB errors. Separately, the generated query itself is semantically wrong for “reorder Chai” (it aggregates order_details.order_id as product_name) and discovery/join planning appears to omit products from the schema snippet, so reorder logic can’t be formed.
+
+⸻
+
+Quick “evidence snippets” (copy/paste)
+
+MCP proves execution works:
+	•	📝 Final SQL ... SELECT public.order_details.order_id ... LIMIT 1000
+	•	✅ QUERY EXECUTION COMPLETED
+	•	📊 Results: 100 rows ... Truncated: True
+
+Postgres container proves MSSQL syntax leakage:
+	•	ERROR: syntax error at or near "1000" ... STATEMENT: SELECT TOP 1000 ...
+	•	ERROR: relation "dbo.customers" does not exist ... FROM dbo.customers
+	•	ERROR: syntax error at or near "*" ... STATEMENT: SELECT COUNT(DISTINCT *) ...
+
+API proves mismatch / overwrite:
+	•	"exec_result": {"ok": false, "data": [], "row_count": 0}
+	•	"error_info": {"type": "UNGROUNDED_RESPONSE_PREVENTED", ...}
+
+  Two separate problems are happening, and your recent canonicalizer/resolver changes only touch one of them.
+
+What’s happening under the hood (based on your logs)
+
+A) The system is still planning the wrong query
+
+Your user question is “When will product Chai need to be reordered based on stock + sales velocity”.
+
+But the SQL you generated is:
+
+SELECT ... order_details.order_id AS product_name, SUM(order_details.quantity) ...
+FROM order_details
+GROUP BY order_details.order_id
+
+That’s “top orders by summed quantity”, not “reorder time for product Chai”.
+
+So even when execution works, the query is semantically unrelated. That’s why the answer layer refuses (“UNGROUNDED_RESPONSE_PREVENTED”)—it can’t justify answering the reorder question from that result.
+
+Why did it happen?
+	•	Your discovery_log.final_tables contains dbo.products but the final_schema snippet does not include products, only order_details, orders, customers.
+	•	Then join/planning builds a query only from the schema snippet tables and misses the product stock columns entirely.
+	•	Also, the system is confusing order_id with product_name (clearly a join-plan / column-selection bug).
+
+B) You have dialect/schema leakage: dbo.* keeps appearing in Postgres mode
+
+Your Postgres container log shows errors like:
+	•	relation "dbo.customers" does not exist
+	•	relation "dbo.order_details" does not exist
+	•	SELECT TOP 1000 ... syntax errors
+
+Those errors are from an earlier stage where SQL was being sent to Postgres without your MCP normalization. (Your current MCP log shows the validator fixes TOP/brackets and executes successfully.)
+
+So you have two execution paths:
+	1.	MCP path (works): normalizes TOP/brackets and runs public.*
+	2.	Non-MCP / direct DB path or “SQL probe path” (broken): still emits dbo.* and TOP
+
+You can see this mismatch clearly:
+	•	MCP log: executed SELECT public.order_details... LIMIT 1000 → 100 rows
+	•	API response: exec_result.ok=false, row_count=0, data=[]
+
+That means the web app is not using the MCP result (or is dropping it during parse), and some other executor/validator path is deciding “failed/no rows”.
+
+This is the core reason “not much changed”.
+
+⸻
+
+Why it still doesn’t work
+
+1) Wrong table selection / snippet gating
+
+Even though discovery “knows” products is required (required_tables_from_kpi: ["public.products"]), it doesn’t make it into the schema snippet, so join agent can’t build stock + velocity logic.
+
+Fix: ensure “required tables” are forcibly included in:
+	•	final_tables
+	•	schema_snippet / final_schema
+	•	and any “relevant_table_details” passed to join
+
+If products is required for reorder KPI, the join agent must see products.units_in_stock, products.reorder_level, etc.
+
+2) Schema mismatch you intentionally introduced (dbo preserved in Postgres)
+
+You changed canonicalization to preserve explicit schema in Postgres:
+	•	[dbo].[Order Details] → dbo.order_details
+
+In a Postgres Northwind DB, those tables are almost certainly under public, not dbo.
+
+So whenever LLM emits dbo.* (and it will, because your seed injection and KPI templates still use dbo), your resolver will now correctly say “not found” (by design), and you’ll end up with missing products / missing matches unless you add explicit schema aliasing.
+
+Fix options:
+	•	Best: make seed injection / KPI templates dialect-aware: in Postgres mode seed public.orders, public.order_details, public.products (not dbo.*).
+	•	Pragmatic: enable a config knob schema_aliases={"dbo":"public"} in Postgres deployments. (You already outlined this.)
+
+3) You have a broken “COUNT(DISTINCT *)” probe in some path
+
+Your Postgres logs include SELECT COUNT(DISTINCT *) ... which is invalid SQL in Postgres. That’s not coming from your MCP validator log; it’s coming from somewhere else (profiling/stats/validator/recovery loop).
+
+Fix: find the code that generates COUNT(DISTINCT *) and change to either:
+	•	COUNT(*) (if you just want row count), or
+	•	COUNT(DISTINCT <pk_or_column>) if you intended distinct entities.
+
+This bug alone can cause “exec failed” signals even if the main query succeeds.
+
+⸻
+
+The minimum set of changes that will actually move the needle
+
+1) Make execution single-source-of-truth
+
+Right now you’re sometimes running queries outside the MCP normalization pipeline.
+
+Action:
+	•	Ensure process_query → exec_sql always goes through the MCP run_query tool for Postgres mode.
+	•	Delete/disable any fallback “direct psycopg” executor, or gate it behind dialect=="mssql" only.
+
+How to confirm:
+	•	Add a log line in the orchestrator right before execution: EXECUTOR=MCP vs EXECUTOR=DIRECT.
+	•	Your API response exec_result must match MCP rows (row_count=100, truncated=true) if it’s wired correctly.
+
+2) Force-include required KPI tables into the schema snippet
+
+When discovery emits required_tables_from_kpi=["public.products"], enforce:
+	•	final_tables = union(final_tables, required_tables_from_kpi)
+	•	schema snippet includes those tables/columns (at least columns needed for reorder logic)
+
+This prevents join agent from producing garbage queries that never touch inventory columns.
+
+3) Dialect-aware seed injection (stop injecting dbo in Postgres)
+
+In Postgres mode:
+	•	seed tables should be public.orders, public.order_details, public.products, etc.
+	•	KPI expressions should use Postgres-safe identifiers (or at least schema-less names that resolver maps to public).
+
+This is the cleanest fix and aligns with your “no semantic guessing” policy.
+
+4) Fix the “TOP” and bracket identifiers at the source (not only in MCP)
+
+Even though MCP normalizes, your other path still hits Postgres with TOP.
+
+Action:
+	•	In SQL generation templates, emit dialect-correct limit:
+	•	Postgres: LIMIT n
+	•	MSSQL: TOP n
+	•	Use consistent quoting rules or no quoting, but don’t mix [] with Postgres.
+
+⸻
+
+Why the final response says it failed even though MCP executed
+
+Because your API response shows:
+
+"exec_result": {"ok": false, "data": [], "row_count": 0}
+
+But MCP shows it executed and returned 100 rows.
+
+That is not an LLM problem. That’s a plumbing / parse / executor selection problem:
+	•	Either you’re not reading the MCP response payload correctly, or
+	•	you executed in MCP but then overwrote exec_result with a later failing probe, or
+	•	the validator/recovery loop is marking it failed due to unrelated probes (COUNT DISTINCT , dbo.).
+
+⸻
+
+Fast debugging checklist (no refactors, just pinpoint)
+
+Do these in order:
+	1.	Log the executor path in orchestrator (MCP vs direct) and include it in the API JSON temporarily.
+	2.	Print the raw MCP response (first 200 chars) in the orchestrator right after run_query and before you map to exec_result.
+	3.	Search your codebase for COUNT(DISTINCT *) and remove it.
+	4.	Search for TOP  generation in join/repair templates; ensure Postgres path never emits it.
+
 ### [ ] Step: Phase 6 — Benchmark & Regression Verification
 
 Consolidate verification across phases and confirm budget/loop improvements.

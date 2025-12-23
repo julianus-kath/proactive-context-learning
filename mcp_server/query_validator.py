@@ -104,21 +104,45 @@ class QueryValidator:
         """
         # Step 1: Strip comments and whitespace
         cleaned_query = self._strip_comments(query)
+
+        # Step 1b: Normalize obviously invalid aggregate forms such as COUNT(DISTINCT *)
+        # to a portable equivalent COUNT(*). This prevents dialect-specific syntax
+        # errors in Postgres while preserving the intent of "row counting" queries.
+        fixed_query = self._sanitize_distinct_star(cleaned_query)
         
         # Step 2: Basic validation
-        validation = self._basic_validation(cleaned_query)
+        validation = self._basic_validation(fixed_query)
         if not validation.valid:
             return validation
         
         # Step 3: Read-only enforcement
-        validation = self._enforce_read_only(cleaned_query)
+        validation = self._enforce_read_only(fixed_query)
         if not validation.valid:
             return validation
         
         # Step 4: Inject or clamp row caps
-        validation = self._inject_row_cap(cleaned_query, requested_limit)
+        validation = self._inject_row_cap(fixed_query, requested_limit)
         
         return validation
+
+    def _sanitize_distinct_star(self, query: str) -> str:
+        """
+        Replace invalid COUNT(DISTINCT *) constructs with COUNT(*).
+
+        Some upstream components (or LLM outputs) may generate COUNT(DISTINCT *)
+        which is not valid SQL in Postgres or SQL Server. In practice these
+        queries are used for simple cardinality checks, so COUNT(*) is a safe,
+        portable fallback.
+        """
+        if not query or "distinct" not in query.lower():
+            return query
+
+        pattern = re.compile(r"COUNT\s*\(\s*DISTINCT\s+\*\s*\)", flags=re.IGNORECASE)
+        if not pattern.search(query):
+            return query
+
+        logger.warning("Normalizing invalid COUNT(DISTINCT *) to COUNT(*) for safer execution")
+        return pattern.sub("COUNT(*)", query)
     
     def _strip_comments(self, query: str) -> str:
         """

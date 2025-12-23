@@ -197,12 +197,12 @@ class TestDiscoveryAgentDateExploration:
         Discovery agent should have a date exploration capability.
         """
         from langgraph_integration.agents.discovery.agent import (
-            discover_agent_graph,
+            build_discovery_graph,
         )
         
-        # Check that the graph has date exploration node
-        # (This is a smoke test; actual node execution tested in integration tests)
-        assert discover_agent_graph is not None
+        # Smoke test: ensure the discovery graph can be built
+        graph = build_discovery_graph()
+        assert graph is not None
         print(f"✓ Discovery agent graph exists")
 
     def test_date_column_highlighting_in_schema(self):
@@ -233,14 +233,19 @@ class TestExecutionNormalizerIntegration:
         """
         import inspect
         from langgraph_integration.agents.exec_recovery.agent import (
-            exec_recovery_graph,
+            build_exec_recovery_graph,
         )
         
-        # Check that normalizer is imported
-        source = inspect.getsource(exec_recovery_graph.__class__)
-        # Note: This is a smoke test; actual integration tested in E2E tests
-        
-        print(f"✓ ExecRecovery agent has normalizer integration capability")
+        # Smoke test: ensure the exec recovery graph can be built and
+        # that the ExecAndRecoveryAgent still imports the SQL normalizer.
+        from langgraph_integration.agents.exec_recovery import agent as exec_agent_module
+
+        graph = build_exec_recovery_graph()
+        assert graph is not None
+
+        source = inspect.getsource(exec_agent_module)
+        assert "prepare_sql_for_execution_dialect_aware" in source
+        print("✓ ExecRecovery agent has normalizer integration capability")
 
 
 # ==============================================================================

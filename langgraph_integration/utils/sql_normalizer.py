@@ -250,8 +250,51 @@ def _prepare_sql_postgres(sql: str) -> tuple[str, list[str]]:
 
     warnings: list[str] = []
 
-    # No LIMIT→TOP conversion in Postgres mode – pass through as-is
+    # Normalize obvious SQL Server–style syntax that may leak through
     normalized_sql = sql.strip().rstrip(";")
+
+    # 1) Translate SELECT TOP n → LIMIT n at the end of the query
+    #    This is a light-weight mirror of the MCP-side validator so that:
+    #    - state["sql_query"] is consistent with actual execution
+    #    - any direct execution path in Postgres mode sees LIMIT, not TOP
+    top_match = re.search(r"\bSELECT\s+TOP\s+(\d+)\s+", normalized_sql, flags=re.IGNORECASE)
+    if top_match:
+        try:
+            top_limit = int(top_match.group(1))
+        except Exception:
+            top_limit = None
+
+        # Remove TOP n from the SELECT list
+        normalized_sql = re.sub(
+            r"\bSELECT\s+TOP\s+\d+\s+",
+            "SELECT ",
+            normalized_sql,
+            flags=re.IGNORECASE,
+        )
+
+        if top_limit is not None:
+            # Inject LIMIT at the end (respecting existing LIMIT if present)
+            if not re.search(r"\bLIMIT\s+\d+", normalized_sql, flags=re.IGNORECASE):
+                normalized_sql = f"{normalized_sql} LIMIT {top_limit}"
+                msg = f"SQL dialect fix (postgres mode): converted TOP {top_limit} to LIMIT {top_limit}"
+                logger.info(msg)
+                warnings.append(msg)
+
+    # 2) Strip SQL Server-style bracket identifiers: [schema].[table] → schema.table
+    if "[" in normalized_sql or "]" in normalized_sql:
+        normalized_sql = re.sub(r"\[([^\]]+)\]", r"\1", normalized_sql)
+        msg = "SQL dialect fix (postgres mode): normalized bracket identifiers to unquoted identifiers"
+        logger.info(msg)
+        warnings.append(msg)
+
+    # 3) Map dbo.* to configured default schema (usually public) for Postgres deployments
+    default_schema = os.getenv("DB_DEFAULT_SCHEMA", "public")
+    normalized_sql = re.sub(
+        r"\bdbo\.",
+        f"{default_schema}.",
+        normalized_sql,
+        flags=re.IGNORECASE,
+    )
 
     is_valid, reason = _validate_common_select_safety(normalized_sql)
     if not is_valid:
