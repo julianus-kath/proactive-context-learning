@@ -160,7 +160,10 @@ class SQLValidatorAgent:
             "error_type": None,
             "error_message": None,
             "warnings": [],
-            "suggestions": []
+            "suggestions": [],
+            # Metadata for downstream consumers (tables/CTEs seen during validation)
+            "tables_used": [],
+            "cte_names": [],
         }
 
         # 1. Basic syntax validation
@@ -305,7 +308,7 @@ class SQLValidatorAgent:
 
     async def _validate_table_column_existence(self, sql: str, state: BaseState) -> Dict[str, Any]:
         """Validate that all tables and columns referenced in SQL exist."""
-        result = {"is_valid": True, "warnings": []}
+        result: Dict[str, Any] = {"is_valid": True, "warnings": []}
 
         raw_column_index = state.get("column_index", {}) or {}
         column_index: Dict[str, List[str]] = {}
@@ -321,6 +324,10 @@ class SQLValidatorAgent:
 
         # Extract table and column references from SQL
         tables_used, columns_used = self._extract_tables_columns_from_sql(sql)
+
+        # Always attach metadata for downstream consumers (even on failure)
+        result["tables_used"] = list(tables_used)
+        result["cte_names"] = list(cte_names)
 
         # Check tables exist
         missing_tables = []
@@ -346,7 +353,9 @@ class SQLValidatorAgent:
                 "is_valid": False,
                 "error_type": "missing_table",
                 "error_message": f"Tables not found: {', '.join(missing_tables)}",
-                "suggestions": ["Check table names against discovery results", "Ensure tables are in relevant_tables"]
+                "suggestions": ["Check table names against discovery results", "Ensure tables are in relevant_tables"],
+                "tables_used": list(tables_used),
+                "cte_names": list(cte_names),
             }
 
         # Check columns exist for each table
@@ -366,7 +375,9 @@ class SQLValidatorAgent:
                             "Check column names against column_index",
                             "Use exploratory SELECT * if column names are uncertain",
                             f"Consider using one of: {available_preview}"
-                        ]
+                        ],
+                        "tables_used": list(tables_used),
+                        "cte_names": list(cte_names),
                     }
             else:
                 result["warnings"].append(f"Could not validate columns for table {table} - not in column_index")
@@ -572,4 +583,3 @@ class SQLValidatorAgent:
         state["sql_warnings"] = validation_result.get("warnings", [])
 
         return state
-

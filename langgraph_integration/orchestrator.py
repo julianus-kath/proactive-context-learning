@@ -1898,6 +1898,29 @@ class QueryOrchestrator:
             is_valid = validation_result.get("is_valid", False)
             error_type = validation_result.get("error_type", "unknown")
 
+            # Phase 4/5: Normalize tables_used from SQL validation into canonical form
+            # so downstream guardrails and diagnostics rely on a single naming scheme.
+            try:
+                raw_tables_used = validation_result.get("tables_used") or []
+                dialect = state.get("db_dialect", self.db_dialect)
+                default_schema = state.get("db_default_schema", self.db_default_schema)
+                canonical_tables: List[str] = []
+                base_tables: List[str] = []
+                for raw in raw_tables_used:
+                    if not raw:
+                        continue
+                    canonical = self._canonical_table_name(str(raw), dialect=dialect, default_schema=default_schema)
+                    canonical_tables.append(canonical)
+                    base_tables.append(canonical.split(".")[-1])
+                if canonical_tables:
+                    state["validator_tables_used"] = canonical_tables
+                    state["validator_tables_used_base"] = base_tables
+                    validation_result["tables_used_canonical"] = canonical_tables
+                    validation_result["tables_used_base"] = base_tables
+                    state["validation_result"] = validation_result
+            except Exception as meta_exc:
+                logger.debug(f"🔍 [VALIDATE_SQL] Unable to normalize tables_used metadata: {meta_exc}")
+
             if is_valid:
                 logger.info("🔍 [VALIDATE_SQL] ✅ SQL validation passed")
             else:
