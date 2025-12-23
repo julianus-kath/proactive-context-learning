@@ -282,6 +282,13 @@ async def run_benchmark(
                 artifact["error_info"] = error_info_payload
                 artifact["discovery_log"] = result.get("discovery_log")
 
+                # Phase 1 instrumentation: persist LLM/node usage and loop diagnostics per query
+                artifact["llm_usage"] = result.get("llm_usage")
+                artifact["node_entry_counts"] = result.get("node_entry_counts")
+                artifact["loop_events"] = result.get("loop_events")
+                artifact["total_llm_calls"] = result.get("total_llm_calls")
+                artifact["total_graph_cycles"] = result.get("total_graph_cycles")
+
                 validation_errors = artifact_validation_errors(artifact)
                 if validation_errors:
                     artifact["status"] = "failed"
@@ -325,6 +332,30 @@ async def run_benchmark(
 
     results_file = run_dir / "results.json"
     results_file.write_text(json.dumps(results, indent=2))
+
+    # Phase 1 instrumentation: emit per-query LLM usage summary for quick inspection
+    calls_summary: List[Dict[str, Any]] = []
+    for qid, artifact in results.items():
+        usage = artifact.get("llm_usage") or {}
+        node_counts = artifact.get("node_entry_counts") or {}
+        loop_events = artifact.get("loop_events") or {}
+        row = {
+            "query_id": qid,
+            "total_calls": usage.get("total", artifact.get("total_llm_calls")),
+            "intent": usage.get("intent", 0),
+            "discovery": usage.get("discovery", 0),
+            "join": usage.get("join", 0),
+            "repair": usage.get("repair", 0),
+            "answer": usage.get("answer", 0),
+            "discovery_entries": node_counts.get("discovery", 0),
+            "join_entries": node_counts.get("join_sql", node_counts.get("join", 0)),
+            "same_tables_suppressed": loop_events.get("discovery_reentered_same_tables", 0),
+            "same_sql_suppressed": loop_events.get("join_sql_regenerated_same_sql", 0),
+        }
+        calls_summary.append(row)
+
+    calls_summary_file = run_dir / "llm_calls_per_query.json"
+    calls_summary_file.write_text(json.dumps(calls_summary, indent=2))
 
     summary = {
         "run_id": run_id,

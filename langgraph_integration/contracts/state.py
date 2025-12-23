@@ -133,10 +133,25 @@ class BaseState(TypedDict, total=False):
     exec_attempt_count: int  # Number of execution/recovery cycles attempted
     max_exec_attempts: int  # Max allowed execution attempts before giving up
 
+    # LLM usage accounting (Phase 1 instrumentation)
+    # llm_usage tracks per-node buckets plus a "total" aggregate, e.g.:
+    # {"intent": 1, "discovery": 2, "join": 1, "repair": 3, "answer": 1, "total": 8}
+    llm_usage: Dict[str, int]
+    node_entry_counts: Dict[str, int]  # How many times each orchestrator node was entered
+    loop_events: Dict[str, int]  # Counters for loop-related events (filled in later phases)
+    answer_mode: Optional[str]  # "llm" | "deterministic_from_data" | other modes in later phases
+
+    # Global LLM budget counters (kept for backward compatibility; total_llm_calls mirrors llm_usage["total"])
     total_llm_calls: int  # Total number of LLM calls across all agents
     max_llm_calls: int  # Global LLM call budget
     total_graph_cycles: int  # Number of validation-driven cycles back to discovery/join_sql
     max_graph_cycles: int  # Max allowed graph cycles before giving up
+
+    # Loop helper state (introduced in Phase 1, used by later phases)
+    discovery_cache: Optional[Dict[str, Any]]  # Cached discovery outputs keyed by input fingerprint
+    last_sql_query: Optional[str]  # Last SQL text produced by join/sql validator
+    last_join_plan: Optional[Dict[str, Any]]  # Last join plan structure
+    required_tables_from_kpi: Optional[List[str]]  # Canonical table names derived from KPI expressions
 
     # Database dialect/schema (used by SQL helpers and future canonicalization)
     db_dialect: str  # "postgres" | "mssql"

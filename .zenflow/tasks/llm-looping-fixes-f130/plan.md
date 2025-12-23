@@ -69,7 +69,8 @@ Verification:
 - System starts cleanly with and without the new env vars set.
 - Existing behavior is unchanged when env vars are not provided (backward compatible defaults).
 
-### [ ] Step: Phase 1 — Instrumentation
+### [x] Step: Phase 1 — Instrumentation
+<!-- chat-id: fca8d27f-2cb9-4e23-9712-e8790c2ab872 -->
 
 Implement LLM usage accounting and loop diagnostics.
 

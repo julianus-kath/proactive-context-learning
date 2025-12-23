@@ -260,9 +260,50 @@ class QueryOrchestrator:
             ),
         ).model_dump(exclude_none=True)
 
+    def _increment_node_entry(self, state: BaseState, node_name: str) -> None:
+        """
+        Increment node entry counter for instrumentation.
+
+        Keeps node_entry_counts optional and lazily initialized to maintain backward compatibility.
+        """
+        counts = state.get("node_entry_counts") or {}
+        current = counts.get(node_name, 0)
+        counts[node_name] = current + 1
+        state["node_entry_counts"] = counts
+
+    def _map_stage_to_llm_bucket(self, stage: str) -> str:
+        """
+        Map fine-grained stages to coarse LLM usage buckets.
+
+        Buckets are designed to align with benchmark reporting:
+        - "intent": intent parsing and related routing
+        - "discovery": table/view discovery
+        - "join": join planning and SQL generation
+        - "repair": validation/repair/execution recovery/result validation
+        - "answer": answer formatting
+        """
+        mapping = {
+            "parse_intent": "intent",
+            "intent": "intent",
+            "discovery": "discovery",
+            "join_sql": "join",
+            "validate_sql": "repair",
+            "sql_validator": "repair",
+            "exec_recovery": "repair",
+            "execution": "repair",
+            "result_validator": "repair",
+            "answer": "answer",
+        }
+        return mapping.get(stage, stage)
+
     def _check_llm_budget(self, state: BaseState, stage: str) -> BaseState:
         """
         Increment global LLM call counter and enforce max_llm_calls budget.
+
+        Accounting rule (Phase 1 instrumentation):
+        - Count once per orchestrator subgraph invocation (per node), not per internal tool call.
+        - Maintain both total_llm_calls (legacy) and llm_usage[...] buckets for per-node analysis.
+
         If the budget is exceeded, mark error_info and set clarify intent.
         """
         max_calls = state.get("max_llm_calls", 0) or 20
@@ -295,9 +336,64 @@ class QueryOrchestrator:
                     "total_llm_calls": total_calls,
                 },
             )
+            # Structured debug log for budget exhaustion
+            debug_logger.info(
+                "LLM_BUDGET_EXCEEDED",
+                data={
+                    "stage": stage,
+                    "total_llm_calls": total_calls,
+                    "max_llm_calls": max_calls,
+                },
+            )
             return state
 
-        state["total_llm_calls"] = total_calls + 1
+        # Update per-node and total usage counters
+        llm_usage = state.get("llm_usage") or {}
+        bucket = self._map_stage_to_llm_bucket(stage)
+        bucket_count = llm_usage.get(bucket, 0) + 1
+        total_usage = llm_usage.get("total", 0) + 1
+        llm_usage[bucket] = bucket_count
+        llm_usage["total"] = total_usage
+        state["llm_usage"] = llm_usage
+
+        # Keep legacy counter in sync with llm_usage["total"] for backward compatibility
+        state["total_llm_calls"] = total_usage
+
+        # Emit structured debug log for this LLM usage event
+        remaining_budget = max_calls - total_usage
+        debug_logger.info(
+            "LLM_CALL_SPENT",
+            data={
+                "stage": stage,
+                "bucket": bucket,
+                "bucket_calls": bucket_count,
+                "total_llm_calls": total_usage,
+                "max_llm_calls": max_calls,
+                "remaining_budget": remaining_budget,
+                "retry_attempt_count": state.get("retry_attempt_count", 0),
+                "plan_attempt_count": state.get("plan_attempt_count", 0),
+                "exec_attempt_count": state.get("exec_attempt_count", 0),
+            },
+        )
+
+        # If we're approaching the hard budget, emit an early warning for diagnostics
+        safety_margin = state.get("llm_budget_safety_margin", 0) or 0
+        if remaining_budget <= safety_margin:
+            debug_logger.warning(
+                title="LLM_BUDGET_NEAR_LIMIT",
+                details=(
+                    f"Stage '{stage}' is near the LLM budget limit; "
+                    f"{remaining_budget} calls remaining (safety_margin={safety_margin})."
+                ),
+                context={
+                    "stage": stage,
+                    "total_llm_calls": total_usage,
+                    "max_llm_calls": max_calls,
+                    "remaining_budget": remaining_budget,
+                    "llm_budget_safety_margin": safety_margin,
+                },
+            )
+
         return state
 
     async def ainvoke(self, input_state: Dict, **kwargs):
@@ -341,7 +437,8 @@ class QueryOrchestrator:
         graph.add_node("validate_sql", self._validate_sql_node)
         graph.add_node("exec_recovery", self._exec_recovery_node)
         # 🆕 Phase 10a: Result validation node (catches silent failures)
-        graph.add_node("result_validator", build_result_validator_node)
+        # Wrap result validator in an orchestrator method so we can instrument node entry/LLM usage.
+        graph.add_node("result_validator", self._result_validator_async)
         graph.add_node("answer", self._answer_node)
         # interpretation node is added once above
 
@@ -841,6 +938,8 @@ class QueryOrchestrator:
         logger.info("🧠 [PARSE_INTENT] 🚀 NODE CALLED - Starting intent parsing")
         if not state.get("run_id"):
             state = {**state, "run_id": str(uuid.uuid4())}
+        # Instrumentation: track node entry
+        self._increment_node_entry(state, "parse_intent")
         debug_logger.agent_entry("parse_intent", dict(state))
         before_state = dict(state)
 
@@ -1013,6 +1112,8 @@ class QueryOrchestrator:
         Finds relevant tables/views using Scout semantic search, ranks by role coverage.
         Output: relevant_tables, schema_snippet, candidate_views, column_index
         """
+        # Instrumentation: track node entry
+        self._increment_node_entry(state, "discovery")
         debug_logger.agent_entry("discovery", dict(state))
         before_state = dict(state)
         
@@ -1180,6 +1281,8 @@ class QueryOrchestrator:
         Plans joins (views-first strategy, FK relationships) and generates MSSQL.
         Output: join_plan, sql_query
         """
+        # Instrumentation: track node entry
+        self._increment_node_entry(state, "join_sql")
         debug_logger.agent_entry("join_sql", dict(state))
         before_state = dict(state)
 
@@ -1237,6 +1340,8 @@ class QueryOrchestrator:
         Validates SQL syntax, MSSQL dialect, table/column existence, and repairs if needed.
         Output: validation_result, sql_query (potentially repaired)
         """
+        # Instrumentation: track node entry
+        self._increment_node_entry(state, "validate_sql")
         debug_logger.agent_entry("validate_sql", dict(state))
         before_state = dict(state)
 
@@ -1494,6 +1599,8 @@ class QueryOrchestrator:
         Executes query safely (row caps, timeouts) and recovers from errors via LLM repair.
         Output: exec_result, error_info, retry_count
         """
+        # Instrumentation: track node entry
+        self._increment_node_entry(state, "exec_recovery")
         debug_logger.agent_entry("exec_recovery", dict(state))
         before_state = dict(state)
         
@@ -1660,6 +1767,8 @@ class QueryOrchestrator:
         Formats successful results, errors, or clarification requests as natural language.
         Output: final_response
         """
+        # Instrumentation: track node entry
+        self._increment_node_entry(state, "answer")
         debug_logger.agent_entry("answer", dict(state))
         before_state = dict(state)
         
@@ -2064,6 +2173,10 @@ class QueryOrchestrator:
             # LLM budget tracking
             "total_llm_calls": 0,
             "max_llm_calls": self.max_llm_calls,
+            # Phase 1 instrumentation: initialize usage/loop maps lazily (kept optional in contracts)
+            "llm_usage": {},
+            "node_entry_counts": {},
+            "loop_events": {},
             # Graph cycle tracking (used by loop guards in later phases)
             "total_graph_cycles": 0,
             "max_graph_cycles": self.max_graph_cycles,
@@ -2381,6 +2494,11 @@ class QueryOrchestrator:
         return mapping.get(normalized_name)
 
     async def _result_validator_async(self, state: BaseState) -> BaseState:
+        """
+        Async wrapper for result validator node so we can attach instrumentation.
+        """
+        # Instrumentation: track node entry
+        self._increment_node_entry(state, "result_validator")
         return build_result_validator_node(state)
 
     def _compute_state_delta(self, before_state: BaseState, after_state: BaseState) -> Dict[str, Any]:
