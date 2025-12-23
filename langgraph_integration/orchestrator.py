@@ -429,7 +429,10 @@ class QueryOrchestrator:
         Increment global LLM call counter and enforce max_llm_calls budget.
 
         Accounting rule (Phase 1 instrumentation):
-        - Count once per orchestrator subgraph invocation (per node), not per internal tool call.
+        - Count once per LLM-using agent subgraph invocation (per-node LLM call),
+          not per orchestrator node entry.
+        - Deterministic paths that do NOT invoke an LLM-backed subgraph should
+          skip this helper entirely so llm_usage reflects actual model calls.
         - Maintain both total_llm_calls (legacy) and llm_usage[...] buckets for per-node analysis.
 
         If the budget is exceeded, mark error_info and set clarify intent.
