@@ -446,6 +446,81 @@ class QueryOrchestrator:
         state["last_exec_error_signature"] = err_sig
         return f"{sql_fp}::{err_sig}"
 
+    def _derive_required_tables_from_kpi(
+        self,
+        kpi_expressions: Dict[str, str],
+        dialect: str,
+        default_schema: str,
+    ) -> List[str]:
+        """
+        Derive required tables from KPI expressions by scanning for table-qualified
+        identifiers and normalizing them via _canonical_table_name.
+
+        Examples:
+        - "CASE WHEN Products.UnitsInStock < Products.ReorderLevel THEN 1 END"
+          → public.products (on Postgres with default_schema=public)
+        - "AVG(DATEDIFF(day, Orders.OrderDate, Orders.ShippedDate))"
+          → public.orders
+        """
+        if not kpi_expressions:
+            return []
+
+        sql_keywords = {
+            "case",
+            "when",
+            "then",
+            "else",
+            "end",
+            "and",
+            "or",
+            "not",
+            "null",
+            "count",
+            "sum",
+            "avg",
+            "min",
+            "max",
+            "coalesce",
+            "isnull",
+            "convert",
+            "cast",
+            "dateadd",
+            "datediff",
+            "eomonth",
+            "year",
+            "month",
+            "day",
+            "distinct",
+        }
+
+        required: List[str] = []
+        seen: set[str] = set()
+
+        for _, expr in kpi_expressions.items():
+            if not isinstance(expr, str) or not expr:
+                continue
+            text = expr
+
+            # Bracketed schema/table patterns: [schema].[table]
+            for schema, table in re.findall(r"\[([^\]]+)\]\.\[([^\]]+)\]", text):
+                raw_name = f"{schema}.{table}"
+                canonical = self._canonical_table_name(raw_name, dialect=dialect, default_schema=default_schema)
+                if canonical and canonical not in seen:
+                    seen.add(canonical)
+                    required.append(canonical)
+
+            # Simple identifier prefix patterns: Products.UnitsInStock → Products
+            for identifier in re.findall(r"\b([A-Za-z_][A-Za-z0-9_]*)\.", text):
+                ident_l = identifier.lower()
+                if ident_l in sql_keywords:
+                    continue
+                canonical = self._canonical_table_name(identifier, dialect=dialect, default_schema=default_schema)
+                if canonical and canonical not in seen:
+                    seen.add(canonical)
+                    required.append(canonical)
+
+        return required
+
     def _canonical_table_name(self, raw_name: str, dialect: str, default_schema: str) -> str:
         """
         Minimal canonicalization for seed tables (Phase 5 quick win).
@@ -1371,19 +1446,33 @@ class QueryOrchestrator:
                 self._canonical_table_name(t, dialect=dialect, default_schema=default_schema)
             )
         state["seed_tables"] = canonical_seed_tables
-        state["concept_hints"] = {
+        concept_hints = {
             "kpi_expressions": mapped.get("kpi_expressions") or {},
             "time_field_hints": mapped.get("time_field_hints") or [],
             "join_hints": mapped.get("join_hints") or {},
         }
+        state["concept_hints"] = concept_hints
+
+        # Phase 4: Derive required tables from KPI expressions so discovery/join can
+        # enforce their presence (e.g., inventory_reorder → products table).
+        kpi_expressions = concept_hints.get("kpi_expressions") or {}
+        required_tables_from_kpi = self._derive_required_tables_from_kpi(
+            kpi_expressions=kpi_expressions,
+            dialect=dialect,
+            default_schema=default_schema,
+        )
+        if required_tables_from_kpi:
+            state["required_tables_from_kpi"] = required_tables_from_kpi
+
         log_payload = state.get("discovery_log") or {}
         log_payload.update({
             "query": state.get("user_input", ""),
             "keywords": intent.get("keywords_for_discovery") or [],
             "concepts": state["inferred_concepts"],
             "seed_tables": state["seed_tables"],
-            "kpi_expressions": state["concept_hints"].get("kpi_expressions"),
-            "time_field_hints": state["concept_hints"].get("time_field_hints"),
+            "kpi_expressions": concept_hints.get("kpi_expressions"),
+            "time_field_hints": concept_hints.get("time_field_hints"),
+            "required_tables_from_kpi": required_tables_from_kpi,
             "concept_explanations": mapped.get("explanations") or [],
         })
         log_payload.setdefault("events", [])

@@ -2278,6 +2278,74 @@ class DiscoveryAgent:
             candidate_view_models = [model for model in detail_models if model.is_view]
             relevant_tables = [model.full_name for model in detail_models]
 
+            # Phase 4: KPI-driven table guardrails.
+            # Ensure tables implied by KPI expressions (e.g. Products. in inventory_reorder)
+            # are present in the final discovery result when available in seed_tables.
+            required_tables = state.get("required_tables_from_kpi") or []
+            if required_tables:
+                seed_tables = state.get("seed_tables") or []
+
+                existing_full = {str(t) for t in relevant_tables}
+                existing_base = {str(t).split(".")[-1].lower(): str(t) for t in relevant_tables}
+                seed_full = {str(t): str(t) for t in seed_tables}
+                seed_base = {str(t).split(".")[-1].lower(): str(t) for t in seed_tables}
+
+                injected_any = False
+                missing_required: List[str] = []
+
+                for req in required_tables:
+                    req_str = str(req)
+                    base = req_str.split(".")[-1].lower()
+
+                    # Already present (by full name or base name) → nothing to do
+                    if req_str in existing_full or base in existing_base:
+                        continue
+
+                    # Prefer canonical seed table when available
+                    candidate_name = seed_full.get(req_str) or seed_base.get(base)
+                    if candidate_name:
+                        try:
+                            detail_models.append(
+                                DiscoveryCandidate.model_validate(
+                                    {
+                                        "full_name": candidate_name,
+                                        # Minimal but non-empty metadata so downstream logic
+                                        # treats this as a valid table candidate.
+                                        "estimated_rows": 1,
+                                        "has_rows": True,
+                                    }
+                                )
+                            )
+                            relevant_tables.append(candidate_name)
+                            existing_full.add(candidate_name)
+                            existing_base[base] = candidate_name
+                            injected_any = True
+                        except Exception as exc:
+                            logger.debug(f"🧾 Failed to inject KPI-required table '{candidate_name}': {exc}")
+                    else:
+                        missing_required.append(req_str)
+
+                if injected_any:
+                    logger.info(
+                        "🧾 [DISCOVERY] Injected KPI-required tables into discovery results: %s",
+                        [t for t in relevant_tables if t in existing_full],
+                    )
+                    log_payload = self._get_discovery_log(state)
+                    log_payload.setdefault("events", []).append(
+                        {
+                            "stage": "kpi_required_tables",
+                            "required_tables_from_kpi": list(required_tables),
+                            "missing_from_seed": missing_required,
+                        }
+                    )
+                    state["discovery_log"] = log_payload
+
+                if missing_required:
+                    logger.warning(
+                        "⚠️ [DISCOVERY] KPI-required tables not found in seeds or existing candidates: %s",
+                        missing_required,
+                    )
+
             role_hints = self._build_role_hints(
                 detail_models,
                 state.get("column_index") or {},

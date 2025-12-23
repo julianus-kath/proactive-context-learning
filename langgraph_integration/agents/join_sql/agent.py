@@ -1300,7 +1300,83 @@ class JoinPlanAndSQLAgent:
                     f"This may indicate the discovery phase found wrong tables - check intent parsing."
                 )
 
-            logger.info("✅ SQL validation passed (including table name validation)")
+            # Phase 4: KPI-driven required table guardrails and product semantics checks.
+            required_tables = state.get("required_tables_from_kpi") or []
+            if required_tables:
+                # Normalize discovered/sql tables down to base table names for comparison
+                discovered_base = {t.split(".")[-1].lower() for t in discovered_tables}
+                sql_base = {
+                    (self._normalize_table_name(t).split(".")[-1]) for t in sql_tables
+                }
+
+                missing_in_discovery = []
+                missing_in_sql = []
+                for req in required_tables:
+                    req_str = str(req)
+                    base = req_str.split(".")[-1].lower()
+                    if base not in discovered_base:
+                        missing_in_discovery.append(req_str)
+                    if base not in sql_base:
+                        missing_in_sql.append(req_str)
+
+                if missing_in_discovery or missing_in_sql:
+                    # Determine if this is specifically a product/inventory KPI scenario.
+                    intent = state.get("intent") or {}
+                    user_text = (state.get("user_input") or "").lower()
+                    entities = [str(e).lower() for e in (intent.get("primary_entities") or [])]
+                    concept_hints = state.get("concept_hints") or {}
+                    kpis = concept_hints.get("kpi_expressions") or {}
+                    kpi_names = {str(name).lower() for name in kpis.keys()}
+
+                    product_domain = (
+                        "product" in user_text
+                        or any("product" in e for e in entities)
+                        or "inventory_reorder" in kpi_names
+                    )
+                    products_required = any(
+                        (str(req).split(".")[-1]).lower() in {"products", "product"}
+                        for req in required_tables
+                    )
+
+                    sql_lower = sql.lower()
+                    err_type = "KPI_REQUIRED_TABLE_MISSING"
+                    message_parts = []
+
+                    if missing_in_discovery:
+                        message_parts.append(
+                            "Required KPI tables missing from discovery: "
+                            + ", ".join(sorted(set(missing_in_discovery)))
+                            + "."
+                        )
+                    if missing_in_sql:
+                        message_parts.append(
+                            "Required KPI tables missing from SQL: "
+                            + ", ".join(sorted(set(missing_in_sql)))
+                            + "."
+                        )
+
+                    # Specialized diagnostic for product_name projected from non-product identifiers.
+                    if product_domain and products_required and "product_name" in sql_lower:
+                        err_type = "PRODUCT_MAPPING_ERROR"
+                        message_parts.append(
+                            "SQL appears to project product_name from a non-product identifier "
+                            "while the products table is absent; join planning should include the products table."
+                        )
+
+                    error = {
+                        "type": err_type,
+                        "message": " ".join(message_parts) or "KPI-required tables are missing in discovery or SQL.",
+                        "sql": sql[:200],
+                        "replan_needed": True,
+                        "validation_stage": "kpi_required_tables",
+                        "missing_required_tables_discovery": missing_in_discovery,
+                        "missing_required_tables_sql": missing_in_sql,
+                    }
+                    logger.error(f"❌ KPI/domain guardrail violation: {error['message']}")
+                    logger.info("🔄 KPI/table mismatch detected - will trigger re-planning")
+                    return {**state, "error_info": error}
+
+            logger.info("✅ SQL validation passed (including table and KPI guardrails)")
             return state
 
         except Exception as e:

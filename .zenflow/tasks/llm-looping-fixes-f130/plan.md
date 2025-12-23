@@ -156,7 +156,8 @@ Verification:
   - Assert the system returns a **specific** diagnostic (e.g., about missing `products` table or bad product mapping) rather than a generic ungrounded-response message.
 - In a benchmark rerun, confirm that queries with successful SQL execution always yield a data-based `final_response` even when `error_info.type == "LLM_BUDGET_EXCEEDED"`, and that purely structural failures produce clear, targeted diagnostics.
 
-### [ ] Step: Phase 4 — KPI-Driven Table Selection Guardrails
+### [x] Step: Phase 4 — KPI-Driven Table Selection Guardrails
+<!-- chat-id: 06430c1c-dd31-4d25-ab9a-e33c5816fabf -->
 
 Use KPI expressions to enforce required tables and add product-domain sanity checks.
 
