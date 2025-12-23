@@ -100,7 +100,8 @@ Verification:
   - `node_entry_counts` reflect expected node visits.
   - `loop_events` are present (even if mostly zeros initially).
 
-### [ ] Step: Phase 2 — Loop Control & Budget-Aware Routing
+### [x] Step: Phase 2 — Loop Control & Budget-Aware Routing
+<!-- chat-id: cc74c738-e507-4116-8c84-ededc83861f1 -->
 
 Cache discovery/join outputs, detect redundant loops, and short-circuit when near budget.
 
