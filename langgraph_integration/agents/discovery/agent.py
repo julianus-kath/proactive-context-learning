@@ -35,6 +35,7 @@ from langgraph_integration.utils.canonical_names import (
     canonical_table_name,
     canonicalize_table_list,
 )
+from langgraph_integration.utils.resolve_tables import TableResolver
 from langgraph_integration.utils.runtime_config import (
     get_db_dialect,
     get_db_default_schema,
@@ -1400,12 +1401,27 @@ class DiscoveryAgent:
                 return self._finalize_discovery_payload(state)
 
             # Canonicalise column index keys so downstream consumers see the
-            # same logical identifiers as discovery/relation hints.
+            # same logical identifiers as discovery/relation hints, but ensure
+            # we align them to physical catalog names when available.
             dialect = state.get("db_dialect") or get_db_dialect()
             default_schema = state.get("db_default_schema") or get_db_default_schema(dialect)
+
+            catalog = state.get("catalog") or {}
+            resolver: Optional[TableResolver] = None
+            if isinstance(catalog, dict):
+                try:
+                    resolver = TableResolver(catalog, dialect=dialect, default_schema=default_schema)
+                except Exception:
+                    resolver = None
+
             canonical_index: Dict[str, List[str]] = {}
             for table, columns in column_index.items():
-                canonical = canonical_table_name(table, dialect=dialect, schema=default_schema)
+                physical_key = str(table)
+                if resolver:
+                    resolved = resolver.resolve(table)
+                    if resolved.match_type != "not_found":
+                        physical_key = resolved.physical_full_name
+                canonical = canonical_table_name(physical_key, dialect=dialect, schema=default_schema)
                 canonical_index[canonical] = list(columns or [])
 
             logger.info("✅ Successfully fetched column index:")
