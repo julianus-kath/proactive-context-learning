@@ -3,6 +3,9 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from langgraph_integration.contracts.state import BaseState
+from langgraph_integration.guardrails.required_relations import (
+    evaluate_required_relations,
+)
 
 
 @patch("langgraph_integration.agents.discovery.agent.ChatOpenAI", autospec=True)
@@ -42,30 +45,58 @@ def test_discovery_injects_kpi_required_tables(mock_mcp, mock_chat):
 
 
 @pytest.mark.asyncio
-async def test_join_sql_kpi_guardrail_missing_products_triggers_product_mapping_error():
-    """JoinPlanAndSQLAgent validation should surface a PRODUCT_MAPPING_ERROR when products is required but missing from SQL."""
-    from langgraph_integration.agents.join_sql.agent import JoinPlanAndSQLAgent
-
-    agent = JoinPlanAndSQLAgent(llm_model="gpt-4o")
-    agent.mcp = MagicMock()
-
+async def test_required_relations_guardrail_marks_missing_tables_and_requests_replan():
+    """Guardrail should detect missing required tables and request one replan, forcing those tables."""
     state = BaseState(
-        sql_query="SELECT od.order_id AS product_name FROM public.order_details od",
-        relevant_tables=["public.orders", "public.order_details", "public.products"],
-        candidate_views=[],
-        intent={"operation": "query", "primary_entities": ["product"], "metrics": []},
-        user_input="Which products need to be reordered?",
-        concept_hints={
-            "kpi_expressions": {
-                "inventory_reorder": "CASE WHEN Products.UnitsInStock + Products.UnitsOnOrder < Products.ReorderLevel THEN 1 ELSE 0 END"
-            }
-        },
         required_tables_from_kpi=["public.products"],
+        validator_tables_used=["public.orders", "public.order_details"],
+        validator_tables_used_base=["orders", "order_details"],
+        db_dialect="postgres",
+        db_default_schema="public",
     )
 
-    result = await agent._validate_sql_node(state)
-
-    error = result.get("error_info") or {}
-    assert error.get("type") in {"PRODUCT_MAPPING_ERROR", "KPI_REQUIRED_TABLE_MISSING"}
+    error = evaluate_required_relations(state)
+    assert error is not None
+    assert error.get("type") == "REQUIRED_TABLE_MISSING_IN_SQL"
     assert error.get("replan_needed") is True
+    missing = error.get("missing_required_tables") or []
+    assert "public.products" in missing
+    forced = state.get("forced_tables") or []
+    assert "public.products" in forced
+    assert state.get("required_enforcement_attempts") == 1
 
+
+@pytest.mark.asyncio
+async def test_required_relations_guardrail_stops_after_repeated_missing_set():
+    """Guardrail should stop requesting replans when the same missing set appears again."""
+    state = BaseState(
+        required_tables_from_kpi=["public.products"],
+        validator_tables_used=["public.orders"],
+        validator_tables_used_base=["orders"],
+        db_dialect="postgres",
+        db_default_schema="public",
+        required_enforcement_attempts=1,
+        last_required_missing_tables=["public.products"],
+        forced_tables=["public.products"],
+    )
+
+    error = evaluate_required_relations(state)
+    assert error is not None
+    assert error.get("type") == "REQUIRED_TABLE_MISSING_IN_SQL"
+    assert error.get("replan_needed") is False
+    assert state.get("required_enforcement_attempts") == 2
+
+
+@pytest.mark.asyncio
+async def test_required_relations_guardrail_no_error_when_all_required_present():
+    """Guardrail should do nothing when all required tables are present in validator tables_used."""
+    state = BaseState(
+        required_tables_from_kpi=["public.products"],
+        validator_tables_used=["public.orders", "public.products"],
+        validator_tables_used_base=["orders", "products"],
+        db_dialect="postgres",
+        db_default_schema="public",
+    )
+
+    error = evaluate_required_relations(state)
+    assert error is None

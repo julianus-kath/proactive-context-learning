@@ -161,6 +161,10 @@ class BaseState(TypedDict, total=False):
     last_join_plan: Optional[Dict[str, Any]]  # Last join plan structure
     last_join_inputs_fingerprint: Optional[str]  # Fingerprint of last join inputs (tables + intent)
     required_tables_from_kpi: Optional[List[str]]  # Canonical table names derived from KPI expressions
+    # Required-relations guardrail (Phase 4)
+    required_enforcement_attempts: int  # How many times required-table enforcement has been applied
+    last_required_missing_tables: Optional[List[str]]  # Last missing required tables set
+    forced_tables: List[str]  # Tables that must be included by discovery/join (canonical)
 
     # Database dialect/schema (used by SQL helpers and future canonicalization)
     db_dialect: str  # "postgres" | "mssql"

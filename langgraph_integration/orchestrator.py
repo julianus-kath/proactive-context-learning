@@ -62,6 +62,9 @@ from langgraph_integration.utils.runtime_config import (
     get_max_exec_recovery_attempts,
     get_max_no_progress_repeats,
 )
+from langgraph_integration.guardrails.required_relations import (
+    evaluate_required_relations,
+)
 
 # Scout Mode is handled by MCP server, not accessed directly from LangGraph
 
@@ -1898,7 +1901,7 @@ class QueryOrchestrator:
             is_valid = validation_result.get("is_valid", False)
             error_type = validation_result.get("error_type", "unknown")
 
-            # Phase 4/5: Normalize tables_used from SQL validation into canonical form
+            # Phase 4: Normalize tables_used from SQL validation into canonical form
             # so downstream guardrails and diagnostics rely on a single naming scheme.
             try:
                 raw_tables_used = validation_result.get("tables_used") or []
@@ -1909,17 +1912,36 @@ class QueryOrchestrator:
                 for raw in raw_tables_used:
                     if not raw:
                         continue
-                    canonical = self._canonical_table_name(str(raw), dialect=dialect, default_schema=default_schema)
+                    canonical = self._canonical_table_name(
+                        str(raw),
+                        dialect=dialect,
+                        default_schema=default_schema,
+                    )
                     canonical_tables.append(canonical)
                     base_tables.append(canonical.split(".")[-1])
-                if canonical_tables:
-                    state["validator_tables_used"] = canonical_tables
-                    state["validator_tables_used_base"] = base_tables
-                    validation_result["tables_used_canonical"] = canonical_tables
-                    validation_result["tables_used_base"] = base_tables
-                    state["validation_result"] = validation_result
+                state["validator_tables_used"] = canonical_tables
+                state["validator_tables_used_base"] = base_tables
+                validation_result["tables_used_canonical"] = canonical_tables
+                validation_result["tables_used_base"] = base_tables
+                state["validation_result"] = validation_result
             except Exception as meta_exc:
-                logger.debug(f"🔍 [VALIDATE_SQL] Unable to normalize tables_used metadata: {meta_exc}")
+                logger.debug(
+                    f"🔍 [VALIDATE_SQL] Unable to normalize tables_used metadata: {meta_exc}"
+                )
+
+            # Orchestrator-level required-relations guardrail: enforce that tables
+            # implied by KPI expressions are present in the final SQL, using
+            # validator-derived tables_used metadata only (no regex).
+            if is_valid:
+                guardrail_error = evaluate_required_relations(state)
+                if guardrail_error:
+                    merge_error_info(state, guardrail_error)
+                    logger.warning(
+                        "🔍 [VALIDATE_SQL] Required-relations guardrail triggered: %s",
+                        guardrail_error.get("type"),
+                    )
+                    debug_logger.agent_exit("validate_sql", before_state, dict(state))
+                    return state
 
             if is_valid:
                 logger.info("🔍 [VALIDATE_SQL] ✅ SQL validation passed")

@@ -163,6 +163,7 @@ class SQLValidatorAgent:
             "suggestions": [],
             # Metadata for downstream consumers (tables/CTEs seen during validation)
             "tables_used": [],
+            "tables_used_base": [],
             "cte_names": [],
         }
 
@@ -327,6 +328,7 @@ class SQLValidatorAgent:
 
         # Always attach metadata for downstream consumers (even on failure)
         result["tables_used"] = list(tables_used)
+        result["tables_used_base"] = list(tables_used)
         result["cte_names"] = list(cte_names)
 
         # Check tables exist
@@ -355,6 +357,7 @@ class SQLValidatorAgent:
                 "error_message": f"Tables not found: {', '.join(missing_tables)}",
                 "suggestions": ["Check table names against discovery results", "Ensure tables are in relevant_tables"],
                 "tables_used": list(tables_used),
+                "tables_used_base": list(tables_used),
                 "cte_names": list(cte_names),
             }
 
@@ -377,6 +380,7 @@ class SQLValidatorAgent:
                             f"Consider using one of: {available_preview}"
                         ],
                         "tables_used": list(tables_used),
+                        "tables_used_base": list(tables_used),
                         "cte_names": list(cte_names),
                     }
             else:
