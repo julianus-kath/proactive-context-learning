@@ -616,3 +616,20 @@ Here is the output from my most recent run:
   },
   "status": "success"
 }
+
+### [x] Step: Postgres Dialect & Schema Normalization
+<!-- chat-id: postgres-dialect-normalization -->
+
+Ensure the multi-agent system runs cleanly against the Postgres Northwind test database without MSSQL-specific syntax causing failures.
+
+Changes implemented:
+- Updated `mcp_server/query_validator.py` to:
+  - Strip `TOP n` for `DB_DIALECT=postgres` and convert it into a standard `LIMIT n` cap.
+  - Normalize SQL Server bracket identifiers (`[dbo].[order_details]`) by stripping brackets.
+  - Map `dbo.` schema prefixes to the configured Postgres schema via `POSTGRES_SCHEMA` (default `public`), so `dbo.order_details` becomes `public.order_details`.
+- Confirmed via unit-style checks that `validate_query(..., dialect="postgres")` now produces Postgres-compatible SQL such as:
+  `SELECT public.order_details.order_id ... ORDER BY total_metric DESC LIMIT 1000`.
+
+Operational notes:
+- For MSSQL production, set `DB_DIALECT=mssql` and no translation is applied (queries remain `TOP`/`dbo`).
+- For the Postgres Northwind test DB, set `DB_DIALECT=postgres` (and `POSTGRES_SCHEMA=public` if needed) and restart the MCP server so all agent-generated MSSQL-style SQL is translated before hitting Postgres.
