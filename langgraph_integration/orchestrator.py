@@ -57,6 +57,7 @@ from langgraph_integration.utils.runtime_config import (
     get_llm_budget_safety_margin,
     get_max_graph_cycles,
     get_max_llm_calls,
+    get_default_answer_mode,
 )
 
 # Scout Mode is handled by MCP server, not accessed directly from LangGraph
@@ -123,6 +124,8 @@ class QueryOrchestrator:
         self.db_dialect = get_db_dialect()
         self.db_default_schema = get_db_default_schema(self.db_dialect)
         self.max_graph_cycles = get_max_graph_cycles()
+        # Default answer formatting strategy (LLM vs deterministic-from-data)
+        self.default_answer_mode = get_default_answer_mode()
 
         # Initialize specialized agents
         logger.info("🚀 Initializing multi-agent orchestrator (Phase 9)...")
@@ -2057,7 +2060,7 @@ class QueryOrchestrator:
             logger.info(f"✨ [ANSWER] intent.operation: {state.get('intent', {}).get('operation')}")
 
             # HIGHEST PRIORITY: Handle clarification requests from intent parsing
-            intent = state.get("intent", {})
+            intent = state.get("intent", {}) or {}
             needs_clarification = intent.get("needs_clarification", False)
             if needs_clarification:
                 clarification_question = intent.get("clarification_question", "Could you please clarify your request?")
@@ -2081,7 +2084,17 @@ class QueryOrchestrator:
                 debug_logger.agent_exit("answer", before_state, dict(state))
                 return state
 
-            # Deterministic data-based fallback when execution succeeded but budget is tight
+            # Determine preferred answer mode from config/state
+            preferred_mode_raw = (state.get("answer_mode") or self.default_answer_mode or "llm_first")
+            preferred_mode = str(preferred_mode_raw).strip().lower()
+            prefer_deterministic = preferred_mode in {
+                "deterministic_from_data",
+                "deterministic",
+                "data_first",
+                "data_only",
+            }
+
+            # Deterministic data-based fallback when execution succeeded
             operation = intent.get("operation", "query")
             is_data_query = operation == "query"
             exec_ok = exec_result.get("ok", False) if isinstance(exec_result, dict) else False
@@ -2091,7 +2104,9 @@ class QueryOrchestrator:
             budget_error_type = (error_info or {}).get("type") if isinstance(error_info, dict) else None
 
             if is_data_query and exec_ok and (row_count is not None and row_count > 0) and (
-                remaining_budget <= safety_margin or budget_error_type == "LLM_BUDGET_EXCEEDED"
+                prefer_deterministic
+                or remaining_budget <= safety_margin
+                or budget_error_type == "LLM_BUDGET_EXCEEDED"
             ):
                 logger.info(
                     "✨ [ANSWER] Using deterministic data-based answer "
@@ -2123,12 +2138,37 @@ class QueryOrchestrator:
                 exec_error = exec_result.get("error") if isinstance(exec_result, dict) else None
                 sql_query = state.get("sql_query", "").strip()
                 
-                # Hard gate: if no successful SQL execution for a data query, fail with structure error
+                # Hard gate: if no successful SQL execution for a data query, fail with structured error
                 if not exec_ok or not sql_query or exec_error:
-                    logger.warning(f"✨ [ANSWER] ⚠️  GROUNDING GATE ACTIVATED: Data query without valid execution")
-                    logger.warning(f"✨   exec_ok={exec_ok}, has_sql={bool(sql_query)}, exec_error={exec_error}")
-                    
-                    # Set error state instead of producing ungrounded answer
+                    logger.warning("✨ [ANSWER] ⚠️  GROUNDING GATE ACTIVATED: Data query without valid execution")
+                    logger.warning("✨   exec_ok=%s, has_sql=%s, exec_error=%s", exec_ok, bool(sql_query), exec_error)
+
+                    existing_error = state.get("error_info") or {}
+                    existing_type = existing_error.get("type") if isinstance(existing_error, dict) else None
+                    existing_message = existing_error.get("message") if isinstance(existing_error, dict) else None
+                    existing_suggestion = existing_error.get("suggestion") if isinstance(existing_error, dict) else None
+
+                    # Prefer a domain-aware diagnostic when we already have a structured error
+                    if isinstance(existing_error, dict) and existing_type:
+                        logger.warning("✨ [ANSWER] Using existing structured error_info for grounding gate: %s", existing_type)
+                        message_bits: List[str] = []
+                        if existing_message:
+                            message_bits.append(existing_message)
+                        else:
+                            message_bits.append("A structural issue in the query or schema prevented a safe answer.")
+                        if existing_suggestion:
+                            message_bits.append(existing_suggestion)
+                        else:
+                            message_bits.append(
+                                "You can often fix this by narrowing the question or specifying different tables or metrics."
+                            )
+
+                        state["final_response"] = " ".join(message_bits)
+                        state["error_info"] = existing_error
+                        debug_logger.agent_exit("answer", before_state, dict(state))
+                        return state
+
+                    # Otherwise, fall back to a generic but safe diagnostic
                     error_msg = exec_error or "Query execution failed or produced no valid SQL"
                     state["error_info"] = {
                         "type": "UNGROUNDED_RESPONSE_PREVENTED",
@@ -2142,7 +2182,7 @@ class QueryOrchestrator:
                         "• The relevant tables couldn't be identified\n\n"
                         "Please try rephrasing your question with more specific details."
                     )
-                    logger.warning(f"✨ [ANSWER] ✅ Ungrounded response prevented, error state returned")
+                    logger.warning("✨ [ANSWER] ✅ Ungrounded response prevented, generic diagnostic returned")
                     debug_logger.agent_exit("answer", before_state, dict(state))
                     return state
 
@@ -2294,6 +2334,33 @@ class QueryOrchestrator:
 
             # LLM budget check (AnswerAgent uses LLM for formatting)
             state = self._check_llm_budget(state, "answer")
+
+            # If budget is now exhausted at the answer stage, prefer a deterministic
+            # data-based answer when we already have executed SQL and rows.
+            budget_error = state.get("error_info") or {}
+            if isinstance(budget_error, dict) and budget_error.get("type") == "LLM_BUDGET_EXCEEDED":
+                refreshed_exec = state.get("exec_result") or {}
+                exec_ok_after_budget = refreshed_exec.get("ok", False) if isinstance(refreshed_exec, dict) else False
+                row_count_after_budget = refreshed_exec.get("row_count") if isinstance(refreshed_exec, dict) else None
+
+                if is_data_query and exec_ok_after_budget and (row_count_after_budget is not None and row_count_after_budget > 0):
+                    logger.warning(
+                        "✨ [ANSWER] LLM budget exhausted at answer stage; returning deterministic data-based answer"
+                    )
+                    deterministic_text = await self._format_execution_results(refreshed_exec, intent, user_input)
+                    state["final_response"] = deterministic_text
+                    state["answer_mode"] = "deterministic_from_data"
+                    merge_error_info(
+                        state,
+                        {
+                            "type": "LLM_BUDGET_EXCEEDED_DEGRADED_ANSWER",
+                            "message": "Returned a data-based answer without additional LLM formatting due to budget limits.",
+                        },
+                    )
+                    debug_logger.agent_exit("answer", before_state, dict(state))
+                    return state
+
+            # If budget exhaustion turned the intent into a clarification request, return a clear diagnostic
             if state.get("error_info") and state.get("intent", {}).get("needs_clarification"):
                 # Global LLM budget exhausted – provide a deterministic, user-friendly message
                 intent = state.get("intent") or {}
@@ -2482,6 +2549,8 @@ class QueryOrchestrator:
             "db_default_schema": self.db_default_schema,
             # Budget safety margin to support budget-aware routing
             "llm_budget_safety_margin": self.llm_budget_safety_margin,
+            # Default answer formatting preference (can be overridden per-query via metadata)
+            "answer_mode": self.default_answer_mode,
         }
         if metadata and isinstance(metadata, dict):
             for key, value in metadata.items():

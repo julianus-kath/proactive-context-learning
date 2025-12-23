@@ -113,3 +113,29 @@ def get_max_graph_cycles(default: int = 10) -> int:
     """
     return _coerce_int(os.getenv("MAX_GRAPH_CYCLES"), default, "MAX_GRAPH_CYCLES")
 
+
+def get_default_answer_mode(default: str = "llm_first") -> str:
+    """
+    Resolve the default answer formatting mode.
+
+    Controlled by ANSWER_MODE; supported values:
+    - \"llm_first\" (default): prefer LLM formatting when budget allows
+    - \"deterministic\" / \"data_first\": prefer deterministic summaries from data
+    - \"data_only\": always use deterministic data formatting when possible
+    """
+    raw = os.getenv("ANSWER_MODE")
+    if raw is None or str(raw).strip() == "":
+        return default
+
+    value = str(raw).strip().lower()
+
+    # Canonicalize common variants into a small set of modes
+    if value in {"llm_first", "llm", "model"}:
+        return "llm_first"
+    if value in {"deterministic", "data_first"}:
+        return "deterministic_from_data"
+    if value == "data_only":
+        return "data_only"
+
+    logger.warning("Unknown ANSWER_MODE '%s'; using default '%s'", raw, default)
+    return default

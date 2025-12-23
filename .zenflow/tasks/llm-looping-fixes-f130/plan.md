@@ -127,7 +127,8 @@ Verification:
   - Confirm join does not regenerate identical SQL more than once (multiple `join_sql` node entries should mostly be covered by `join_inputs_cache_hit` / `join_budget_short_circuit` loop events, with `llm_usage["join"]` staying low).
   - Inspect `llm_usage` and `loop_events` in benchmark artifacts to validate that most residual budget usage now comes from validation/repair (`llm_usage["repair"]`) rather than from repeated discovery/join loops, and that `LLM_BUDGET_EXCEEDED` at `stage=answer` is rare.
 
-### [ ] Step: Phase 3 — Deterministic Answer Fallback
+### [x] Step: Phase 3 — Deterministic Answer Fallback
+<!-- chat-id: 45b0cd06-8304-4ceb-99eb-b572bf47880b -->
 
 Ensure users receive a meaningful answer when SQL execution succeeds, even with zero remaining LLM budget.
 

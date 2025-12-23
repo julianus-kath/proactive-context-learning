@@ -9,7 +9,12 @@ Tests that the orchestrator correctly:
 
 import pytest
 import asyncio
+import os
+import sys
 from unittest.mock import MagicMock, AsyncMock, patch
+
+# Ensure the project root (containing langgraph_integration) is importable
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from langgraph_integration.orchestrator import QueryOrchestrator
 from langgraph_integration.contracts.state import BaseState
@@ -207,6 +212,100 @@ class TestValidationRouting:
             # Verify join_sql node exists to replan
             assert "join_sql" in orch.graph.nodes
             print("✅ Validation routing can replan SQL on replan_with_aggregation")
+
+
+class TestDeterministicAnswerFallback:
+    """Tests for deterministic answer fallback behaviour in the answer node."""
+
+    @pytest.mark.asyncio
+    async def test_deterministic_mode_uses_data_without_llm(self):
+        """
+        When answer_mode is deterministic and execution succeeded with rows,
+        the answer node should render from data without spending LLM budget.
+        """
+        from langgraph_integration.orchestrator import QueryOrchestrator
+
+        with patch("langgraph_integration.orchestrator.get_shared_mcp_tool"):
+            orch = QueryOrchestrator(llm_model="gpt-4o", llm_temp=0.0)
+
+            state: BaseState = {
+                "user_input": "How many customers do we have?",
+                "intent": {
+                    "operation": "query",
+                    "metrics": ["count"],
+                    "primary_entities": ["customers"],
+                },
+                "sql_query": "SELECT COUNT(*) AS count FROM dbo.Customers",
+                "exec_result": {
+                    "ok": True,
+                    "data": [{"count": 42}],
+                    "row_count": 1,
+                    "execution_time_ms": 10,
+                    "truncated": False,
+                },
+                # Start with no recorded LLM usage and a very small budget
+                "llm_usage": {},
+                "total_llm_calls": 0,
+                "max_llm_calls": 1,
+                "llm_budget_safety_margin": 2,
+                # Force deterministic formatting preference
+                "answer_mode": "deterministic_from_data",
+            }
+
+            result_state = await orch._answer_node(state)
+
+            # Should have chosen deterministic path
+            assert result_state.get("answer_mode") == "deterministic_from_data"
+            assert isinstance(result_state.get("final_response"), str)
+            # Response should include the count value from data
+            assert "42" in result_state["final_response"]
+            # No additional LLM usage should have been recorded for answer formatting
+            llm_usage = result_state.get("llm_usage") or {}
+            assert llm_usage.get("answer", 0) == 0
+
+    @pytest.mark.asyncio
+    async def test_grounding_gate_uses_structured_error_when_available(self):
+        """
+        When execution fails for a data query but error_info already contains
+        a structured domain error (e.g., DIMENSION_MISSING), the answer node
+        should surface that message instead of a generic ungrounded response.
+        """
+        from langgraph_integration.orchestrator import QueryOrchestrator
+
+        with patch("langgraph_integration.orchestrator.get_shared_mcp_tool"):
+            orch = QueryOrchestrator(llm_model="gpt-4o", llm_temp=0.0)
+
+            state: BaseState = {
+                "user_input": "Show sales by customer",
+                "intent": {
+                    "operation": "query",
+                    "primary_entities": ["customer", "sales"],
+                },
+                # Failed execution with no usable rows
+                "exec_result": {
+                    "ok": False,
+                    "data": [],
+                    "row_count": 0,
+                    "execution_time_ms": 5,
+                    "truncated": False,
+                    "error": "Execution failed due to missing dimension",
+                },
+                "sql_query": "SELECT * FROM dbo.Sales",  # Present but execution failed
+                "error_info": {
+                    "type": "DIMENSION_MISSING",
+                    "message": "Customer dimension is required but was not identified in discovery.",
+                    "suggestion": "Try referencing the customer table directly or narrowing the question.",
+                },
+            }
+
+            result_state = await orch._answer_node(state)
+
+            # The original structured error type should be preserved
+            err = result_state.get("error_info") or {}
+            assert err.get("type") == "DIMENSION_MISSING"
+            # Final response should surface the domain-specific message, not the generic ungrounded text
+            assert "Customer dimension is required" in result_state.get("final_response", "")
+            assert "UNGROUNDED_RESPONSE_PREVENTED" not in result_state.get("final_response", "")
 
 
 if __name__ == "__main__":
