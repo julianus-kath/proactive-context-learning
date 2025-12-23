@@ -133,6 +133,14 @@ class BaseState(TypedDict, total=False):
     exec_attempt_count: int  # Number of execution/recovery cycles attempted
     max_exec_attempts: int  # Max allowed execution attempts before giving up
 
+    # Phase 2b: Repair loop control (validation/exec caps + no-progress detector)
+    validation_attempt_count: int  # Number of times result validation has been run
+    exec_recovery_attempt_count: int  # Number of times exec_recovery has been invoked
+    repair_no_progress_count: int  # Number of times a repeated repair signature was observed
+    repair_signatures_seen: Dict[str, int]  # Map of repair_signature -> occurrence count
+    last_exec_error_signature: Optional[str]  # Last execution error signature used for diagnostics
+    stop_reason: Optional[str]  # High-level reason why planning/repair stopped early
+
     # LLM usage accounting (Phase 1 instrumentation)
     # llm_usage tracks per-node buckets plus a "total" aggregate, e.g.:
     # {"intent": 1, "discovery": 2, "join": 1, "repair": 3, "answer": 1, "total": 8}

@@ -58,6 +58,9 @@ from langgraph_integration.utils.runtime_config import (
     get_max_graph_cycles,
     get_max_llm_calls,
     get_default_answer_mode,
+    get_max_validation_attempts,
+    get_max_exec_recovery_attempts,
+    get_max_no_progress_repeats,
 )
 
 # Scout Mode is handled by MCP server, not accessed directly from LangGraph
@@ -124,6 +127,10 @@ class QueryOrchestrator:
         self.db_dialect = get_db_dialect()
         self.db_default_schema = get_db_default_schema(self.db_dialect)
         self.max_graph_cycles = get_max_graph_cycles()
+        # Phase 2b: Repair loop caps / no-progress thresholds
+        self.max_validation_attempts = get_max_validation_attempts()
+        self.max_exec_recovery_attempts = get_max_exec_recovery_attempts()
+        self.max_no_progress_repeats = get_max_no_progress_repeats()
         # Default answer formatting strategy (LLM vs deterministic-from-data)
         self.default_answer_mode = get_default_answer_mode()
 
@@ -386,6 +393,58 @@ class QueryOrchestrator:
             "intent": intent_sig,
         }
         return json.dumps(payload, sort_keys=True, ensure_ascii=False)
+
+    def _sql_fingerprint(self, sql: str) -> str:
+        """
+        Build a stable fingerprint for SQL text for repair loop diagnostics.
+
+        Normalizes whitespace and case and hashes the result so that
+        repeated attempts with the same logical SQL can be detected.
+        """
+        try:
+            import hashlib
+            normalized = (sql or "").strip().lower()
+            # Collapse internal whitespace to a single space to ignore formatting-only changes
+            normalized = re.sub(r"\s+", " ", normalized)
+            return hashlib.sha1(normalized.encode("utf-8")).hexdigest()
+        except Exception:
+            # Fall back to raw SQL if hashing fails for any reason
+            return (sql or "").strip()
+
+    def _exec_error_signature(self, exec_result: Dict[str, Any]) -> str:
+        """
+        Build a normalized execution error signature from exec_result.
+
+        When the driver exposes structured error codes/SQLSTATE, those
+        should be incorporated; for now we normalize the error message.
+        """
+        error_payload = None
+        if isinstance(exec_result, dict):
+            error_payload = exec_result.get("error") or exec_result.get("error_info")
+
+        if isinstance(error_payload, dict):
+            raw_msg = error_payload.get("message") or error_payload.get("error") or str(error_payload)
+        else:
+            raw_msg = str(error_payload) if error_payload is not None else ""
+
+        # Normalize: lowercase, collapse whitespace, strip digits to reduce noise
+        msg = (raw_msg or "").strip().lower()
+        msg = re.sub(r"\s+", " ", msg)
+        msg = re.sub(r"\d+", "#", msg)
+        return msg or "<no_error>"
+
+    def _repair_signature(self, state: BaseState) -> str:
+        """
+        Combine SQL and execution error into a single repair signature.
+
+        Used by Phase 2b repair loop control to detect no-progress cycles.
+        """
+        sql_query = state.get("sql_query", "") or ""
+        exec_result = state.get("exec_result") or {}
+        sql_fp = self._sql_fingerprint(sql_query)
+        err_sig = self._exec_error_signature(exec_result if isinstance(exec_result, dict) else {})
+        state["last_exec_error_signature"] = err_sig
+        return f"{sql_fp}::{err_sig}"
 
     def _canonical_table_name(self, raw_name: str, dialect: str, default_schema: str) -> str:
         """
@@ -717,10 +776,64 @@ class QueryOrchestrator:
             - replan_with_filter: missing WHERE, regenerate SQL
             - ask_user: validation unclear, ask user for clarification
             """
-            validation = state.get("validation_result", {})
+            validation = state.get("validation_result", {}) or {}
             retry_action = validation.get("retry_action", "accept")
             
             logger.info(f"🚦 [VALIDATION_ROUTE] retry_action={retry_action}")
+
+            # Phase 2b: Repair loop caps & no-progress detection
+            validation_attempts = state.get("validation_attempt_count", 0)
+            exec_recovery_attempts = state.get("exec_recovery_attempt_count", 0)
+            max_validation_attempts = state.get("max_validation_attempts", 0) or getattr(self, "max_validation_attempts", 2)
+            max_exec_recovery_attempts = state.get("max_exec_recovery_attempts", 0) or getattr(self, "max_exec_recovery_attempts", 2)
+            max_no_progress_repeats = state.get("max_no_progress_repeats", 0) or getattr(self, "max_no_progress_repeats", 2)
+
+            logger.info(
+                "🚦 [VALIDATION_ROUTE] attempts: validation=%s/%s exec_recovery=%s/%s",
+                validation_attempts,
+                max_validation_attempts,
+                exec_recovery_attempts,
+                max_exec_recovery_attempts,
+            )
+
+            # No-progress detector: track repeated (SQL,error) signatures
+            try:
+                sig = self._repair_signature(state)
+                seen = state.get("repair_signatures_seen") or {}
+                count = seen.get(sig, 0) + 1
+                seen[sig] = count
+                state["repair_signatures_seen"] = seen
+                state["repair_no_progress_count"] = state.get("repair_no_progress_count", 0) + (1 if count > 1 else 0)
+
+                if count >= max_no_progress_repeats and max_no_progress_repeats > 0:
+                    logger.warning(
+                        "🚦 [VALIDATION] Repair no-progress detected for signature %s (count=%s/%s)",
+                        sig,
+                        count,
+                        max_no_progress_repeats,
+                    )
+                    state["stop_reason"] = "repair_no_progress"
+                    preview_sql = (state.get("sql_query", "") or "").strip()
+                    preview_sql = preview_sql[:300] + ("..." if len(preview_sql) > 300 else "")
+                    merge_error_info(
+                        state,
+                        {
+                            "type": "REPAIR_NO_PROGRESS",
+                            "stage": "validate_sql",
+                            "message": "Validation/repair cycles repeated the same failing SQL and error without improvement.",
+                            "suggestion": (
+                                "Try narrowing the question (fewer tables/metrics) or phrasing it in a simpler way. "
+                                "You can also try referencing specific tables if you know them."
+                            ),
+                            "context": {
+                                "sql_preview": preview_sql,
+                                "last_error_signature": state.get("last_exec_error_signature"),
+                            },
+                        },
+                    )
+                    return "answer"
+            except Exception as e:
+                logger.warning(f"🚦 [VALIDATION] Failed to compute repair signature: {e}")
 
             # 🧠 Budget-aware routing: if we are at or below the safety margin,
             # stop sending the graph back to discovery/join (which would require
@@ -769,6 +882,55 @@ class QueryOrchestrator:
                         "message": (
                             "The system attempted multiple discovery and planning cycles "
                             "but could not produce a stable query plan."
+                        ),
+                    },
+                )
+                return "answer"
+
+            # Phase 2b: Hard caps on validation and exec_recovery attempts
+            if retry_action in ("try_next_candidate", "replan_with_aggregation", "replan_with_filter"):
+                if validation_attempts >= max_validation_attempts:
+                    logger.warning(
+                        "🚦 [VALIDATION] Max validation attempts reached (%s/%s); stopping repair loop",
+                        validation_attempts,
+                        max_validation_attempts,
+                    )
+                    state["stop_reason"] = "max_validation_attempts"
+                    merge_error_info(
+                        state,
+                        {
+                            "type": "REPAIR_LOOP_STUCK",
+                            "stage": "validate_sql",
+                            "message": (
+                                "The system attempted to validate and repair the SQL multiple times "
+                                "but could not produce a stable, executable query."
+                            ),
+                            "suggestion": (
+                                "Try narrowing the question (fewer tables/metrics) or specifying a clearer metric "
+                                "so the planner can generate a simpler query."
+                            ),
+                        },
+                    )
+                    return "answer"
+
+            if retry_action == "try_next_candidate" and exec_recovery_attempts >= max_exec_recovery_attempts:
+                logger.warning(
+                    "🚦 [VALIDATION] Max exec_recovery attempts reached (%s/%s); stopping repair loop",
+                    exec_recovery_attempts,
+                    max_exec_recovery_attempts,
+                )
+                state["stop_reason"] = "max_exec_recovery_attempts"
+                merge_error_info(
+                    state,
+                    {
+                        "type": "REPAIR_LOOP_STUCK",
+                        "stage": "exec_recovery",
+                        "message": (
+                            "The system attempted to execute and repair the query multiple times "
+                            "but could not complete execution safely."
+                        ),
+                        "suggestion": (
+                            "Consider asking a simpler question or focusing on a smaller subset of data."
                         ),
                     },
                 )
@@ -1627,6 +1789,10 @@ class QueryOrchestrator:
             debug_logger.agent_exit("validate_sql", before_state, dict(state))
             return state
 
+        # Phase 2b: increment validation attempt counter
+        current_validation_attempts = state.get("validation_attempt_count", 0)
+        state["validation_attempt_count"] = current_validation_attempts + 1
+
         # Run SQLValidatorAgent
         try:
             # LLM budget check
@@ -1919,6 +2085,10 @@ class QueryOrchestrator:
         # Increment execution attempt count
         state["exec_attempt_count"] = exec_attempt + 1
 
+        # Phase 2b: Track exec_recovery-specific attempts (separate from exec_attempt_count)
+        exec_recovery_attempt = state.get("exec_recovery_attempt_count", 0)
+        state["exec_recovery_attempt_count"] = exec_recovery_attempt + 1
+
         try:
             # LLM budget check (ExecAndRecoveryAgent uses LLM for repair/simplification)
             state = self._check_llm_budget(state, "exec_recovery")
@@ -2116,7 +2286,7 @@ class QueryOrchestrator:
                     f"(row_count={row_count}, remaining_budget={remaining_budget}, safety_margin={safety_margin})"
                 )
                 # Render deterministic answer from data without consuming additional LLM calls
-                deterministic_text = await self._format_execution_results(exec_result, intent, user_input)
+                deterministic_text = await _format_execution_results(exec_result, intent, user_input)
                 state["final_response"] = deterministic_text
                 state["answer_mode"] = "deterministic_from_data"
 
@@ -2350,7 +2520,7 @@ class QueryOrchestrator:
                     logger.warning(
                         "✨ [ANSWER] LLM budget exhausted at answer stage; returning deterministic data-based answer"
                     )
-                    deterministic_text = await self._format_execution_results(refreshed_exec, intent, user_input)
+                    deterministic_text = await _format_execution_results(refreshed_exec, intent, user_input)
                     state["final_response"] = deterministic_text
                     state["answer_mode"] = "deterministic_from_data"
                     merge_error_info(
@@ -2554,6 +2724,14 @@ class QueryOrchestrator:
             "llm_budget_safety_margin": self.llm_budget_safety_margin,
             # Default answer formatting preference (can be overridden per-query via metadata)
             "answer_mode": self.default_answer_mode,
+            # Phase 2b: Repair loop control caps (can be overridden via metadata)
+            "max_validation_attempts": self.max_validation_attempts,
+            "max_exec_recovery_attempts": self.max_exec_recovery_attempts,
+            "max_no_progress_repeats": self.max_no_progress_repeats,
+            "validation_attempt_count": 0,
+            "exec_recovery_attempt_count": 0,
+            "repair_no_progress_count": 0,
+            "repair_signatures_seen": {},
         }
         if metadata and isinstance(metadata, dict):
             for key, value in metadata.items():
@@ -2604,72 +2782,139 @@ class QueryOrchestrator:
                 "final_response": "I ran into an internal error while processing your request.",
             }
 
-    async def _format_execution_results(self, execution_result: Dict[str, Any], intent: Dict[str, Any], user_input: str) -> str:
-        """Format execution results into user-friendly response."""
-        try:
-            data = execution_result.get("data", [])
-            row_count = execution_result.get("row_count", 0)
-            execution_time = execution_result.get("execution_time_ms", 0)
 
-            # DEBUG: Log data reception
-            logger.debug(f"📊 _format_execution_results: data={len(data)} rows, row_count={row_count}, keys in exec_result={execution_result.keys()}")
+async def create_orchestrator(
+    llm_model: str = "gpt-4o",
+    llm_temp: float = 0.0,
+    max_joins: int = 3,
+    max_retries: int = 2,
+    row_limit: int = 1000,
+    query_timeout_seconds: int = 30,
+) -> QueryOrchestrator:
+    """
+    Thin async factory for QueryOrchestrator.
 
-            # Handle different query types
-            query_operation = intent.get("operation", "query")
-            primary_entities = intent.get("primary_entities", [])
-            metrics = intent.get("metrics", [])
+    Provided for backwards compatibility with older tests and callers
+    that expect a create_orchestrator() export.
+    """
+    return QueryOrchestrator(
+        llm_model=llm_model,
+        llm_temp=llm_temp,
+        max_joins=max_joins,
+        max_retries=max_retries,
+        row_limit=row_limit,
+        query_timeout_seconds=query_timeout_seconds,
+    )
 
-            if not data:
-                logger.warning(f"⚠️  No data returned. execution_result keys={execution_result.keys()}, row_count={row_count}")
-                return f"Your query '{user_input}' executed successfully but returned no data. This might mean there are no matching records in the database."
 
-            # Format based on query type
-            if query_operation == "query" and "count" in metrics:
-                # COUNT query - return the number
-                if data and len(data) > 0 and len(data[0]) > 0:
-                    count_value = list(data[0].values())[0]
-                    entity_name = primary_entities[0] if primary_entities else "items"
-                    return f"There are {count_value} {entity_name} in the database."
+async def _result_validator_async(self, state: BaseState) -> BaseState:
+    """
+    Async wrapper for result validator node so we can attach instrumentation.
 
-            elif query_operation == "query" and metrics:
-                # Aggregation query (SUM, AVG, etc.)
-                if data and len(data) > 0:
-                    result_values = []
-                    for row in data[:5]:  # Show first 5 results
-                        for key, value in row.items():
-                            if key and value is not None:
-                                result_values.append(f"{key}: {value}")
-                    result_str = ", ".join(result_values)
-                    return f"Query results: {result_str}"
+    NOTE: This is defined at module scope and then bound onto QueryOrchestrator
+    to avoid issues with older bytecode caches during migration.
+    """
+    # Instrumentation: track node entry
+    try:
+        self._increment_node_entry(state, "result_validator")
+    except Exception:
+        pass
+    return build_result_validator_node(state)
 
-            else:
-                # Regular SELECT query
-                if row_count == 1:
-                    # Single row result
-                    row = data[0]
-                    formatted_data = []
+
+# Ensure QueryOrchestrator exposes _result_validator_async even if older
+# bytecode caches omit the in-class definition.
+if hasattr(QueryOrchestrator, "__mro__"):
+    setattr(QueryOrchestrator, "_result_validator_async", _result_validator_async)
+
+async def _format_execution_results(
+    execution_result: Dict[str, Any],
+    intent: Dict[str, Any],
+    user_input: str,
+) -> str:
+    """Format execution results into a user-friendly deterministic response."""
+    try:
+        data = execution_result.get("data", [])
+        row_count = execution_result.get("row_count", 0)
+        execution_time = execution_result.get("execution_time_ms", 0)
+
+        # DEBUG: Log data reception
+        logger.debug(
+            "📊 _format_execution_results: data=%s rows, row_count=%s, keys in exec_result=%s",
+            len(data),
+            row_count,
+            list(execution_result.keys()),
+        )
+
+        # Handle different query types
+        query_operation = intent.get("operation", "query")
+        primary_entities = intent.get("primary_entities", [])
+        metrics = intent.get("metrics", [])
+
+        if not data:
+            logger.warning(
+                "⚠️  No data returned. execution_result keys=%s, row_count=%s",
+                list(execution_result.keys()),
+                row_count,
+            )
+            return (
+                f"Your query '{user_input}' executed successfully but returned no data. "
+                "This might mean there are no matching records in the database."
+            )
+
+        # Format based on query type
+        if query_operation == "query" and "count" in metrics:
+            # COUNT query - return the number
+            if data and len(data) > 0 and len(data[0]) > 0:
+                count_value = list(data[0].values())[0]
+                entity_name = primary_entities[0] if primary_entities else "items"
+                return f"There are {count_value} {entity_name} in the database."
+
+        elif query_operation == "query" and metrics:
+            # Aggregation query (SUM, AVG, etc.)
+            if data and len(data) > 0:
+                result_values = []
+                for row in data[:5]:  # Show first 5 results
                     for key, value in row.items():
-                        if value is not None:
-                            formatted_data.append(f"{key}: {value}")
-                    return f"Found 1 result: {', '.join(formatted_data)}"
-                elif row_count <= 10:
-                    # Small result set - show all
-                    response = f"Found {row_count} results:\n"
-                    for i, row in enumerate(data, 1):
-                        row_values = []
-                        for key, value in row.items():
-                            if value is not None:
-                                row_values.append(f"{key}: {value}")
-                        response += f"{i}. {', '.join(row_values)}\n"
-                    return response.rstrip()
-                else:
-                    # Large result set - summarize
-                    columns = list(data[0].keys()) if data else []
-                    return f"Found {row_count} results with columns: {', '.join(columns)}. Use a more specific query to see the actual data."
+                        if key and value is not None:
+                            result_values.append(f"{key}: {value}")
+                result_str = ", ".join(result_values)
+                return f"Query results: {result_str}"
 
-        except Exception as e:
-            logger.error(f"Error formatting execution results: {e}")
-            return f"The query executed successfully and returned {execution_result.get('row_count', 'unknown')} results, but I had trouble formatting them for display."
+        # Regular SELECT query
+        if row_count == 1:
+            # Single row result
+            row = data[0]
+            formatted_data = []
+            for key, value in row.items():
+                if value is not None:
+                    formatted_data.append(f"{key}: {value}")
+            return f"Found 1 result: {', '.join(formatted_data)}"
+        elif row_count <= 10:
+            # Small result set - show all
+            response = f"Found {row_count} results:\n"
+            for i, row in enumerate(data, 1):
+                row_values = []
+                for key, value in row.items():
+                    if value is not None:
+                        row_values.append(f"{key}: {value}")
+                response += f"{i}. {', '.join(row_values)}\n"
+            return response.rstrip()
+        else:
+            # Large result set - summarize
+            columns = list(data[0].keys()) if data else []
+            return (
+                f"Found {row_count} results with columns: {', '.join(columns)}. "
+                "Use a more specific query to see the actual data."
+            )
+
+    except Exception as e:
+        logger.error(f"Error formatting execution results: {e}")
+        return (
+            "The query executed successfully and returned "
+            f"{execution_result.get('row_count', 'unknown')} results, "
+            "but I had trouble formatting them for display."
+        )
 
     async def _probe_candidate_counts(self, table_names: List[str]) -> Dict[str, int]:
         """Quickly probe row counts per candidate to prioritize tables with data."""

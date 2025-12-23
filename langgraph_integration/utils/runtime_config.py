@@ -114,6 +114,37 @@ def get_max_graph_cycles(default: int = 10) -> int:
     return _coerce_int(os.getenv("MAX_GRAPH_CYCLES"), default, "MAX_GRAPH_CYCLES")
 
 
+def get_max_validation_attempts(default: int = 2) -> int:
+    """
+    Resolve the maximum number of allowed validation attempts.
+
+    Controlled by MAX_VALIDATION_ATTEMPTS; used by the orchestrator's
+    repair loop control to prevent infinite validate/replan cycles.
+    """
+    return _coerce_int(os.getenv("MAX_VALIDATION_ATTEMPTS"), default, "MAX_VALIDATION_ATTEMPTS")
+
+
+def get_max_exec_recovery_attempts(default: int = 2) -> int:
+    """
+    Resolve the maximum number of allowed exec_recovery attempts.
+
+    Controlled by MAX_EXEC_RECOVERY_ATTEMPTS; separate from the older
+    max_exec_attempts counter to differentiate planning vs. repair.
+    """
+    return _coerce_int(os.getenv("MAX_EXEC_RECOVERY_ATTEMPTS"), default, "MAX_EXEC_RECOVERY_ATTEMPTS")
+
+
+def get_max_no_progress_repeats(default: int = 2) -> int:
+    """
+    Resolve the maximum number of allowed repeated repair signatures.
+
+    Controlled by MAX_NO_PROGRESS_REPEATS; when the same (SQL,error)
+    pair is seen this many times, the orchestrator will stop repair
+    loops and return a structured diagnostic instead of thrashing.
+    """
+    return _coerce_int(os.getenv("MAX_NO_PROGRESS_REPEATS"), default, "MAX_NO_PROGRESS_REPEATS")
+
+
 def get_default_answer_mode(default: str = "llm_first") -> str:
     """
     Resolve the default answer formatting mode.
