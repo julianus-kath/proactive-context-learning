@@ -124,6 +124,9 @@ class BaseState(TypedDict, total=False):
     max_retries_per_candidate_set: int  # Circuit breaker threshold (e.g., 2)
     skip_tables: List[str]  # Tables to skip in discovery filter (passed to subgraph)
 
+    # LLM budget configuration
+    llm_budget_safety_margin: int  # Safety buffer before hitting hard budget
+
     # Global orchestration budgets (logical stop conditions, independent of graph recursion_limit)
     plan_attempt_count: int  # Number of full plan/validate cycles attempted
     max_total_plans: int  # Max allowed plan/validation cycles before giving up
@@ -134,6 +137,10 @@ class BaseState(TypedDict, total=False):
     max_llm_calls: int  # Global LLM call budget
     total_graph_cycles: int  # Number of validation-driven cycles back to discovery/join_sql
     max_graph_cycles: int  # Max allowed graph cycles before giving up
+
+    # Database dialect/schema (used by SQL helpers and future canonicalization)
+    db_dialect: str  # "postgres" | "mssql"
+    db_default_schema: str  # e.g., "public" or "dbo"
 
     # Deprecated/legacy (for backward compat during migration)
     schema: Optional[str]  # Full schema (deprecated; use schema_snippet)

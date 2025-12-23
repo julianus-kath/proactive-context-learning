@@ -50,6 +50,13 @@ from langgraph_integration.agents.interpretation.agent import InterpretationAgen
 from langgraph_integration.concept_mapper import ConceptMapper
 from langgraph_integration.mcp_client import get_shared_mcp_tool
 from langgraph_integration.debug_logger import get_debug_logger
+from langgraph_integration.utils.runtime_config import (
+    get_db_default_schema,
+    get_db_dialect,
+    get_llm_budget_safety_margin,
+    get_max_graph_cycles,
+    get_max_llm_calls,
+)
 
 # Scout Mode is handled by MCP server, not accessed directly from LangGraph
 
@@ -108,6 +115,13 @@ class QueryOrchestrator:
         self.max_retries = max_retries
         self.row_limit = row_limit
         self.query_timeout_seconds = query_timeout_seconds
+
+        # Global orchestration and database configuration (env-driven, with safe defaults)
+        self.max_llm_calls = get_max_llm_calls()
+        self.llm_budget_safety_margin = get_llm_budget_safety_margin()
+        self.db_dialect = get_db_dialect()
+        self.db_default_schema = get_db_default_schema(self.db_dialect)
+        self.max_graph_cycles = get_max_graph_cycles()
 
         # Initialize specialized agents
         logger.info("🚀 Initializing multi-agent orchestrator (Phase 9)...")
@@ -2047,6 +2061,17 @@ class QueryOrchestrator:
             "max_total_plans": 4,
             "exec_attempt_count": 0,
             "max_exec_attempts": 4,
+            # LLM budget tracking
+            "total_llm_calls": 0,
+            "max_llm_calls": self.max_llm_calls,
+            # Graph cycle tracking (used by loop guards in later phases)
+            "total_graph_cycles": 0,
+            "max_graph_cycles": self.max_graph_cycles,
+            # Database config for downstream helpers (e.g., canonicalization)
+            "db_dialect": self.db_dialect,
+            "db_default_schema": self.db_default_schema,
+            # Budget safety margin to support budget-aware routing
+            "llm_budget_safety_margin": self.llm_budget_safety_margin,
         }
         if metadata and isinstance(metadata, dict):
             for key, value in metadata.items():

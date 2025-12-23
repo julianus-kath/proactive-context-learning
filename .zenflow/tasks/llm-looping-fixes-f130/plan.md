@@ -51,7 +51,8 @@ If the feature is trivial and doesn't warrant full specification, update this wo
 
 Save to `{@artifacts_path}/plan.md`.
 
-### [ ] Step: Step 0 — Pre-flight Configuration
+### [x] Step: Step 0 — Pre-flight Configuration
+<!-- chat-id: f64efa0b-686d-43bc-aaef-66d9898dda5b -->
 
 Define configuration knobs and ensure they are wired into orchestrator/config loading.
 

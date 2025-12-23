@@ -170,8 +170,11 @@ async def debug_config():
     state_defaults = {
         "max_total_plans": 4,
         "max_exec_attempts": 4,
-        "max_llm_calls": 20,
-        "max_graph_cycles": 10,
+        "max_llm_calls": getattr(orchestrator, "max_llm_calls", 20),
+        "max_graph_cycles": getattr(orchestrator, "max_graph_cycles", 10),
+        "llm_budget_safety_margin": getattr(orchestrator, "llm_budget_safety_margin", 2),
+        "db_dialect": getattr(orchestrator, "db_dialect", None),
+        "db_default_schema": getattr(orchestrator, "db_default_schema", None),
     }
     return {
         "status": "ok",
