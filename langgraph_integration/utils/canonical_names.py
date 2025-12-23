@@ -79,11 +79,18 @@ def canonical_table_name(raw_name: str, dialect: str, schema: str) -> str:
     table_norm = re.sub(r"\s+", " ", table_part.strip())
     table_clean = table_norm.lower().replace(" ", "_")
 
-    # Schema: for Postgres, always use the configured logical default schema;
-    # for MSSQL, prefer the explicit schema if present, otherwise the provided
-    # default or "dbo".
+    # Schema normalisation:
+    # - For Postgres, preserve explicit schema tokens from the raw name
+    #   (lowercased) when present to avoid collapsing multi-schema usage.
+    #   Only when no schema_part is present do we fall back to the configured
+    #   default schema.
+    # - For MSSQL/others, prefer explicit schema when present, otherwise the
+    #   provided default or a sensible dialect-specific fallback.
     if dialect == "postgres":
-        schema_clean = (schema or "public").strip().lower()
+        if schema_part:
+            schema_clean = schema_part.strip().lower()
+        else:
+            schema_clean = (schema or "public").strip().lower()
     else:
         effective_schema = (schema_part or schema or ("dbo" if dialect == "mssql" else "public"))
         schema_clean = str(effective_schema).strip().lower()

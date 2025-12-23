@@ -20,6 +20,11 @@ def _fake_catalog():
                 "table_name": "order_details",
                 "type": "BASE TABLE",
             },
+            "analytics.orders": {
+                "schema": "analytics",
+                "table_name": "orders",
+                "type": "BASE TABLE",
+            },
         },
         "views": {
             "public.orders_view": {
@@ -42,10 +47,11 @@ def test_resolve_exact_canonical_match():
 
 def test_resolve_loose_full_match():
     resolver = TableResolver(_fake_catalog(), dialect="postgres", default_schema="public")
-    # Bracketed MSSQL-style name that should resolve via loose key
+    # Bracketed MSSQL-style name with dbo schema does not map directly to the
+    # Postgres catalog when schema is preserved; resolver should not fabricate
+    # a mapping here.
     r = resolver.resolve("[dbo].[Order Details]")
-    assert r.match_type in {"loose", "default_schema", "ci", "exact"}
-    assert r.physical_full_name == "public.order_details"
+    assert r.match_type == "not_found"
 
 
 def test_resolve_table_only_default_schema():
@@ -54,3 +60,20 @@ def test_resolve_table_only_default_schema():
     assert r.match_type in {"default_schema", "loose", "ci", "exact"}
     assert r.physical_full_name == "public.order_details"
 
+
+def test_resolve_prefers_default_schema_on_collision():
+    # 'orders' exists in both public and analytics schemas; default_schema=public
+    resolver = TableResolver(_fake_catalog(), dialect="postgres", default_schema="public")
+    r = resolver.resolve("orders")
+    assert r.match_type in {"default_schema", "loose", "ci", "exact"}
+    assert r.physical_full_name == "public.orders"
+
+
+def test_resolve_ambiguous_when_no_default_schema_match():
+    # Use a resolver with default_schema that does not match either candidate;
+    # collisions on 'orders' should become ambiguous.
+    resolver = TableResolver(_fake_catalog(), dialect="postgres", default_schema="reporting")
+    r = resolver.resolve("orders")
+    assert r.match_type == "ambiguous"
+    assert "public.orders" in r.candidates
+    assert "analytics.orders" in r.candidates

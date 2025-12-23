@@ -95,9 +95,9 @@ class TableResolver:
         _add_entries(views, "view")
 
         # Build indices
-        self._exact_full: Dict[str, str] = {}   # canonical_full_name -> physical_full_name
-        self._ci_full: Dict[str, str] = {}      # lower(canonical_full_name) -> physical_full_name
-        self._loose_full: Dict[str, str] = {}   # loose(canonical_full_name) -> physical_full_name
+        self._exact_full: Dict[str, List[str]] = {}   # canonical_full_name -> [physical_full_name]
+        self._ci_full: Dict[str, List[str]] = {}      # lower(canonical_full_name) -> [physical_full_name]
+        self._loose_full: Dict[str, List[str]] = {}   # loose(canonical_full_name) -> [physical_full_name]
         self._loose_table: Dict[str, List[str]] = {}  # loose(table_name) -> [physical_full_name]
 
         for physical_full, meta in self._entries.items():
@@ -111,12 +111,12 @@ class TableResolver:
                 schema=self.default_schema,
             )
 
-            self._exact_full[canonical] = physical_full
-            self._ci_full[canonical.lower()] = physical_full
+            self._exact_full.setdefault(canonical, []).append(physical_full)
+            self._ci_full.setdefault(canonical.lower(), []).append(physical_full)
 
             loose_full = _loose_key(canonical)
-            if loose_full and loose_full not in self._loose_full:
-                self._loose_full[loose_full] = physical_full
+            if loose_full:
+                self._loose_full.setdefault(loose_full, []).append(physical_full)
 
             loose_table = _loose_key(table_name)
             if loose_table:
@@ -151,32 +151,66 @@ class TableResolver:
             canonical_schema, canonical_table = self.default_schema, canonical
 
         # 1) Exact canonical match
-        if canonical in self._exact_full:
-            physical_full = self._exact_full[canonical]
-            return self._build_result(
-                canonical=canonical,
-                physical_full=physical_full,
-                match_type="exact",
+        matches = self._exact_full.get(canonical) or []
+        if matches:
+            chosen = self._select_preferred(matches)
+            if chosen:
+                return self._build_result(
+                    canonical=canonical,
+                    physical_full=chosen,
+                    match_type="exact",
+                )
+            return ResolvedTable(
+                canonical_full_name=canonical,
+                physical_full_name="",
+                physical_schema="",
+                physical_name="",
+                object_type="unknown",
+                match_type="ambiguous",
+                candidates=sorted(matches),
             )
 
         # 2) Case-insensitive canonical match
-        if canonical_lower in self._ci_full:
-            physical_full = self._ci_full[canonical_lower]
-            return self._build_result(
-                canonical=canonical,
-                physical_full=physical_full,
-                match_type="ci",
+        matches = self._ci_full.get(canonical_lower) or []
+        if matches:
+            chosen = self._select_preferred(matches)
+            if chosen:
+                return self._build_result(
+                    canonical=canonical,
+                    physical_full=chosen,
+                    match_type="ci",
+                )
+            return ResolvedTable(
+                canonical_full_name=canonical,
+                physical_full_name="",
+                physical_schema="",
+                physical_name="",
+                object_type="unknown",
+                match_type="ambiguous",
+                candidates=sorted(matches),
             )
 
         # 3) Loose canonical (schema + table)
         loose_full = _loose_key(canonical)
         if loose_full and loose_full in self._loose_full:
-            physical_full = self._loose_full[loose_full]
-            return self._build_result(
-                canonical=canonical,
-                physical_full=physical_full,
-                match_type="loose",
-            )
+            matches = self._loose_full.get(loose_full) or []
+            if matches:
+                chosen = self._select_preferred(matches)
+                if chosen:
+                    return self._build_result(
+                        canonical=canonical,
+                        physical_full=chosen,
+                        match_type="loose",
+                    )
+                return ResolvedTable(
+                    canonical_full_name=canonical,
+                    physical_full_name="",
+                    physical_schema="",
+                    physical_name="",
+                    object_type="unknown",
+                    match_type="ambiguous",
+                    candidates=sorted(matches),
+                )
 
         # 4) Table-only loose search (only when schema is effectively "default")
         schema_is_default = (
@@ -186,25 +220,15 @@ class TableResolver:
         loose_table = _loose_key(canonical_table)
         if schema_is_default and loose_table:
             matches = self._loose_table.get(loose_table, [])
-            if len(matches) == 1:
-                return self._build_result(
-                    canonical=canonical,
-                    physical_full=matches[0],
-                    match_type="default_schema",
-                )
-            if len(matches) > 1:
-                # Prefer default_schema if present
-                preferred = [
-                    m for m in matches
-                    if m.split(".")[0].lower() == self.default_schema.lower()
-                ]
-                if len(preferred) == 1:
+            if matches:
+                chosen = self._select_preferred(matches, prefer_default_schema=True)
+                if chosen:
                     return self._build_result(
                         canonical=canonical,
-                        physical_full=preferred[0],
+                        physical_full=chosen,
                         match_type="default_schema",
                     )
-                # Ambiguous across schemas
+                # Ambiguous across schemas/types
                 return ResolvedTable(
                     canonical_full_name=canonical,
                     physical_full_name="",
@@ -243,3 +267,47 @@ class TableResolver:
             candidates=[physical_full],
         )
 
+    def _select_preferred(
+        self,
+        candidates: List[str],
+        prefer_default_schema: bool = False,
+    ) -> Optional[str]:
+        """
+        Deterministically pick one physical entry from a list of candidates.
+
+        Preference order:
+        1) If prefer_default_schema=True, prefer entries whose schema equals
+           default_schema (case-insensitive).
+        2) Prefer tables over views when types are mixed.
+        3) If still ambiguous (multiple equally good candidates) → return None.
+        """
+        if not candidates:
+            return None
+
+        pool = list(candidates)
+
+        if prefer_default_schema:
+            preferred = [
+                c for c in pool
+                if c.split(".")[0].lower() == self.default_schema.lower()
+            ]
+            if preferred:
+                pool = preferred
+
+        # Prefer tables over views based on stored metadata
+        table_candidates = [
+            c for c in pool
+            if (self._entries.get(c, {}).get("object_type") or "").lower() == "table"
+        ]
+        if len(table_candidates) == 1:
+            return table_candidates[0]
+        if len(table_candidates) > 1:
+            # Multiple equally-preferred table candidates → ambiguous
+            return None
+
+        # If pool collapsed to a single candidate, use it
+        if len(pool) == 1:
+            return pool[0]
+
+        # More than one candidate of the same preference level → ambiguous
+        return None
