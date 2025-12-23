@@ -65,6 +65,7 @@ from langgraph_integration.utils.runtime_config import (
 from langgraph_integration.guardrails.required_relations import (
     evaluate_required_relations,
 )
+from langgraph_integration.utils.canonical_names import canonical_table_name
 
 # Scout Mode is handled by MCP server, not accessed directly from LangGraph
 
@@ -526,40 +527,13 @@ class QueryOrchestrator:
 
     def _canonical_table_name(self, raw_name: str, dialect: str, default_schema: str) -> str:
         """
-        Minimal canonicalization for seed tables (Phase 5 quick win).
+        Wrapper around the shared canonical_table_name utility.
 
-        Examples:
-        - [dbo].[Order Details] → public.order_details (postgres)
-        - dbo.Products → dbo.products (mssql)
-        - Products → public.products (postgres, with default schema)
+        Kept as a method for backwards compatibility with existing call
+        sites in the orchestrator, but the implementation is shared with
+        other components (concept mapper, discovery, join planning).
         """
-        if not raw_name:
-            return raw_name
-
-        name = str(raw_name).strip()
-        # Strip brackets and surrounding quotes
-        name = name.replace("[", "").replace("]", "").replace("`", "").replace('"', "")
-
-        parts = [p for p in name.split(".") if p]
-        if len(parts) >= 2:
-            # schema.table or similar; keep last part as table
-            schema_part = parts[-2]
-            table_part = parts[-1]
-        else:
-            schema_part = default_schema or ("dbo" if dialect == "mssql" else "public")
-            table_part = parts[0]
-
-        # Normalize table: lower-case, spaces → underscores
-        table_clean = re.sub(r"\s+", "_", table_part.strip()).lower()
-        schema_clean = schema_part.strip().lower() if schema_part else (default_schema or "")
-
-        # For postgres, prefer configured default schema, ignore dbo-like prefixes
-        if dialect == "postgres":
-            schema_clean = (default_schema or "public").lower()
-
-        if not schema_clean:
-            return table_clean
-        return f"{schema_clean}.{table_clean}"
+        return canonical_table_name(raw_name, dialect=dialect, schema=default_schema)
 
     def _check_llm_budget(self, state: BaseState, stage: str) -> BaseState:
         """

@@ -181,7 +181,8 @@ Verification:
   - No `order_id AS product_name` pattern appears in the generated SQL.
   - The user receives either a correct data-backed reorder answer or a targeted diagnostic explaining which product/inventory tables are missing or inconsistent.
 
-### [ ] Step: Phase 5 — Early Identifier Canonicalization
+### [x] Step: Phase 5 — Early Identifier Canonicalization
+<!-- chat-id: 041199fe-fdc4-4662-9cf4-036fb098b2ae -->
 
 Normalize table identifiers early so the entire pipeline uses a consistent naming scheme.
 

@@ -31,6 +31,14 @@ from langgraph_integration.contracts.discovery_models import (
 )
 from langgraph_integration.mcp_client import get_shared_mcp_tool, get_column_index_mcp, _extract_json_from_text
 from langgraph_integration.prompts.discovery import TABLE_FOCUS_PROMPT, VIEWS_FIRST_GUIDANCE
+from langgraph_integration.utils.canonical_names import (
+    canonical_table_name,
+    canonicalize_table_list,
+)
+from langgraph_integration.utils.runtime_config import (
+    get_db_dialect,
+    get_db_default_schema,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1390,15 +1398,24 @@ class DiscoveryAgent:
                 logger.warning("⚠️  Column index fetch returned empty, continuing without it")
                 state["column_index"] = {}
                 return self._finalize_discovery_payload(state)
-            
-            logger.info(f"✅ Successfully fetched column index:")
+
+            # Canonicalise column index keys so downstream consumers see the
+            # same logical identifiers as discovery/relation hints.
+            dialect = state.get("db_dialect") or get_db_dialect()
+            default_schema = state.get("db_default_schema") or get_db_default_schema(dialect)
+            canonical_index: Dict[str, List[str]] = {}
             for table, columns in column_index.items():
+                canonical = canonical_table_name(table, dialect=dialect, schema=default_schema)
+                canonical_index[canonical] = list(columns or [])
+
+            logger.info("✅ Successfully fetched column index:")
+            for table, columns in canonical_index.items():
                 col_count = len(columns) if isinstance(columns, list) else 0
                 logger.info(f"  {table}: {col_count} column(s)")
                 if col_count <= 5:
                     logger.debug(f"    Columns: {columns}")
 
-            state["column_index"] = column_index
+            state["column_index"] = canonical_index
             logger.info(f"🗂️ Column index fetched; existing detail entries: {len(state.get('relevant_table_details') or [])}")
             await self._enrich_row_estimates(state)
             return self._finalize_discovery_payload(state)
@@ -1845,17 +1862,19 @@ class DiscoveryAgent:
         return 0
 
     def _qualify_table_name(self, table: str) -> str:
+        """
+        Map any incoming table identifier to the canonical logical name.
+
+        This is used both for seed tables and for lightweight probes
+        (e.g., row-count checks).  Actual SQL generation is responsible
+        for applying dialect-specific quoting.
+        """
         raw = (table or "").strip()
         if not raw:
             return ""
-        stripped = raw.strip("[]")
-        if "." in stripped:
-            schema, name = stripped.split(".", 1)
-        else:
-            schema, name = "dbo", stripped
-        schema = schema.strip("[]") or "dbo"
-        name = name.strip("[]")
-        return f"[{schema}].[{name}]"
+        dialect = get_db_dialect()
+        default_schema = get_db_default_schema(dialect)
+        return canonical_table_name(raw, dialect=dialect, schema=default_schema)
 
     async def _fallback_fact_from_keywords(self, intent: Dict[str, Any]) -> Optional[DiscoveryCandidate]:
         keywords = intent.get("keywords_for_discovery") or []
@@ -2274,6 +2293,31 @@ class DiscoveryAgent:
                         detail_models.append(DiscoveryCandidate.model_validate({"full_name": name}))
                     except Exception:
                         continue
+
+            # Canonicalise detail models and derive canonical table list.
+            dialect = state.get("db_dialect") or get_db_dialect()
+            default_schema = state.get("db_default_schema") or get_db_default_schema(dialect)
+
+            canonical_detail_models: List[DiscoveryCandidate] = []
+            for model in detail_models:
+                try:
+                    canonical_full = canonical_table_name(
+                        model.full_name,
+                        dialect=dialect,
+                        schema=default_schema,
+                    )
+                    model.full_name = canonical_full
+                    # Keep schema/name fields consistent with full_name
+                    if "." in canonical_full:
+                        schema_part, table_part = canonical_full.split(".", 1)
+                        model.schema = schema_part
+                        model.name = table_part
+                except Exception:
+                    # Best-effort; if anything goes wrong, keep the original model
+                    pass
+                canonical_detail_models.append(model)
+
+            detail_models = canonical_detail_models
 
             candidate_view_models = [model for model in detail_models if model.is_view]
             relevant_tables = [model.full_name for model in detail_models]

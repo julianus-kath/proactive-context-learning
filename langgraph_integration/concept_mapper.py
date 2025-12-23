@@ -5,6 +5,12 @@ import re
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from langgraph_integration.utils.canonical_names import canonical_table_name
+from langgraph_integration.utils.runtime_config import (
+    get_db_dialect,
+    get_db_default_schema,
+)
+
 
 class ConceptMapper:
     def __init__(self, concepts_path: Optional[str] = None):
@@ -26,6 +32,15 @@ class ConceptMapper:
             if score > 0:
                 matched.append((score, concept))
         matched.sort(key=lambda item: item[0], reverse=True)
+
+        # Derive canonical seed tables from matching concepts.
+        # Canonicalisation happens here so that downstream components
+        # (discovery, join planning, guardrails) see a single logical
+        # naming scheme even when concept definitions use MSSQL-style
+        # identifiers like [dbo].[Orders].
+        dialect = get_db_dialect()
+        default_schema = get_db_default_schema(dialect)
+
         seed_tables: List[str] = []
         kpi_expressions: Dict[str, str] = {}
         time_fields: List[str] = []
@@ -38,8 +53,15 @@ class ConceptMapper:
                 continue
             concept_names.append(name)
             for table in concept.get("tables", []):
-                if table and table not in seed_tables:
-                    seed_tables.append(table)
+                if not table:
+                    continue
+                canonical = canonical_table_name(
+                    str(table),
+                    dialect=dialect,
+                    schema=default_schema,
+                )
+                if canonical and canonical not in seed_tables:
+                    seed_tables.append(canonical)
             expr = concept.get("kpi_expression")
             if isinstance(expr, str) and expr:
                 kpi_expressions[name] = expr
