@@ -36,7 +36,8 @@ Save to `{@artifacts_path}/spec.md` with:
 - Delivery phases (incremental, testable milestones)
 - Verification approach using project lint/test commands
 
-### [ ] Step: Planning
+### [x] Step: Planning
+<!-- chat-id: 8614782f-f9fa-4422-9882-3e5ebc5fa48e -->
 
 Create a detailed implementation plan based on `{@artifacts_path}/spec.md`.
 
@@ -50,8 +51,135 @@ If the feature is trivial and doesn't warrant full specification, update this wo
 
 Save to `{@artifacts_path}/plan.md`.
 
-### [ ] Step: Implementation
+### [ ] Step: Phase 1 — Instrumentation
 
-This step should be replaced with detailed implementation tasks from the Planning step.
+Implement LLM usage accounting and loop diagnostics.
 
-If Planning didn't replace this step, execute the tasks in `{@artifacts_path}/plan.md`, updating checkboxes as you go. Run planned tests/lint and record results in plan.md.
+1. Extend `langgraph_integration/contracts/state.py`:
+   - Add optional fields: `llm_usage`, `node_entry_counts`, `loop_events`, `answer_mode`.
+   - Add optional fields for loop helpers: `discovery_cache`, `last_sql_query`, `last_join_plan`, `required_tables_from_kpi`.
+2. Update orchestrator (`langgraph_integration/orchestrator.py`):
+   - Increment `node_entry_counts` on each node entry (intent, discovery, join_sql, sql_validator, exec_recovery, result_validator, answer).
+   - Centralize LLM call accounting (e.g., in `_check_llm_budget` / wrapper) to bump `llm_usage[node]` and `llm_usage["total"]`.
+   - Emit structured debug logs via `debug_logger` when:
+     - A node spends a call (include node, reason, retry_action, loop-related flags).
+     - Budget is near / exceeds `max_llm_calls`.
+3. Ensure `process_query` return payload includes `llm_usage`, `node_entry_counts`, and `loop_events`, and update `eval/run_benchmark.py` to persist them onto each query artifact.
+
+Verification:
+- Run `pytest tests/test_orchestrator.py tests/test_orchestrator_integration.py`.
+- Run a small benchmark (`eval/run_benchmark.py` with 3–5 queries) and confirm:
+  - `llm_usage` totals match `total_llm_calls`.
+  - `node_entry_counts` reflect expected node visits.
+  - `loop_events` are present (even if mostly zeros initially).
+
+### [ ] Step: Phase 2 — Loop Control & Budget-Aware Routing
+
+Cache discovery/join outputs, detect redundant loops, and short-circuit when near budget.
+
+1. Implement discovery caching in orchestrator:
+   - Add `discovery_cache` to state, storing a fingerprint (user_input, intent, skip_tables/tried_candidate_tables) and last discovery result (`relevant_tables`, `final_tables`, role hints).
+   - Before re-entering discovery, compare fingerprint; if unchanged, reuse cached discovery result and avoid an LLM call.
+2. Add redundant loop guards:
+   - Track `last_discovery_final_tables` and `last_sql_query` in state.
+   - If discovery returns the same `final_tables` as previous, increment `loop_events["discovery_reentered_same_tables"]` and skip another discovery call.
+   - In join node, if generated SQL matches `last_sql_query`, increment `loop_events["join_sql_regenerated_same_sql"]` and skip regeneration; proceed directly to validation/execution.
+3. Implement budget-aware routing:
+   - In `_check_llm_budget` (or equivalent), expose remaining budget to nodes.
+   - If `llm_usage["total"]` is within 1–2 of `max_llm_calls`, short-circuit nodes that would require LLM calls (e.g., further discovery/join retries) and route toward deterministic paths (validation/exec/answer fallback).
+
+Verification:
+- Re-run a known “bad” query from the benchmark (high prior LLM usage):
+  - Confirm discovery runs at most once per unchanged fingerprint.
+  - Confirm join does not regenerate identical SQL more than once.
+  - Inspect `llm_usage` and `loop_events` in benchmark artifacts to validate reduced loops and fewer `LLM_BUDGET_EXCEEDED` at `stage=answer`.
+
+### [ ] Step: Phase 3 — Deterministic Answer Fallback
+
+Ensure users receive a meaningful answer when SQL execution succeeds, even with zero remaining LLM budget.
+
+1. Extend answer node (`langgraph_integration/agents/answer/agent.py` or orchestrator `_answer_node`):
+   - When `exec_result.ok` and `row_count > 0`, and either:
+     - Budget is exhausted, or
+     - A config flag prefers deterministic mode,
+     - Use `_format_execution_results` (or a new small helper) to build `final_response` and `final_answer` without calling LLM.
+   - Set `answer_mode` in state (e.g., `"deterministic_from_data"` vs `"llm"`).
+2. Handle `LLM_BUDGET_EXCEEDED` gracefully:
+   - If an LLM call is blocked at stage `answer` but `exec_result` has data:
+     - Fall back to deterministic rendering and clear/adjust `error_info` to indicate a degraded but valid answer (e.g., `type="LLM_BUDGET_EXCEEDED_DEGRADED_ANSWER"`).
+   - If there is no data, return a diagnostic message indicating:
+     - Missing tables or unresolved concepts.
+     - Suggested user actions (“narrow scope to X”, etc.).
+3. Ensure grounding and safety gates remain intact:
+   - Preserve existing guards for hallucination / no-data scenarios.
+
+Verification:
+- Run `pytest tests/test_orchestrator_result_validator_integration.py tests/test_complete_system.py`.
+- Add or adapt a test where `max_llm_calls` is artificially low but SQL execution succeeds:
+  - Assert `final_response` contains tabular data and summary text without answer-node LLM usage.
+- In a benchmark rerun, confirm that queries with successful SQL execution always yield a data-based `final_response` even when `error_info.type == "LLM_BUDGET_EXCEEDED"`.
+
+### [ ] Step: Phase 4 — KPI-Driven Table Selection Guardrails
+
+Use KPI expressions to enforce required tables and add product-domain sanity checks.
+
+1. Derive `required_tables_from_kpi`:
+   - In `langgraph_integration/concept_mapper.py` (or related module), parse KPI expression strings for table-qualified identifiers (e.g., `Products.`, `OrderDetails.`).
+   - Map these to canonical table names (e.g., `public.products`, `public.order_details`) and store in state as `required_tables_from_kpi`.
+2. Enforce required tables during discovery/join:
+   - In discovery agent (`langgraph_integration/agents/discovery/agent.py`), ensure `required_tables_from_kpi` are present in `final_tables` when applicable (or flagged if missing from catalog).
+   - In join planning (`langgraph_integration/agents/join_sql/agent.py`), ensure required tables are included as fact or dimension tables; if not, bias selection or surface a deterministic error (`DIMENSION_MISSING` with clearer guidance).
+3. Add domain guardrails for product semantics:
+   - Implement `validate_product_semantics(sql: str, state: BaseState)` (e.g., in join agent or a small helper) to detect obviously wrong mappings like `order_details.order_id AS product_name` when intent/entities mention “product”.
+   - If triggered, set a structured validation error (`PRODUCT_MAPPING_ERROR`) and route back to join with hints forcing inclusion of the products table/product_id column.
+
+Verification:
+- Add/extend tests for KPI/concept-driven queries (including the “Chai reorder” scenario):
+  - Assert `relevant_tables` / `final_tables` include the products table.
+  - Assert final SQL joins orders, order_details, and products, and filters by product (e.g., `products.product_name = 'Chai'`).
+- Manually run the “Chai reorder” query via eval or service and confirm no `order_id AS product_name` pattern appears.
+
+### [ ] Step: Phase 5 — Early Identifier Canonicalization
+
+Normalize table identifiers early so the entire pipeline uses a consistent naming scheme.
+
+1. Add `langgraph_integration/utils/canonical_names.py`:
+   - Implement `canonical_table_name(raw_name: str, dialect: str, schema: str) -> str` to:
+     - Normalize bracketed MSSQL forms (`[dbo].[Order Details]`) and dotted forms (`dbo.Products`) into canonical `schema.table`.
+     - Prevent duplicates such as `[dbo].[dbo].[Suppliers]`.
+   - Optionally add `canonicalize_table_list`.
+2. Wire canonicalization into concept mapping:
+   - In `concept_mapper.py`, when building `seed_tables`, call `canonical_table_name` using configured `DB_DIALECT` and `DB_DEFAULT_SCHEMA` (env or config).
+   - Ensure `state["seed_tables"]` and logged seed tables are canonical (e.g., `public.orders` on Postgres).
+3. Apply canonicalization in discovery and join:
+   - In discovery agent:
+     - Canonicalize all table names when populating `relevant_tables`, `final_tables`, `DiscoveryOutput.relevant_tables`, and `discovery_log`.
+     - Ensure column index and role hints use canonical table keys.
+   - In join agent:
+     - Treat incoming tables as canonical; avoid reintroducing `[dbo].` prefixes when `DB_DIALECT=postgres`.
+4. Guard SQL validator behavior:
+   - Ensure SQL validator preserves canonical logical names and only performs dialect-specific syntactic rewrites (quoting, casing), not schema renaming back to `[dbo]`.
+
+Verification:
+- Add or update tests to cover canonicalization behavior:
+  - `[dbo].[Order Details]` → `public.order_details` when `DB_DIALECT=postgres`.
+  - No double-schema artifacts like `[dbo].[dbo].[Suppliers]`.
+- Run a discovery-heavy benchmark subset and confirm logs show only canonical names (`public.*`) and no `[dbo].*` on Postgres.
+
+### [ ] Step: Phase 6 — Benchmark & Regression Verification
+
+Consolidate verification across phases and confirm budget/loop improvements.
+
+1. Re-run the 12-query benchmark via `eval/run_benchmark.py`:
+   - Capture `results.json` and inspect:
+     - `llm_usage` per query.
+     - `node_entry_counts` and `loop_events` (with focus on discovery/join loops).
+     - Frequency of `LLM_BUDGET_EXCEEDED` errors, especially at `stage="answer"`.
+2. Compare with previous run:
+   - Confirm typical queries use ~3–8 LLM calls.
+   - Confirm a significant reduction in budget-exceeded failures and improved `final_response` quality.
+3. Run full test suite (or at least orchestrator + integration tests) and document any deviations.
+
+Verification:
+- All orchestrator and system tests pass.
+- Benchmark metrics demonstrate fewer loops and more successful data-backed answers.
