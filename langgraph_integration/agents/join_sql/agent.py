@@ -357,30 +357,32 @@ class JoinPlanAndSQLAgent:
                 rows = result.get("data") or []
                 if isinstance(rows, list) and rows and isinstance(rows[0], dict):
                     return list(rows[0].keys())
-            # Try sys catalog as a final fallback (works for tables and views)
+            # Try sys catalog as a final fallback (MSSQL only)
             try:
-                full = (table_name or "").strip()
-                if '.' in full:
-                    parts = full.split('.')
-                    schema = parts[-2]
-                    obj = parts[-1]
-                else:
-                    schema = 'dbo'
-                    obj = full
-                sys_sql = (
-                    "SELECT c.name AS col_name "
-                    "FROM sys.columns c "
-                    "JOIN sys.objects o ON c.object_id = o.object_id "
-                    "JOIN sys.schemas s ON o.schema_id = s.schema_id "
-                    f"WHERE s.name = '{schema}' AND o.name = '{obj}'"
-                )
-                sres = await self.mcp.query_bounded(sys_sql, max_rows=500, timeout_ms=5000)
-                if isinstance(sres, dict) and sres.get("ok"):
-                    rows = sres.get("data") or []
-                    if isinstance(rows, list) and rows and isinstance(rows[0], dict):
-                        cols = [r.get("col_name") for r in rows if r.get("col_name")]
-                        if cols:
-                            return [str(c) for c in cols]
+                import os as _os
+                if (_os.getenv("DB_DIALECT") or "").lower() == "mssql":
+                    full = (table_name or "").strip()
+                    if '.' in full:
+                        parts = full.split('.')
+                        schema = parts[-2]
+                        obj = parts[-1]
+                    else:
+                        schema = 'dbo'
+                        obj = full
+                    sys_sql = (
+                        "SELECT c.name AS col_name "
+                        "FROM sys.columns c "
+                        "JOIN sys.objects o ON c.object_id = o.object_id "
+                        "JOIN sys.schemas s ON o.schema_id = s.schema_id "
+                        f"WHERE s.name = '{schema}' AND o.name = '{obj}'"
+                    )
+                    sres = await self.mcp.query_bounded(sys_sql, max_rows=500, timeout_ms=5000)
+                    if isinstance(sres, dict) and sres.get("ok"):
+                        rows = sres.get("data") or []
+                        if isinstance(rows, list) and rows and isinstance(rows[0], dict):
+                            cols = [r.get("col_name") for r in rows if r.get("col_name")]
+                            if cols:
+                                return [str(c) for c in cols]
             except Exception:
                 pass
             return []
