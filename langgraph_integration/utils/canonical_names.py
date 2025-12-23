@@ -28,45 +28,33 @@ from typing import Iterable, List
 
 def canonical_table_name(raw_name: str, dialect: str, schema: str) -> str:
     """
-    Convert a raw table identifier into a canonical `schema.table` string.
+    Convert a raw table identifier into a *syntactically* canonical `schema.table`.
 
-    Behaviour:
-    - Strip MSSQL-style brackets and generic quoting characters.
-    - Collapse multi-part names down to a single schema + table:
-      `[dbo].[dbo].[Suppliers]` → `dbo.suppliers`
-    - When no schema is present, use the provided default schema.
-    - For Postgres, always prefer the configured default schema
-      (e.g. `public`) and ignore `dbo`-like prefixes.
+    This function is deliberately conservative: it normalizes representation,
+    not meaning. It does **not** attempt to guess dataset-specific names
+    (e.g. mapping "Order Details" → "order_details" or "Products" → "product").
 
-    Examples (dialect="postgres", schema="public"):
-    - "[dbo].[Order Details]"   → "public.order_details"
-    - "dbo.Products"            → "public.products"
-    - "Products"                → "public.products"
+    Rules:
+    - Strip wrappers: [], ``, double quotes.
+    - Trim outer whitespace.
+    - Split into parts on '.'; treat the last part as the table token, the
+      previous as the schema token (collapsing prefixes such as dbo.dbo.X).
+    - If schema is missing, fall back to the provided default schema.
+    - Normalize whitespace *inside* the table token to single spaces.
+    - Normalize case to lower-case for comparison consistency.
+    - For Postgres dialect, always emit the configured logical schema
+      (e.g. "public") rather than dbo-style prefixes.
 
-    Examples (dialect="mssql", schema="dbo"):
-    - "[dbo].[Order Details]"   → "dbo.order_details"
-    - "sales.Orders"            → "sales.orders"
-    - "Orders"                  → "dbo.orders"
+    Any higher-level aliasing (e.g., resolving "Order Details" to an actual
+    `order_details` table) must be done by a catalog-backed resolver, not here.
     """
     if not raw_name:
         return raw_name
 
-    # Normalise to string and strip whitespace
+    # Normalise to string and strip outer whitespace
     name = str(raw_name).strip()
 
-    # Fast path: avoid accidental "[dbo].[dbo." duplication when already canonical
-    if "[" not in name and "]" not in name and " " not in name and name.count(".") == 1:
-        # Already looks like schema.table, just normalise casing/whitespace
-        schema_part, table_part = [p.strip() for p in name.split(".", 1)]
-        table_clean = re.sub(r"\s+", "_", table_part).lower()
-        schema_clean = schema_part.lower() or (schema or "").lower()
-        if dialect == "postgres":
-            schema_clean = (schema or "public").lower()
-        if not schema_clean:
-            return table_clean
-        return f"{schema_clean}.{table_clean}"
-
-    # Strip brackets and generic quoting
+    # Strip MSSQL-style brackets and generic quoting
     name = name.replace("[", "").replace("]", "").replace("`", "").replace('"', "")
     name = name.strip()
 
@@ -75,20 +63,26 @@ def canonical_table_name(raw_name: str, dialect: str, schema: str) -> str:
 
     parts = [p for p in name.split(".") if p]
     if len(parts) >= 2:
-        # Take the last element as the table name and the one before as schema.
-        # This collapses things like "dbo.dbo.Suppliers" safely.
+        # Take the last element as the table token and the one before as schema.
+        # This collapses duplicates like "dbo.dbo.Suppliers" safely.
         schema_part = parts[-2]
         table_part = parts[-1]
     else:
-        schema_part = schema or ("dbo" if dialect == "mssql" else "public")
+        schema_part = None
         table_part = parts[0]
 
-    table_clean = re.sub(r"\s+", "_", table_part.strip()).lower()
-    schema_clean = (schema_part or "").strip().lower()
+    # Whitespace-normalized, lowercased table token (no underscore guessing).
+    table_norm = re.sub(r"\s+", " ", table_part.strip())
+    table_clean = table_norm.lower()
 
-    # For Postgres, always normalise to the configured default schema.
+    # Schema: for Postgres, always use the configured logical default schema;
+    # for MSSQL, prefer the explicit schema if present, otherwise the provided
+    # default or "dbo".
     if dialect == "postgres":
-        schema_clean = (schema or "public").lower()
+        schema_clean = (schema or "public").strip().lower()
+    else:
+        effective_schema = (schema_part or schema or ("dbo" if dialect == "mssql" else "public"))
+        schema_clean = str(effective_schema).strip().lower()
 
     if not schema_clean:
         return table_clean
@@ -119,4 +113,3 @@ def canonicalize_table_list(
         seen.add(canonical)
         output.append(canonical)
     return output
-

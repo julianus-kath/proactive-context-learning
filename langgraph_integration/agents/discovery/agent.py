@@ -1863,18 +1863,27 @@ class DiscoveryAgent:
 
     def _qualify_table_name(self, table: str) -> str:
         """
-        Map any incoming table identifier to the canonical logical name.
+        Qualify a table name for lightweight probe SQL.
 
-        This is used both for seed tables and for lightweight probes
-        (e.g., row-count checks).  Actual SQL generation is responsible
-        for applying dialect-specific quoting.
+        This is intentionally MSSQL-style (`[schema].[name]`) because
+        the downstream query validator already knows how to normalise
+        these forms for Postgres execution when needed.
+
+        Semantic canonicalisation (schema.table for reasoning) is handled
+        separately by the canonical_names utility and should not be mixed
+        with SQL-quoting concerns.
         """
         raw = (table or "").strip()
         if not raw:
             return ""
-        dialect = get_db_dialect()
-        default_schema = get_db_default_schema(dialect)
-        return canonical_table_name(raw, dialect=dialect, schema=default_schema)
+        stripped = raw.strip("[]")
+        if "." in stripped:
+            schema, name = stripped.split(".", 1)
+        else:
+            schema, name = "dbo", stripped
+        schema = schema.strip("[]") or "dbo"
+        name = name.strip("[]")
+        return f"[{schema}].[{name}]"
 
     async def _fallback_fact_from_keywords(self, intent: Dict[str, Any]) -> Optional[DiscoveryCandidate]:
         keywords = intent.get("keywords_for_discovery") or []
