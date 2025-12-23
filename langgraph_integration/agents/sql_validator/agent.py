@@ -427,15 +427,82 @@ class SQLValidatorAgent:
         return result
 
     def _extract_tables_columns_from_sql(self, sql: str) -> Tuple[List[str], Dict[str, List[str]]]:
-        """Extract table and column references from SQL query."""
+        """Extract table and column references from SQL query using AST when available.
+
+        Best-effort approach:
+        - Prefer sqlglot AST parsing for robust table/column provenance.
+        - Fall back to legacy regex-based extraction if sqlglot is unavailable
+          or parsing fails.
+        """
         tables: List[str] = []
         columns: Dict[str, List[str]] = {}
 
-        # Normalize SQL to simplify parsing (remove brackets)
+        # Normalize SQL for CTE name detection (but keep original for AST parsing)
         normalized_sql = sql.replace("[", "").replace("]", "")
         cte_names = self._extract_cte_names(normalized_sql)
-        cte_base_names = {name.split(".")[-1] for name in cte_names}
+        cte_base_names = {name.split(".")[-1].lower() for name in cte_names}
 
+        # --- Preferred path: AST-based extraction via sqlglot ---
+        try:
+            import sqlglot
+            from sqlglot import expressions as exp
+
+            try:
+                ast = sqlglot.parse_one(sql)
+            except Exception:
+                ast = None
+
+            if ast is not None:
+                table_aliases: Dict[str, str] = {}
+
+                # Collect physical tables (exclude CTE names)
+                for table_expr in ast.find_all(exp.Table):
+                    try:
+                        table_name = str(table_expr.this).strip()
+                        if not table_name:
+                            continue
+                        schema = str(table_expr.db).strip() if table_expr.db is not None else ""
+                        base = table_name.split(".")[-1].lower()
+                        if base in cte_base_names:
+                            # CTE reference, not a physical table
+                            continue
+                        # Use base name as key for existence/column checks
+                        key = base
+                        if key not in tables:
+                            tables.append(key)
+                            columns[key] = []
+                    except Exception:
+                        continue
+
+                # Collect columns and associate with their table/base name
+                col_map: Dict[str, set] = {t: set() for t in tables}
+                for col_expr in ast.find_all(exp.Column):
+                    try:
+                        col_name = str(col_expr.this).strip()
+                        if not col_name:
+                            continue
+                        table_ref = str(col_expr.table).strip() if col_expr.table else ""
+                        if table_ref:
+                            base = table_ref.split(".")[-1].lower()
+                            if base in col_map:
+                                col_map[base].add(col_name)
+                        else:
+                            # Unqualified column; cannot reliably assign without schema,
+                            # so skip to avoid false positives.
+                            continue
+                    except Exception:
+                        continue
+
+                for key, colset in col_map.items():
+                    columns[key] = list(colset)
+
+                if tables:
+                    return tables, columns
+        except Exception:
+            # If sqlglot is not installed or parsing fails, fall back to regex logic below.
+            pass
+
+        # --- Fallback path: legacy regex-based extraction (best-effort) ---
         from_pattern = r"\bFROM\s+([a-zA-Z_][\w\.]*)"
         join_pattern = r"\bJOIN\s+([a-zA-Z_][\w\.]*)"
 
@@ -446,14 +513,15 @@ class SQLValidatorAgent:
             for match in matches:
                 ref = match.strip()
                 base_table = ref.split(".")[-1]
-                if base_table in cte_base_names:
+                base_key = base_table.lower()
+                if base_key in cte_base_names:
                     continue
-                if base_table not in tables:
-                    tables.append(base_table)
-                    columns[base_table] = []
-                alias_map.setdefault(base_table, [])
-                if ref not in alias_map[base_table]:
-                    alias_map[base_table].append(ref)
+                if base_key not in tables:
+                    tables.append(base_key)
+                    columns[base_key] = []
+                alias_map.setdefault(base_key, [])
+                if ref not in alias_map[base_key]:
+                    alias_map[base_key].append(ref)
 
         # Associate columns with tables by looking for table.column patterns
         for base_table in tables:
