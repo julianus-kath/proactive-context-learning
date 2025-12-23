@@ -489,3 +489,100 @@ Consolidate verification across phases and confirm budget/loop improvements.
 Verification:
 - All orchestrator and system tests pass.
 - Benchmark metrics demonstrate fewer loops and more successful data-backed answers.
+
+### [ ] Step: Pass 1 — Catalog-Driven Discovery & Join Planning
+<!-- chat-id: catalog-pass-1 -->
+
+Make discovery and join planning 100% catalog-driven so no behavior depends on literal table names or schemas.
+
+1. Expose a catalog summary from MCP:
+   - Ensure MCP provides a single tool response that returns the warmed `SchemaCatalog` in a generic shape, e.g.:
+     - `tables: [{full_name, schema, name, type, columns: [...], primary_keys: [...], foreign_keys: [...]}]`.
+   - Reuse the existing `catalog_postgres.json` / `SchemaCatalog` wiring to avoid extra DB hits.
+2. Replace hardcoded seed tables in discovery:
+   - Remove literal `dbo.orders`, `dbo.order_details`, `dbo.products`, etc. from LangGraph discovery.
+   - Instead, choose initial candidates from catalog search only, using:
+     - text search (`search_tables`) over table/column names,
+     - plus simple role hints (see next point) derived from column patterns.
+3. Introduce role-based seeding instead of name-based seeding:
+   - Define semantic roles like `transaction_fact`, `entity_dimension`, `inventory_dimension`, `time_dimension`.
+   - Infer roles per table by scoring column signatures (catalog-driven), for example:
+     - inventory: columns resembling `units_in_stock`, `reorder_level`, `units_on_order`, `discontinued`.
+     - sales line: columns like `quantity`, `unit_price`, `discount`, `product_id`, `order_id`.
+     - order header: columns like `order_date`, `customer_id`, `ship_*`, etc.
+   - Use these roles as “seeds” for discovery and join planning instead of literal table names.
+4. Ensure schema snippets include all required role tables:
+   - When `required_tables_from_kpi` or role inference says a table is needed (e.g. `inventory_dimension` → products), force-include it in:
+     - `final_tables`,
+     - `final_schema` / schema snippet passed to join_sql,
+     - any `relevant_table_details` / column index objects.
+
+Verification:
+- Grep-based check: no `dbo.*`, `orders`, `order_details`, or `products` literals remain in discovery/join logic outside of tests and docs.
+- For the “Chai reorder” query, `final_schema` and join planning always see the `products` table (via catalog), not via hardcoded names.
+
+### [ ] Step: Pass 2 — Central SQL Execution Gateway
+<!-- chat-id: dialect-pass-2 -->
+
+Centralize dialect handling and safety checks in a single execution gateway used by all probes and “real” queries.
+
+1. Implement a shared execution helper in LangGraph integration:
+   - Signature sketch:
+     - `async def execute_sql(sql_raw: str, *, state: BaseState, purpose: str = "final") -> Dict[str, Any]`.
+   - Inside the helper:
+     - Canonicalize identifiers (strip quotes/brackets, normalize spacing).
+     - Qualify schema using `db_default_schema` and dialect-aware rules.
+     - Call the dialect-aware normalizer (TOP↔LIMIT, dbo→schema, etc.).
+     - Apply safety sanitizers (`COUNT(DISTINCT *)` → `COUNT(*)`, etc.).
+     - Enforce read-only + row caps (reusing MCP `QueryValidator` semantics).
+     - Dispatch to MCP via `query_bounded` / `run_query`.
+2. Route all probes through the gateway:
+   - `_probe_candidate_counts` in orchestrator:
+     - Replace direct `self.mcp.query_bounded(sql, ...)` with `execute_sql(sql_raw, purpose="probe")`.
+   - `_probe_columns` in `JoinPlanAndSQLAgent`:
+     - Replace inline `SELECT TOP 1` / `LIMIT 1` and direct MCP calls with gateway usage.
+   - Any other “probe-like” calls (profiling, stats, auto-aggregate helpers) should also call the gateway with `purpose="probe"`.
+3. Route ExecAndRecovery through the same gateway:
+   - In `ExecAndRecoveryAgent._execute_query_node` and `_query_with_recording`, avoid constructing dialect-specific SQL or calling MCP directly.
+   - Instead, build logical SQL and hand off to the gateway, tagging `purpose="final"` for the main answer query and `purpose="probe"` for any auxiliary checks.
+4. Make probe failures explicitly non-fatal:
+   - When `purpose="probe"` and the gateway returns an error:
+     - Log it and add to `warnings` / `loop_events`.
+     - Do **not** set `exec_result.ok = False` for the whole request.
+     - Do **not** trigger repair loops or grounding gate failures solely due to probe errors.
+
+Verification:
+- Single code path between LangGraph and MCP execution for all SQL.
+- No direct `self.mcp.query_bounded(...)` remaining in orchestrator/join agents except inside the shared gateway.
+- Probe-related failures never cause `UNGROUNDED_RESPONSE_PREVENTED` if the main “final” query succeeds.
+
+### [ ] Step: Pass 3 — Remove Hardcoded Qualifiers & Name-Based Heuristics
+<!-- chat-id: naming-pass-3 -->
+
+Eliminate all hardcoded database/server/schema/table assumptions so the system is plug-and-play across databases.
+
+1. Strip hardcoded database and schema prefixes:
+   - Ensure `_qualify_table_name` and related helpers use only:
+     - `db_dialect`, `db_default_schema`, and dialect-specific env/config (e.g. `DB_MSSQL_DATABASE`).
+   - Never emit `OLLuisiDiener.dbo.*` or similar literals; in Postgres mode, never emit a database prefix at all (only `schema.table`).
+2. Remove name-based heuristics in agents:
+   - Replace any logic that looks for specific table names (`orders`, `products`, `KHKAdressen`, etc.) with:
+     - role-based scoring (from Pass 1),
+     - or catalog-driven metadata (primary keys, foreign keys, column names).
+   - Clarify in comments/docs that agent behavior must not depend on particular ERP schemas.
+3. Ensure discovery and join planning are completely decoupled from vendor-specific names:
+   - Use only:
+     - intent entities/metrics,
+     - catalog metadata (column names, types, FK graph),
+     - role hints inferred from that metadata.
+4. Guard with simple regression checks:
+   - Add or update lightweight tests that:
+     - spin up a minimal synthetic catalog with different schema/table names,
+     - confirm discovery/join/exec still produce a coherent plan without any assumptions about “orders/products/customers”.
+
+Verification:
+- Grep for vendor-specific names (`dbo.`, `KHKAdressen`, `OLLuisiDiener`, etc.) yields only:
+  - docs,
+  - tests explicitly documenting old behavior,
+  - or commented migration helpers.
+- Changing only connection/dialect config and restarting MCP is sufficient to point the system at a new database without code changes.
