@@ -74,6 +74,13 @@ class QueryResponse(BaseModel):
     error_info: Optional[Dict[str, Any]] = None
     discovery_log: Optional[Dict[str, Any]] = None
     status: str = "success"
+    # Phase 1/2 diagnostics: propagate orchestrator instrumentation fields
+    llm_usage: Optional[Dict[str, Any]] = None
+    node_entry_counts: Optional[Dict[str, Any]] = None
+    loop_events: Optional[Dict[str, Any]] = None
+    total_llm_calls: Optional[int] = None
+    total_graph_cycles: Optional[int] = None
+    answer_mode: Optional[str] = None
 
 class ConversationResponse(BaseModel):
     final_response: Optional[str] = None
@@ -299,7 +306,13 @@ async def process_query(request: QueryRequest = Body(...), api_key_header: Optio
             sources=sources or [],
             error_info=error_info_data,
             discovery_log=discovery_log,
-            status="success"
+            status="success",
+            llm_usage=orchestrator_result.get("llm_usage"),
+            node_entry_counts=orchestrator_result.get("node_entry_counts"),
+            loop_events=orchestrator_result.get("loop_events"),
+            total_llm_calls=orchestrator_result.get("total_llm_calls"),
+            total_graph_cycles=orchestrator_result.get("total_graph_cycles"),
+            answer_mode=orchestrator_result.get("answer_mode"),
         )
         
         # Ensure all fields are JSON-serializable before returning

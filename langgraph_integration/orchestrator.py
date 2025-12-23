@@ -29,6 +29,7 @@ import asyncio
 import uuid
 import copy
 import time
+import re
 from typing import Dict, Any, List, Optional
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
@@ -271,6 +272,16 @@ class QueryOrchestrator:
         counts[node_name] = current + 1
         state["node_entry_counts"] = counts
 
+    def _increment_loop_event(self, state: BaseState, event_key: str) -> None:
+        """
+        Increment a loop-related instrumentation counter.
+
+        Keeps loop_events optional and lazily initialized.
+        """
+        events = state.get("loop_events") or {}
+        events[event_key] = events.get(event_key, 0) + 1
+        state["loop_events"] = events
+
     def _map_stage_to_llm_bucket(self, stage: str) -> str:
         """
         Map fine-grained stages to coarse LLM usage buckets.
@@ -295,6 +306,120 @@ class QueryOrchestrator:
             "answer": "answer",
         }
         return mapping.get(stage, stage)
+
+    def _get_remaining_llm_budget(self, state: BaseState) -> int:
+        """
+        Compute remaining LLM budget based on max_llm_calls and current usage.
+        """
+        max_calls = state.get("max_llm_calls", 0) or 20
+        llm_usage = state.get("llm_usage") or {}
+        total_usage = llm_usage.get("total", state.get("total_llm_calls", 0) or 0)
+        remaining = max_calls - int(total_usage)
+        return remaining
+
+    def _build_discovery_fingerprint(self, state: BaseState) -> str:
+        """
+        Build a stable, hashable fingerprint for discovery inputs.
+
+        Used to detect redundant discovery invocations and enable caching.
+        """
+        user_input = (state.get("user_input") or "").strip().lower()
+        intent = state.get("intent") or {}
+        intent_sig = {
+            "operation": intent.get("operation"),
+            "entities": intent.get("primary_entities") or [],
+            "metrics": intent.get("metrics") or [],
+            "filters": intent.get("filters") or [],
+            "time_window": intent.get("time_window") or {},
+            "analytic_template": intent.get("analytic_template"),
+            "required_action": intent.get("required_action"),
+        }
+        skip_tables = sorted(state.get("skip_tables") or [])
+        tried_tables = sorted(state.get("tried_candidate_tables") or [])
+        seed_tables = sorted(state.get("seed_tables") or [])
+        dialect = state.get("db_dialect") or self.db_dialect
+        schema = state.get("db_default_schema") or self.db_default_schema
+        payload = {
+            "user_input": user_input,
+            "intent": intent_sig,
+            "skip_tables": skip_tables,
+            "tried_tables": tried_tables,
+            "seed_tables": seed_tables,
+            "db_dialect": dialect,
+            "db_default_schema": schema,
+        }
+        return json.dumps(payload, sort_keys=True, ensure_ascii=False)
+
+    def _build_join_inputs_fingerprint(self, state: BaseState) -> str:
+        """
+        Build a stable fingerprint for join/SQL generation inputs.
+
+        Captures relevant_tables + intent signature so we can detect redundant
+        join planning/SQL generation cycles.
+        """
+        raw_tables = state.get("relevant_tables") or []
+        table_names: List[str] = []
+        for t in raw_tables:
+            if isinstance(t, str):
+                table_names.append(t)
+            elif isinstance(t, dict):
+                name = t.get("full_name") or t.get("name")
+                if name:
+                    table_names.append(str(name))
+        table_names = sorted(set(table_names))
+
+        intent = state.get("intent") or {}
+        intent_sig = {
+            "operation": intent.get("operation"),
+            "entities": intent.get("primary_entities") or [],
+            "metrics": intent.get("metrics") or [],
+            "filters": intent.get("filters") or [],
+            "time_window": intent.get("time_window") or {},
+            "analytic_template": intent.get("analytic_template"),
+            "required_action": intent.get("required_action"),
+        }
+        payload = {
+            "tables": table_names,
+            "intent": intent_sig,
+        }
+        return json.dumps(payload, sort_keys=True, ensure_ascii=False)
+
+    def _canonical_table_name(self, raw_name: str, dialect: str, default_schema: str) -> str:
+        """
+        Minimal canonicalization for seed tables (Phase 5 quick win).
+
+        Examples:
+        - [dbo].[Order Details] → public.order_details (postgres)
+        - dbo.Products → dbo.products (mssql)
+        - Products → public.products (postgres, with default schema)
+        """
+        if not raw_name:
+            return raw_name
+
+        name = str(raw_name).strip()
+        # Strip brackets and surrounding quotes
+        name = name.replace("[", "").replace("]", "").replace("`", "").replace('"', "")
+
+        parts = [p for p in name.split(".") if p]
+        if len(parts) >= 2:
+            # schema.table or similar; keep last part as table
+            schema_part = parts[-2]
+            table_part = parts[-1]
+        else:
+            schema_part = default_schema or ("dbo" if dialect == "mssql" else "public")
+            table_part = parts[0]
+
+        # Normalize table: lower-case, spaces → underscores
+        table_clean = re.sub(r"\s+", "_", table_part.strip()).lower()
+        schema_clean = schema_part.strip().lower() if schema_part else (default_schema or "")
+
+        # For postgres, prefer configured default schema, ignore dbo-like prefixes
+        if dialect == "postgres":
+            schema_clean = (default_schema or "public").lower()
+
+        if not schema_clean:
+            return table_clean
+        return f"{schema_clean}.{table_clean}"
 
     def _check_llm_budget(self, state: BaseState, stage: str) -> BaseState:
         """
@@ -590,6 +715,25 @@ class QueryOrchestrator:
             retry_action = validation.get("retry_action", "accept")
             
             logger.info(f"🚦 [VALIDATION_ROUTE] retry_action={retry_action}")
+
+            # 🧠 Budget-aware routing: if we are at or below the safety margin,
+            # stop sending the graph back to discovery/join (which would require
+            # additional LLM calls) and move toward answering with existing data.
+            llm_usage = state.get("llm_usage") or {}
+            max_calls = state.get("max_llm_calls", 0) or 20
+            total_usage = llm_usage.get("total", state.get("total_llm_calls", 0) or 0)
+            remaining_budget = max_calls - int(total_usage)
+            safety_margin = state.get("llm_budget_safety_margin", 0) or 0
+            if remaining_budget <= safety_margin:
+                logger.warning(
+                    "🚦 [VALIDATION] Remaining LLM budget at/below safety margin "
+                    f"(remaining={remaining_budget}, safety_margin={safety_margin}); "
+                    "disabling discovery/join retries and routing to 'answer'."
+                )
+                # Force accept-path so downstream goes directly to answer.
+                validation["retry_action"] = "accept"
+                state["validation_result"] = validation
+                return "answer"
 
             # 🆕 Global plan budget: stop after too many plan/validate cycles
             plan_attempt = state.get("plan_attempt_count", 0)
@@ -1048,7 +1192,17 @@ class QueryOrchestrator:
         catalog = state.get("catalog") or {}
         mapped = self.concept_mapper.map(state.get("user_input", ""), intent, catalog.get("concepts"))
         state["inferred_concepts"] = mapped.get("concepts") or []
-        state["seed_tables"] = mapped.get("seed_tables") or []
+        raw_seed_tables = mapped.get("seed_tables") or []
+        # Phase 5 (quick win): canonicalize seed tables early so the entire pipeline
+        # sees consistent identifiers (especially on Postgres runs).
+        dialect = state.get("db_dialect", self.db_dialect)
+        default_schema = state.get("db_default_schema", self.db_default_schema)
+        canonical_seed_tables: List[str] = []
+        for t in raw_seed_tables:
+            canonical_seed_tables.append(
+                self._canonical_table_name(t, dialect=dialect, default_schema=default_schema)
+            )
+        state["seed_tables"] = canonical_seed_tables
         state["concept_hints"] = {
             "kpi_expressions": mapped.get("kpi_expressions") or {},
             "time_field_hints": mapped.get("time_field_hints") or [],
@@ -1138,6 +1292,40 @@ class QueryOrchestrator:
         if state.get("error_info"):
             logger.info("🔍 [DISCOVERY] Clearing previous error_info before new discovery attempt")
         state.pop("error_info", None)
+
+        # Build discovery fingerprint for caching/loop control
+        fingerprint = self._build_discovery_fingerprint(state)
+        discovery_cache = state.get("discovery_cache") or {}
+        cached_fp = discovery_cache.get("fingerprint")
+        cached_payload = discovery_cache.get("payload") or {}
+
+        # Budget-aware short circuit: if we're re-entering discovery near the hard budget,
+        # avoid spending additional LLM calls and reuse cached results when possible.
+        remaining_budget = self._get_remaining_llm_budget(state)
+        safety_margin = state.get("llm_budget_safety_margin", 0) or 0
+        if retry_attempt > 0 and remaining_budget <= safety_margin:
+            self._increment_loop_event(state, "discovery_budget_short_circuit")
+            logger.warning(
+                "🔍 [DISCOVERY] Near LLM budget limit "
+                f"(remaining={remaining_budget}, safety_margin={safety_margin}); "
+                "reusing existing discovery results if available and skipping new LLM calls."
+            )
+            if cached_payload:
+                # Restore cached discovery outputs
+                for key in (
+                    "relevant_tables",
+                    "candidate_views",
+                    "schema_snippet",
+                    "column_index",
+                    "session_described_tables",
+                    "relevant_table_details",
+                    "discovery_role_hints",
+                    "discovery_result",
+                ):
+                    if key in cached_payload:
+                        state[key] = cached_payload[key]
+                debug_logger.agent_exit("discovery", before_state, dict(state))
+                return state
         
         # SURGICAL DEBUG: Show input state
         logger.info("🔍 [DISCOVERY] ━━━ INPUT STATE ━━━")
@@ -1159,6 +1347,25 @@ class QueryOrchestrator:
             logger.warning("🔍 [DISCOVERY] This will cause discovery to use fallback extraction and get 943 candidates!")
 
         try:
+            # Cache hit: fingerprint unchanged → reuse previous discovery outputs without LLM calls
+            if cached_fp == fingerprint and cached_payload:
+                self._increment_loop_event(state, "discovery_cache_hit")
+                logger.info("🔍 [DISCOVERY] Cache hit: reusing previous discovery results; skipping discovery subgraph")
+                for key in (
+                    "relevant_tables",
+                    "candidate_views",
+                    "schema_snippet",
+                    "column_index",
+                    "session_described_tables",
+                    "relevant_table_details",
+                    "discovery_role_hints",
+                    "discovery_result",
+                ):
+                    if key in cached_payload:
+                        state[key] = cached_payload[key]
+                debug_logger.agent_exit("discovery", before_state, dict(state))
+                return state
+
             # LLM budget check
             state = self._check_llm_budget(state, "discovery")
             if state.get("error_info") and state.get("intent", {}).get("needs_clarification"):
@@ -1229,6 +1436,26 @@ class QueryOrchestrator:
                 "relevant_tables": relevant_tables,
                 "role_hints": state.get("discovery_role_hints"),
                 "schema_snippet": schema_snippet,
+            }
+
+            # Loop diagnostics: detect when repeated discovery returns identical table sets
+            previous_tables = (cached_payload.get("relevant_tables") or []) if cached_payload else []
+            if previous_tables and relevant_tables == previous_tables:
+                self._increment_loop_event(state, "discovery_reentered_same_tables")
+
+            # Persist discovery cache for future reuse
+            state["discovery_cache"] = {
+                "fingerprint": fingerprint,
+                "payload": {
+                    "relevant_tables": relevant_tables,
+                    "candidate_views": candidate_views,
+                    "schema_snippet": schema_snippet,
+                    "column_index": column_index,
+                    "session_described_tables": state.get("session_described_tables"),
+                    "relevant_table_details": state.get("relevant_table_details"),
+                    "discovery_role_hints": state.get("discovery_role_hints"),
+                    "discovery_result": state.get("discovery_result"),
+                },
             }
 
             error = self._normalize_error_info(result.get("error_info"))
@@ -1304,6 +1531,36 @@ class QueryOrchestrator:
             debug_logger.agent_exit("join_sql", before_state, dict(state))
             return state
 
+        # Build join inputs fingerprint for loop control
+        join_inputs_fingerprint = self._build_join_inputs_fingerprint(state)
+        last_join_fp = state.get("last_join_inputs_fingerprint")
+        existing_sql = (state.get("sql_query") or "").strip()
+
+        remaining_budget = self._get_remaining_llm_budget(state)
+        safety_margin = state.get("llm_budget_safety_margin", 0) or 0
+
+        # If inputs are unchanged and we already have SQL, reuse it instead of regenerating.
+        if last_join_fp == join_inputs_fingerprint and existing_sql:
+            self._increment_loop_event(state, "join_inputs_cache_hit")
+            logger.info(
+                "🔗 [JOIN_SQL] Inputs unchanged and SQL already present; "
+                "reusing existing SQL and skipping join subgraph."
+            )
+            debug_logger.agent_exit("join_sql", before_state, dict(state))
+            return state
+
+        # Budget-aware short circuit: when near the hard budget and SQL already exists,
+        # avoid additional LLM calls for SQL regeneration.
+        if remaining_budget <= safety_margin and existing_sql:
+            self._increment_loop_event(state, "join_budget_short_circuit")
+            logger.warning(
+                "🔗 [JOIN_SQL] Near LLM budget limit "
+                f"(remaining={remaining_budget}, safety_margin={safety_margin}); "
+                "reusing existing SQL and skipping regeneration."
+            )
+            debug_logger.agent_exit("join_sql", before_state, dict(state))
+            return state
+
         # Delegate to JoinPlanAndSQLAgent subgraph for robust planning and SQL generation
         try:
             # LLM budget check
@@ -1319,8 +1576,17 @@ class QueryOrchestrator:
             join_plan = join_result.get("join_plan", {})
             if not sql_query:
                 raise ValueError("Join SQL agent returned no SQL")
+
+            # Loop diagnostics: detect identical SQL being regenerated
+            last_sql = state.get("last_sql_query") or ""
+            if last_sql and sql_query.strip() == str(last_sql).strip():
+                self._increment_loop_event(state, "join_sql_regenerated_same_sql")
+
             state["sql_query"] = sql_query
             state["join_plan"] = join_plan
+            state["last_sql_query"] = sql_query
+            state["last_join_plan"] = join_plan
+            state["last_join_inputs_fingerprint"] = join_inputs_fingerprint
             logger.info(f"🔗 [JOIN_SQL] Generated SQL (agent): {sql_query}")
         except Exception as e:
             logger.error(f"🔗 [JOIN_SQL] Join SQL agent failed: {e}", exc_info=True)
@@ -1775,48 +2041,6 @@ class QueryOrchestrator:
         logger.info("✨ Running AnswerAgent...")
 
         try:
-            # LLM budget check (AnswerAgent uses LLM for formatting)
-            state = self._check_llm_budget(state, "answer")
-            if state.get("error_info") and state.get("intent", {}).get("needs_clarification"):
-                # Global LLM budget exhausted – provide a deterministic, user-friendly message
-                intent = state.get("intent") or {}
-                error_info = state.get("error_info") or {}
-                err_type = str(error_info.get("type", "LLM_BUDGET_EXCEEDED"))
-                stage = error_info.get("stage") or "answer"
-                total_calls = error_info.get("total_llm_calls")
-
-                clarification_question = intent.get(
-                    "clarification_question",
-                    "Could you narrow down the scope of your question?",
-                )
-                ambiguity_reason = intent.get(
-                    "ambiguity_reason",
-                    "LLM call budget exceeded while trying to answer this question.",
-                )
-
-                details: List[str] = []
-                if stage:
-                    details.append(f"stage: {stage}")
-                if isinstance(total_calls, int):
-                    details.append(f"model calls used: {total_calls}")
-                detail_suffix = f" ({', '.join(details)})" if details else ""
-
-                state["final_response"] = (
-                    "I couldn't finish processing your request because the model call "
-                    "budget for this query was reached"
-                    f"{detail_suffix}. "
-                    f"Reason: {ambiguity_reason} "
-                    f"Suggestion: {clarification_question}"
-                )
-
-                logger.warning(
-                    "✨ [ANSWER] Exiting early due to LLM budget exhaustion (%s)%s",
-                    err_type,
-                    f" at {stage}" if stage else "",
-                )
-                debug_logger.agent_exit("answer", before_state, dict(state))
-                return state
-
             # DEBUG: Log what we received
             user_input = state.get("user_input", "")
             exec_result_raw = state.get("exec_result")
@@ -1857,11 +2081,42 @@ class QueryOrchestrator:
                 debug_logger.agent_exit("answer", before_state, dict(state))
                 return state
 
-            # FIX 2: HARD GROUNDING GATE - Prevent ungrounded answers
-            # Check if we have meaningful execution results for a data query
+            # Deterministic data-based fallback when execution succeeded but budget is tight
             operation = intent.get("operation", "query")
             is_data_query = operation == "query"
-            
+            exec_ok = exec_result.get("ok", False) if isinstance(exec_result, dict) else False
+            row_count = exec_result.get("row_count") if isinstance(exec_result, dict) else None
+            remaining_budget = self._get_remaining_llm_budget(state)
+            safety_margin = state.get("llm_budget_safety_margin", 0) or 0
+            budget_error_type = (error_info or {}).get("type") if isinstance(error_info, dict) else None
+
+            if is_data_query and exec_ok and (row_count is not None and row_count > 0) and (
+                remaining_budget <= safety_margin or budget_error_type == "LLM_BUDGET_EXCEEDED"
+            ):
+                logger.info(
+                    "✨ [ANSWER] Using deterministic data-based answer "
+                    f"(row_count={row_count}, remaining_budget={remaining_budget}, safety_margin={safety_margin})"
+                )
+                # Render deterministic answer from data without consuming additional LLM calls
+                deterministic_text = await self._format_execution_results(exec_result, intent, user_input)
+                state["final_response"] = deterministic_text
+                state["answer_mode"] = "deterministic_from_data"
+
+                # If there was a budget error, mark it as degraded-but-successful answer
+                if budget_error_type == "LLM_BUDGET_EXCEEDED":
+                    merge_error_info(
+                        state,
+                        {
+                            "type": "LLM_BUDGET_EXCEEDED_DEGRADED_ANSWER",
+                            "message": "Returned a data-based answer without additional LLM formatting due to budget limits.",
+                        },
+                    )
+
+                debug_logger.agent_exit("answer", before_state, dict(state))
+                return state
+
+            # FIX 2: HARD GROUNDING GATE - Prevent ungrounded answers
+            # Check if we have meaningful execution results for a data query
             if is_data_query:
                 exec_result = state.get("exec_result") or {}
                 exec_ok = exec_result.get("ok", False) if isinstance(exec_result, dict) else False
@@ -2035,7 +2290,49 @@ class QueryOrchestrator:
             else:
                 logger.warning("✨ [ANSWER] ❌ exec_result not successful or missing")
 
-            # If we get here, fall back to AnswerAgent subgraph
+            # If we get here, fall back to AnswerAgent subgraph (LLM-based formatting)
+
+            # LLM budget check (AnswerAgent uses LLM for formatting)
+            state = self._check_llm_budget(state, "answer")
+            if state.get("error_info") and state.get("intent", {}).get("needs_clarification"):
+                # Global LLM budget exhausted – provide a deterministic, user-friendly message
+                intent = state.get("intent") or {}
+                error_info = state.get("error_info") or {}
+                err_type = str(error_info.get("type", "LLM_BUDGET_EXCEEDED"))
+                stage = error_info.get("stage") or "answer"
+                total_calls = error_info.get("total_llm_calls")
+
+                clarification_question = intent.get(
+                    "clarification_question",
+                    "Could you narrow down the scope of your question?",
+                )
+                ambiguity_reason = intent.get(
+                    "ambiguity_reason",
+                    "LLM call budget exceeded while trying to answer this question.",
+                )
+
+                details: List[str] = []
+                if stage:
+                    details.append(f"stage: {stage}")
+                if isinstance(total_calls, int):
+                    details.append(f"model calls used: {total_calls}")
+                detail_suffix = f" ({', '.join(details)})" if details else ""
+
+                state["final_response"] = (
+                    "I couldn't finish processing your request because the model call "
+                    "budget for this query was reached"
+                    f"{detail_suffix}. "
+                    f"Reason: {ambiguity_reason} "
+                    f"Suggestion: {clarification_question}"
+                )
+
+                logger.warning(
+                    "✨ [ANSWER] Exiting early due to LLM budget exhaustion (%s)%s",
+                    err_type,
+                    f" at {stage}" if stage else "",
+                )
+                debug_logger.agent_exit("answer", before_state, dict(state))
+                return state
 
             # Build and run answer subgraph
             answer_graph = self.answer_agent.build_subgraph()

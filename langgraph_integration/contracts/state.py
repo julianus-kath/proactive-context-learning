@@ -151,6 +151,7 @@ class BaseState(TypedDict, total=False):
     discovery_cache: Optional[Dict[str, Any]]  # Cached discovery outputs keyed by input fingerprint
     last_sql_query: Optional[str]  # Last SQL text produced by join/sql validator
     last_join_plan: Optional[Dict[str, Any]]  # Last join plan structure
+    last_join_inputs_fingerprint: Optional[str]  # Fingerprint of last join inputs (tables + intent)
     required_tables_from_kpi: Optional[List[str]]  # Canonical table names derived from KPI expressions
 
     # Database dialect/schema (used by SQL helpers and future canonicalization)
