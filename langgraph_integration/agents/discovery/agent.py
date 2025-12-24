@@ -369,40 +369,7 @@ class DiscoveryAgent:
                         "tables": injected,
                     })
 
-            # Minimal targeted enrichment: ensure customer master candidate is present for customer + sum intents
-            try:
-                entities = [e.lower() for e in (intent.get("primary_entities") or [])]
-                metrics = [m.lower() for m in (intent.get("metrics") or [])]
-                wants_sum = any(m in ["sum", "total"] for m in metrics)
-                wants_customers = any(e in ["customer", "customers", "kunde", "kunden"] for e in entities)
-                if wants_sum and wants_customers:
-                    if all("khkadressen" not in (c.get("table_name","") or "").lower() for c in unique_candidates):
-                        logger.debug("  Enriching candidates with explicit 'KHKAdressen' lookup")
-                        try:
-                            enr = await self.mcp.search_tables("KHKAdressen", page=1, page_size=3, intent_data=intent)
-                            eparsed = self._parse_search_result(enr)
-                            for ec in eparsed:
-                                tname = ec.get("table_name") or ec.get("name")
-                                if tname and tname not in seen:
-                                    seen.add(tname)
-                                    unique_candidates.append(ec)
-                        except Exception as ee:
-                            logger.debug(f"  KHKAdressen enrichment failed: {ee}")
-                if wants_sum and any("umsatz" in k for k in (intent.get("keywords_for_discovery") or [])):
-                    try:
-                        enr = await self.mcp.search_tables("Umsatz", page=1, page_size=5, intent_data=intent)
-                        eparsed = self._parse_search_result(enr)
-                        for ec in eparsed:
-                            tname = ec.get("table_name") or ec.get("name")
-                            if tname and tname not in seen:
-                                seen.add(tname)
-                                unique_candidates.append(ec)
-                    except Exception as ee:
-                        logger.debug(f"  Umsatz enrichment failed: {ee}")
-            except Exception:
-                pass
-
-            # Business-pattern fallback DISABLED; rely on primary joined search only
+            # Business-pattern fallback DISABLED; rely on primary joined search and catalog-driven ranking only
             logger.info(f"✅ Using primary joined search only: {len(unique_candidates)} candidate(s)")
 
             # Check if we have meaningful semantic matches (not just size-based ranking)
@@ -1287,65 +1254,8 @@ class DiscoveryAgent:
             logger.info(f"✅ Built schema snippet with {len(relevant_tables)} table(s)")
             logger.debug(f"Schema:\n{schema_snippet}")
             
-            # Targeted enrichment: ensure a customer dimension table is present for SUM-over-customers intents
-            try:
-                intent = state.get("intent", {}) or {}
-                metrics = [m.lower() for m in (intent.get("metrics") or [])]
-                entities = [e.lower() for e in (intent.get("primary_entities") or [])]
-                needs_customer_dim = (any(m in ["sum", "total"] for m in metrics) and any(e in ["customer", "customers", "kunde", "kunden"] for e in entities))
-                has_customer_dim = any(any(tok in (t or "").lower() for tok in ["khkadressen", "adressen", "adresse", "kunde", "kunden", "customer"]) for t in relevant_tables)
-                if needs_customer_dim and not has_customer_dim:
-                    logger.info("🎯 Enriching with customer dimension candidate (KHKAdressen)...")
-                    try:
-                        search_terms = ["khkadressen", "adressen", "kunde", "customer"]
-                        best_name = None
-                        best_score = -1
-                        for term in search_terms:
-                            res = await self.mcp.search_tables(term, page=1, page_size=10)
-                            parsed = self._parse_search_result(res)
-                            for r in parsed:
-                                name = r.get("full_name") or r.get("name") or r.get("table_name")
-                                if not name:
-                                    continue
-                                n = name.lower()
-                                score = 0
-                                if "khkadressen" in n: score += 3
-                                if any(tok in n for tok in ["adresse", "adressen", "address"]): score += 2
-                                if any(tok in n for tok in ["kunde", "kunden", "customer"]): score += 1
-                                est = int(r.get("estimated_rows") or 0)
-                                if est > 0: score += 1
-                                if score > best_score:
-                                    best_score = score
-                                    best_name = name
-                        if best_name and best_name not in relevant_tables:
-                            relevant_tables.append(best_name)
-                            relevant_table_details.append({"table_name": best_name, "columns": [], "is_view": False})
-                            logger.info(f"✅ Added customer dimension candidate: {best_name}")
-                    except Exception as _:
-                        pass
-                # For pure customer count intents, also ensure a customer master table is present
-                needs_customer_count = (any(m in ["count"] for m in metrics) and any(e in ["customer", "customers", "kunde", "kunden"] for e in entities))
-                has_customer_master = any(any(tok in (t or "").lower() for tok in ["khkadressen", "adressen", "adresse"]) for t in relevant_tables)
-                if needs_customer_count and not has_customer_master:
-                    try:
-                        logger.info("🎯 Enriching with customer master for COUNT intent (KHKAdressen/Adressen)...")
-                        res = await self.mcp.search_tables("KHKAdressen", page=1, page_size=5)
-                        parsed = self._parse_search_result(res)
-                        best = None
-                        for r in parsed:
-                            nm = (r.get("full_name") or r.get("name") or r.get("table_name") or "").lower()
-                            if any(tok in nm for tok in ["khkadressen", "adressen", "adresse"]):
-                                best = r.get("full_name") or r.get("name") or r.get("table_name")
-                                break
-                        if best and best not in relevant_tables:
-                            relevant_tables.insert(0, best)
-                            relevant_table_details.insert(0, {"table_name": best, "columns": [], "is_view": False})
-                            logger.info(f"✅ Prefixed customer master table for COUNT: {best}")
-                    except Exception:
-                        pass
-            except Exception:
-                pass
-            
+            # NOTE: legacy name-based enrichment removed; schema snippet now reflects
+            # only catalog-driven candidates and intent, without hardcoded ERP table names.
             log_payload = self._get_discovery_log(state)
             log_payload.setdefault("events", []).append({
                 "stage": "schema_snippet",
