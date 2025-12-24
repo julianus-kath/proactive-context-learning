@@ -472,55 +472,6 @@ Do these in order:
 	3.	Search your codebase for COUNT(DISTINCT *) and remove it.
 	4.	Search for TOP  generation in join/repair templates; ensure Postgres path never emits it.
 
-### [ ] Step: Phase 6 — Benchmark & Regression Verification
-
-Consolidate verification across phases and confirm budget/loop improvements.
-
-1. Re-run the 12-query benchmark via `eval/run_benchmark.py`:
-   - Capture `results.json` and inspect:
-     - `llm_usage` per query.
-     - `node_entry_counts` and `loop_events` (with focus on discovery/join loops).
-     - Frequency of `LLM_BUDGET_EXCEEDED` errors, especially at `stage="answer"`.
-2. Compare with previous run:
-   - Confirm typical queries use ~3–8 LLM calls.
-   - Confirm a significant reduction in budget-exceeded failures and improved `final_response` quality.
-3. Run full test suite (or at least orchestrator + integration tests) and document any deviations.
-
-Verification:
-- All orchestrator and system tests pass.
-- Benchmark metrics demonstrate fewer loops and more successful data-backed answers.
-
-### [ ] Step: Pass 1 — Catalog-Driven Discovery & Join Planning
-<!-- chat-id: catalog-pass-1 -->
-
-Make discovery and join planning 100% catalog-driven so no behavior depends on literal table names or schemas.
-
-1. Expose a catalog summary from MCP:
-   - Ensure MCP provides a single tool response that returns the warmed `SchemaCatalog` in a generic shape, e.g.:
-     - `tables: [{full_name, schema, name, type, columns: [...], primary_keys: [...], foreign_keys: [...]}]`.
-   - Reuse the existing `catalog_postgres.json` / `SchemaCatalog` wiring to avoid extra DB hits.
-2. Replace hardcoded seed tables in discovery:
-   - Remove literal `dbo.orders`, `dbo.order_details`, `dbo.products`, etc. from LangGraph discovery.
-   - Instead, choose initial candidates from catalog search only, using:
-     - text search (`search_tables`) over table/column names,
-     - plus simple role hints (see next point) derived from column patterns.
-3. Introduce role-based seeding instead of name-based seeding:
-   - Define semantic roles like `transaction_fact`, `entity_dimension`, `inventory_dimension`, `time_dimension`.
-   - Infer roles per table by scoring column signatures (catalog-driven), for example:
-     - inventory: columns resembling `units_in_stock`, `reorder_level`, `units_on_order`, `discontinued`.
-     - sales line: columns like `quantity`, `unit_price`, `discount`, `product_id`, `order_id`.
-     - order header: columns like `order_date`, `customer_id`, `ship_*`, etc.
-   - Use these roles as “seeds” for discovery and join planning instead of literal table names.
-4. Ensure schema snippets include all required role tables:
-   - When `required_tables_from_kpi` or role inference says a table is needed (e.g. `inventory_dimension` → products), force-include it in:
-     - `final_tables`,
-     - `final_schema` / schema snippet passed to join_sql,
-     - any `relevant_table_details` / column index objects.
-
-Verification:
-- Grep-based check: no `dbo.*`, `orders`, `order_details`, or `products` literals remain in discovery/join logic outside of tests and docs.
-- For the “Chai reorder” query, `final_schema` and join planning always see the `products` table (via catalog), not via hardcoded names.
-
 ### [ ] Step: Pass 2 — Central SQL Execution Gateway
 <!-- chat-id: dialect-pass-2 -->
 
@@ -586,3 +537,112 @@ Verification:
   - tests explicitly documenting old behavior,
   - or commented migration helpers.
 - Changing only connection/dialect config and restarting MCP is sufficient to point the system at a new database without code changes.
+
+### [ ] Step: Agent Response Optimization
+
+“From the latest benchmark run (results.json), main systemic failures are: (1) schema_snippet/table selection drops required dimension tables (e.g., Q6 drops shippers), (2) early abort returns generic ‘system working’ answer with missing_sql even when required tables exist (Q7), (3) non-canonical dbo.* leaks into final_tables under Postgres (Q8), (4) result validator accepts answers that ignore core entities (Q9 employees/products missing), (5) probe-style SQL (SELECT * ... LIMIT) is being treated as final answering SQL. Implement invariants: intent/KPI required tables must be present in schema_snippet; enforce canonical table naming before join; block probe SQL as final unless sampling intent; remove health-fallback path for non-health intents; strengthen result validator to require table/entity coverage and metric computation.”
+
+Benchmark run summary (from 20251224_111756_northwind_v2/results.json)
+
+High-level
+	•	Total queries: 12
+	•	Status: 9 success, 3 failed (Q2, Q5, Q7)
+	•	Avg latency: ~5.5s/query
+	•	Avg LLM calls: ~5.25/query
+	•	Failure reasons frequency:
+	•	missing_sql: 3
+	•	invalid_final_answer: 2
+	•	grounding_gate_activated: 2
+	•	missing_tables: 1
+
+The real problem (even among “success”)
+
+A chunk of the “success” items are functionally incorrect: the system often executes a probe-style query (e.g., SELECT * FROM public.order_details LIMIT ...) and then produces an answer that doesn’t match the question.
+
+This is exactly the kind of systemic brittleness you’re pointing out: it’s not “fix Chai,” it’s “stop the pipeline from accepting degenerate plans.”
+
+⸻
+
+Concrete log examples you can pass to a coding agent
+
+1) Selection drops required tables → join/sql can’t answer the question
+
+Q6 question: “% of orders fulfilled by each shipper, avg delivery time”
+Discovery seeds: dbo.orders, dbo.shippers, dbo.order_details, dbo.customers
+But selection + schema_snippet: only order_details, orders, customers (shipppers is omitted)
+Executed SQL: SELECT * FROM public.order_details ... LIMIT 10
+Final answer: “No records found … in order_details” despite row_count=10 and preview rows existing.
+
+This is a double failure:
+	•	table selection/snippet misses required dimension (shippers)
+	•	answer formatter asserts “no records” even though results exist
+
+Coding-agent task framing: enforce that if intent mentions shipper/delivery-time KPI, schema_snippet must include orders + shippers (and any join path tables), not just “top 3”.
+
+⸻
+
+2) KPI-required tables exist but pipeline can still terminate with missing_sql
+
+Q7 question: “inventory below reorder level”
+Discovery log shows:
+	•	concepts: ["inventory_reorder"]
+	•	required_tables_from_kpi: ["public.products"]
+	•	seed_tables: dbo.products, dbo.suppliers, dbo.order_details
+But events are empty and the graph never reaches join/exec.
+Node entry counts: only parse_intent:1, answer:1
+Failure reasons: missing_sql, missing_tables
+Final answer: “System is working. Database has 14 tables…”
+
+This indicates an early abort / gating path that returns a “health/system” style response instead of forcing the pipeline to produce SQL when intent is clearly queryable.
+
+Coding-agent task framing: remove/raise the threshold for any “health fallback” answer path when intent is non-health and catalog contains the required tables (here: public.products).
+
+⸻
+
+3) Schema and table naming leakage (dbo.*) persists into final_tables
+
+Q8 (YoY order volume growth) discovery: required_tables_from_kpi includes public.orders, public.products
+But final_tables includes: public.order_details, public.orders, public.customers, dbo.products
+Executed SQL: SELECT COUNT(*) FROM public.order_details
+Final answer: basically “I counted order_details; maybe you need order tables.”
+
+So even after normalization work, the pipeline still allows:
+	•	mixed canonical (public.*) and non-canonical (dbo.*) table names in the same state
+	•	a “growth rate” question to collapse to a meaningless count
+
+Coding-agent task framing: enforce a single canonical table namespace before join/sql planning and before state is finalized (no dbo.* allowed when dialect=postgres).
+
+⸻
+
+4) “Success” can still be totally mis-grounded (result validator not strict enough)
+
+Q9 question: “employees revenue + top-selling products”
+Executed SQL: aggregates order revenue by order_id from public.order_details only
+No join to employees, no join to products, no “top-selling products”, no employee attribution.
+
+Yet status is “success”.
+
+Coding-agent task framing: tighten “result validator” rules:
+	•	If intent mentions entity employees, require employees table (or equivalent) in tables_used OR explicit join path.
+	•	If question asks for “top-selling products”, require products table usage or product identifier + name mapping.
+	•	If missing, force repair (don’t accept the answer).
+
+⸻
+
+Systemic fixes to prioritize (generic, plug-and-play aligned)
+	1.	Hard invariants between intent → required tables → schema_snippet
+	•	If required_tables_from_kpi contains public.products, then final_schema must include products columns.
+	•	If intent references a dimension explicitly (“shipper”, “employee”), require that dimension table (or a catalog-mapped equivalent) is included.
+	2.	Block “probe SQL” from being accepted as final SQL
+	•	Any final query that is just SELECT * FROM <single table> LIMIT n should be treated as non-answering unless the user asked “show sample rows”.
+	3.	Canonicalization must be enforced at state boundaries
+	•	No mixed dbo.* + public.* in final_tables when dialect is postgres.
+	•	Canonicalize once, early, then treat non-canonical names as invalid state.
+	4.	Kill the “system is working” escape hatch for non-health questions
+	•	If intent != health-check and catalog has candidate tables, the graph must proceed to discovery → join_sql → validate → exec (or return a concrete error with why it could not).
+	5.	Result validator needs question/intent coverage checks
+	•	Validate that the executed SQL actually computes the asked metrics (YoY growth, share by shipper, avg delivery time).
+	•	If not, do a repair cycle (or fail explicitly), but don’t mark success.
+
+
+
