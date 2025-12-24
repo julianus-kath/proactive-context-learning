@@ -1210,6 +1210,7 @@ class DiscoveryAgent:
                 table = info.get("table", "")
                 date_cols_by_table[table] = info.get("date_columns", [])
             
+            # Build initial snippet from candidate views/tables
             for cand in candidates:
                 table_name = cand.get("table_name") or cand.get("name") or cand.get("full_name", "")
                 columns = cand.get("columns", [])
@@ -1248,6 +1249,51 @@ class DiscoveryAgent:
                         schema_line += f" (+ {len(date_cols) - 3} more)"
                 
                 schema_lines.append(schema_line)
+
+            # Ensure KPI-required tables (e.g., inventory tables inferred from KPIs)
+            # are present in the schema snippet when they exist in the catalog.
+            try:
+                required_tables = state.get("required_tables_from_kpi") or []
+                if required_tables:
+                    catalog_tables = self._catalog_tables(state)
+                    existing_full = {str(t) for t in relevant_tables}
+                    existing_base = {str(t).split(".")[-1].lower() for t in relevant_tables}
+                    for req in required_tables:
+                        req_str = str(req)
+                        base = req_str.split(".")[-1].lower()
+                        if req_str in existing_full or base in existing_base:
+                            continue
+                        meta = self._match_catalog_entry(catalog_tables, req_str) if catalog_tables else None
+                        if not meta:
+                            continue
+                        # Build synthetic detail entry from catalog metadata
+                        columns = meta.get("columns") or []
+                        detail = {
+                            "table_name": req_str,
+                            "full_name": req_str,
+                            "columns": columns,
+                            "is_view": bool(meta.get("type") == "view"),
+                            "estimated_rows": meta.get("row_count") or meta.get("estimated_rows"),
+                            "column_count": meta.get("column_count"),
+                            "fk_count": meta.get("fk_count"),
+                        }
+                        relevant_tables.append(req_str)
+                        relevant_table_details.append(detail)
+                        existing_full.add(req_str)
+                        existing_base.add(base)
+
+                        # Render into schema snippet using the same format
+                        col_strs = []
+                        for col in columns[:10]:
+                            col_name = col.get("name", "unknown")
+                            col_type = str(col.get("type", "varchar")).lower()
+                            col_strs.append(f"{col_name} ({col_type})")
+                        if len(columns) > 10:
+                            col_strs.append(f"... and {len(columns) - 10} more columns")
+                        schema_lines.append(f"{req_str}: {', '.join(col_strs)}")
+            except Exception:
+                # Best-effort enrichment; never fail discovery because of KPI injection
+                pass
             
             schema_snippet = "\n".join(schema_lines)
             
