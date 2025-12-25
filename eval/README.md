@@ -118,6 +118,7 @@ Failed: 1
 SQL Execution Rate: 100.0%
 Non-Empty Results Rate: 91.7%
 Avg Latency: 1456.23ms
+Semantic Correctness (entity+metric+join): 9 (75.0%)
 ============================================================
 
 Failure Analysis:
@@ -151,7 +152,7 @@ After each benchmark run, `eval/runs/<run_id>/` contains:
 - **trace_events.jsonl**: Complete trace of all pipeline stages
 - **score.json**: Scoring report (created by `score_run.py`)
 
-Example Q1.json:
+Example Q1.json (interactive / legacy run, without semantic fields):
 
 ```json
 {
@@ -175,6 +176,38 @@ Example Q1.json:
   "error": null
 }
 ```
+
+In **benchmark / semantic contract mode**, additional fields are populated by the LangGraph orchestrator’s result validator and preserved in `results.json` and per-query artifacts:
+
+```json
+{
+  "query_id": "Q2",
+  "question": "What is total revenue for the top 3 customers in 2024?",
+  "status": "success",
+  "final_answer_text": "In 2024, the top 3 customers by revenue are Acme Corp, Contoso, and Fabrikam.",
+  "sql_executed": ["SELECT ..."],
+  "tables_used": ["customers", "orders", "order_details"],
+  "row_count": 3,
+  "latency_ms_total": 1875,
+  "retries": 1,
+  "error": null,
+  "semantic_status": "OK",
+  "semantic_failure_reasons": [],
+  "semantic_retry_count": 1,
+  "semantic_retry_action": "replan",
+  "contract_id": "Q2"
+}
+```
+
+Semantic fields are:
+
+- `semantic_status`: One of `OK`, `ENTITY_MISMATCH`, `METRIC_MISMATCH`, `JOIN_PATH_INVALID`, `NO_VALID_JOIN_PATH`, `UNSUPPORTED_METRIC`, `CONTRACT_MISSING`.
+- `semantic_failure_reasons`: Human-readable reasons for any mismatch (entity, metric, join path).
+- `semantic_retry_count`: How many semantic-driven replans were attempted for this query.
+- `semantic_retry_action`: Action requested by the semantic validator (`none` or `replan`), interpreted by the orchestrator.
+- `contract_id`: Identifier of the query contract used (typically the dataset `query_id`).
+
+These fields are optional and primarily used for evaluation and scoring; interactive callers can ignore them.
 
 ## Configuration
 
@@ -228,6 +261,11 @@ See `chatbot_ui/langgraph_service.py` for instrumentation hooks.
 - **SQL Execution Rate**: % of successful queries with executed SQL
 - **Non-Empty Results Rate**: % with row_count > 0
 - **Failure Categorization**: Timeout, connection, syntax, table/column not found, permission, other
+- **Semantic Correctness Rate**: % of queries where the entity, metric, and join path all match the benchmark contract:
+  - `entity_metric_join_correct_count`: number of queries with `status == "success"` and `semantic_status == "OK"`.
+  - `entity_metric_join_correct_rate`: that count divided by total queries (as a `"%.1f%%"` string).
+
+The semantic metrics are the primary signal for H2a (“Proof of Performance”) in benchmark runs; structural success alone is not sufficient.
 
 ### Phase 2 Scoring (Future)
 
