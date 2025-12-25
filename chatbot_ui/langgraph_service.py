@@ -60,6 +60,9 @@ app.add_middleware(
 class QueryRequest(BaseModel):
     user_input: str
     api_key: Optional[str] = None
+    # Optional per-query semantic contract payload (used in benchmark mode).
+    # Passed through to the orchestrator via metadata["query_contract"].
+    query_contract: Optional[Dict[str, Any]] = None
 
 class ConversationRequest(BaseModel):
     messages: list
@@ -190,7 +193,12 @@ async def debug_config():
     }
 
 @app.post("/process_query", response_model=QueryResponse)
-async def process_query(request: QueryRequest = Body(...), api_key_header: Optional[str] = Header(default=None, alias="X-API-Key")):
+async def process_query(
+    request: QueryRequest = Body(...),
+    api_key_header: Optional[str] = Header(default=None, alias="X-API-Key"),
+    x_eval_run_id: Optional[str] = Header(default=None, alias="X-Eval-Run-Id"),
+    x_eval_query_id: Optional[str] = Header(default=None, alias="X-Eval-Query-Id"),
+):
     """
     Process a user query through the multi-agent orchestrator.
     
@@ -217,9 +225,26 @@ async def process_query(request: QueryRequest = Body(...), api_key_header: Optio
     
     try:
         logger.info(f"📝 Processing query: {request.user_input[:100]}...")
+
+        # Build metadata payload for orchestrator, including optional eval headers
+        # and per-query semantic contracts used in benchmark mode.
+        metadata: Dict[str, Any] = {}
+        if request.query_contract is not None:
+            metadata["query_contract"] = request.query_contract
+
+        if x_eval_run_id:
+            metadata["eval_run_id"] = x_eval_run_id
+        if x_eval_query_id:
+            metadata["eval_query_id"] = x_eval_query_id
+        # If any eval identifiers are present, mark this query as a benchmark run.
+        if x_eval_run_id or x_eval_query_id:
+            metadata.setdefault("eval_mode", "benchmark")
         
         # Process the query through multi-agent orchestrator
-        orchestrator_result = await orchestrator.process_query(request.user_input.strip())
+        orchestrator_result = await orchestrator.process_query(
+            user_input=request.user_input.strip(),
+            metadata=metadata or None,
+        )
         logger.info(f"📝 Orchestrator completed, result type: {type(orchestrator_result)}")
 
         # Ensure result is a dict
@@ -334,7 +359,11 @@ async def process_query(request: QueryRequest = Body(...), api_key_header: Optio
         )
 
 @app.post("/process_conversation", response_model=ConversationResponse)
-async def process_conversation(request: ConversationRequest = Body(...)):
+async def process_conversation(
+    request: ConversationRequest = Body(...),
+    x_eval_run_id: Optional[str] = Header(default=None, alias="X-Eval-Run-Id"),
+    x_eval_query_id: Optional[str] = Header(default=None, alias="X-Eval-Query-Id"),
+):
     """
     Process a conversation with full context through the multi-agent orchestrator.
     
@@ -374,12 +403,22 @@ async def process_conversation(request: ConversationRequest = Body(...)):
         
         logger.info(f"📝 Last user message: {last_user_message[:100]}...")
         logger.info(f"📝 Conversation ID: {request.conversation_id}")
-        
+
+        # Build metadata payload for orchestrator, including optional eval headers.
+        metadata: Dict[str, Any] = {}
+        if x_eval_run_id:
+            metadata["eval_run_id"] = x_eval_run_id
+        if x_eval_query_id:
+            metadata["eval_query_id"] = x_eval_query_id
+        if x_eval_run_id or x_eval_query_id:
+            metadata.setdefault("eval_mode", "benchmark")
+
         # Process through multi-agent orchestrator with full conversation context
         result = await orchestrator.process_query(
             user_input=last_user_message,
             messages=request.messages,
-            conversation_id=request.conversation_id
+            conversation_id=request.conversation_id,
+            metadata=metadata or None,
         )
 
         # Ensure result is a dict

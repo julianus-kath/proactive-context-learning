@@ -8,6 +8,7 @@ import asyncio
 import logging
 import os
 import sys
+from typing import Dict, Any, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -482,6 +483,56 @@ class TestFastAPIIntegration:
         except Exception as e:
             logger.warning(f"⚠️ Startup event warning (expected if MCP unavailable): {e}")
             # This is OK - MCP might not be available in test environment
+
+    def test_fastapi_propagates_eval_headers_and_contract(self, monkeypatch):
+        """Ensure eval headers and query_contract are passed into orchestrator metadata."""
+        from fastapi.testclient import TestClient
+        import chatbot_ui.langgraph_service as svc
+
+        captured: Dict[str, Any] = {}
+
+        class StubOrchestrator:
+            async def process_query(
+                self,
+                user_input: str,
+                messages: Optional[list] = None,
+                conversation_id: Optional[str] = None,
+                metadata: Optional[Dict[str, Any]] = None,
+            ) -> Dict[str, Any]:
+                captured["user_input"] = user_input
+                captured["messages"] = messages
+                captured["conversation_id"] = conversation_id
+                captured["metadata"] = metadata or {}
+                return {"final_response": "ok"}
+
+        # Avoid heavy real orchestrator initialization in tests.
+        monkeypatch.setattr(svc, "create_query_orchestrator", lambda: StubOrchestrator())
+        monkeypatch.setattr(svc, "get_debug_logger", lambda: None)
+
+        client = TestClient(svc.app)
+        # Ensure global orchestrator used by the handler is our stub.
+        svc.orchestrator = StubOrchestrator()
+
+        response = client.post(
+            "/process_query",
+            json={
+                "user_input": "test benchmark query",
+                "api_key": "supersecretapikey",
+                "query_contract": {"metric_key": "revenue"},
+            },
+            headers={
+                "X-Eval-Run-Id": "run-123",
+                "X-Eval-Query-Id": "Q-42",
+            },
+        )
+
+        assert response.status_code == 200
+        assert captured["user_input"] == "test benchmark query"
+        metadata = captured["metadata"]
+        assert metadata.get("eval_mode") == "benchmark"
+        assert metadata.get("eval_run_id") == "run-123"
+        assert metadata.get("eval_query_id") == "Q-42"
+        assert metadata.get("query_contract") == {"metric_key": "revenue"}
 
 
 if __name__ == "__main__":

@@ -71,7 +71,8 @@ Verification:
 - Smoke‑run `python -m langgraph_integration.orchestrator` or existing orchestrator startup paths (e.g., FastAPI import via `tests/test_orchestrator_integration.py::TestFastAPIIntegration::test_fastapi_imports_orchestrator`) to confirm no import/runtime regressions.
 - Add or extend an integration test (e.g., `tests/test_orchestrator_integration.py::TestQueryOrchestrator::test_orchestrator_intent_routing_query`) to assert that interactive (non‑benchmark) queries continue to route and respond as before aside from additional internal fields.
 
-### [ ] Step: Propagate eval headers and query contracts into LangGraph state
+### [x] Step: Propagate eval headers and query contracts into LangGraph state
+<!-- chat-id: a3b2e8fa-b7a6-4c85-80b6-5c71cf0abd23 -->
 
 Scope:
 - Update `langgraph_integration/api.py` (FastAPI service) to:
