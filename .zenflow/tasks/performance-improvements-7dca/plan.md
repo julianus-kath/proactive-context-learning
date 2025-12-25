@@ -140,7 +140,8 @@ Verification:
   - construct states with `eval_mode == "benchmark"` and a `query_contract.required_tables` including a low‑scoring table,
   - assert that required tables are retained in `relevant_tables` and passed downstream to join planning.
 
-### [ ] Step: Implement semantic validator logic in result_validator agent
+### [x] Step: Implement semantic validator logic in result_validator agent
+<!-- chat-id: 76456252-d4de-4f32-a61f-03990270585b -->
 
 Scope:
 - Extend `langgraph_integration/agents/result_validator/agent.py` to:

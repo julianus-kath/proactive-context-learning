@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from pydantic import ValidationError
 
 from langgraph_integration.contracts.response_envelope import ResponseEnvelope
+from langgraph_integration.contracts.semantic_contracts import QueryContract
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,11 @@ class ValidationResult(TypedDict, total=False):
         "replan_with_filter"
     ]]
     clarification_question: Optional[str]
+    # Semantic validation fields (benchmark mode)
+    semantic_status: Optional[str]
+    semantic_failure_reasons: Optional[List[str]]
+    contract_id: Optional[str]
+    semantic_retry_action: Optional[Literal["none", "replan", "try_next_candidate"]]
 
 
 @dataclass
@@ -465,8 +471,17 @@ def build_result_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
     if "is_valid" not in validation and "valid" in validation:
         validation["is_valid"] = bool(validation.get("valid"))
     
-    logger.info(f"🔍 [RESULT_VALIDATOR] Valid={validation.get('valid')}, Action={validation.get('retry_action')}")
-    
+    # 🧮 Semantic validation (benchmark mode, contract-backed)
+    _apply_semantic_validation(state, validation)
+
+    logger.info(
+        "🔍 [RESULT_VALIDATOR] Valid=%s, Action=%s, SemanticStatus=%s, SemanticAction=%s",
+        validation.get("valid"),
+        validation.get("retry_action"),
+        validation.get("semantic_status"),
+        validation.get("semantic_retry_action"),
+    )
+
     state["validation_result"] = validation
 
     retry_action = validation.get("retry_action")
@@ -487,3 +502,272 @@ def build_result_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
         logger.info("🔍 [RESULT_VALIDATOR] Escalating to clarification mode")
 
     return state
+
+
+def _apply_semantic_validation(state: Dict[str, Any], validation: ValidationResult) -> None:
+    """
+    Compute semantic validation fields based on the benchmark QueryContract.
+
+    This augments (but does not override) the structural validation outcome.
+    It only performs strict checks in benchmark mode when a query_contract is present.
+    """
+    eval_mode = state.get("eval_mode")
+    exec_result = state.get("exec_result") or {}
+
+    # Default fields – safe for interactive mode and missing contracts.
+    semantic_status: str = "CONTRACT_MISSING"
+    semantic_failure_reasons: List[str] = []
+    semantic_retry_action: str = "none"
+    contract_id: Optional[str] = None
+
+    # Always attach semantic fields so downstream eval/scoring can rely on them.
+    validation["semantic_status"] = semantic_status
+    validation["semantic_failure_reasons"] = semantic_failure_reasons
+    validation["semantic_retry_action"] = semantic_retry_action
+    validation["contract_id"] = contract_id
+
+    # Only apply strict semantic checks in benchmark mode.
+    if eval_mode != "benchmark":
+        return
+
+    raw_contract = state.get("query_contract")
+    if not isinstance(raw_contract, dict):
+        semantic_failure_reasons.append("Query contract missing in benchmark mode.")
+        validation["semantic_status"] = semantic_status
+        validation["semantic_failure_reasons"] = semantic_failure_reasons
+        return
+
+    try:
+        contract = QueryContract.model_validate(raw_contract)
+    except Exception as exc:  # pragma: no cover - defensive guard
+        semantic_failure_reasons.append(f"Query contract invalid: {exc}")
+        validation["semantic_status"] = semantic_status
+        validation["semantic_failure_reasons"] = semantic_failure_reasons
+        return
+
+    contract_id = contract.query_id
+
+    # If execution payload is obviously not a successful run, semantic correctness
+    # is not meaningful; keep CONTRACT_MISSING to signal "not evaluated".
+    if not isinstance(exec_result, dict) or not exec_result.get("ok", False):
+        semantic_failure_reasons.append(
+            "Execution did not succeed; semantic correctness not evaluated."
+        )
+        validation["semantic_status"] = semantic_status
+        validation["semantic_failure_reasons"] = semantic_failure_reasons
+        validation["contract_id"] = contract_id
+        return
+
+    intent = state.get("intent") or {}
+    tables_used_base = state.get("validator_tables_used_base") or []
+    join_plan = state.get("join_plan") or {}
+
+    # ---------- Entity checks ----------
+    primary_entities = intent.get("primary_entities") or []
+    primary_entities_l = {str(e).lower() for e in primary_entities}
+    contract_entity_l = contract.entity.lower()
+
+    entity_in_intent = contract_entity_l in primary_entities_l
+
+    used_base_l = {str(t).split(".")[-1].lower() for t in tables_used_base}
+    entity_table_l = contract.entity_table.lower()
+    entity_table_used = entity_table_l in used_base_l
+
+    entity_ok = entity_in_intent and entity_table_used
+
+    if not entity_in_intent:
+        semantic_failure_reasons.append(
+            f"Expected entity '{contract.entity}' in primary_entities, "
+            f"got {sorted(primary_entities_l) or 'none'}."
+        )
+    if not entity_table_used:
+        semantic_failure_reasons.append(
+            f"Expected entity_table '{contract.entity_table}' in validator_tables_used_base, "
+            f"got {sorted(used_base_l) or 'none'}."
+        )
+
+    # ---------- Metric checks ----------
+    supported_templates = {"TOP_K_BY_METRIC", "COUNT_ENTITY"}
+    contract_template = (contract.analytic_template or "").strip() or None
+
+    # Out-of-scope templates are treated as unsupported metrics in Phase 1.
+    if contract_template and contract_template not in supported_templates:
+        semantic_status = "UNSUPPORTED_METRIC"
+        semantic_failure_reasons.append(
+            f"Analytic template '{contract_template}' is not supported in Phase 1."
+        )
+        validation["semantic_status"] = semantic_status
+        validation["semantic_failure_reasons"] = semantic_failure_reasons
+        validation["semantic_retry_action"] = semantic_retry_action
+        validation["contract_id"] = contract_id
+        return
+
+    resolved_metrics = intent.get("resolved_metrics") or []
+    resolved_metric = resolved_metrics[0] if resolved_metrics else None
+
+    resolved_key = None
+    resolved_expression = None
+    if isinstance(resolved_metric, dict):
+        resolved_key = resolved_metric.get("key")
+        resolved_expression = resolved_metric.get("expression_sql")
+
+    # Fallback to template_params when resolved_metrics are not present for any reason.
+    if not resolved_expression:
+        template_params = intent.get("template_params") or {}
+        resolved_expression = template_params.get("metric_expression_sql")
+
+    metric_key_ok = resolved_key == contract.metric_key
+
+    expected_expr = _normalize_sql_expression(contract.metric_expression_sql)
+    actual_expr = _normalize_sql_expression(resolved_expression) if resolved_expression else None
+    expression_ok = True
+    if actual_expr is not None:
+        expression_ok = actual_expr == expected_expr
+
+    template_ok = True
+    if contract_template:
+        actual_template = intent.get("analytic_template")
+        template_ok = actual_template == contract_template
+        if not template_ok:
+            semantic_failure_reasons.append(
+                f"Analytic template mismatch: expected '{contract_template}', "
+                f"got '{actual_template}'."
+            )
+
+    if not metric_key_ok:
+        semantic_failure_reasons.append(
+            f"Metric key mismatch: expected '{contract.metric_key}', got '{resolved_key}'."
+        )
+    if not expression_ok:
+        semantic_failure_reasons.append(
+            "Metric expression mismatch between contract and resolved metric."
+        )
+
+    metric_ok = metric_key_ok and expression_ok and template_ok
+
+    # ---------- Join path checks ----------
+    required_tables = {t.lower() for t in (contract.required_tables or [])}
+    missing_required = sorted(required_tables - used_base_l)
+
+    actual_path = _infer_join_path_tables(join_plan, tables_used_base)
+    actual_path_l = [t.lower() for t in actual_path]
+
+    allowed_paths = [
+        [str(t).split(".")[-1].lower() for t in path]
+        for path in (contract.allowed_join_paths or [])
+    ]
+
+    join_status: Optional[str] = None
+
+    if missing_required:
+        join_status = "NO_VALID_JOIN_PATH"
+        semantic_failure_reasons.append(
+            f"Required tables missing from final SQL: {', '.join(missing_required)}."
+        )
+    elif allowed_paths:
+        if actual_path_l:
+            actual_set = set(actual_path_l)
+            allowed_sets = [set(p) for p in allowed_paths]
+            if any(actual_set == s for s in allowed_sets):
+                join_status = None
+            else:
+                join_status = "JOIN_PATH_INVALID"
+                semantic_failure_reasons.append(
+                    f"Join path {actual_path_l or '[]'} does not match any allowed paths "
+                    f"{allowed_paths}."
+                )
+        else:
+            join_status = "NO_VALID_JOIN_PATH"
+            semantic_failure_reasons.append(
+                "Required tables are present but no join path could be reconstructed "
+                "from join_plan."
+            )
+
+    # ---------- Final semantic status aggregation ----------
+    if not entity_ok:
+        semantic_status = "ENTITY_MISMATCH"
+    elif not metric_ok:
+        semantic_status = "METRIC_MISMATCH"
+    elif join_status:
+        semantic_status = join_status
+    else:
+        semantic_status = "OK"
+
+    # Retry action is interpreted by route_validation_result in a later phase.
+    if semantic_status in {
+        "ENTITY_MISMATCH",
+        "METRIC_MISMATCH",
+        "JOIN_PATH_INVALID",
+        "NO_VALID_JOIN_PATH",
+    }:
+        semantic_retry_action = "replan"
+    else:
+        semantic_retry_action = "none"
+
+    validation["semantic_status"] = semantic_status
+    validation["semantic_failure_reasons"] = semantic_failure_reasons
+    validation["semantic_retry_action"] = semantic_retry_action
+    validation["contract_id"] = contract_id
+
+
+def _normalize_sql_expression(expr: Optional[str]) -> Optional[str]:
+    """Normalize SQL expressions for semantic comparison."""
+    if not expr:
+        return None
+    try:
+        text = expr.strip().lower()
+        text = re.sub(r"\s+", " ", text)
+        text = text.rstrip(";")
+        return text
+    except Exception:  # pragma: no cover - defensive guard
+        return expr
+
+
+def _infer_join_path_tables(
+    join_plan: Dict[str, Any],
+    fallback_tables_used_base: List[str],
+) -> List[str]:
+    """
+    Infer an ordered list of base table names from join_plan.
+
+    This is intentionally conservative and only uses simple heuristics so it
+    remains robust to join_plan schema changes.
+    """
+    tables: List[str] = []
+
+    try:
+        fact = join_plan.get("fact_table") or join_plan.get("primary_table")
+        if isinstance(fact, str):
+            tables.append(fact.split(".")[-1])
+
+        joins = join_plan.get("joins") or []
+        if isinstance(joins, list):
+            for j in joins:
+                if not isinstance(j, dict):
+                    continue
+                table_name = None
+                for key in ("table", "right_table", "left_table", "dimension_table", "join_table"):
+                    val = j.get(key)
+                    if isinstance(val, str) and val:
+                        table_name = val
+                        break
+                if table_name:
+                    tables.append(table_name.split(".")[-1])
+    except Exception:  # pragma: no cover - defensive guard
+        tables = []
+
+    if not tables and fallback_tables_used_base:
+        tables = list(fallback_tables_used_base)
+
+    # Deduplicate while preserving order
+    seen = set()
+    ordered: List[str] = []
+    for t in tables:
+        if not t:
+            continue
+        base = str(t).split(".")[-1]
+        if base not in seen:
+            seen.add(base)
+            ordered.append(base)
+
+    return ordered
