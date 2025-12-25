@@ -24,6 +24,7 @@ project_root = Path(__file__).parent.parent
 load_dotenv(project_root / ".env")
 
 from eval.eval_client import EvalClient
+from langgraph_integration.contracts.semantic_contracts import QueryContract
 
 
 def first_non_empty_str(*candidates: Optional[str]) -> str:
@@ -47,6 +48,67 @@ def merge_unique_strings(*sources: Any) -> List[str]:
                 if trimmed and trimmed not in merged:
                     merged.append(trimmed)
     return merged
+
+
+def _derive_contract_path_for_dataset(dataset_path: Path) -> Path:
+    """
+    Derive the contract file path for a given dataset.
+
+    Example:
+        eval/datasets/cockpit_queries_top5.jsonl
+        -> eval/datasets/cockpit_queries_top5.contracts.json
+    """
+    return dataset_path.with_name(f"{dataset_path.stem}.contracts.json")
+
+
+def load_query_contracts_for_dataset(dataset_path: Path) -> Dict[str, QueryContract]:
+    """
+    Load per-query semantic contracts for a dataset.
+
+    Returns a mapping {query_id -> QueryContract}.
+    Raises FileNotFoundError if the contract file is missing and
+    ValueError if any contract fails validation.
+    """
+    contract_path = _derive_contract_path_for_dataset(dataset_path)
+    if not contract_path.exists():
+        raise FileNotFoundError(f"Contract file not found: {contract_path}")
+
+    with open(contract_path) as f:
+        raw = json.load(f)
+
+    entries: List[Dict[str, Any]] = []
+    if isinstance(raw, list):
+        entries = [e for e in raw if isinstance(e, dict)]
+    elif isinstance(raw, dict):
+        # Support either a dict keyed by query_id or a single contract object.
+        if "query_id" in raw:
+            entries = [raw]
+        else:
+            for qid, payload in raw.items():
+                if not isinstance(payload, dict):
+                    continue
+                # Ensure query_id is set, defaulting to the dict key.
+                entry = dict(payload)
+                entry.setdefault("query_id", qid)
+                entries.append(entry)
+    else:
+        raise ValueError(f"Unsupported contract file format: {type(raw).__name__}")
+
+    contracts: Dict[str, QueryContract] = {}
+    errors: List[str] = []
+    for entry in entries:
+        try:
+            contract = QueryContract.model_validate(entry)
+        except Exception as exc:  # pragma: no cover - defensive
+            qid = entry.get("query_id") or "<missing>"
+            errors.append(f"{qid}: {exc}")
+            continue
+        contracts[contract.query_id] = contract
+
+    if errors:
+        raise ValueError("Contract validation failed:\n" + "\n".join(errors))
+
+    return contracts
 
 
 def artifact_validation_errors(artifact: Dict[str, Any]) -> List[str]:
@@ -155,6 +217,23 @@ async def run_benchmark(
 
     print(f"✅ Loaded {len(queries)} queries")
 
+    # Load per-dataset semantic contracts when available.
+    try:
+        query_contracts = load_query_contracts_for_dataset(dataset_path)
+        print(
+            f"🧾 Loaded {len(query_contracts)} semantic contracts from "
+            f"{_derive_contract_path_for_dataset(dataset_path)}"
+        )
+    except FileNotFoundError:
+        query_contracts = {}
+        print(
+            f"⚠️  No semantic contract file found for dataset {dataset_path.name}; "
+            "semantic correctness scoring will be disabled for this run."
+        )
+    except Exception as exc:
+        query_contracts = {}
+        print(f"⚠️  Failed to load semantic contracts: {exc}")
+
     run_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{run_name}"
     run_dir = Path(__file__).parent / "runs" / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -203,12 +282,24 @@ async def run_benchmark(
             question = query["question"]
             print(f"\n[{i}/{len(queries)}] {query_id}: {question[:60]}...")
 
+            # Select the QueryContract (if any) for this benchmark query.
+            contract_payload: Optional[Dict[str, Any]] = None
+            contract = query_contracts.get(query_id)
+            if isinstance(contract, QueryContract):
+                contract_payload = contract.model_dump(exclude_none=True)
+
             start_time = time.time()
             try:
                 api_key = os.getenv("API_KEY", "supersecretapikey")
                 response = await client.post(
                     f"{target_url}/process_query",
-                    json={"user_input": question, "api_key": api_key},
+                    json={
+                        "user_input": question,
+                        "api_key": api_key,
+                        # Per-query semantic contract is passed through to the
+                        # LangGraph service, which forwards it via metadata.
+                        "query_contract": contract_payload,
+                    },
                     headers={"X-Eval-Run-Id": run_id, "X-Eval-Query-Id": query_id},
                 )
 

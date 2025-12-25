@@ -88,7 +88,8 @@ Verification:
   - passing eval headers results in `state.eval_mode == "benchmark"` and `state.eval_query_id` being set.
 - Manually exercise the FastAPI service (if available) with a single benchmark query and log `BaseState` to confirm metadata is present.
 
-### [ ] Step: Implement per‑dataset contract loading and metric catalog in eval harness
+### [x] Step: Implement per‑dataset contract loading and metric catalog in eval harness
+<!-- chat-id: 6e2851b7-fe17-4020-baae-838bd2768e4e -->
 
 Scope:
 - Define per‑dataset contract files alongside existing JSONL datasets, e.g. `eval/datasets/<dataset>.contracts.json` (as in §4.1).

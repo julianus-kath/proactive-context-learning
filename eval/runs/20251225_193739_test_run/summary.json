@@ -1,0 +1,8 @@
+{
+  "run_id": "20251225_193739_test_run",
+  "total_queries": 5,
+  "successful": 0,
+  "failed": 5,
+  "success_rate": "0.0%",
+  "results_dir": "/private/var/folders/0v/gfnycml53110tbl3dj5jlwr80000gn/T/zenflow/worktrees/performance-improvements-7dca/eval/runs/20251225_193739_test_run"
+}
