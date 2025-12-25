@@ -194,6 +194,10 @@ class TestQueryOrchestrator:
         # Verify BaseState has all required fields
         assert "user_input" in BaseState.__annotations__
         assert "intent" in BaseState.__annotations__
+        # Benchmark / evaluation fields should be present but optional
+        assert "eval_mode" in BaseState.__annotations__
+        assert "semantic_retry_count" in BaseState.__annotations__
+        assert "max_semantic_retries" in BaseState.__annotations__
         assert "relevant_tables" in BaseState.__annotations__
         assert "schema_snippet" in BaseState.__annotations__
         assert "join_plan" in BaseState.__annotations__

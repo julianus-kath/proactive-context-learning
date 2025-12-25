@@ -2821,11 +2821,32 @@ class QueryOrchestrator:
         """
         logger.info(f"📝 PROCESS_QUERY CALLED: {user_input[:100]}...")
         logger.info(f"📝 Conversation ID: {conversation_id}, Messages count: {len(messages) if messages else 0}")
-        
+
+        # Seed evaluation / benchmark configuration (can be overridden via metadata).
+        eval_mode = None
+        if metadata and isinstance(metadata, dict):
+            raw_mode = metadata.get("eval_mode")
+            if isinstance(raw_mode, str):
+                eval_mode = raw_mode.strip() or None
+
+        # Default semantic retry configuration (NF-1, NF-2).
+        # In benchmark mode we allow up to 2 semantic replans; in interactive mode
+        # semantic retries remain disabled by default.
+        if eval_mode == "benchmark":
+            semantic_retry_count = 0
+            max_semantic_retries = 2
+        else:
+            semantic_retry_count = 0
+            max_semantic_retries = 0
+
         initial_state: Dict[str, Any] = {
             "user_input": user_input,
             "messages": messages or [],
             "conversation_id": conversation_id or "",
+            # Benchmark / evaluation flags
+            "eval_mode": eval_mode,
+            "semantic_retry_count": semantic_retry_count,
+            "max_semantic_retries": max_semantic_retries,
             # 🆕 Retry & candidate tracking (prevent infinite loops)
             "tried_candidate_tables": [],
             "retry_attempt_count": 0,
@@ -2866,6 +2887,25 @@ class QueryOrchestrator:
             for key, value in metadata.items():
                 if value is not None:
                     initial_state[key] = value
+
+        # Enforce non-functional invariants on semantic counters after metadata merge.
+        # semantic_retry_count must not exceed max_semantic_retries, and the combined
+        # number of plan + semantic attempts must remain within max_total_plans.
+        semantic_retry_count = int(initial_state.get("semantic_retry_count", 0) or 0)
+        max_semantic_retries = int(initial_state.get("max_semantic_retries", 0) or 0)
+        plan_attempt_count = int(initial_state.get("plan_attempt_count", 0) or 0)
+        max_total_plans = int(initial_state.get("max_total_plans", 0) or 0) or 4
+
+        if semantic_retry_count > max_semantic_retries:
+            semantic_retry_count = max_semantic_retries
+        if plan_attempt_count + semantic_retry_count > max_total_plans:
+            semantic_retry_count = max(0, max_total_plans - plan_attempt_count)
+
+        initial_state["semantic_retry_count"] = semantic_retry_count
+        initial_state["max_semantic_retries"] = max_semantic_retries
+        initial_state["plan_attempt_count"] = plan_attempt_count
+        initial_state["max_total_plans"] = max_total_plans
+
         try:
             # Server-side timeout for full orchestration to avoid client-level timeouts.
             # Use the same query_timeout_seconds as an upper bound for now.

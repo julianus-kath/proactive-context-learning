@@ -116,6 +116,10 @@ class BaseState(TypedDict, total=False):
     health_status: Dict[str, Any]  # {ok, db_connected, tables_count, views_count, ...}
     eval_run_id: Optional[str]
     eval_query_id: Optional[str]
+    # Benchmark / evaluation configuration
+    eval_mode: Optional[str]  # "benchmark" | "interactive" | None
+    semantic_retry_count: int  # Number of semantic replans attempted
+    max_semantic_retries: int  # Max allowed semantic replans (benchmark mode)
     executed_tool_calls: List[Dict[str, Any]]
 
     # 🆕 PHASE 10b: Retry & candidate tracking (prevent infinite loops)

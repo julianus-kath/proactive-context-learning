@@ -50,7 +50,8 @@ If the feature is trivial and doesn't warrant full specification, update this wo
 
 Save to `{@artifacts_path}/plan.md`.
 
-### [ ] Step: Extend BaseState for benchmark mode and semantic counters
+### [x] Step: Extend BaseState for benchmark mode and semantic counters
+<!-- chat-id: 1c84b474-b530-4138-ad48-4b7a47f57d8c -->
 
 Scope:
 - Update `langgraph_integration/contracts/state.py` to add:
