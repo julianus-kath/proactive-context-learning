@@ -162,7 +162,8 @@ Verification:
 - Run an end‑to‑end benchmark on 1–2 queries with intentionally wrong SQL (via mocks) to confirm semantic failures are detected even when SQL executes successfully.
 - Add a small test (e.g., `tests/test_result_validator_semantic_statuses.py`) that verifies template mismatches are reported as `METRIC_MISMATCH` with a clear `semantic_failure_reasons` entry.
 
-### [ ] Step: Enforce semantic replanning budgets and routing in route_validation_result
+### [x] Step: Enforce semantic replanning budgets and routing in route_validation_result
+<!-- chat-id: d131d67d-8f28-4071-8488-bcf78bc355a3 -->
 
 Scope:
 - Update `langgraph_integration/orchestrator.py:route_validation_result` to:

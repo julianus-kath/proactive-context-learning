@@ -718,6 +718,211 @@ class QueryOrchestrator:
 
         return state
 
+    def _route_validation_result_for_state(self, state: BaseState) -> str:
+        """
+        Internal helper to interpret validation and semantic fields and decide routing.
+
+        This mirrors the logic used by the route_validation_result closure in the
+        compiled graph so it can be exercised directly in unit tests without
+        depending on LangGraph internals.
+        """
+        validation = state.get("validation_result", {}) or {}
+        retry_action = validation.get("retry_action", "accept") or "accept"
+        semantic_status = validation.get("semantic_status")
+        semantic_retry_action = validation.get("semantic_retry_action", "none") or "none"
+
+        eval_mode = state.get("eval_mode")
+        is_benchmark = eval_mode == "benchmark"
+        semantic_retry_count = int(state.get("semantic_retry_count", 0) or 0)
+        max_semantic_retries = int(state.get("max_semantic_retries", 0) or 0)
+        plan_attempt = int(state.get("plan_attempt_count", 0) or 0)
+        max_plans = int(state.get("max_total_plans", 0) or 0) or 4
+
+        # Semantic-aware routing is only active in benchmark mode; interactive mode
+        # treats semantic findings as logging-only so UX remains unchanged.
+        semantic_driven_retry = False
+
+        # Phase 2b: Repair loop caps & no-progress detection
+        validation_attempts = state.get("validation_attempt_count", 0)
+        exec_recovery_attempts = state.get("exec_recovery_attempt_count", 0)
+        max_validation_attempts = state.get("max_validation_attempts", 0) or getattr(self, "max_validation_attempts", 2)
+        max_exec_recovery_attempts = state.get("max_exec_recovery_attempts", 0) or getattr(self, "max_exec_recovery_attempts", 2)
+        max_no_progress_repeats = state.get("max_no_progress_repeats", 0) or getattr(self, "max_no_progress_repeats", 2)
+
+        # No-progress detector: track repeated (SQL,error) signatures
+        try:
+            sig = self._repair_signature(state)
+            seen = state.get("repair_signatures_seen") or {}
+            count = seen.get(sig, 0) + 1
+            seen[sig] = count
+            state["repair_signatures_seen"] = seen
+            state["repair_no_progress_count"] = state.get("repair_no_progress_count", 0) + (1 if count > 1 else 0)
+
+            if count >= max_no_progress_repeats and max_no_progress_repeats > 0:
+                state["stop_reason"] = "repair_no_progress"
+                preview_sql = (state.get("sql_query", "") or "").strip()
+                preview_sql = preview_sql[:300] + ("..." if len(preview_sql) > 300 else "")
+                merge_error_info(
+                    state,
+                    {
+                        "type": "REPAIR_NO_PROGRESS",
+                        "stage": "validate_sql",
+                        "message": "Validation/repair cycles repeated the same failing SQL and error without improvement.",
+                        "suggestion": (
+                            "Try narrowing the question (fewer tables/metrics) or phrasing it in a simpler way. "
+                            "You can also try referencing specific tables if you know them."
+                        ),
+                        "context": {
+                            "sql_preview": preview_sql,
+                            "last_error_signature": state.get("last_exec_error_signature"),
+                        },
+                    },
+                )
+                return "answer"
+        except Exception:
+            # Defensive guard – routing should continue even if repair signature fails.
+            pass
+
+        # ===================== Semantic-aware routing (benchmark mode only) =====================
+        if is_benchmark:
+            if semantic_status and semantic_status not in ("OK", "CONTRACT_MISSING", "UNSUPPORTED_METRIC"):
+                if semantic_retry_action == "replan":
+                    # Enforce semantic-specific budget and shared global plan budget.
+                    if max_semantic_retries > 0 and semantic_retry_count >= max_semantic_retries:
+                        if not state.get("stop_reason"):
+                            state["stop_reason"] = "max_semantic_retries"
+                    elif plan_attempt + semantic_retry_count >= max_plans:
+                        # Shared global plan budget exhausted; fall through to existing plan cap.
+                        pass
+                    else:
+                        # Map semantic failures to existing retry actions without introducing
+                        # new graph nodes or edges. Join-path issues tend to benefit from
+                        # trying a new candidate set, while entity/metric mismatches are
+                        # better served by a fresh plan over the current candidates.
+                        if semantic_status in ("JOIN_PATH_INVALID", "NO_VALID_JOIN_PATH"):
+                            mapped_retry = "try_next_candidate"
+                        else:
+                            mapped_retry = "replan_with_aggregation"
+
+                        retry_action = mapped_retry
+                        validation["retry_action"] = mapped_retry
+                        state["validation_result"] = validation
+                        semantic_driven_retry = True
+
+        # 🧠 Budget-aware routing: if we are at or below the safety margin,
+        # stop sending the graph back to discovery/join (which would require
+        # additional LLM calls) and move toward answering with existing data.
+        llm_usage = state.get("llm_usage") or {}
+        max_calls = state.get("max_llm_calls", 0) or 20
+        total_usage = llm_usage.get("total", state.get("total_llm_calls", 0) or 0)
+        remaining_budget = max_calls - int(total_usage)
+        safety_margin = state.get("llm_budget_safety_margin", 0) or 0
+        if remaining_budget <= safety_margin:
+            # Force accept-path so downstream goes directly to answer.
+            validation["retry_action"] = "accept"
+            state["validation_result"] = validation
+            return "answer"
+
+        # 🆕 Global plan budget: stop after too many plan/validate cycles
+        if plan_attempt >= max_plans:
+            # Convert into a clarification-style failure to avoid burning more tokens
+            intent = state.get("intent") or {}
+            intent["operation"] = "clarify"
+            intent["needs_clarification"] = True
+            intent["clarification_question"] = intent.get(
+                "clarification_question",
+                "This question requires a complex analytic query and I could not find a stable plan within a safe number of attempts. Could you narrow down the scope or specify the main metric you care about?"
+            )
+            intent["ambiguity_reason"] = intent.get(
+                "ambiguity_reason",
+                "Maximum planning retries exceeded; query was too broad or complex for an automatic plan."
+            )
+            state["intent"] = intent
+            merge_error_info(
+                state,
+                {
+                    "type": "MAX_RETRIES_EXCEEDED",
+                    "message": (
+                        "The system attempted multiple discovery and planning cycles "
+                        "but could not produce a stable query plan."
+                    ),
+                },
+            )
+            return "answer"
+
+        # Phase 2b: Hard caps on validation and exec_recovery attempts
+        if retry_action in ("try_next_candidate", "replan_with_aggregation", "replan_with_filter"):
+            if validation_attempts >= max_validation_attempts:
+                state["stop_reason"] = "max_validation_attempts"
+                merge_error_info(
+                    state,
+                    {
+                        "type": "REPAIR_LOOP_STUCK",
+                        "stage": "validate_sql",
+                        "message": (
+                            "The system attempted to validate and repair the SQL multiple times "
+                            "but could not produce a stable, executable query."
+                        ),
+                        "suggestion": (
+                            "Try narrowing the question (fewer tables/metrics) or specifying a clearer metric "
+                            "so the planner can generate a simpler query."
+                        ),
+                    },
+                )
+                return "answer"
+
+        if retry_action == "try_next_candidate" and exec_recovery_attempts >= max_exec_recovery_attempts:
+            state["stop_reason"] = "max_exec_recovery_attempts"
+            merge_error_info(
+                state,
+                {
+                    "type": "REPAIR_LOOP_STUCK",
+                    "stage": "exec_recovery",
+                    "message": (
+                        "The system attempted to execute and repair the query multiple times "
+                        "but could not complete execution safely."
+                    ),
+                    "suggestion": (
+                        "Consider asking a simpler question or focusing on a smaller subset of data."
+                    ),
+                },
+            )
+            return "answer"
+
+        # Increment plan attempt count when we're about to take a retry action
+        if retry_action in ("try_next_candidate", "replan_with_aggregation", "replan_with_filter"):
+            state["plan_attempt_count"] = plan_attempt + 1
+            if is_benchmark and semantic_driven_retry:
+                state["semantic_retry_count"] = semantic_retry_count + 1
+
+        # 🆕 Circuit breaker: stop retrying per candidate set
+        retry_attempt = state.get("retry_attempt_count", 0)
+        max_retries = state.get("max_retries_per_candidate_set", 2)
+
+        if retry_attempt >= max_retries:
+            merge_error_info(
+                state,
+                {
+                    "type": "MAX_RETRIES_EXCEEDED",
+                    "message": (
+                        "All discovery candidates have been tried but the query "
+                        "could not be executed successfully."
+                    ),
+                },
+            )
+            return "answer"
+
+        if retry_action == "try_next_candidate":
+            state["retry_attempt_count"] = retry_attempt + 1
+            return "discovery"
+        elif retry_action in ["replan_with_aggregation", "replan_with_filter"]:
+            state["retry_attempt_count"] = retry_attempt + 1
+            return "join_sql"
+        elif retry_action == "ask_user":
+            return "answer"
+        else:  # accept or unknown
+            return "answer"
+
     async def ainvoke(self, input_state: Dict, **kwargs):
         """
         Invoke the orchestrator graph with sensible defaults.
@@ -897,7 +1102,7 @@ class QueryOrchestrator:
         # 🆕 Phase 10a: After exec, validate result before answering
         graph.add_edge("exec_recovery", "result_validator")
         
-        # 🆕 Phase 10a: Conditional routing from result_validator based on validation outcome TODO explain this?
+        # 🆕 Phase 10a: Conditional routing from result_validator based on validation outcome
         def route_validation_result(state: BaseState) -> str:
             """
             Route based on validation result.
@@ -909,9 +1114,33 @@ class QueryOrchestrator:
             - ask_user: validation unclear, ask user for clarification
             """
             validation = state.get("validation_result", {}) or {}
-            retry_action = validation.get("retry_action", "accept")
-            
-            logger.info(f"🚦 [VALIDATION_ROUTE] retry_action={retry_action}")
+            retry_action = validation.get("retry_action", "accept") or "accept"
+            semantic_status = validation.get("semantic_status")
+            semantic_retry_action = validation.get("semantic_retry_action", "none") or "none"
+
+            eval_mode = state.get("eval_mode")
+            is_benchmark = eval_mode == "benchmark"
+            semantic_retry_count = int(state.get("semantic_retry_count", 0) or 0)
+            max_semantic_retries = int(state.get("max_semantic_retries", 0) or 0)
+            plan_attempt = int(state.get("plan_attempt_count", 0) or 0)
+            max_plans = int(state.get("max_total_plans", 0) or 0) or 4
+
+            # Semantic-aware routing is only active in benchmark mode; interactive mode
+            # treats semantic findings as logging-only so UX remains unchanged.
+            semantic_driven_retry = False
+
+            logger.info(
+                "🚦 [VALIDATION_ROUTE] retry_action=%s semantic_status=%s semantic_retry_action=%s "
+                "semantic_retry_count=%s/%s plan_attempt_count=%s/%s eval_mode=%s",
+                retry_action,
+                semantic_status,
+                semantic_retry_action,
+                semantic_retry_count,
+                max_semantic_retries,
+                plan_attempt,
+                max_plans,
+                eval_mode,
+            )
 
             # Phase 2b: Repair loop caps & no-progress detection
             validation_attempts = state.get("validation_attempt_count", 0)
@@ -966,6 +1195,56 @@ class QueryOrchestrator:
                     return "answer"
             except Exception as e:
                 logger.warning(f"🚦 [VALIDATION] Failed to compute repair signature: {e}")
+
+            # ===================== Semantic-aware routing (benchmark mode only) =====================
+            if is_benchmark:
+                if semantic_status and semantic_status not in ("OK", "CONTRACT_MISSING", "UNSUPPORTED_METRIC"):
+                    if semantic_retry_action == "replan":
+                        # Enforce semantic-specific budget and shared global plan budget.
+                        if max_semantic_retries > 0 and semantic_retry_count >= max_semantic_retries:
+                            logger.warning(
+                                "🚦 [SEMANTIC] Max semantic replans reached (%s/%s); "
+                                "disabling further semantic retries",
+                                semantic_retry_count,
+                                max_semantic_retries,
+                            )
+                            # Preserve any existing stop_reason but record semantic cap exhaustion.
+                            if not state.get("stop_reason"):
+                                state["stop_reason"] = "max_semantic_retries"
+                        elif plan_attempt + semantic_retry_count >= max_plans:
+                            logger.warning(
+                                "🚦 [SEMANTIC] Global plan budget exhausted for semantic replans "
+                                "(plan_attempt_count=%s, semantic_retry_count=%s, max_total_plans=%s)",
+                                plan_attempt,
+                                semantic_retry_count,
+                                max_plans,
+                            )
+                        else:
+                            # Map semantic failures to existing retry actions without introducing
+                            # new graph nodes or edges. Join-path issues tend to benefit from
+                            # trying a new candidate set, while entity/metric mismatches are
+                            # better served by a fresh plan over the current candidates.
+                            if semantic_status in ("JOIN_PATH_INVALID", "NO_VALID_JOIN_PATH"):
+                                mapped_retry = "try_next_candidate"
+                            else:
+                                mapped_retry = "replan_with_aggregation"
+
+                            logger.info(
+                                "🚦 [SEMANTIC] Mapping semantic_status=%s to retry_action=%s",
+                                semantic_status,
+                                mapped_retry,
+                            )
+                            retry_action = mapped_retry
+                            validation["retry_action"] = mapped_retry
+                            state["validation_result"] = validation
+                            semantic_driven_retry = True
+                    else:
+                        logger.info(
+                            "🚦 [SEMANTIC] semantic_retry_action=%s does not request replanning; "
+                            "semantic_status=%s will be reported without extra retries",
+                            semantic_retry_action,
+                            semantic_status,
+                        )
 
             # 🧠 Budget-aware routing: if we are at or below the safety margin,
             # stop sending the graph back to discovery/join (which would require
@@ -1070,6 +1349,8 @@ class QueryOrchestrator:
             # Increment plan attempt count when we're about to take a retry action
             if retry_action in ("try_next_candidate", "replan_with_aggregation", "replan_with_filter"):
                 state["plan_attempt_count"] = plan_attempt + 1
+                if is_benchmark and semantic_driven_retry:
+                    state["semantic_retry_count"] = semantic_retry_count + 1
 
             # 🆕 Circuit breaker: stop retrying per candidate set
             retry_attempt = state.get("retry_attempt_count", 0)
