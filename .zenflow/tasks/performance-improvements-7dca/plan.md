@@ -35,7 +35,8 @@ Save to `{@artifacts_path}/spec.md` with:
 - Delivery phases (incremental, testable milestones)
 - Verification approach using project lint/test commands
 
-### [ ] Step: Planning
+### [x] Step: Planning
+<!-- chat-id: 0bd7788c-6294-4d89-81ef-461afa356112 -->
 
 Create a detailed implementation plan based on `{@artifacts_path}/spec.md`.
 
@@ -49,8 +50,124 @@ If the feature is trivial and doesn't warrant full specification, update this wo
 
 Save to `{@artifacts_path}/plan.md`.
 
-### [ ] Step: Implementation
+### [ ] Step: Extend BaseState for benchmark mode and semantic counters
 
-This step should be replaced with detailed implementation tasks from the Planning step.
+Scope:
+- Update `langgraph_integration/contracts/state.py` to add:
+  - `eval_mode: Optional[str]` (e.g., `"benchmark"` vs `None` / `"interactive"`),
+  - `semantic_retry_count: int`,
+  - `max_semantic_retries: int`.
+- Update `langgraph_integration/orchestrator.py:QueryOrchestrator.process_query()` to:
+  - initialize `eval_mode` and semantic counters from `metadata` (default `eval_mode=None`, `semantic_retry_count=0`, `max_semantic_retries=2` in benchmark mode),
+  - ensure `semantic_retry_count <= max_semantic_retries` and `plan_attempt_count + semantic_retry_count <= max_total_plans` (NF‑1, NF‑2).
+- Ensure new fields are included in any state serialization / response envelopes where `BaseState` is exposed, without breaking existing callers.
 
-If Planning didn't replace this step, execute the tasks in `{@artifacts_path}/plan.md`, updating checkboxes as you go. Run planned tests/lint and record results in plan.md.
+Verification:
+- Run `pytest tests/test_orchestrator_integration.py::TestQueryOrchestrator::test_state_contracts_valid -q` to confirm state contracts remain consistent.
+- Smoke‑run `python -m langgraph_integration.orchestrator` or existing orchestrator startup paths (e.g., FastAPI import via `tests/test_orchestrator_integration.py::TestFastAPIIntegration::test_fastapi_imports_orchestrator`) to confirm no import/runtime regressions.
+
+### [ ] Step: Propagate eval headers and query contracts into LangGraph state
+
+Scope:
+- Update `langgraph_integration/api.py` (FastAPI service) to:
+  - read `X-Eval-Run-Id` and `X-Eval-Query-Id` headers on benchmark requests,
+  - set `metadata={"eval_run_id": ..., "eval_query_id": ..., "eval_mode": "benchmark"}` when calling `QueryOrchestrator.process_query()`,
+  - accept an optional `query_contract` payload (or reuse existing request body/extensible metadata mechanism) and pass it through `metadata`.
+- Update `langgraph_integration/orchestrator.py:QueryOrchestrator.process_query()` to:
+  - merge `eval_run_id`, `eval_query_id`, `eval_mode`, and `query_contract` from `metadata` into the initial `BaseState`,
+  - keep `eval_mode` read‑only for all downstream nodes (BM‑1).
+
+Verification:
+- Add or update a small FastAPI integration test (or extend `tests/test_orchestrator_integration.py::TestFastAPIIntegration`) to assert that:
+  - passing eval headers results in `state.eval_mode == "benchmark"` and `state.eval_query_id` being set.
+- Manually exercise the FastAPI service (if available) with a single benchmark query and log `BaseState` to confirm metadata is present.
+
+### [ ] Step: Implement per‑dataset contract loading and metric catalog in eval harness
+
+Scope:
+- Define per‑dataset contract files alongside existing JSONL datasets, e.g. `eval/datasets/<dataset>.contracts.json` (as in §4.1).
+- Implement a contract loader in `eval/run_benchmark.py` to:
+  - load the contract file for the selected dataset into a `Dict[query_id, Contract]`,
+  - validate basic schema (required fields like `query_id`, `entity`, `entity_table`, `metric_key`, `metric_expression_sql`, `required_tables`, `allowed_join_paths`, `analytic_template`),
+  - select the correct `Contract` per benchmark query using `eval_query_id`,
+  - pass the selected contract into `QueryOrchestrator.process_query()` via `metadata["query_contract"]`.
+- Introduce a canonical metric mapping per dataset (metric key → SQL expression, metric phrase) that matches the contract schema and is used by the intent/metric resolver in benchmark mode.
+
+Verification:
+- Add or update a lightweight unit test under `tests/` (or near `eval/run_benchmark.py`) that:
+  - loads a sample `.contracts.json` file,
+  - asserts that each dataset entry has a matching contract keyed by `query_id`,
+  - verifies `run_benchmark` passes a non‑empty `query_contract` when `eval_mode == "benchmark"`.
+- Perform a dry‑run benchmark on a very small subset (e.g., a single query) to confirm contract loading and wiring without enforcing semantic validation yet.
+
+### [ ] Step: Implement deterministic metric resolution and analytic template selection
+
+Scope:
+- Extend the intent/metric resolution path (e.g., in `langgraph_integration/orchestrator.py` intent parsing or a dedicated resolver) so that in benchmark mode:
+  - `intent["metrics"]` becomes a structured list with at least `{"key": "<metric_key>", "phrase": "<metric_phrase>"}` derived from the contract (R6.1–R6.3),
+  - `intent["analytic_template"]` is set to the contract’s `analytic_template` for Phase 1 templates (`TOP_K_BY_METRIC`, `COUNT_ENTITY`).
+- Update `JoinPlanAndSQLAgent` (`langgraph_integration/agents/join_sql/agent.py`) to:
+  - honor `intent["analytic_template"]` and `query_contract.metric_expression_sql` when generating SQL,
+  - ensure TOP‑K queries follow the “SELECT entity_dim, metric_expression FROM ... GROUP BY entity_dim ORDER BY metric DESC LIMIT K” pattern,
+  - ensure COUNT_ENTITY queries use the contract’s count expression (e.g., `COUNT(DISTINCT ...)`).
+- Ensure discovery and join planning do not drop required tables and are grounded in FK paths when `eval_mode == "benchmark"`, using `contract.required_tables` and `contract.allowed_join_paths` (R4.*, R5.*).
+
+Verification:
+- Add targeted unit tests around the metric/template selection logic to assert:
+  - metric phrases in benchmark datasets resolve to the expected `metric_key` and SQL expression,
+  - incorrect or unsupported metric phrases yield an `UNSUPPORTED_METRIC` semantic status (once validator is wired).
+- Use existing debugging harnesses (e.g., `PHASE_11_VERIFICATION.py` or a new small script) to generate SQL for a couple of contract‑backed benchmark queries and visually confirm template adherence.
+
+### [ ] Step: Implement semantic validator logic in result_validator agent
+
+Scope:
+- Extend `langgraph_integration/agents/result_validator/agent.py` to:
+  - load `state["query_contract"]` and skip semantic validation when it is absent or `eval_mode` is not `"benchmark"`,
+  - compare:
+    - resolved entity vs `contract.entity` and `contract.entity_table` using `state["intent"]["primary_entities"]`, `state["validator_tables_used_base"]`, and `state["join_plan"]`,
+    - resolved metric key and normalized SQL expression vs `contract.metric_key` and `contract.metric_expression_sql`,
+    - actual join path (from `join_plan` and catalog FK info) vs `contract.allowed_join_paths`,
+  - set `validation_result.semantic_status` using the codes in §5.1 (`"OK"`, `"ENTITY_MISMATCH"`, `"METRIC_MISMATCH"`, `"JOIN_PATH_INVALID"`, `"NO_VALID_JOIN_PATH"`, `"UNSUPPORTED_METRIC"`, `"CONTRACT_MISSING"`),
+  - populate `validation_result.semantic_failure_reasons`, `validation_result.contract_id`, and `validation_result.semantic_retry_action` (`"none"`, `"replan"`, `"try_next_candidate"`).
+- Ensure semantic validation runs post‑exec only, using `state["exec_result"]`, `state["sql_query"]`, and `state["join_plan"]` (SV‑2).
+
+Verification:
+- Add focused unit tests for the result validator that:
+  - construct synthetic `BaseState` + `query_contract` combinations and assert the correct `semantic_status`/failure reasons,
+  - cover each major failure mode (entity mismatch, metric mismatch, join path invalid, unsupported metric).
+- Run an end‑to‑end benchmark on 1–2 queries with intentionally wrong SQL (via mocks) to confirm semantic failures are detected even when SQL executes successfully.
+
+### [ ] Step: Enforce semantic replanning budgets and routing in route_validation_result
+
+Scope:
+- Update `langgraph_integration/orchestrator.py:route_validation_result` to:
+  - interpret `validation_result.semantic_status` and `semantic_retry_action`,
+  - in benchmark mode, map semantic failures to existing `retry_action` values (`"replan_with_aggregation"`, `"replan_with_filter"`, `"try_next_candidate"`) without introducing new graph nodes or edges (SV‑1, NF‑4),
+  - increment `state["semantic_retry_count"]` whenever a semantic replan is triggered,
+  - enforce `max_semantic_retries` and `max_total_plans` caps (NF‑2, RP‑1) and set `state["stop_reason"] = "max_semantic_retries"` when exhausted,
+  - in interactive mode, treat semantic findings as logging‑only (no additional retries), preserving current UX.
+- Ensure semantic retries share the existing budgets for validation attempts and plan attempts (NF‑1).
+
+Verification:
+- Add unit tests for `route_validation_result` that:
+  - simulate states with various `semantic_status`/`semantic_retry_action` combinations and assert routing decisions,
+  - verify counters (`plan_attempt_count`, `semantic_retry_count`) increment correctly and stop at configured caps.
+- Run `pytest tests/test_orchestrator_integration.py::TestQueryOrchestrator::test_orchestrator_with_mock_mcp -q` (and nearby tests) to ensure orchestration flow remains healthy.
+
+### [ ] Step: Extend evaluation artifacts and scoring for semantic correctness
+
+Scope:
+- Update `eval/run_benchmark.py` to:
+  - capture semantic fields from the orchestrator response (`semantic_status`, `semantic_failure_reasons`, `semantic_retry_count`, `semantic_retry_action`, `contract_id`),
+  - persist them alongside existing per‑query artifacts under `eval/runs/<run_id>/` (PRD‑1, §5.4).
+- Update `eval/scoring/score_run.py` to:
+  - consume the new semantic fields from `results.json`,
+  - compute and report `entity_metric_join_correct_count` and `entity_metric_join_correct_rate` (PRD‑3),
+  - ensure a query only counts as “semantically passed” when `status == "success"` **and** `semantic_status == "OK"`.
+- Keep public API responses backward compatible, ensuring semantic fields remain internal/eval‑focused and optional for existing clients (PRD‑2).
+
+Verification:
+- Add or extend scoring tests to assert:
+  - runs with mixed semantic statuses compute the expected semantic correctness rates,
+  - legacy scoring behavior remains unchanged when semantic fields are absent.
+- Execute a small benchmark run and inspect `eval/runs/<run_id>/results.json` to confirm semantic fields and new summary metrics are present and correctly derived.
