@@ -212,6 +212,86 @@ class TestQueryOrchestrator:
         logger.info("✅ State contracts properly defined")
 
     @pytest.mark.asyncio
+    async def test_process_query_semantic_counters_and_eval_mode_defaults(self):
+        """process_query should seed eval_mode and semantic counters deterministically."""
+        from langgraph_integration.orchestrator import QueryOrchestrator
+
+        orchestrator = QueryOrchestrator()
+
+        async def fake_ainvoke(input_state, **kwargs):
+            # Return the state as the result so we can inspect it directly.
+            return input_state
+
+        orchestrator.ainvoke = fake_ainvoke  # type: ignore[assignment]
+
+        # (a) No metadata → interactive defaults (no semantic retries).
+        result = await orchestrator.process_query("hello world")
+        assert result.get("eval_mode") is None
+        assert result.get("semantic_retry_count") == 0
+        assert result.get("max_semantic_retries") == 0
+        assert result.get("plan_attempt_count") == 0
+        assert result.get("max_total_plans") >= 1
+
+        # (b) Benchmark mode (case-insensitive) → 0/2 semantic retry defaults.
+        result_bench = await orchestrator.process_query(
+            "bench query",
+            metadata={"eval_mode": "BENCHMARK"},
+        )
+        assert result_bench.get("eval_mode") == "benchmark"
+        assert result_bench.get("semantic_retry_count") == 0
+        assert result_bench.get("max_semantic_retries") == 2
+
+        # (c) Clamping when semantic + plan exceed max_total_plans.
+        result_clamped = await orchestrator.process_query(
+            "clamp query",
+            metadata={
+                "eval_mode": "benchmark",
+                "semantic_retry_count": 5,
+                "max_semantic_retries": 10,
+                "plan_attempt_count": 3,
+                "max_total_plans": 4,
+            },
+        )
+        # semantic_retry_count should be reduced so that plan + semantic <= max_total_plans
+        assert result_clamped.get("plan_attempt_count") == 3
+        assert result_clamped.get("max_total_plans") == 4
+        assert result_clamped.get("semantic_retry_count") == 1
+
+    @pytest.mark.asyncio
+    async def test_process_query_handles_invalid_numeric_metadata(self):
+        """Invalid numeric metadata should not crash process_query and should fall back to defaults."""
+        from langgraph_integration.orchestrator import QueryOrchestrator
+
+        orchestrator = QueryOrchestrator()
+
+        async def fake_ainvoke(input_state, **kwargs):
+            return input_state
+
+        orchestrator.ainvoke = fake_ainvoke  # type: ignore[assignment]
+
+        result = await orchestrator.process_query(
+            "invalid budgets",
+            metadata={
+                "eval_mode": "benchmark",
+                "semantic_retry_count": "not-an-int",
+                "max_semantic_retries": "-3",
+                "plan_attempt_count": "2",
+                "max_total_plans": "zero",
+            },
+        )
+
+        # eval_mode should still resolve to benchmark
+        assert result.get("eval_mode") == "benchmark"
+        # semantic_retry_count falls back to 0 on invalid input
+        assert result.get("semantic_retry_count") == 0
+        # negative max_semantic_retries falls back to benchmark default (2)
+        assert result.get("max_semantic_retries") == 2
+        # plan_attempt_count coerces to integer when valid
+        assert result.get("plan_attempt_count") == 2
+        # invalid max_total_plans falls back to default 4
+        assert result.get("max_total_plans") == 4
+
+    @pytest.mark.asyncio
     async def test_health_check_short_circuit(self):
         """Health check intents should bypass discovery and return health status envelope."""
         from langgraph_integration.orchestrator import QueryOrchestrator

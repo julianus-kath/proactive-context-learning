@@ -200,6 +200,58 @@ class QueryOrchestrator:
         """Explicit cleanup method."""
         await self.__aexit__(None, None, None)
 
+    def _normalize_eval_mode(self, value: Any) -> Optional[str]:
+        """
+        Normalize eval/benchmark mode to a small, case-insensitive set.
+
+        Currently recognized:
+        - "benchmark" → "benchmark"
+        - "interactive" → "interactive"
+        Any other value (including empty) is treated as None.
+        """
+        if not isinstance(value, str):
+            return None
+        trimmed = value.strip().lower()
+        if not trimmed:
+            return None
+        if trimmed in ("benchmark", "bench"):
+            return "benchmark"
+        if trimmed in ("interactive", "prod", "production"):
+            return "interactive"
+        return None
+
+    def _safe_int(self, raw: Any, default: int, key: str, min_value: Optional[int] = None) -> int:
+        """
+        Best-effort integer coercion for state/metadata fields.
+
+        On invalid input (TypeError/ValueError) or values below min_value,
+        logs a warning and returns the provided default.
+        """
+        try:
+            if isinstance(raw, bool):
+                # Avoid treating booleans as integers for configuration values.
+                raise TypeError("boolean is not a valid int configuration value")
+            value = int(raw)
+        except (TypeError, ValueError):
+            logger.warning(
+                "orchestrator_config_invalid_int: key=%s raw_value=%r, using default=%s",
+                key,
+                raw,
+                default,
+            )
+            return default
+
+        if min_value is not None and value < min_value:
+            logger.warning(
+                "orchestrator_config_below_min: key=%s value=%s min=%s, using default=%s",
+                key,
+                value,
+                min_value,
+                default,
+            )
+            return default
+        return value
+
     def _normalize_error_info(self, error: Any) -> Optional[Dict[str, Any]]:
         """Ensure error_info payloads are consistent dictionaries."""
         if not error:
@@ -3185,22 +3237,17 @@ class QueryOrchestrator:
         logger.info(f"📝 PROCESS_QUERY CALLED: {user_input[:100]}...")
         logger.info(f"📝 Conversation ID: {conversation_id}, Messages count: {len(messages) if messages else 0}")
 
-        # Seed evaluation / benchmark configuration (can be overridden via metadata).
-        eval_mode = None
+        # Seed evaluation / benchmark configuration from metadata (case-insensitive).
+        raw_mode = None
         if metadata and isinstance(metadata, dict):
             raw_mode = metadata.get("eval_mode")
-            if isinstance(raw_mode, str):
-                eval_mode = raw_mode.strip() or None
+        eval_mode = self._normalize_eval_mode(raw_mode)
 
-        # Default semantic retry configuration (NF-1, NF-2).
-        # In benchmark mode we allow up to 2 semantic replans; in interactive mode
-        # semantic retries remain disabled by default.
-        if eval_mode == "benchmark":
-            semantic_retry_count = 0
-            max_semantic_retries = 2
-        else:
-            semantic_retry_count = 0
-            max_semantic_retries = 0
+        # Default semantic retry configuration (NF-1, NF-2):
+        # - benchmark mode: allow up to 2 semantic replans;
+        # - interactive mode: semantic retries disabled by default.
+        baseline_max_semantic_retries = 2 if eval_mode == "benchmark" else 0
+        baseline_semantic_retry_count = 0
 
         initial_state: Dict[str, Any] = {
             "user_input": user_input,
@@ -3208,8 +3255,8 @@ class QueryOrchestrator:
             "conversation_id": conversation_id or "",
             # Benchmark / evaluation flags
             "eval_mode": eval_mode,
-            "semantic_retry_count": semantic_retry_count,
-            "max_semantic_retries": max_semantic_retries,
+            "semantic_retry_count": baseline_semantic_retry_count,
+            "max_semantic_retries": baseline_max_semantic_retries,
             # 🆕 Retry & candidate tracking (prevent infinite loops)
             "tried_candidate_tables": [],
             "retry_attempt_count": 0,
@@ -3251,13 +3298,39 @@ class QueryOrchestrator:
                 if value is not None:
                     initial_state[key] = value
 
+        # Normalize eval_mode again in case metadata overrode it.
+        eval_mode = self._normalize_eval_mode(initial_state.get("eval_mode"))
+        initial_state["eval_mode"] = eval_mode
+
         # Enforce non-functional invariants on semantic counters after metadata merge.
         # semantic_retry_count must not exceed max_semantic_retries, and the combined
         # number of plan + semantic attempts must remain within max_total_plans.
-        semantic_retry_count = int(initial_state.get("semantic_retry_count", 0) or 0)
-        max_semantic_retries = int(initial_state.get("max_semantic_retries", 0) or 0)
-        plan_attempt_count = int(initial_state.get("plan_attempt_count", 0) or 0)
-        max_total_plans = int(initial_state.get("max_total_plans", 0) or 0) or 4
+        baseline_max_semantic_retries = 2 if eval_mode == "benchmark" else 0
+
+        max_semantic_retries = self._safe_int(
+            initial_state.get("max_semantic_retries", baseline_max_semantic_retries),
+            default=baseline_max_semantic_retries,
+            key="max_semantic_retries",
+            min_value=0,
+        )
+        semantic_retry_count = self._safe_int(
+            initial_state.get("semantic_retry_count", 0),
+            default=0,
+            key="semantic_retry_count",
+            min_value=0,
+        )
+        plan_attempt_count = self._safe_int(
+            initial_state.get("plan_attempt_count", 0),
+            default=0,
+            key="plan_attempt_count",
+            min_value=0,
+        )
+        max_total_plans = self._safe_int(
+            initial_state.get("max_total_plans", 4),
+            default=4,
+            key="max_total_plans",
+            min_value=1,
+        )
 
         if semantic_retry_count > max_semantic_retries:
             semantic_retry_count = max_semantic_retries
@@ -3268,6 +3341,17 @@ class QueryOrchestrator:
         initial_state["max_semantic_retries"] = max_semantic_retries
         initial_state["plan_attempt_count"] = plan_attempt_count
         initial_state["max_total_plans"] = max_total_plans
+
+        logger.debug(
+            "orchestrator_semantic_budgets_resolved eval_mode=%s "
+            "semantic_retry_count=%s max_semantic_retries=%s "
+            "plan_attempt_count=%s max_total_plans=%s",
+            eval_mode,
+            semantic_retry_count,
+            max_semantic_retries,
+            plan_attempt_count,
+            max_total_plans,
+        )
 
         try:
             # Server-side timeout for full orchestration to avoid client-level timeouts.
