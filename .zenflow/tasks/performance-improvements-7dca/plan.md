@@ -112,6 +112,7 @@ Verification:
 - Add a new unit test module (e.g., `tests/test_eval_contracts.py`) that validates the `QueryContract` schema and its round‑trip from JSON → model → metadata.
 
 ### [ ] Step: Implement deterministic metric resolution and analytic template selection
+<!-- chat-id: 17b67bed-d3dc-4d22-99ce-9924d984f771 -->
 
 Scope:
 - Implement a dedicated metric/analytic template resolver (e.g., `_resolve_metric_and_template_from_contract`) in `langgraph_integration/orchestrator.py` (or a small helper module it owns) so that in benchmark mode:
