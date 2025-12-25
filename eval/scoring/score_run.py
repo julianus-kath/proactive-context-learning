@@ -53,11 +53,13 @@ def score_run(run_dir: Path) -> Dict[str, Any]:
         else "0%"
     )
 
-    avg_latency_ms = (
-        sum(r.get("latency_ms_total", 0) for r in results.values()) / total_queries
-        if total_queries > 0
-        else 0
-    )
+    # Average latency: consider only entries that have a numeric latency value.
+    latencies = [
+        r.get("latency_ms_total")
+        for r in results.values()
+        if isinstance(r.get("latency_ms_total"), (int, float))
+    ]
+    avg_latency_ms = (sum(latencies) / len(latencies)) if latencies else 0
 
     score = {
         "run_id": manifest.get("run_id"),
@@ -77,7 +79,7 @@ def score_run(run_dir: Path) -> Dict[str, Any]:
         "failure_analysis": failure_categories,
         "per_query_status": {
             qid: {
-                "status": r["status"],
+                "status": r.get("status", "unknown"),
                 "latency_ms": r.get("latency_ms_total"),
                 "row_count": r.get("row_count"),
                 "error": r.get("error"),
@@ -102,10 +104,10 @@ def _categorize_failures(results: Dict[str, Any]) -> Dict[str, List[str]]:
     }
 
     for query_id, result in results.items():
-        if result["status"] != "failed":
+        if result.get("status") != "failed":
             continue
 
-        error = result.get("error", "").lower()
+        error = str(result.get("error", "")).lower()
 
         if "timeout" in error or "timed out" in error:
             categories["timeout"].append(query_id)
@@ -163,6 +165,11 @@ def main():
         print(f"SQL Execution Rate: {metrics['sql_executed_rate']}")
         print(f"Non-Empty Results Rate: {metrics['non_empty_results_rate']}")
         print(f"Avg Latency: {metrics['avg_latency_ms']}ms")
+        print(
+            "Semantic Correctness (entity+metric+join): "
+            f"{metrics['entity_metric_join_correct_count']} "
+            f"({metrics['entity_metric_join_correct_rate']})"
+        )
         print("=" * 60)
 
         if score["failure_analysis"]:
