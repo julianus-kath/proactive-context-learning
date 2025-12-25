@@ -2562,9 +2562,9 @@ class JoinPlanAndSQLAgent:
 
         Used for questions like "How many customers do we have?"
         """
-        intent = state.get("intent", {})
-        join_plan = state.get("join_plan", {})
-        template_params = intent.get("template_params", {})
+        intent = state.get("intent", {}) or {}
+        join_plan = state.get("join_plan", {}) or {}
+        template_params = intent.get("template_params", {}) or {}
 
         entity = template_params.get("entity", "rows")
         fact_table = join_plan.get("fact_table")
@@ -2577,14 +2577,24 @@ class JoinPlanAndSQLAgent:
         where_conditions = self._build_where_conditions(filters) if filters else []
         where_clause = f"WHERE {' AND '.join(where_conditions)}" if where_conditions else ""
 
-        # COUNT_ENTITY is used for questions like "How many customers do we have?"
-        # Using COUNT(*) is safe and portable across MSSQL/Postgres. If we later
-        # want to count distinct keys, we can derive the PK from discovery
-        # metadata, but COUNT(*) is correct for simple cardinality questions.
-        sql = f"SELECT COUNT(*) AS {entity}_count\nFROM {fact_table}\n{where_clause}".strip()
+        # In benchmark mode, honor the semantic contract's metric expression to make
+        # COUNT_ENTITY deterministic (e.g., COUNT(DISTINCT orders.order_id)).
+        eval_mode = state.get("eval_mode")
+        contract = state.get("query_contract") if eval_mode == "benchmark" else None
+        metric_expression = None
+        if isinstance(contract, dict):
+            metric_expression = (contract.get("metric_expression_sql") or "").strip() or None
+
+        if metric_expression:
+            alias = f"{entity}_count" if entity else "metric"
+            sql = f"SELECT {metric_expression} AS {alias}\nFROM {fact_table}\n{where_clause}".strip()
+            logger.info(f"🎯 [TEMPLATE] COUNT_ENTITY SQL (contract) generated: {sql[:100]}...")
+        else:
+            # Default behavior for interactive mode when no semantic contract is present.
+            sql = f"SELECT COUNT(*) AS {entity}_count\nFROM {fact_table}\n{where_clause}".strip()
+            logger.info(f"🎯 [TEMPLATE] COUNT_ENTITY SQL generated: {sql[:100]}...")
 
         state["sql_query"] = sql
-        logger.info(f"🎯 [TEMPLATE] COUNT_ENTITY SQL generated: {sql[:100]}...")
         return state
 
     async def _generate_top_k_by_metric_sql(self, state: BaseState) -> BaseState:
@@ -2593,14 +2603,12 @@ class JoinPlanAndSQLAgent:
 
         Used for questions like "Which products have the highest profit margins?"
         """
-        intent = state.get("intent", {})
-        join_plan = state.get("join_plan", {})
-        template_params = intent.get("template_params", {})
+        intent = state.get("intent", {}) or {}
+        join_plan = state.get("join_plan", {}) or {}
+        template_params = intent.get("template_params", {}) or {}
 
-        metric = template_params.get("metric", "value")
-        group_by = template_params.get("group_by", "id")
-        top_k = template_params.get("top_k", 10)
-        order = template_params.get("order", "desc")
+        eval_mode = state.get("eval_mode")
+        contract = state.get("query_contract") if eval_mode == "benchmark" else None
 
         fact_table = join_plan.get("fact_table")
         if not fact_table:
@@ -2611,7 +2619,46 @@ class JoinPlanAndSQLAgent:
         where_conditions = self._build_where_conditions(filters) if filters else []
         where_clause = f"WHERE {' AND '.join(where_conditions)}" if where_conditions else ""
 
-        sql = f"""SELECT TOP {top_k}
+        # In benchmark mode with a contract-backed TOP_K_BY_METRIC template, generate
+        # a deterministic skeleton using the contract's metric expression and top_k.
+        contract_template = None
+        if isinstance(contract, dict):
+            raw_template = contract.get("analytic_template")
+            if isinstance(raw_template, str):
+                contract_template = raw_template.strip() or None
+
+        if eval_mode == "benchmark" and contract_template == "TOP_K_BY_METRIC" and isinstance(contract, dict):
+            metric_expression = (contract.get("metric_expression_sql") or "").strip()
+            if not metric_expression:
+                metric_expression = template_params.get("metric", "1")
+
+            top_k = contract.get("top_k") or template_params.get("top_k") or 10
+            try:
+                top_k_int = int(top_k)
+            except Exception:
+                top_k_int = 10
+
+            # Prefer a pre-computed group_by hint, otherwise fall back to a simple entity label.
+            group_by = template_params.get("group_by")
+            if not group_by:
+                entity = template_params.get("entity") or contract.get("entity") or "entity"
+                group_by = entity
+
+            sql = f"""SELECT TOP {top_k_int}
+    {group_by} AS entity,
+    {metric_expression} AS metric
+FROM {fact_table}
+{where_clause}
+GROUP BY {group_by}
+ORDER BY metric DESC""".strip()
+            logger.info(f"🎯 [TEMPLATE] TOP_K_BY_METRIC SQL (contract) generated: {sql[:120]}...")
+        else:
+            metric = template_params.get("metric", "value")
+            group_by = template_params.get("group_by", "id")
+            top_k = template_params.get("top_k", 10)
+            order = template_params.get("order", "desc")
+
+            sql = f"""SELECT TOP {top_k}
     {group_by},
     COUNT(*) AS record_count,
     AVG(CAST({metric} AS FLOAT)) AS avg_{metric}
@@ -2619,9 +2666,9 @@ FROM {fact_table}
 {where_clause}
 GROUP BY {group_by}
 ORDER BY avg_{metric} {order.upper()}""".strip()
+            logger.info(f"🎯 [TEMPLATE] TOP_K_BY_METRIC SQL generated: {sql[:120]}...")
 
         state["sql_query"] = sql
-        logger.info(f"🎯 [TEMPLATE] TOP_K_BY_METRIC SQL generated: {sql[:100]}...")
         return state
 
     async def _generate_period_comparison_sql(self, state: BaseState) -> BaseState:

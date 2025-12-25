@@ -111,7 +111,7 @@ Verification:
 - Perform a dry‑run benchmark on a very small subset (e.g., a single query) to confirm contract loading and wiring without enforcing semantic validation yet.
 - Add a new unit test module (e.g., `tests/test_eval_contracts.py`) that validates the `QueryContract` schema and its round‑trip from JSON → model → metadata.
 
-### [ ] Step: Implement deterministic metric resolution and analytic template selection
+### [x] Step: Implement deterministic metric resolution and analytic template selection
 <!-- chat-id: 17b67bed-d3dc-4d22-99ce-9924d984f771 -->
 
 Scope:

@@ -36,6 +36,7 @@ from langgraph.graph import StateGraph, START, END
 from pydantic import ValidationError
 
 from langgraph_integration.contracts.state import BaseState, merge_error_info
+from langgraph_integration.contracts.semantic_contracts import QueryContract
 from langgraph_integration.contracts.response_envelope import (
     ErrorInfo as ErrorInfoModel,
     ResponseEnvelope,
@@ -363,6 +364,85 @@ class QueryOrchestrator:
             "db_default_schema": schema,
         }
         return json.dumps(payload, sort_keys=True, ensure_ascii=False)
+
+    def _resolve_metric_and_template_from_contract(self, state: BaseState) -> BaseState:
+        """
+        Deterministically resolve metric and analytic template from a benchmark QueryContract.
+
+        In benchmark mode, this makes metric resolution structural instead of LLM-driven by
+        anchoring intent.metrics and intent.analytic_template to the contract while keeping
+        existing string metrics for backward compatibility with downstream heuristics.
+        """
+        eval_mode = state.get("eval_mode")
+        if eval_mode != "benchmark":
+            return state
+
+        raw_contract = state.get("query_contract")
+        if not isinstance(raw_contract, dict):
+            return state
+
+        try:
+            contract = QueryContract.model_validate(raw_contract)
+        except Exception as exc:
+            logger.warning("⚠️ [METRIC_RESOLVER] Failed to validate query_contract: %s", exc)
+            return state
+
+        intent = state.get("intent") or {}
+
+        # Resolve a stable metric phrase.
+        metric_phrase = (contract.metric_phrase or "").strip()
+        if not metric_phrase:
+            existing_metrics = intent.get("metrics") or []
+            if isinstance(existing_metrics, list) and existing_metrics:
+                first = existing_metrics[0]
+                if isinstance(first, str) and first.strip():
+                    metric_phrase = first.strip()
+        if not metric_phrase:
+            metric_phrase = contract.metric_key
+
+        # Structured metric object used by semantic validator; keep original
+        # metrics as a simple string list for existing consumers.
+        resolved_metric = {
+            "key": contract.metric_key,
+            "phrase": metric_phrase,
+            "expression_sql": contract.metric_expression_sql,
+        }
+
+        intent["metrics"] = [contract.metric_key]
+        intent["resolved_metrics"] = [resolved_metric]
+
+        # Ensure the primary entity is present and stable.
+        primary_entities = intent.get("primary_entities") or []
+        if contract.entity not in primary_entities:
+            intent["primary_entities"] = [*primary_entities, contract.entity]
+
+        # Analytic template & parameters – only enforce Phase 1 templates here.
+        template_from_contract = (contract.analytic_template or "").strip() or None
+        supported_templates = {"TOP_K_BY_METRIC", "COUNT_ENTITY"}
+        template_params = dict(intent.get("template_params") or {})
+
+        if template_from_contract in supported_templates:
+            intent["analytic_template"] = template_from_contract
+
+            if template_from_contract == "TOP_K_BY_METRIC":
+                template_params.setdefault("metric_expression_sql", contract.metric_expression_sql)
+                if contract.top_k is not None:
+                    template_params.setdefault("top_k", contract.top_k)
+                template_params.setdefault("entity", contract.entity)
+                template_params.setdefault("entity_table", contract.entity_table)
+            elif template_from_contract == "COUNT_ENTITY":
+                template_params.setdefault("entity", contract.entity)
+                template_params.setdefault("metric_expression_sql", contract.metric_expression_sql)
+        elif template_from_contract:
+            # Expose the contract template for later semantic validation without
+            # forcing current planning to support it.
+            intent.setdefault("analytic_template_from_contract", template_from_contract)
+
+        if template_params:
+            intent["template_params"] = template_params
+
+        state["intent"] = intent
+        return state
 
     def _build_join_inputs_fingerprint(self, state: BaseState) -> str:
         """
@@ -1454,6 +1534,8 @@ class QueryOrchestrator:
         })
         log_payload.setdefault("events", [])
         state["discovery_log"] = log_payload
+        # In benchmark mode, lock metric + template to the per-query semantic contract.
+        state = self._resolve_metric_and_template_from_contract(state)
         return state
 
     async def _route_operation_node(self, state: BaseState) -> BaseState:

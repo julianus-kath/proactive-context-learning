@@ -2303,10 +2303,28 @@ class DiscoveryAgent:
             candidate_view_models = [model for model in detail_models if model.is_view]
             relevant_tables = [model.full_name for model in detail_models]
 
-            # Phase 4: KPI-driven table guardrails.
-            # Ensure tables implied by KPI expressions (e.g. Products. in inventory_reorder)
+            # Phase 4: KPI-driven table guardrails + benchmark contracts.
+            # Ensure tables implied by KPI expressions OR by benchmark semantic contracts
             # are present in the final discovery result when available in seed_tables.
             required_tables = state.get("required_tables_from_kpi") or []
+
+            # In benchmark mode, treat contract.required_tables and the entity_table as
+            # hard requirements that must survive discovery (they are merged here so the
+            # required-relations guardrail and join planner see them as canonical).
+            eval_mode = state.get("eval_mode")
+            contract = state.get("query_contract") if eval_mode == "benchmark" else None
+            if isinstance(contract, dict):
+                contract_required = list(contract.get("required_tables") or [])
+                entity_table = contract.get("entity_table")
+                if isinstance(entity_table, str) and entity_table:
+                    contract_required.append(entity_table)
+                existing_required = {str(t) for t in required_tables}
+                for req in contract_required:
+                    req_str = str(req)
+                    if req_str and req_str not in existing_required:
+                        required_tables.append(req_str)
+                        existing_required.add(req_str)
+
             if required_tables:
                 seed_tables = state.get("seed_tables") or []
 
