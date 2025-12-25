@@ -60,11 +60,15 @@ Scope:
 - Update `langgraph_integration/orchestrator.py:QueryOrchestrator.process_query()` to:
   - initialize `eval_mode` and semantic counters from `metadata` (default `eval_mode=None`, `semantic_retry_count=0`, `max_semantic_retries=2` in benchmark mode),
   - ensure `semantic_retry_count <= max_semantic_retries` and `plan_attempt_count + semantic_retry_count <= max_total_plans` (NF‑1, NF‑2).
-- Ensure new fields are included in any state serialization / response envelopes where `BaseState` is exposed, without breaking existing callers.
+- Ensure new fields are included in state/response models where `BaseState` is exposed, in particular:
+  - any Pydantic models in `langgraph_integration/contracts/response_envelope.py`,
+  - top‑level responses returned from `QueryOrchestrator.process_query()` and exposed via `langgraph_integration/api.py`,
+  while keeping them backward‑compatible and optional for existing callers.
 
 Verification:
 - Run `pytest tests/test_orchestrator_integration.py::TestQueryOrchestrator::test_state_contracts_valid -q` to confirm state contracts remain consistent.
 - Smoke‑run `python -m langgraph_integration.orchestrator` or existing orchestrator startup paths (e.g., FastAPI import via `tests/test_orchestrator_integration.py::TestFastAPIIntegration::test_fastapi_imports_orchestrator`) to confirm no import/runtime regressions.
+- Add or extend an integration test (e.g., `tests/test_orchestrator_integration.py::TestQueryOrchestrator::test_orchestrator_intent_routing_query`) to assert that interactive (non‑benchmark) queries continue to route and respond as before aside from additional internal fields.
 
 ### [ ] Step: Propagate eval headers and query contracts into LangGraph state
 
@@ -86,8 +90,11 @@ Verification:
 
 Scope:
 - Define per‑dataset contract files alongside existing JSONL datasets, e.g. `eval/datasets/<dataset>.contracts.json` (as in §4.1).
+- Introduce a shared `QueryContract` schema (e.g., a `TypedDict` or Pydantic model) in `langgraph_integration/contracts/semantic_contracts.py` that:
+  - matches the fields in §4.1–4.3 (`query_id`, `entity`, `entity_table`, `metric_key`, `metric_expression_sql`, `required_tables`, `allowed_join_paths`, `analytic_template`, etc.),
+  - is imported both by `eval/run_benchmark.py` and by the semantic validator / orchestrator, so contract shape stays consistent.
 - Implement a contract loader in `eval/run_benchmark.py` to:
-  - load the contract file for the selected dataset into a `Dict[query_id, Contract]`,
+  - load the contract file for the selected dataset into a `Dict[query_id, QueryContract]`,
   - validate basic schema (required fields like `query_id`, `entity`, `entity_table`, `metric_key`, `metric_expression_sql`, `required_tables`, `allowed_join_paths`, `analytic_template`),
   - select the correct `Contract` per benchmark query using `eval_query_id`,
   - pass the selected contract into `QueryOrchestrator.process_query()` via `metadata["query_contract"]`.
@@ -99,24 +106,35 @@ Verification:
   - asserts that each dataset entry has a matching contract keyed by `query_id`,
   - verifies `run_benchmark` passes a non‑empty `query_contract` when `eval_mode == "benchmark"`.
 - Perform a dry‑run benchmark on a very small subset (e.g., a single query) to confirm contract loading and wiring without enforcing semantic validation yet.
+- Add a new unit test module (e.g., `tests/test_eval_contracts.py`) that validates the `QueryContract` schema and its round‑trip from JSON → model → metadata.
 
 ### [ ] Step: Implement deterministic metric resolution and analytic template selection
 
 Scope:
-- Extend the intent/metric resolution path (e.g., in `langgraph_integration/orchestrator.py` intent parsing or a dedicated resolver) so that in benchmark mode:
+- Implement a dedicated metric/analytic template resolver (e.g., `_resolve_metric_and_template_from_contract`) in `langgraph_integration/orchestrator.py` (or a small helper module it owns) so that in benchmark mode:
   - `intent["metrics"]` becomes a structured list with at least `{"key": "<metric_key>", "phrase": "<metric_phrase>"}` derived from the contract (R6.1–R6.3),
   - `intent["analytic_template"]` is set to the contract’s `analytic_template` for Phase 1 templates (`TOP_K_BY_METRIC`, `COUNT_ENTITY`).
 - Update `JoinPlanAndSQLAgent` (`langgraph_integration/agents/join_sql/agent.py`) to:
   - honor `intent["analytic_template"]` and `query_contract.metric_expression_sql` when generating SQL,
   - ensure TOP‑K queries follow the “SELECT entity_dim, metric_expression FROM ... GROUP BY entity_dim ORDER BY metric DESC LIMIT K” pattern,
   - ensure COUNT_ENTITY queries use the contract’s count expression (e.g., `COUNT(DISTINCT ...)`).
-- Ensure discovery and join planning do not drop required tables and are grounded in FK paths when `eval_mode == "benchmark"`, using `contract.required_tables` and `contract.allowed_join_paths` (R4.*, R5.*).
+- Update `DiscoveryAgent` (`langgraph_integration/agents/discovery/agent.py`) and any ranking/pruning logic to:
+  - treat `contract.required_tables` as hard constraints in benchmark mode (must not be dropped once present in candidates),
+  - propagate required entity tables into `relevant_tables` / `candidate_views` even if their heuristic score is low,
+  - log when a required table would have been dropped absent the contract (R4.2–R4.3).
+- Ensure discovery and join planning are grounded in FK paths when `eval_mode == "benchmark"`, using `contract.required_tables` and `contract.allowed_join_paths` plus catalog FK info (R4.*, R5.*).
+- Define behavior for out‑of‑scope cases:
+  - benchmark queries whose contracts specify an analytic template outside Phase 1 should fall back to current behavior but mark a semantic status of `UNSUPPORTED_METRIC` (or equivalent) so they are counted as semantically failing,
+  - multi‑metric queries in benchmark datasets should either be explicitly unsupported (and treated as `UNSUPPORTED_METRIC`) or mapped to a deterministic subset of metrics defined in the contract.
 
 Verification:
 - Add targeted unit tests around the metric/template selection logic to assert:
   - metric phrases in benchmark datasets resolve to the expected `metric_key` and SQL expression,
   - incorrect or unsupported metric phrases yield an `UNSUPPORTED_METRIC` semantic status (once validator is wired).
 - Use existing debugging harnesses (e.g., `PHASE_11_VERIFICATION.py` or a new small script) to generate SQL for a couple of contract‑backed benchmark queries and visually confirm template adherence.
+- Add unit tests for discovery behavior (e.g., `tests/test_discovery_required_tables.py`) that:
+  - construct states with `eval_mode == "benchmark"` and a `query_contract.required_tables` including a low‑scoring table,
+  - assert that required tables are retained in `relevant_tables` and passed downstream to join planning.
 
 ### [ ] Step: Implement semantic validator logic in result_validator agent
 
@@ -127,7 +145,8 @@ Scope:
     - resolved entity vs `contract.entity` and `contract.entity_table` using `state["intent"]["primary_entities"]`, `state["validator_tables_used_base"]`, and `state["join_plan"]`,
     - resolved metric key and normalized SQL expression vs `contract.metric_key` and `contract.metric_expression_sql`,
     - actual join path (from `join_plan` and catalog FK info) vs `contract.allowed_join_paths`,
-  - set `validation_result.semantic_status` using the codes in §5.1 (`"OK"`, `"ENTITY_MISMATCH"`, `"METRIC_MISMATCH"`, `"JOIN_PATH_INVALID"`, `"NO_VALID_JOIN_PATH"`, `"UNSUPPORTED_METRIC"`, `"CONTRACT_MISSING"`),
+  - set `validation_result.semantic_status` using the codes in §5.1 (`"OK"`, `"ENTITY_MISMATCH"`, `"METRIC_MISMATCH"`, `"JOIN_PATH_INVALID"`, `"NO_VALID_JOIN_PATH"`, `"UNSUPPORTED_METRIC"`, `"CONTRACT_MISSING"`), treating §5.1 as the authoritative set:
+    - encode template‑selection mismatches under `"METRIC_MISMATCH"` with a specific failure reason (rather than introducing a separate `METRIC_OR_TEMPLATE_MISMATCH` code mentioned earlier in the spec),
   - populate `validation_result.semantic_failure_reasons`, `validation_result.contract_id`, and `validation_result.semantic_retry_action` (`"none"`, `"replan"`, `"try_next_candidate"`).
 - Ensure semantic validation runs post‑exec only, using `state["exec_result"]`, `state["sql_query"]`, and `state["join_plan"]` (SV‑2).
 
@@ -136,6 +155,7 @@ Verification:
   - construct synthetic `BaseState` + `query_contract` combinations and assert the correct `semantic_status`/failure reasons,
   - cover each major failure mode (entity mismatch, metric mismatch, join path invalid, unsupported metric).
 - Run an end‑to‑end benchmark on 1–2 queries with intentionally wrong SQL (via mocks) to confirm semantic failures are detected even when SQL executes successfully.
+- Add a small test (e.g., `tests/test_result_validator_semantic_statuses.py`) that verifies template mismatches are reported as `METRIC_MISMATCH` with a clear `semantic_failure_reasons` entry.
 
 ### [ ] Step: Enforce semantic replanning budgets and routing in route_validation_result
 
@@ -153,6 +173,9 @@ Verification:
   - simulate states with various `semantic_status`/`semantic_retry_action` combinations and assert routing decisions,
   - verify counters (`plan_attempt_count`, `semantic_retry_count`) increment correctly and stop at configured caps.
 - Run `pytest tests/test_orchestrator_integration.py::TestQueryOrchestrator::test_orchestrator_with_mock_mcp -q` (and nearby tests) to ensure orchestration flow remains healthy.
+- Add an explicit regression test (e.g., `tests/test_orchestrator_semantic_routing.py`) that:
+  - runs a representative interactive query with `eval_mode` unset,
+  - asserts no additional semantic replanning cycles are introduced and the existing UX (clarification vs answer) remains unchanged.
 
 ### [ ] Step: Extend evaluation artifacts and scoring for semantic correctness
 
