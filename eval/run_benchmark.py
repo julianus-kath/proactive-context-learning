@@ -295,7 +295,7 @@ async def run_benchmark(
                     f"{target_url}/process_query",
                     json={
                         "user_input": question,
-                        "api_key": api_key,
+                        "api_key": api_key,  # Legacy field; ignored by LangGraph API but preserved for compatibility
                         # Per-query semantic contract is passed through to the
                         # LangGraph service, which forwards it via metadata.
                         "query_contract": contract_payload,
@@ -309,6 +309,7 @@ async def run_benchmark(
                 result = response.json()
                 latency_ms = int((time.time() - start_time) * 1000)
 
+                # Base artifact structure (backward compatible with Phase 1/2).
                 artifact = {
                     "query_id": query_id,
                     "question": question,
@@ -323,7 +324,27 @@ async def run_benchmark(
                     "result_preview": [],
                     "error_info": None,
                     "discovery_log": None,
+                    # Semantic correctness fields (populated by result_validator in benchmark mode).
+                    # These are optional for legacy runs and remain internal to eval artifacts.
+                    "semantic_status": None,
+                    "semantic_failure_reasons": [],
+                    "semantic_retry_count": None,
+                    "semantic_retry_action": None,
+                    "contract_id": None,
                 }
+
+                # Semantic metadata comes from the orchestrator's validation_result + state.
+                validation = result.get("validation_result") or {}
+                if isinstance(validation, dict):
+                    artifact["semantic_status"] = validation.get("semantic_status")
+                    reasons = validation.get("semantic_failure_reasons") or []
+                    if isinstance(reasons, list):
+                        artifact["semantic_failure_reasons"] = list(reasons)
+                    artifact["semantic_retry_action"] = validation.get("semantic_retry_action")
+                    artifact["contract_id"] = validation.get("contract_id")
+
+                if "semantic_retry_count" in result:
+                    artifact["semantic_retry_count"] = result.get("semantic_retry_count")
 
                 exec_result_payload = result.get("exec_result")
                 rows: List[Dict[str, Any]] = []
@@ -397,6 +418,8 @@ async def run_benchmark(
 
             except Exception as e:
                 latency_ms = int((time.time() - start_time) * 1000)
+                # Even on client-side failures, emit a consistent artifact shape
+                # so downstream scoring and analysis remain robust.
                 artifact = {
                     "query_id": query_id,
                     "question": question,
@@ -407,6 +430,11 @@ async def run_benchmark(
                     "tables_used": [],
                     "error_info": {"type": "CLIENT_EXCEPTION", "message": str(e)},
                     "discovery_log": None,
+                    "semantic_status": None,
+                    "semantic_failure_reasons": [],
+                    "semantic_retry_count": None,
+                    "semantic_retry_action": None,
+                    "contract_id": None,
                 }
                 results[query_id] = artifact
                 failed += 1

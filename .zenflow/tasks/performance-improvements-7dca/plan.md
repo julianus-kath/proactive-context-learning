@@ -183,7 +183,8 @@ Verification:
   - runs a representative interactive query with `eval_mode` unset,
   - asserts no additional semantic replanning cycles are introduced and the existing UX (clarification vs answer) remains unchanged.
 
-### [ ] Step: Extend evaluation artifacts and scoring for semantic correctness
+### [x] Step: Extend evaluation artifacts and scoring for semantic correctness
+<!-- chat-id: 9e73d011-91d2-4178-961c-b8ef66756f74 -->
 
 Scope:
 - Update `eval/run_benchmark.py` to:

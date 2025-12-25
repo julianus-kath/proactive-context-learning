@@ -24,8 +24,8 @@ def score_run(run_dir: Path) -> Dict[str, Any]:
     results = json.loads(results_path.read_text())
 
     total_queries = len(results)
-    successful = sum(1 for r in results.values() if r["status"] == "success")
-    failed = sum(1 for r in results.values() if r["status"] == "failed")
+    successful = sum(1 for r in results.values() if r.get("status") == "success")
+    failed = sum(1 for r in results.values() if r.get("status") == "failed")
 
     sql_executed_count = sum(
         1 for r in results.values()
@@ -39,8 +39,22 @@ def score_run(run_dir: Path) -> Dict[str, Any]:
 
     failure_categories = _categorize_failures(results)
 
+    # Semantic correctness metrics:
+    # Count queries where the entity, metric, and join path all match the contract.
+    semantic_pass_count = sum(
+        1
+        for r in results.values()
+        if r.get("status") == "success" and r.get("semantic_status") == "OK"
+    )
+
+    entity_metric_join_correct_rate = (
+        f"{(semantic_pass_count / total_queries * 100):.1f}%"
+        if total_queries > 0
+        else "0%"
+    )
+
     avg_latency_ms = (
-        sum(r["latency_ms_total"] for r in results.values()) / total_queries
+        sum(r.get("latency_ms_total", 0) for r in results.values()) / total_queries
         if total_queries > 0
         else 0
     )
@@ -56,6 +70,8 @@ def score_run(run_dir: Path) -> Dict[str, Any]:
             "success_rate": f"{(successful/total_queries*100):.1f}%" if total_queries > 0 else "0%",
             "sql_executed_rate": f"{(sql_executed_count/total_queries*100):.1f}%" if total_queries > 0 else "0%",
             "non_empty_results_rate": f"{(non_empty_results_count/total_queries*100):.1f}%" if total_queries > 0 else "0%",
+            "entity_metric_join_correct_count": semantic_pass_count,
+            "entity_metric_join_correct_rate": entity_metric_join_correct_rate,
             "avg_latency_ms": round(avg_latency_ms, 2),
         },
         "failure_analysis": failure_categories,
