@@ -82,6 +82,23 @@ class StubOrchestrator:
         )
         return state
 
+    async def _parse_intent_node(self, state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        state = dict(state or {})
+        state.setdefault(
+            "intent",
+            {
+                "operation": "query",
+                "primary_entities": ["customers"],
+                "metrics": ["count"],
+                "filters": [],
+                "time_window": "last_month",
+                "keywords_for_discovery": ["customers", "orders"],
+                "confidence": 0.9,
+                "needs_clarification": False,
+            },
+        )
+        return state
+
 
 def make_test_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     """
@@ -109,6 +126,24 @@ class TestAgentEndpoints:
         body = response.text
         assert "/agent/discovery" in body
         assert "/agent/join_sql" in body
+
+    def test_intent_parser_endpoint_returns_intent(self, monkeypatch: pytest.MonkeyPatch):
+        client = make_test_client(monkeypatch)
+
+        response = client.post(
+            "/agent/intent_parser",
+            json={
+                "state": {"user_input": "How many customers placed orders last month?"},
+                "api_key": "supersecretapikey",
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["agent"] in ("intent_parser", "parse_intent")
+        intent = payload["output_state"].get("intent") or {}
+        assert intent.get("operation") == "query"
+        assert "customers" in (intent.get("keywords_for_discovery") or [])
 
     def test_discovery_endpoint_returns_relevant_tables(self, monkeypatch: pytest.MonkeyPatch):
         client = make_test_client(monkeypatch)

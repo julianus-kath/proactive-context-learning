@@ -6,6 +6,33 @@
   },
   "item": [
     {
+      "name": "Intent Parser",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "supersecretapikey"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5001/agent/intent_parser",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5001",
+          "path": ["agent", "intent_parser"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"state\": {\n    \"user_input\": \"How many customers placed orders last month?\"\n  }\n}"
+        }
+      }
+    },
+    {
       "name": "Discovery Agent",
       "request": {
         "method": "POST",
@@ -142,4 +169,3 @@
     }
   ]
 }
-

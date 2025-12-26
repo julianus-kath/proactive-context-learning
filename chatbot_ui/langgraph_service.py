@@ -180,7 +180,9 @@ async def _invoke_named_agent(
         # existing orchestrator versions that don't expose invoke_agent().
         normalized = (agent_name or "").strip().lower()
         handler = None
-        if normalized in ("discovery",):
+        if normalized in ("intent_parser", "parse_intent"):
+            handler = getattr(orchestrator, "_parse_intent_node", None)
+        elif normalized in ("discovery",):
             handler = getattr(orchestrator, "_discovery_node", None)
         elif normalized in ("join_sql",):
             handler = getattr(orchestrator, "_join_sql_node", None)
@@ -239,7 +241,7 @@ async def _invoke_named_agent(
         updated = {
             k: {"before": before_state[k], "after": normalized_state[k]}
             for k in normalized_state.keys()
-            if k in before_state and before_state[k] != before_state[k]
+            if k in before_state and before_state[k] != normalized_state[k]
         }
 
         overall_ok = exec_ok and not bool(error_info)
@@ -306,6 +308,21 @@ async def invoke_discovery_agent(
     - Inspect relevant_tables, schema_snippet, and column_index in output_state
     """
     return await _invoke_named_agent("discovery", request, api_key_header)
+
+
+@app.post("/agent/intent_parser", response_model=AgentInvokeResponse)
+async def invoke_intent_parser_agent(
+    request: AgentInvokeRequest = Body(...),
+    api_key_header: Optional[str] = Header(default=None, alias="X-API-Key"),
+):
+    """
+    Invoke the IntentParserAgent subgraph via the parse_intent node.
+
+    Typical usage:
+    - Provide user_input (and optionally messages for multi-turn)
+    - Inspect intent.operation, keywords_for_discovery, filters, time_window, etc.
+    """
+    return await _invoke_named_agent("parse_intent", request, api_key_header)
 
 
 @app.post("/agent/join_sql", response_model=AgentInvokeResponse)
@@ -829,6 +846,22 @@ async def agent_docs():
         </div>
 
         <div class="endpoint">
+            <h2><span class="method">POST</span> <code>/agent/intent_parser</code></h2>
+            <p>Runs the <strong>IntentParserAgent</strong> subgraph via the <code>parse_intent</code> node.</p>
+            <p><strong>Required state:</strong></p>
+            <pre>{
+  "user_input": "How many customers placed orders last month?"
+}</pre>
+            <p><strong>Key outputs in <code>output_state</code>:</strong></p>
+            <ul>
+                <li><code>intent.operation</code> – e.g. <code>query</code>, <code>schema_query</code>, <code>health_check</code>, <code>clarify</code>.</li>
+                <li><code>intent.primary_entities</code>, <code>metrics</code>, <code>filters</code>, <code>time_window</code>.</li>
+                <li><code>intent.keywords_for_discovery</code> – canonical tokens used by Discovery.</li>
+                <li><code>intent.needs_clarification</code> and <code>intent.clarification_question</code> when the query is ambiguous.</li>
+            </ul>
+        </div>
+
+        <div class="endpoint">
             <h2><span class="method">POST</span> <code>/agent/join_sql</code></h2>
             <p>Runs the <strong>JoinPlanAndSQLAgent</strong> to build a join plan and generate SQL.</p>
             <p><strong>Required state (typical):</strong></p>
@@ -921,6 +954,7 @@ async def root():
             "process_query": "/process_query (POST)",
             "process_conversation": "/process_conversation (POST)",
             "agent_docs": "/agent/docs (GET)",
+            "agent_intent_parser": "/agent/intent_parser (POST)",
             "agent_discovery": "/agent/discovery (POST)",
             "agent_join_sql": "/agent/join_sql (POST)",
             "agent_validate_sql": "/agent/validate_sql (POST)",
