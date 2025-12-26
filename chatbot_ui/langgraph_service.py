@@ -11,6 +11,7 @@ from typing import Dict, Any, Optional, List
 from fastapi import FastAPI, HTTPException, Body, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, ValidationError, Field
 import uvicorn
 from dotenv import load_dotenv
@@ -663,6 +664,171 @@ async def stream_debug_logs():
             status="error"
         )
 
+
+@app.get("/agent/docs", response_class=HTMLResponse)
+async def agent_docs():
+    """
+    Lightweight HTML documentation for the /agent/* endpoints so you
+    can inspect and exercise individual agents locally in a browser.
+    """
+    html = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>LangGraph Agent Endpoints</title>
+        <style>
+            body { font-family: system-ui, sans-serif; margin: 2rem; line-height: 1.5; }
+            h1, h2 { color: #222; }
+            code { background: #f4f4f4; padding: 0.1rem 0.25rem; border-radius: 3px; }
+            pre { background: #f4f4f4; padding: 0.75rem; border-radius: 4px; overflow-x: auto; }
+            .endpoint { margin-bottom: 2rem; }
+            .method { font-weight: bold; color: #0b7285; }
+        </style>
+    </head>
+    <body>
+        <h1>LangGraph Agent Endpoints</h1>
+        <p>
+            These endpoints let you invoke individual LangGraph agents with partial state
+            for targeted debugging and analysis, without running the full orchestration pipeline.
+        </p>
+
+        <h2>Common Request Envelope</h2>
+        <p><span class="method">POST</span> <code>/agent/&lt;name&gt;</code></p>
+        <pre>{
+  "state": { /* partial LangGraph state visible to the agent */ },
+  "options": {
+    // optional; if present, "state_overrides" is merged into state
+    "state_overrides": { "some_key": "some_value" }
+  },
+  "api_key": "supersecretapikey"
+}</pre>
+
+        <h2>Common Response Envelope</h2>
+        <pre>{
+  "ok": true,
+  "agent": "discovery",
+  "data": [ /* convenience view of rows, mainly for exec_recovery */ ],
+  "row_count": 42,
+  "execution_time_ms": 15,
+  "truncated": false,
+  "warnings": [],
+  "error": null,
+  "error_info": null,
+  "output_state": { /* full LangGraph state after the agent */ },
+  "state_delta": {
+    "added": { /* keys added */ },
+    "removed": [ /* keys removed */ ],
+    "updated": { /* keys whose values changed */ }
+  }
+}</pre>
+
+        <h2>Authentication</h2>
+        <ul>
+            <li>Header: <code>X-API-Key: supersecretapikey</code> <strong>or</strong></li>
+            <li>Body field: <code>"api_key": "supersecretapikey"</code></li>
+        </ul>
+
+        <div class="endpoint">
+            <h2><span class="method">POST</span> <code>/agent/discovery</code></h2>
+            <p>Runs the <strong>DiscoveryAgent</strong> ("scout + schema linking") to find relevant tables and schema context.</p>
+            <p><strong>Required state (typical):</strong></p>
+            <pre>{
+  "user_input": "Show me customers",
+  "intent": {
+    "operation": "query",
+    "keywords_for_discovery": ["customers"]
+  }
+}</pre>
+            <p><strong>Key outputs in <code>output_state</code>:</strong></p>
+            <ul>
+                <li><code>relevant_tables</code> – list of candidate tables/views.</li>
+                <li><code>schema_snippet</code> – compact SQL-style schema description.</li>
+                <li><code>column_index</code> – mapping of table → list of columns.</li>
+            </ul>
+        </div>
+
+        <div class="endpoint">
+            <h2><span class="method">POST</span> <code>/agent/join_sql</code></h2>
+            <p>Runs the <strong>JoinPlanAndSQLAgent</strong> to build a join plan and generate SQL.</p>
+            <p><strong>Required state (typical):</strong></p>
+            <pre>{
+  "intent": {
+    "operation": "query"
+  },
+  "relevant_tables": [
+    { "name": "dbo.Customers" }
+  ]
+}</pre>
+            <p><strong>Key outputs in <code>output_state</code>:</strong></p>
+            <ul>
+                <li><code>sql_query</code> – generated SQL statement.</li>
+                <li><code>join_plan</code> – structured description of primary table and joins.</li>
+            </ul>
+        </div>
+
+        <div class="endpoint">
+            <h2><span class="method">POST</span> <code>/agent/validate_sql</code></h2>
+            <p>Runs the <strong>SQLValidatorAgent</strong> to validate and optionally repair a SQL string.</p>
+            <p><strong>Required state:</strong></p>
+            <pre>{
+  "sql_query": "SELECT TOP 10 * FROM dbo.Customers"
+}</pre>
+            <p><strong>Key outputs in <code>output_state</code>:</strong></p>
+            <ul>
+                <li><code>validation_result.is_valid</code> – whether the SQL passed validation.</li>
+                <li><code>validation_result.error_type</code>, <code>error_message</code> – if invalid.</li>
+                <li>Possibly updated <code>sql_query</code> if a repair was applied.</li>
+            </ul>
+        </div>
+
+        <div class="endpoint">
+            <h2><span class="method">POST</span> <code>/agent/exec_recovery</code></h2>
+            <p>Runs the <strong>ExecAndRecoveryAgent</strong> to execute SQL against the database with safety and retry logic.</p>
+            <p><strong>Required state:</strong></p>
+            <pre>{
+  "sql_query": "SELECT TOP 10 * FROM dbo.Customers"
+}</pre>
+            <p><strong>Key outputs:</strong></p>
+            <ul>
+                <li>Top-level <code>data</code>, <code>row_count</code>, <code>truncated</code> – convenience summary.</li>
+                <li><code>output_state.exec_result</code> – full execution envelope (ok, data, row_count, error, error_info).</li>
+            </ul>
+        </div>
+
+        <div class="endpoint">
+            <h2><span class="method">POST</span> <code>/agent/result_validator</code></h2>
+            <p>Runs the <strong>result validator</strong> node to assess result quality and surface warnings.</p>
+            <p><strong>Required state (typical):</strong></p>
+            <pre>{
+  "exec_result": {
+    "ok": true,
+    "data": [],
+    "row_count": 0
+  }
+}</pre>
+            <p><strong>Key outputs in <code>output_state</code>:</strong></p>
+            <ul>
+                <li><code>validation_result</code> – semantic status of the result set.</li>
+                <li><code>warnings</code> – any issues discovered during validation.</li>
+            </ul>
+        </div>
+
+        <h2>Example Debugging Flows</h2>
+        <ol>
+            <li>Call <code>/agent/discovery</code> to see which tables/views a question maps to.</li>
+            <li>Feed that state into <code>/agent/join_sql</code> to inspect the generated SQL.</li>
+            <li>Validate that SQL with <code>/agent/validate_sql</code>.</li>
+            <li>Execute it with <code>/agent/exec_recovery</code> if valid.</li>
+            <li>Optionally, run <code>/agent/result_validator</code> to check result quality.</li>
+        </ol>
+
+        <p>For OpenAPI/Swagger documentation of all endpoints, visit <code>/docs</code>.</p>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html, status_code=200)
+
 @app.get("/")
 async def root():
     """Root endpoint with service information."""
@@ -674,6 +840,7 @@ async def root():
             "health": "/health",
             "process_query": "/process_query (POST)",
             "process_conversation": "/process_conversation (POST)",
+            "agent_docs": "/agent/docs (GET)",
             "agent_discovery": "/agent/discovery (POST)",
             "agent_join_sql": "/agent/join_sql (POST)",
             "agent_validate_sql": "/agent/validate_sql (POST)",

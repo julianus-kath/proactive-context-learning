@@ -103,6 +103,16 @@ def make_test_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
 
 class TestAgentEndpoints:
+    def test_agent_docs_endpoint_serves_html(self, monkeypatch: pytest.MonkeyPatch):
+        client = make_test_client(monkeypatch)
+
+        response = client.get("/agent/docs")
+        assert response.status_code == 200
+        assert "text/html" in response.headers.get("content-type", "")
+        body = response.text
+        assert "/agent/discovery" in body
+        assert "/agent/join_sql" in body
+
     def test_discovery_endpoint_returns_relevant_tables(self, monkeypatch: pytest.MonkeyPatch):
         client = make_test_client(monkeypatch)
 
