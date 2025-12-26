@@ -110,6 +110,10 @@ class AgentInvokeResponse(BaseModel):
     warnings: List[str] = Field(default_factory=list)
     error: Optional[str] = None
     error_info: Optional[Dict[str, Any]] = None
+    # Full normalized state returned by the agent invocation (for debugging and targeted inspection)
+    output_state: Optional[Dict[str, Any]] = None
+    # Minimal state delta between input_state and output_state (added/removed/updated keys)
+    state_delta: Optional[Dict[str, Any]] = None
 
 class ErrorResponse(BaseModel):
     error: str
@@ -155,6 +159,55 @@ async def startup_event():
         print(f"❌ Failed to initialize multi-agent orchestrator: {e}")
         raise
 
+
+async def _invoke_named_agent(
+    agent_name: str,
+    request: AgentInvokeRequest,
+    api_key_header: Optional[str],
+) -> AgentInvokeResponse:
+    """
+    Helper to invoke a single orchestrator agent by name using partial state.
+
+    This is used by the /agent/* endpoints so that tests and tools can
+    exercise individual nodes (discovery, join_sql, validate_sql, exec_recovery,
+    result_validator) without running the full pipeline.
+    """
+    global orchestrator
+
+    # API key can be provided either via header or request body
+    provided_key = api_key_header or request.api_key
+    _validate_api_key(provided_key)
+
+    if orchestrator is None:
+        raise HTTPException(status_code=503, detail="Multi-agent orchestrator not initialized")
+
+    try:
+        result = await orchestrator.invoke_agent(
+            agent_name=agent_name,
+            state=request.state or {},
+            options=request.options or {},
+        )
+    except ValueError as exc:
+        # Localized, agent-level input errors (e.g., unknown agent, bad state shape)
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("❌ Error invoking agent '%s': %s", agent_name, exc)
+        raise HTTPException(status_code=500, detail=f"Error invoking agent '{agent_name}': {exc}")
+
+    return AgentInvokeResponse(
+        ok=bool(result.get("ok", False)),
+        agent=result.get("agent", agent_name),
+        data=result.get("data") or [],
+        row_count=result.get("row_count"),
+        execution_time_ms=result.get("execution_time_ms"),
+        truncated=bool(result.get("truncated", False)),
+        warnings=result.get("warnings") or [],
+        error=result.get("error"),
+        error_info=result.get("error_info"),
+        output_state=result.get("output_state"),
+        state_delta=result.get("state_delta"),
+    )
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
@@ -164,6 +217,81 @@ async def health_check():
         "orchestrator_ready": orchestrator is not None,
         "agents": ["IntentParserAgent", "DiscoveryAgent", "JoinPlanAndSQLAgent", "ExecAndRecoveryAgent", "AnswerAgent"]
     }
+
+
+@app.post("/agent/discovery", response_model=AgentInvokeResponse)
+async def invoke_discovery_agent(
+    request: AgentInvokeRequest = Body(...),
+    api_key_header: Optional[str] = Header(default=None, alias="X-API-Key"),
+):
+    """
+    Invoke the DiscoveryAgent with a partial LangGraph state.
+
+    Typical usage:
+    - Provide user_input and intent (including keywords_for_discovery)
+    - Inspect relevant_tables, schema_snippet, and column_index in output_state
+    """
+    return await _invoke_named_agent("discovery", request, api_key_header)
+
+
+@app.post("/agent/join_sql", response_model=AgentInvokeResponse)
+async def invoke_join_sql_agent(
+    request: AgentInvokeRequest = Body(...),
+    api_key_header: Optional[str] = Header(default=None, alias="X-API-Key"),
+):
+    """
+    Invoke the JoinPlanAndSQLAgent with a partial LangGraph state.
+
+    Typical usage:
+    - Provide intent and relevant_tables (and optionally schema_snippet/column_index)
+    - Inspect sql_query and join_plan in output_state
+    """
+    return await _invoke_named_agent("join_sql", request, api_key_header)
+
+
+@app.post("/agent/validate_sql", response_model=AgentInvokeResponse)
+async def invoke_validate_sql_agent(
+    request: AgentInvokeRequest = Body(...),
+    api_key_header: Optional[str] = Header(default=None, alias="X-API-Key"),
+):
+    """
+    Invoke the SQLValidatorAgent with a partial LangGraph state.
+
+    Typical usage:
+    - Provide sql_query (and join_plan/column_index for analytic queries)
+    - Inspect validation_result and any repair attempts in output_state
+    """
+    return await _invoke_named_agent("validate_sql", request, api_key_header)
+
+
+@app.post("/agent/exec_recovery", response_model=AgentInvokeResponse)
+async def invoke_exec_recovery_agent(
+    request: AgentInvokeRequest = Body(...),
+    api_key_header: Optional[str] = Header(default=None, alias="X-API-Key"),
+):
+    """
+    Invoke the ExecAndRecoveryAgent with a partial LangGraph state.
+
+    Typical usage:
+    - Provide validated sql_query and connection/runtime options in state
+    - Inspect exec_result (rows, row_count, truncated) in output_state
+    """
+    return await _invoke_named_agent("exec_recovery", request, api_key_header)
+
+
+@app.post("/agent/result_validator", response_model=AgentInvokeResponse)
+async def invoke_result_validator_agent(
+    request: AgentInvokeRequest = Body(...),
+    api_key_header: Optional[str] = Header(default=None, alias="X-API-Key"),
+):
+    """
+    Invoke the result validator node with a partial LangGraph state.
+
+    Typical usage:
+    - Provide exec_result, intent, and join_plan
+    - Inspect validation_result and any warnings in output_state
+    """
+    return await _invoke_named_agent("result_validator", request, api_key_header)
 
 
 @app.get("/debug/config")
@@ -559,6 +687,11 @@ async def root():
             "health": "/health",
             "process_query": "/process_query (POST)",
             "process_conversation": "/process_conversation (POST)",
+            "agent_discovery": "/agent/discovery (POST)",
+            "agent_join_sql": "/agent/join_sql (POST)",
+            "agent_validate_sql": "/agent/validate_sql (POST)",
+            "agent_exec_recovery": "/agent/exec_recovery (POST)",
+            "agent_result_validator": "/agent/result_validator (POST)",
             "debug/logs": "/debug/logs (GET) - Get and clear debug logs",
             "debug/logs/stream": "/debug/logs/stream (GET) - Stream debug logs (non-destructive)",
             "docs": "/docs"

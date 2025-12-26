@@ -73,7 +73,8 @@ Implement a single, robust core path through the orchestrator and verify it end-
     - Asserts `final_response` exists, `sql_query` is non-empty, and `validation_result.is_valid` is True on success.
   - Manual check: hitting `/process_query` with a simple benchmark-style question yields a coherent SQL + answer, with logs confirming the exact node sequence.
 
-### [ ] Step: Phase 2 – Agent-Level HTTP Endpoints for Targeted Testing
+### [x] Step: Phase 2 – Agent-Level HTTP Endpoints for Targeted Testing
+<!-- chat-id: 214df880-267f-42af-8751-5c4cd31819a7 -->
 
 Expose lightweight HTTP endpoints to invoke individual agents (orchestration nodes) with partial state for focused debugging and use them throughout later phases.
 

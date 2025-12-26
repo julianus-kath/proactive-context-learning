@@ -1,0 +1,145 @@
+{
+  "info": {
+    "name": "LangGraph Agent Endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "langgraph-agent-endpoints-collection"
+  },
+  "item": [
+    {
+      "name": "Discovery Agent",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "supersecretapikey"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5001/agent/discovery",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5001",
+          "path": ["agent", "discovery"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"state\": {\n    \"user_input\": \"Show me customers\",\n    \"intent\": {\n      \"operation\": \"query\",\n      \"keywords_for_discovery\": [\"customers\"]\n    }\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "Join SQL Agent",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "supersecretapikey"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5001/agent/join_sql",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5001",
+          "path": ["agent", "join_sql"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"state\": {\n    \"intent\": {\n      \"operation\": \"query\"\n    },\n    \"relevant_tables\": [\n      {\"name\": \"dbo.Customers\"}\n    ]\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "Validate SQL Agent",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "supersecretapikey"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5001/agent/validate_sql",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5001",
+          "path": ["agent", "validate_sql"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"state\": {\n    \"sql_query\": \"SELECT TOP 10 * FROM dbo.Customers\"\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "Exec Recovery Agent",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "supersecretapikey"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5001/agent/exec_recovery",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5001",
+          "path": ["agent", "exec_recovery"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"state\": {\n    \"sql_query\": \"SELECT TOP 10 * FROM dbo.Customers\"\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "Result Validator Agent",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "supersecretapikey"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5001/agent/result_validator",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5001",
+          "path": ["agent", "result_validator"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"state\": {\n    \"exec_result\": {\n      \"ok\": true,\n      \"data\": [],\n      \"row_count\": 0\n    }\n  }\n}"
+        }
+      }
+    }
+  ]
+}
+

@@ -50,6 +50,22 @@ async def shutdown_event():
     print("Orchestrator shut down.")
 
 
+async def invoke_orchestrator_agent(
+    agent_name: str,
+    state: Optional[Dict[str, Any]] = None,
+    options: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Thin helper around QueryOrchestrator.invoke_agent for reuse from
+    HTTP services, tests, or other tools.
+
+    This provides a stable import path so callers don't have to
+    construct their own orchestrator instances when they only need to
+    exercise a single agent node.
+    """
+    return await orchestrator.invoke_agent(agent_name=agent_name, state=state, options=options)
+
+
 @app.post("/invoke", response_model=Dict[str, Any])
 async def invoke_agent(request: InvokeRequest = Body(...)):
     """
