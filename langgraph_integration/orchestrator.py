@@ -1144,14 +1144,32 @@ class QueryOrchestrator:
             }
         )
 
-        # ============= QUERY PIPELINE ============= TODO Still up to date?
+        # ============= QUERY PIPELINE =============
         # Standard query flow: discovery → join_sql → validate_sql → exec_recovery → result_validator → (conditional) answer
         def route_discovery_result(state: BaseState) -> str:
             intent = state.get("intent") or {}
             if intent.get("needs_clarification"):
                 logger.info("🔍 [DISCOVERY_ROUTE] Clarification requested after discovery → answer")
                 return "answer"
-            if state.get("error_info"):
+            error = state.get("error_info") or {}
+            if error:
+                # Special-case: when discovery explicitly reports that no candidates
+                # exist, we treat this as a clarify-style answer rather than a hard
+                # pipeline error so the user gets a clear explanation instead of
+                # a generic failure path.
+                error_type = None
+                if isinstance(error, dict):
+                    error_type = error.get("type") or error.get("error_type")
+                else:
+                    try:
+                        error_type = getattr(error, "type", None) or getattr(error, "error_type", None)
+                    except Exception:
+                        error_type = None
+
+                if error_type == "DISCOVERY_NO_CANDIDATES":
+                    logger.info("🔍 [DISCOVERY_ROUTE] DISCOVERY_NO_CANDIDATES → answer")
+                    return "answer"
+
                 logger.info("🔍 [DISCOVERY_ROUTE] Error detected after discovery → answer_error")
                 return "answer_error"
             relevant_tables = state.get("relevant_tables") or []

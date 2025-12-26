@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import pytest
+from unittest.mock import AsyncMock, patch
 from dotenv import load_dotenv
 
 # Load environment
@@ -337,6 +338,116 @@ async def test_discovery_agent_keyword_extraction(discovery_agent):
         
         # Verify some keywords were extracted
         assert len(keywords) > 0, f"No keywords extracted for: {case['user_input']}"
+
+
+@pytest.mark.asyncio
+async def test_discovery_subgraph_populates_schema_and_column_index(monkeypatch):
+    """
+    Discovery subgraph should produce canonical relevant_tables, a compact schema_snippet,
+    a populated column_index, and a discovery_result summary for a simple query.
+    """
+    from langgraph_integration.agents.discovery.agent import DiscoveryAgent
+
+    agent = DiscoveryAgent(llm_model="gpt-4o", llm_temp=0.0)
+
+    class DummyMCP:
+        async def search_tables(self, query, page=1, page_size=10, intent_data=None):
+            payload = {
+                "results": [
+                    {
+                        "full_name": "dbo.Customers",
+                        "table_name": "Customers",
+                        "schema": "dbo",
+                        "type": "table",
+                        "is_view": False,
+                        "relevance_score": 0.9,
+                        "role_coverage": 0.8,
+                        "has_rows": True,
+                        "estimated_rows": 100,
+                        "column_count": 3,
+                        "fk_count": 0,
+                        "columns": [
+                            {"name": "Id", "type": "int", "role_hint": "primary key"},
+                            {"name": "Name", "type": "varchar", "role_hint": "label"},
+                            {"name": "CreatedAt", "type": "datetime", "role_hint": "date"},
+                        ],
+                        "description": "Customer master data",
+                    }
+                ]
+            }
+            return [{"text": json.dumps(payload)}]
+
+        async def search_views(self, query, page=1, page_size=10, include_empty=False):
+            return []  # No additional views needed for this unit test
+
+        async def describe_table(self, table_name, include_sample=False):
+            payload = {
+                "data": {
+                    "columns": [
+                        {"name": "Id", "type": "int", "role_hint": "primary key"},
+                        {"name": "Name", "type": "varchar", "role_hint": "label"},
+                        {"name": "CreatedAt", "type": "datetime", "role_hint": "date"},
+                    ],
+                    "row_count": 100,
+                    "has_rows": True,
+                    "is_view": False,
+                    "role_coverage": 0.9,
+                    "relationships": [],
+                }
+            }
+            return [{"text": json.dumps(payload)}]
+
+        async def describe_view(self, table_name, include_sample=False):
+            return await self.describe_table(table_name, include_sample=include_sample)
+
+        async def get_view_dependencies(self, table_name):
+            return [{"text": json.dumps({"data": {"dependencies": []}})}]
+
+    # Use deterministic MCP stub instead of hitting a real server
+    agent.mcp = DummyMCP()
+
+    # Stub column index fetcher so we don't depend on an MCP server
+    with patch(
+        "langgraph_integration.agents.discovery.agent.get_column_index_mcp",
+        new=AsyncMock(return_value={"dbo.Customers": ["Id", "Name", "CreatedAt"]}),
+    ):
+        subgraph = agent.build_subgraph()
+        initial_state = BaseState(
+            user_input="How many customers do we have?",
+            intent={
+                "operation": "query",
+                "primary_entities": ["customers"],
+                "metrics": ["count"],
+                "keywords_for_discovery": ["customers"],
+            },
+            session_described_tables={},
+            messages=[],
+        )
+
+        final_state = await subgraph.ainvoke(initial_state)
+
+        # relevant_tables should be non-empty and canonicalised
+        relevant_tables = final_state.get("relevant_tables") or []
+        assert relevant_tables, "relevant_tables should not be empty"
+        assert all(isinstance(t, str) for t in relevant_tables)
+
+        # schema_snippet should be human-readable and compact
+        schema_snippet = final_state.get("schema_snippet") or ""
+        assert isinstance(schema_snippet, str)
+        assert "Customers" in schema_snippet or "customers" in schema_snippet
+
+        # column_index should contain the canonicalised table key and exact columns
+        column_index = final_state.get("column_index") or {}
+        assert column_index, "column_index should not be empty"
+        # MSSQL default dialect canonicalises to lower-case schema.table
+        assert "dbo.customers" in column_index
+        assert column_index["dbo.customers"] == ["Id", "Name", "CreatedAt"]
+
+        # discovery_result summary should be present for downstream consumers
+        discovery_result = final_state.get("discovery_result") or {}
+        assert discovery_result.get("candidates_count") >= 1
+        assert discovery_result.get("relevant_tables")
+        assert discovery_result.get("schema_snippet")
 
 
 if __name__ == "__main__":

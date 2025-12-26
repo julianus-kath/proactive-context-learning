@@ -103,7 +103,8 @@ Expose lightweight HTTP endpoints to invoke individual agents (orchestration nod
     - Use curl/Postman to call, for example, `/agent/validate_sql` with a candidate `sql_query` and inspect validation behavior directly, without going through the entire pipeline.
     - Provide a ready-to-import Postman collection JSON (e.g. `{@artifacts_path}/agent_endpoints.postman_collection.json`) with sample requests for each `/agent/*` route so you can exercise all agents from Postman immediately after this phase.
 
-### [ ] Step: Phase 3 – Discovery as Scout + Schema Linking
+### [x] Step: Phase 3 – Discovery as Scout + Schema Linking
+<!-- chat-id: b7dcdafd-e832-434b-b699-d927535b32a9 -->
 
 Make Discovery explicitly “Scout search + deterministic schema linking” and verify it in isolation.
 

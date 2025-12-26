@@ -1203,6 +1203,8 @@ class DiscoveryAgent:
             schema_lines = []
             relevant_tables: List[str] = []
             relevant_table_details = []
+            max_entities_in_snippet = 3
+            extra_entities_count = 0
             
             # Build a quick lookup for date columns
             date_cols_by_table = {}
@@ -1211,7 +1213,7 @@ class DiscoveryAgent:
                 date_cols_by_table[table] = info.get("date_columns", [])
             
             # Build initial snippet from candidate views/tables
-            for cand in candidates:
+            for index, cand in enumerate(candidates):
                 table_name = cand.get("table_name") or cand.get("name") or cand.get("full_name", "")
                 columns = cand.get("columns", [])
 
@@ -1222,33 +1224,37 @@ class DiscoveryAgent:
                 relevant_tables.append(table_name)
                 relevant_table_details.append(cand)
                 
-                # Build column list: name (type) [role hints]
-                col_strs = []
-                for col in columns[:10]:  # Limit to 10 columns in snippet
-                    col_name = col.get("name", "unknown")
-                    col_type = col.get("type", "varchar").lower()
-                    role = col.get("role_hint", "")
+                # Keep the human-facing snippet compact: at most a few entities.
+                if index < max_entities_in_snippet:
+                    # Build column list: name (type) [role hints]
+                    col_strs = []
+                    for col in columns[:10]:  # Limit to 10 columns in snippet
+                        col_name = col.get("name", "unknown")
+                        col_type = col.get("type", "varchar").lower()
+                        role = col.get("role_hint", "")
+                        
+                        if role:
+                            col_strs.append(f"{col_name} ({col_type}, {role})")
+                        else:
+                            col_strs.append(f"{col_name} ({col_type})")
                     
-                    if role:
-                        col_strs.append(f"{col_name} ({col_type}, {role})")
-                    else:
-                        col_strs.append(f"{col_name} ({col_type})")
-                
-                # Add "..." if more than 10 columns
-                if len(columns) > 10:
-                    col_strs.append(f"... and {len(columns) - 10} more columns")
-                
-                schema_line = f"{table_name}: {', '.join(col_strs)}"
-                
-                # Add date column highlights if explored
-                if table_name in date_cols_by_table and date_cols_by_table[table_name]:
-                    date_cols = date_cols_by_table[table_name]
-                    date_col_names = ", ".join([f"{dc['name']} ({dc['type']})" for dc in date_cols[:3]])
-                    schema_line += f"\n  └─ Date columns: {date_col_names}"
-                    if len(date_cols) > 3:
-                        schema_line += f" (+ {len(date_cols) - 3} more)"
-                
-                schema_lines.append(schema_line)
+                    # Add "..." if more than 10 columns
+                    if len(columns) > 10:
+                        col_strs.append(f"... and {len(columns) - 10} more columns")
+                    
+                    schema_line = f"{table_name}: {', '.join(col_strs)}"
+                    
+                    # Add date column highlights if explored
+                    if table_name in date_cols_by_table and date_cols_by_table[table_name]:
+                        date_cols = date_cols_by_table[table_name]
+                        date_col_names = ", ".join([f"{dc['name']} ({dc['type']})" for dc in date_cols[:3]])
+                        schema_line += f"\n  └─ Date columns: {date_col_names}"
+                        if len(date_cols) > 3:
+                            schema_line += f" (+ {len(date_cols) - 3} more)"
+                    
+                    schema_lines.append(schema_line)
+                else:
+                    extra_entities_count += 1
 
             # Ensure KPI-required tables (e.g., inventory tables inferred from KPIs)
             # are present in the schema snippet when they exist in the catalog.
@@ -1294,6 +1300,12 @@ class DiscoveryAgent:
             except Exception:
                 # Best-effort enrichment; never fail discovery because of KPI injection
                 pass
+            
+            # If there are more entities than we included explicitly, summarise them.
+            if extra_entities_count > 0:
+                schema_lines.append(
+                    f"... and {extra_entities_count} more table(s) available but omitted for brevity"
+                )
             
             schema_snippet = "\n".join(schema_lines)
             
@@ -2410,6 +2422,15 @@ class DiscoveryAgent:
                 "relevant_table_details": [detail.model_dump() for detail in payload.relevant_table_details],
                 "column_index": payload.column_index,
                 "discovery_role_hints": payload.role_hints.model_dump(),
+            }
+            # Provide a compact summary object for downstream consumers (orchestrator,
+            # debug tooling, and HTTP agents) so callers don't need to reconstruct
+            # this information from scattered fields.
+            updates["discovery_result"] = {
+                "candidates_count": len(updates["relevant_tables"]),
+                "relevant_tables": updates["relevant_tables"],
+                "schema_snippet": updates["schema_snippet"],
+                "role_hints": updates["discovery_role_hints"],
             }
             logger.info("🧾 Discovery updates keys: %s", list(updates.keys()))
             logger.info(

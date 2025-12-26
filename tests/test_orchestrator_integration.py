@@ -601,6 +601,82 @@ class TestQueryOrchestrator:
         assert intent["operation"] == "health_check"
         logger.info("✅ Routing works for health check")
 
+    @pytest.mark.asyncio
+    async def test_discovery_no_candidates_routes_to_answer_not_error(self):
+        """
+        When discovery reports DISCOVERY_NO_CANDIDATES, the orchestrator should
+        route to the answer node (clarify-style explanation) instead of the
+        error branch, and must not attempt SQL planning.
+        """
+        from langgraph_integration.orchestrator import QueryOrchestrator
+
+        orchestrator = QueryOrchestrator()
+
+        async def fake_index_database_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            state = dict(state)
+            state.setdefault("catalog", {"tables": {}, "views": {}})
+            return state
+
+        async def fake_parse_intent_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            state = dict(state)
+            state["intent"] = {
+                "operation": "query",
+                "primary_entities": [],
+                "metrics": [],
+                "filters": [],
+                "time_window": {},
+                "keywords_for_discovery": ["nonsense_token"],
+            }
+            return state
+
+        async def fake_concept_mapping_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            return state
+
+        async def fake_discovery_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            state = dict(state)
+            state["relevant_tables"] = []
+            state["schema_snippet"] = ""
+            state["candidate_views"] = []
+            state["column_index"] = {}
+            state["error_info"] = {
+                "type": "DISCOVERY_NO_CANDIDATES",
+                "message": "No relevant tables found for this query.",
+                "keywords_attempted": ["nonsense_token"],
+                "tables_found": 0,
+            }
+            return state
+
+        async def failing_join_sql_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            raise AssertionError("join_sql should not be invoked when discovery finds no candidates")
+
+        async def fake_answer_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            state = dict(state)
+            state["final_response"] = "I could not find any relevant tables for your question."
+            return state
+
+        async def failing_answer_error_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            raise AssertionError("answer_error path should not be used for DISCOVERY_NO_CANDIDATES")
+
+        orchestrator._index_database_node = fake_index_database_node
+        orchestrator._parse_intent_node = fake_parse_intent_node
+        orchestrator._concept_mapping_node = fake_concept_mapping_node
+        orchestrator._discovery_node = fake_discovery_node
+        orchestrator._join_sql_node = failing_join_sql_node
+        orchestrator._answer_node = fake_answer_node
+        orchestrator._answer_error_node = failing_answer_error_node
+
+        # Rebuild the graph so conditional routing picks up our patched nodes
+        orchestrator.graph = orchestrator._build_graph()
+
+        input_state: Dict[str, Any] = {
+            "user_input": "asdlkj qweoiu zxcmnv",  # nonsense query
+        }
+
+        result = await orchestrator.ainvoke(input_state)
+
+        assert result.get("final_response"), "final_response should be populated for DISCOVERY_NO_CANDIDATES"
+        assert "relevant tables" in result["final_response"].lower()
+
 
 class TestFactoryIntegration:
     """Test factory functions and integration points."""
