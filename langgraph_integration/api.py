@@ -3,8 +3,12 @@ from typing import Any, Dict, List, Optional
 
 import uvicorn
 from fastapi import Body, FastAPI, Header, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
+from langgraph_integration.contracts.response_envelope import (
+    ErrorInfo as ErrorInfoModel,
+    ResponseEnvelope,
+)
 from langgraph_integration.orchestrator import QueryOrchestrator
 
 
@@ -117,7 +121,78 @@ async def process_query(
             conversation_id=request.conversation_id,
             metadata=metadata or None,
         )
-        return result
+
+        # Always return a stable, minimal envelope to external callers.
+        if not isinstance(result, dict):
+            # Fallback: coerce non-dict responses into a simple answer.
+            return {"final_response": str(result)}
+
+        # Normalize exec_result (optional, for callers that need raw rows).
+        exec_result: Optional[Dict[str, Any]] = None
+        exec_payload = result.get("exec_result")
+        if exec_payload is not None:
+            try:
+                envelope = ResponseEnvelope.model_validate(exec_payload)
+                exec_result = envelope.model_dump(exclude_none=True)
+            except ValidationError:
+                # On validation failure, surface a safe empty envelope.
+                exec_result = ResponseEnvelope(ok=False, data=[]).model_dump(exclude_none=True)
+
+        # Normalize error_info so callers see a consistent shape.
+        error_info: Optional[Dict[str, Any]] = None
+        error_payload = result.get("error_info")
+        if error_payload:
+            try:
+                normalized_error = ErrorInfoModel.model_validate(error_payload)
+                error_info = normalized_error.model_dump(exclude_none=True)
+            except ValidationError:
+                # Best-effort projection of arbitrary payloads.
+                if isinstance(error_payload, dict):
+                    error_info = ErrorInfoModel(
+                        type=str(error_payload.get("type") or "UNKNOWN_ERROR"),
+                        message=str(
+                            error_payload.get("message")
+                            or error_payload.get("error")
+                            or "An unknown error occurred."
+                        ),
+                    ).model_dump(exclude_none=True)
+                else:
+                    error_info = ErrorInfoModel(
+                        type="UNKNOWN_ERROR",
+                        message=str(error_payload),
+                    ).model_dump(exclude_none=True)
+
+        # Prefer orchestrator's final_response/final_answer; fall back to error_info.
+        final_response = (
+            result.get("final_response")
+            or result.get("final_answer")
+        )
+        if not final_response:
+            if isinstance(error_info, dict):
+                msg = error_info.get("message") or "An error occurred while processing your request."
+                suggestion = error_info.get("suggestion")
+                if suggestion:
+                    final_response = f"{msg} {suggestion}"
+                else:
+                    final_response = msg
+            else:
+                final_response = (
+                    "I couldn't process your request due to an internal error. "
+                    "Please try again or adjust your question."
+                )
+
+        response: Dict[str, Any] = {"final_response": final_response}
+
+        # Optional debug-oriented fields for callers that need extra context.
+        if exec_result is not None:
+            response["exec_result"] = exec_result
+        sql_query = result.get("sql_query")
+        if sql_query:
+            response["sql_query"] = sql_query
+        if error_info:
+            response["error_info"] = error_info
+
+        return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

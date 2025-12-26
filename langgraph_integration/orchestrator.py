@@ -3512,9 +3512,37 @@ class QueryOrchestrator:
             timeout_s = max(self.query_timeout_seconds, 60)
             import asyncio as _asyncio
             result = await _asyncio.wait_for(self.ainvoke(initial_state), timeout=timeout_s)
+
+            # Normalize terminal answer fields so API callers always see a usable answer.
             if isinstance(result, dict):
+                # Keep legacy aliases in sync.
                 result.setdefault("final_response", result.get("final_answer"))
                 result.setdefault("final_answer", result.get("final_response"))
+
+                final_response = result.get("final_response") or result.get("final_answer")
+                if not final_response:
+                    # Synthesize a short, actionable message from error_info when present.
+                    error_payload = result.get("error_info")
+                    message_parts = []
+                    if isinstance(error_payload, dict):
+                        err_type = error_payload.get("type")
+                        err_message = error_payload.get("message") or error_payload.get("error")
+                        suggestion = error_payload.get("suggestion")
+                        if err_message:
+                            message_parts.append(str(err_message))
+                        elif err_type:
+                            message_parts.append(f"An error of type '{err_type}' occurred.")
+                        if suggestion:
+                            message_parts.append(str(suggestion))
+                    if not message_parts:
+                        message_parts.append(
+                            "I couldn't process your request due to an internal error. "
+                            "Please try again or narrow the question."
+                        )
+                    synthesized = " ".join(part.strip() for part in message_parts if part)
+                    result["final_response"] = synthesized
+                    result.setdefault("final_answer", synthesized)
+
             return result
         except TimeoutError:
             logger.error("❌ [PROCESS_QUERY] Orchestrator timed out before completion", exc_info=True)

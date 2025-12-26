@@ -187,7 +187,8 @@ Ground SQL generation in a deterministic join graph and ensure it can produce Q1
     - Fewer “I don’t know” answers.
     - Richer SQL structure closer to your hand-written examples.
 
-### [ ] Step: Phase 6 – Answer Shaping & Core API Stability
+### [x] Step: Phase 6 – Answer Shaping & Core API Stability
+<!-- chat-id: 80043321-0194-4214-82c1-7a1b216c3e14 -->
 
 Ensure every terminal path yields a useful answer and the main API remains simple and predictable.
 
