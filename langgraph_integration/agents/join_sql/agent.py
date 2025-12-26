@@ -1057,8 +1057,6 @@ class JoinPlanAndSQLAgent:
 
                     if where_conditions:
                         sql += " WHERE " + " AND ".join(where_conditions)
-
-                    sql += " ORDER BY (SELECT NULL)"  # Dummy ORDER BY to ensure query works
                 else:
                     # Build FROM and JOINs for regular query
                     sql = f"SELECT TOP {self.row_limit} * FROM {primary_table}"
@@ -1438,6 +1436,38 @@ class JoinPlanAndSQLAgent:
                 }
                 if all(role in available_roles for role in required_roles):
                     return candidate
+
+        # NEW: For non-metric entity-count style queries (e.g. "How many customers"),
+        # prefer a fact candidate whose table name matches the primary entity
+        # derived from intent entities/keywords. This avoids defaulting to the
+        # largest transactional table when the user clearly asks about a
+        # dimension like customers or products.
+        entities: List[str] = []
+        for e in intent.get("primary_entities") or []:
+            canonical = self._canonical_entity(e)
+            if canonical:
+                entities.append(canonical)
+        # Fallback: use keywords_for_discovery when primary_entities are missing.
+        for kw in intent.get("keywords_for_discovery") or []:
+            canonical = self._canonical_entity(kw)
+            if canonical and canonical not in entities:
+                entities.append(canonical)
+
+        def _table_matches_entity(table: str, entity: str) -> bool:
+            t = (table or "").lower()
+            if entity == "customer":
+                return any(x in t for x in ["customer", "customers", "kunde", "kunden"])
+            if entity == "product":
+                return any(x in t for x in ["product", "products", "produkt", "produkte", "artikel"])
+            if entity == "project":
+                return any(x in t for x in ["project", "projects", "projekt", "projekte"])
+            return False
+
+        if entities and not needs_metric:
+            for candidate in ranked:
+                for ent in entities:
+                    if _table_matches_entity(candidate.table, ent):
+                        return candidate
 
         if not needs_metric:
             return ranked[0]
