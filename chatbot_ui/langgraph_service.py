@@ -175,12 +175,101 @@ async def _invoke_named_agent(
     if orchestrator is None:
         raise HTTPException(status_code=503, detail="Multi-agent orchestrator not initialized")
 
+    # Prefer the orchestrator's native helper when available (newer versions).
     try:
-        result = await orchestrator.invoke_agent(
-            agent_name=agent_name,
-            state=request.state or {},
-            options=request.options or {},
-        )
+        if hasattr(orchestrator, "invoke_agent"):
+            result = await orchestrator.invoke_agent(
+                agent_name=agent_name,
+                state=request.state or {},
+                options=request.options or {},
+            )
+        else:
+            # Backwards-compatible fallback for orchestrator versions that do not
+            # yet expose invoke_agent(). We manually route to the appropriate
+            # internal node handler and normalize the output into the same shape.
+            normalized = (agent_name or "").strip().lower()
+            handler = None
+            if normalized in ("discovery",):
+                handler = getattr(orchestrator, "_discovery_node", None)
+            elif normalized in ("join_sql",):
+                handler = getattr(orchestrator, "_join_sql_node", None)
+            elif normalized in ("validate_sql", "sql_validator"):
+                handler = getattr(orchestrator, "_validate_sql_node", None)
+            elif normalized in ("exec_recovery", "execution"):
+                handler = getattr(orchestrator, "_exec_recovery_node", None)
+            elif normalized in ("result_validator",):
+                # Prefer orchestrator wrapper if present, otherwise build directly.
+                handler = getattr(orchestrator, "_result_validator_async", None)
+                if handler is None:
+                    from langgraph_integration.agents.result_validator.agent import build_result_validator_node
+
+                    async def _inline_result_validator(state):
+                        return build_result_validator_node(state)
+
+                    handler = _inline_result_validator
+
+            if handler is None:
+                raise ValueError(f"Unknown agent '{agent_name}'")
+
+            # Build state payload with optional overrides
+            state_payload: Dict[str, Any] = dict(request.state or {})
+            options = request.options or {}
+            overrides = options.get("state_overrides") if isinstance(options, dict) else None
+            if isinstance(overrides, dict):
+                for key, value in overrides.items():
+                    state_payload[key] = value
+
+            before_state: Dict[str, Any] = dict(state_payload)
+            result_state = await handler(state_payload)
+            if not isinstance(result_state, dict):
+                raise ValueError(f"Agent '{agent_name}' returned invalid state")
+
+            normalized_state: Dict[str, Any] = dict(result_state)
+            exec_envelope = normalized_state.get("exec_result") if isinstance(normalized_state.get("exec_result"), dict) else None
+            error_info = normalized_state.get("error_info")
+            if error_info is not None and not isinstance(error_info, dict):
+                error_info = {"type": "UNKNOWN_ERROR", "message": str(error_info)}
+
+            data: List[Dict[str, Any]] = []
+            row_count: Optional[int] = None
+            truncated = False
+            exec_error: Optional[str] = None
+            exec_ok = True
+            if exec_envelope:
+                data = exec_envelope.get("data") or []
+                row_count = exec_envelope.get("row_count")
+                truncated = bool(exec_envelope.get("truncated", False))
+                exec_error = exec_envelope.get("error")
+                exec_ok = bool(exec_envelope.get("ok", True))
+
+            # Simple state delta for debugging
+            added = {k: v for k, v in normalized_state.items() if k not in before_state}
+            removed = [k for k in before_state.keys() if k not in normalized_state]
+            updated = {
+                k: {"before": before_state[k], "after": normalized_state[k]}
+                for k in normalized_state.keys()
+                if k in before_state and before_state[k] != normalized_state[k]
+            }
+
+            overall_ok = exec_ok and not bool(error_info)
+            result = {
+                "agent": normalized,
+                "ok": overall_ok,
+                "data": data,
+                "row_count": row_count,
+                "execution_time_ms": None,
+                "truncated": truncated,
+                "warnings": normalized_state.get("warnings") or [],
+                "error": exec_error,
+                "error_info": error_info,
+                "input_state": before_state,
+                "output_state": normalized_state,
+                "state_delta": {
+                    "added": added,
+                    "removed": removed,
+                    "updated": updated,
+                },
+            }
     except ValueError as exc:
         # Localized, agent-level input errors (e.g., unknown agent, bad state shape)
         raise HTTPException(status_code=400, detail=str(exc))
