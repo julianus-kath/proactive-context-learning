@@ -72,7 +72,35 @@ Implement a single, robust core path through the orchestrator and verify it end-
     - Asserts `final_response` exists, `sql_query` is non-empty, and `validation_result.is_valid` is True on success.
   - Manual check: hitting `/process_query` with a simple benchmark-style question yields a coherent SQL + answer, with logs confirming the exact node sequence.
 
-### [ ] Step: Phase 2 – Discovery as Scout + Schema Linking
+### [ ] Step: Phase 2 – Agent-Level HTTP Endpoints for Targeted Testing
+
+Expose lightweight HTTP endpoints to invoke individual agents (orchestration nodes) with partial state for focused debugging and use them throughout later phases.
+
+- Code changes:
+  - In `chatbot_ui/langgraph_service.py`:
+    - Implement endpoints such as:
+      - `POST /agent/discovery`
+      - `POST /agent/join_sql`
+      - `POST /agent/validate_sql`
+      - `POST /agent/exec_recovery`
+      - `POST /agent/result_validator`
+    - Use `AgentInvokeRequest` / `AgentInvokeResponse` (already defined) to:
+      - Accept partial `state` and optional `options`.
+      - Route to the corresponding orchestrator node or subgraph (e.g., `DiscoveryAgent.build_subgraph().ainvoke`, `SQLValidatorAgent`, `ExecAndRecoveryAgent`, result validator node).
+    - Normalize outputs so each endpoint returns:
+      - Result data (e.g., `relevant_tables`, `sql_query`, `exec_result`, `validation_result`)
+      - Any `error_info`.
+  - Optionally add a thin helper in `langgraph_integration/api.py` to encapsulate agent invocation logic so it can be reused from tests or other services.
+- Tests / deliverable:
+  - Add FastAPI tests that:
+    - Hit each `/agent/*` endpoint with a minimal, valid state and assert:
+      - 2xx responses.
+      - Expected fields are present in the JSON body (e.g., `relevant_tables` for discovery, `validation_result` for validator).
+    - Confirm that bad or incomplete state yields clear, localized errors (without running the full pipeline).
+  - Manual check:
+    - Use curl/Postman to call, for example, `/agent/validate_sql` with a candidate `sql_query` and inspect validation behavior directly, without going through the entire pipeline.
+
+### [ ] Step: Phase 3 – Discovery as Scout + Schema Linking
 
 Make Discovery explicitly “Scout search + deterministic schema linking” and verify it in isolation.
 
@@ -96,7 +124,7 @@ Make Discovery explicitly “Scout search + deterministic schema linking” and 
     - Verify that a nonsense query results in a graceful “no tables found” style answer via the orchestrator, not a hang.
   - Manual check: inspect `/debug/logs` to see Discovery’s candidate tables and schema_snippet for a known query.
 
-### [ ] Step: Phase 3 – SQL Validation as Hard, Bounded Gate
+### [ ] Step: Phase 4 – SQL Validation as Hard, Bounded Gate
 
 Ensure every SQL goes through a bounded validation/repair loop before any execution.
 
@@ -127,7 +155,7 @@ Ensure every SQL goes through a bounded validation/repair loop before any execut
     - Repair attempts are bounded.
     - Final answer clearly explains the problem instead of silently failing.
 
-### [ ] Step: Phase 4 – Deterministic Join Graph & Rich SQL Generation
+### [ ] Step: Phase 5 – Deterministic Join Graph & Rich SQL Generation
 
 Ground SQL generation in a deterministic join graph and ensure it can produce Q1/Q2-level queries.
 
@@ -153,7 +181,7 @@ Ground SQL generation in a deterministic join graph and ensure it can produce Q1
     - Fewer “I don’t know” answers.
     - Richer SQL structure closer to your hand-written examples.
 
-### [ ] Step: Phase 5 – Answer Shaping & Core API Stability
+### [ ] Step: Phase 6 – Answer Shaping & Core API Stability
 
 Ensure every terminal path yields a useful answer and the main API remains simple and predictable.
 
@@ -173,31 +201,3 @@ Ensure every terminal path yields a useful answer and the main API remains simpl
     - Assert `final_response` is always non-empty for valid inputs.
     - Verify error cases return meaningful messages.
   - Manual check: query different modes (data, schema, health, clarify) via `/process_query` and confirm all responses are usable and informative.
-
-### [ ] Step: Phase 6 – Agent-Level HTTP Endpoints for Targeted Testing
-
-Expose lightweight HTTP endpoints to invoke individual agents (orchestration nodes) with partial state for focused debugging.
-
-- Code changes:
-  - In `chatbot_ui/langgraph_service.py`:
-    - Implement endpoints such as:
-      - `POST /agent/discovery`
-      - `POST /agent/join_sql`
-      - `POST /agent/validate_sql`
-      - `POST /agent/exec_recovery`
-      - `POST /agent/result_validator`
-    - Use `AgentInvokeRequest` / `AgentInvokeResponse` to:
-      - Accept partial `state` and optional `options`.
-      - Route to the corresponding orchestrator node or subgraph (e.g., call `DiscoveryAgent.build_subgraph().ainvoke`, `SQLValidatorAgent`, etc.).
-    - Normalize outputs so each endpoint returns:
-      - Result data (e.g., `relevant_tables`, `sql_query`, `exec_result`, `validation_result`)
-      - Any `error_info`.
-  - Optionally add a thin helper in `langgraph_integration/api.py` to encapsulate agent invocation logic.
-- Tests / deliverable:
-  - Add FastAPI tests that:
-    - Hit each `/agent/*` endpoint with a minimal state and assert:
-      - 2xx responses.
-      - Expected fields are present in the JSON body.
-    - Confirm that bad or incomplete state yields clear, localized errors (without running the full pipeline).
-  - Manual check:
-    - Use curl/Postman to call, for example, `/agent/validate_sql` with a candidate `sql_query` and inspect validation behavior directly, without going through the entire pipeline.
