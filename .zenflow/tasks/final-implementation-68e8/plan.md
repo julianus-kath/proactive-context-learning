@@ -160,7 +160,8 @@ Ensure every SQL goes through a bounded validation/repair loop before any execut
     - Repair attempts are bounded.
     - Final answer clearly explains the problem instead of silently failing.
 
-### [ ] Step: Phase 5 – Deterministic Join Graph & Rich SQL Generation
+### [x] Step: Phase 5 – Deterministic Join Graph & Rich SQL Generation
+<!-- chat-id: 86b3ecb3-de44-4d26-8b38-4824ce98655f -->
 
 Ground SQL generation in a deterministic join graph and ensure it can produce Q1/Q2-level queries.
 

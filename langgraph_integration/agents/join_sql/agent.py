@@ -295,14 +295,31 @@ class JoinPlanAndSQLAgent:
             }
 
             if join_condition:
-                join_plan["joins"].append(
-                    {
-                        "table": dimension.table,
-                        "on": join_condition,
-                        "type": "INNER",
-                        "role": canonical_role or role_name,
-                    }
-                )
+                join_edge: Dict[str, Any] = {
+                    "table": dimension.table,
+                    "on": join_condition,
+                    # JoinPlan schema: prefer explicit join_type but keep legacy "type".
+                    "join_type": "INNER",
+                    "type": "INNER",
+                    "role": canonical_role or role_name,
+                    "direction": "self" if is_self_dimension else "fact_to_dim",
+                }
+                # Best-effort structured join key hints extracted from the condition.
+                try:
+                    keys: List[str] = []
+                    if "=" in join_condition:
+                        left, right = join_condition.split("=", 1)
+                        left = left.strip()
+                        right = right.strip()
+                        if left and right:
+                            keys = [left, right]
+                    if keys:
+                        join_edge["join_keys"] = keys
+                except Exception:
+                    # Hints are optional; failures here should never block planning.
+                    pass
+
+                join_plan["joins"].append(join_edge)
             return dimension
 
         if required_action in {"topk_sum_by_customer", "sum_by_customer"}:
@@ -1028,7 +1045,7 @@ class JoinPlanAndSQLAgent:
 
                     # Add JOINs if present
                     for join in joins:
-                        join_type = join.get("type", "INNER")
+                        join_type = join.get("join_type") or join.get("type", "INNER")
                         join_table = join.get("table", "")
                         join_condition = join.get("on", "")
                         sql += f" {join_type} JOIN {join_table} ON {join_condition}"
@@ -1047,7 +1064,7 @@ class JoinPlanAndSQLAgent:
                     sql = f"SELECT TOP {self.row_limit} * FROM {primary_table}"
 
                     for join in joins:
-                        join_type = join.get("type", "INNER")
+                        join_type = join.get("join_type") or join.get("type", "INNER")
                         join_table = join.get("table", "")
                         join_condition = join.get("on", "")
                         sql += f" {join_type} JOIN {join_table} ON {join_condition}"
@@ -1722,11 +1739,20 @@ class JoinPlanAndSQLAgent:
                 join_keys = find_join_keys(cols, cust_cols)
                 if join_keys:
                     sales_key, cust_key = join_keys
-                    joins.append({
-                        "table": customer_table,
-                        "on": f"{primary_table}.{sales_key} = {customer_table}.{cust_key}",
-                        "type": "LEFT"
-                    })
+                    joins.append(
+                        {
+                            "table": customer_table,
+                            "on": f"{primary_table}.{sales_key} = {customer_table}.{cust_key}",
+                            # JoinPlan schema fields (keep legacy "type" for backward compatibility).
+                            "join_type": "LEFT",
+                            "type": "LEFT",
+                            "direction": "fact_to_dim",
+                            "join_keys": [
+                                f"{primary_table}.{sales_key}",
+                                f"{customer_table}.{cust_key}",
+                            ],
+                        }
+                    )
 
                     # Now try to find customer label column in joined table
                     customer_col = find_customer_column(cust_cols)
@@ -1740,7 +1766,7 @@ class JoinPlanAndSQLAgent:
             for join in joins:
                 join_table = join.get("table", "")
                 join_condition = join.get("on", "")
-                join_type = join.get("type", "LEFT")
+                join_type = join.get("join_type") or join.get("type", "LEFT")
                 if join_table and join_condition:
                     from_clause += f" {join_type} JOIN {join_table} ON {join_condition}"
 
@@ -2349,7 +2375,7 @@ class JoinPlanAndSQLAgent:
         for j in (joins or []):
             jt = j.get("table")
             on = j.get("on")
-            jtype = j.get("type", "LEFT")
+            jtype = j.get("join_type") or j.get("type", "LEFT")
             if jt and on:
                 from_clause += f" {jtype} JOIN {jt} ON {on}"
                 # Try to find group column from joined table

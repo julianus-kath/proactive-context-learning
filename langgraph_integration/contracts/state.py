@@ -93,7 +93,7 @@ class BaseState(TypedDict, total=False):
     discovery_result: Dict[str, Any]  # Summary info for downstream reporting
 
     # Join planning & SQL generation
-    join_plan: Dict[str, Any]  # {strategy: "view"|"joins", path:[...], fk_hints:[...], ...}
+    join_plan: "JoinPlan"  # Deterministic join graph and template metadata
     sql_query: str  # Generated MSSQL query
 
     # Execution & recovery
@@ -174,7 +174,7 @@ class BaseState(TypedDict, total=False):
     # Loop helper state (introduced in Phase 1, used by later phases)
     discovery_cache: Optional[Dict[str, Any]]  # Cached discovery outputs keyed by input fingerprint
     last_sql_query: Optional[str]  # Last SQL text produced by join/sql validator
-    last_join_plan: Optional[Dict[str, Any]]  # Last join plan structure
+    last_join_plan: Optional["JoinPlan"]  # Last join plan structure
     last_join_inputs_fingerprint: Optional[str]  # Fingerprint of last join inputs (tables + intent)
     required_tables_from_kpi: Optional[List[str]]  # Canonical table names derived from KPI expressions
     # Required-relations guardrail (Phase 4)
@@ -194,6 +194,66 @@ class BaseState(TypedDict, total=False):
     database_index: Optional[Dict]  # Deprecated
     query_results: Optional[str]  # Deprecated; use exec_result instead
     final_response_debug: Optional[str]  # Debug info
+
+
+class JoinPlanJoinEdge(TypedDict, total=False):
+    """
+    Single edge in the deterministic join graph.
+
+    This captures a logical relationship between the fact/primary table
+    and a dimension or secondary table.
+    """
+
+    table: str  # Target table name (schema-qualified where possible)
+    join_type: str  # "INNER" | "LEFT" | "RIGHT" | "FULL" | etc.
+    on: str  # SQL join condition text
+    # Optional structured join key hints, e.g. ["Fact.CustomerID", "DimCustomer.ID"]
+    join_keys: List[str]
+    # Direction of the relationship relative to the fact/primary table.
+    direction: Literal["fact_to_dim", "dim_to_fact", "self", "unknown"]
+    # Optional semantic role for this edge (e.g., "customer", "product").
+    role: Optional[str]
+
+
+class JoinPlan(TypedDict, total=False):
+    """
+    Deterministic join plan used by JoinPlanAndSQLAgent and SQL templates.
+
+    The plan is built exclusively from:
+    - discovery_role_hints (fact/dimension metadata)
+    - relevant_tables / candidate_views
+    - FK metadata (fk_hints)
+    - column_index (for column presence checks)
+    """
+
+    # High-level planning strategy
+    strategy: Literal["view", "template", "joins"]
+
+    # Fact/primary table driving the query
+    primary_table: str
+    fact_table: str
+
+    # Join graph
+    joins: List[JoinPlanJoinEdge]
+    fk_hints: List[Dict[str, Any]]
+
+    # Metric/date/entity hints derived from discovery role hints
+    metric_candidates: Dict[str, float]
+    date_columns: List[str]
+    entity_keys: Dict[str, List[str]]
+
+    # Dimension metadata keyed by canonical role name ("customer", "product", etc.)
+    dimensions: Dict[str, Any]
+
+    # Intent-linked filters / time window used when generating SQL
+    filters: List[Dict[str, Any]]
+    time_window: Optional[Dict[str, Any]]
+
+    # Required analytic action from intent routing (e.g., "topk_sum_by_customer")
+    required_action: Optional[str]
+
+    # Optional planner metadata (used by templates and diagnostics)
+    fact_estimated_rows: Optional[int]
 
 
 # Input/Output contracts per agent
@@ -258,7 +318,7 @@ class JoinPlanAndSQLAgentOutput(TypedDict, total=False):
     - error_info: if planning/generation fails
     """
 
-    join_plan: Dict[str, Any]
+    join_plan: "JoinPlan"
     sql_query: str
     error_info: Optional[Dict[str, Any]]
 
@@ -274,7 +334,7 @@ class ExecAndRecoveryAgentInput(TypedDict, total=False):
 
     sql_query: str
     retry_count: int
-    join_plan: Optional[Dict[str, Any]]
+    join_plan: Optional[JoinPlan]
     schema_snippet: Optional[str]
 
 

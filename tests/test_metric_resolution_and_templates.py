@@ -160,3 +160,64 @@ async def test_top_k_by_metric_uses_contract_metric_and_top_k(mock_mcp):
     assert _make_contract().metric_expression_sql in sql
     assert "GROUP BY customers.CustomerID" in sql
     assert "ORDER BY metric DESC" in sql
+
+
+@patch("langgraph_integration.agents.join_sql.agent.get_shared_mcp_tool", autospec=True)
+@pytest.mark.asyncio
+async def test_growth_analysis_generates_yoy_window_query(mock_mcp):
+    """
+    Growth-analysis style questions (Q1/Q2 benchmark patterns) should yield
+    CTE/window-style SQL with year-over-year growth logic, not trivial SELECTs.
+    """
+    from langgraph_integration.agents.join_sql.agent import JoinPlanAndSQLAgent
+
+    mock_mcp.return_value = MagicMock()
+    agent = JoinPlanAndSQLAgent()
+
+    state = BaseState(
+        user_input="How has our customer base grown over the last 3 years?",
+        intent={"operation": "query", "required_action": "growth_analysis", "metrics": ["count"]},
+        join_plan={"primary_table": "dbo.FactCustomers"},
+        # Pre-populate column_index so the agent does not need to probe MCP.
+        column_index={"dbo.FactCustomers": ["CustomerID", "CreatedDate"]},
+    )
+
+    updated = await agent._generate_growth_analysis_sql(state)
+    sql = (updated.get("sql_query") or "").upper()
+
+    # Ensure we generated a non-trivial analytic query.
+    assert "FROM DBO.FACTCUSTOMERS" in sql
+    assert "GROUP BY YEAR(" in sql
+    assert "LAG(" in sql
+    assert "OVER (ORDER BY YEAR(" in sql
+    assert "WHERE" in sql and "DATEADD(YEAR" in sql
+
+
+@patch("langgraph_integration.agents.join_sql.agent.get_shared_mcp_tool", autospec=True)
+@pytest.mark.asyncio
+async def test_comparative_analysis_generates_quarterly_window_query(mock_mcp):
+    """
+    Comparative analysis questions (e.g., Q1 vs Q2 performance) should
+    generate quarter-based window functions with meaningful aggregation.
+    """
+    from langgraph_integration.agents.join_sql.agent import JoinPlanAndSQLAgent
+
+    mock_mcp.return_value = MagicMock()
+    agent = JoinPlanAndSQLAgent()
+
+    state = BaseState(
+        user_input="Compare sales in Q1 vs Q2 over the last year.",
+        intent={"operation": "query", "required_action": "comparative_analysis", "metrics": ["sum"]},
+        join_plan={"primary_table": "dbo.FactSales"},
+        column_index={"dbo.FactSales": ["OrderDate", "SalesAmount"]},
+    )
+
+    updated = await agent._generate_comparative_analysis_sql(state)
+    sql = (updated.get("sql_query") or "").upper()
+
+    assert "FROM DBO.FACTSALES" in sql
+    assert "DATEPART(YEAR" in sql
+    assert "DATEPART(QUARTER" in sql
+    assert "LAG(SUM(" in sql
+    assert "OVER (ORDER BY DATEPART(YEAR" in sql
+    assert "GROUP BY DATEPART(YEAR" in sql and "DATEPART(QUARTER" in sql
