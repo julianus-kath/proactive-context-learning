@@ -23,67 +23,64 @@ class StubOrchestrator:
     without invoking real LLMs, databases, or MCP.
     """
 
-    async def invoke_agent(
-        self,
-        agent_name: str,
-        state: Optional[Dict[str, Any]] = None,
-        options: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
-        normalized = (agent_name or "").strip().lower()
-        base_state: Dict[str, Any] = {}
-
-        if normalized == "discovery":
-            base_state = {
+    # The service now routes directly to internal node handlers, so we
+    # provide lightweight async methods that match those expectations.
+    async def _discovery_node(self, state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        state = dict(state or {})
+        state.update(
+            {
                 "relevant_tables": [{"name": "dbo.Customers"}],
                 "schema_snippet": "CREATE TABLE dbo.Customers (...);",
                 "column_index": {"dbo.Customers": ["CustomerId", "Name"]},
             }
-        elif normalized == "join_sql":
-            base_state = {
+        )
+        return state
+
+    async def _join_sql_node(self, state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        state = dict(state or {})
+        state.update(
+            {
                 "sql_query": "SELECT TOP 1 * FROM dbo.Customers",
                 "join_plan": {"primary_table": "dbo.Customers", "joins": []},
             }
-        elif normalized in ("validate_sql", "sql_validator"):
-            base_state = {
-                "validation_result": {
-                    "is_valid": False,
-                    "error_type": "no_sql",
-                    "error_message": "sql_query is required for validation",
-                }
-            }
-        elif normalized == "exec_recovery":
-            base_state = {
-                "exec_result": {
-                    "ok": True,
-                    "data": [{"id": 1}],
-                    "row_count": 1,
-                    "truncated": False,
-                }
-            }
-        elif normalized == "result_validator":
-            base_state = {
-                "validation_result": {
-                    "is_valid": True,
-                    "error_type": None,
-                }
-            }
-        else:
-            raise ValueError(f"Unknown agent '{agent_name}'")
+        )
+        return state
 
-        return {
-            "agent": normalized,
-            "ok": True,
-            "data": base_state.get("exec_result", {}).get("data", []),
-            "row_count": base_state.get("exec_result", {}).get("row_count"),
-            "execution_time_ms": 5,
-            "truncated": bool(base_state.get("exec_result", {}).get("truncated", False)),
-            "warnings": [],
-            "error": None,
-            "error_info": None,
-            "input_state": state or {},
-            "output_state": base_state,
-            "state_delta": {"added": list(base_state.keys()), "removed": [], "updated": {}},
-        }
+    async def _validate_sql_node(self, state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        state = dict(state or {})
+        state.setdefault(
+            "validation_result",
+            {
+                "is_valid": False,
+                "error_type": "no_sql",
+                "error_message": "sql_query is required for validation",
+            },
+        )
+        return state
+
+    async def _exec_recovery_node(self, state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        state = dict(state or {})
+        state.setdefault(
+            "exec_result",
+            {
+                "ok": True,
+                "data": [{"id": 1}],
+                "row_count": 1,
+                "truncated": False,
+            },
+        )
+        return state
+
+    async def _result_validator_async(self, state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        state = dict(state or {})
+        state.setdefault(
+            "validation_result",
+            {
+                "is_valid": True,
+                "error_type": None,
+            },
+        )
+        return state
 
 
 def make_test_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
