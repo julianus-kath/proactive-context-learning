@@ -15,6 +15,7 @@ def test_nodes_present(compiled_graph):
         "__start__",
         "index_database",
         "parse_intent",
+        "concept_mapping",
         "route_operation",
         "discovery",
         "join_sql",
@@ -34,8 +35,8 @@ def test_query_path_edges(compiled_graph):
     required_direct = {
         ("__start__", "index_database"),
         ("index_database", "parse_intent"),
-        ("parse_intent", "route_operation"),
-        ("discovery", "join_sql"),
+        ("parse_intent", "concept_mapping"),
+        ("concept_mapping", "route_operation"),
         ("join_sql", "validate_sql"),
         ("validate_sql", "exec_recovery"),
         ("exec_recovery", "result_validator"),
@@ -44,6 +45,7 @@ def test_query_path_edges(compiled_graph):
 
     required_conditional = {
         ("route_operation", "discovery"),
+        ("discovery", "join_sql"),
         ("result_validator", "answer"),
     }
     assert required_conditional <= conditional_edges, f"Missing conditional edges: {required_conditional - conditional_edges}"
@@ -52,6 +54,9 @@ def test_query_path_edges(compiled_graph):
 def test_terminal_edges(compiled_graph):
     direct_edges = {(edge.source, edge.target) for edge in compiled_graph.edges if not edge.conditional}
     assert ("answer", "__end__") in direct_edges
+    terminal_sources = {src for (src, tgt) in direct_edges if tgt == "__end__"}
+    # Only the main answer nodes should terminate the graph.
+    assert terminal_sources <= {"answer", "answer_schema", "answer_error", "interpret"}
 #!/usr/bin/env python3
 """
 Smoke test: Verify all LangGraph agents have proper topology (no orphaned nodes).

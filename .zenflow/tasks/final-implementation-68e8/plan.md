@@ -51,7 +51,8 @@ Save to `{@artifacts_path}/plan.md`. If the feature is trivial and doesn't warra
 
 ---
 
-### [ ] Step: Phase 1 – Canonical Pipeline & Golden Path
+### [x] Step: Phase 1 – Canonical Pipeline & Golden Path
+<!-- chat-id: b2e96c8c-4832-4735-9349-75ae46a86900 -->
 
 Implement a single, robust core path through the orchestrator and verify it end-to-end.
 

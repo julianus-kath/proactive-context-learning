@@ -349,6 +349,24 @@ class QueryOrchestrator:
         events[event_key] = events.get(event_key, 0) + 1
         state["loop_events"] = events
 
+    def _require_state_fields(self, state: BaseState, required: List[str], node_name: str) -> None:
+        """
+        Lightweight contract check for node boundaries.
+
+        Logs a structured warning when expected fields are missing at the
+        input of a node but does not raise, so existing flows remain robust
+        while violations show up clearly in logs.
+        """
+        missing = [field for field in required if field not in state]
+        if not missing:
+            return
+        logger.warning(
+            "state_contract_violation: node=%s missing_fields=%s present_keys=%s",
+            node_name,
+            missing,
+            sorted(state.keys()),
+        )
+
     def _map_stage_to_llm_bucket(self, stage: str) -> str:
         """
         Map fine-grained stages to coarse LLM usage buckets.
@@ -1051,9 +1069,8 @@ class QueryOrchestrator:
             - "error": Handle errors (error_info present)
             - "schema_query": Discover tables/views and explain schema
             - "health_check": Check system health
-            - "execute_direct": Execute pre-written SQL
-            - "query" (default): Full query pipeline *TODO Default?
-            #TODO CHAT with the agent
+            - "execute_direct": Validate & execute pre-written SQL
+            - "query" (default): Full query pipeline
             """
             intent = state.get("intent", {})
             operation = intent.get("operation", "query")
@@ -1099,11 +1116,13 @@ class QueryOrchestrator:
             elif operation == "health_check":
                 result = "answer_health"
             elif operation == "execute_direct":
-                result = "exec_recovery"
+                # Canonical path for direct SQL:
+                # validate_sql → exec_recovery → result_validator → answer
+                result = "validate_sql"
             elif operation == "error":
                 result = "answer_error"
             else:
-                # Default: query → discovery → join_sql → exec → answer
+                # Default: query → discovery → join_sql → validate_sql → exec_recovery → result_validator → answer
                 result = "discovery"
 
             logger.info(f"🚦 [ROUTE_TO_OPERATION] Routing to: {result}")
@@ -1118,6 +1137,7 @@ class QueryOrchestrator:
                 "discovery_for_schema": "discovery_for_schema",
                 "answer_health": "answer_health",
                 "exec_recovery": "exec_recovery",
+                 "validate_sql": "validate_sql",
                 "answer_error": "answer_error",
                 "discovery": "discovery",
                 "interpret": "interpret",
@@ -1455,8 +1475,6 @@ class QueryOrchestrator:
                 "answer": "answer",
             }
         )
-        # Interpretation path is terminal
-        graph.add_edge("interpret", END)
 
         # ============= SCHEMA QUERY PIPELINE =============
         # Schema discovery flow: discovery_for_schema → answer_schema
@@ -1464,11 +1482,14 @@ class QueryOrchestrator:
         graph.add_node("discovery_for_schema", self._discovery_node)  # Same implementation
         graph.add_edge("discovery_for_schema", "answer_schema")
 
-        # ============= TERMINAL NODES =============
+        # ============= TERMINAL NODES & HEALTH ROUTING =============
+        # Only these nodes terminate the graph.
         graph.add_edge("answer", END)
         graph.add_edge("answer_schema", END)
-        graph.add_edge("answer_health", END)
         graph.add_edge("answer_error", END)
+        graph.add_edge("interpret", END)
+        # Health check is handled by answer_health node then funneled through answer.
+        graph.add_edge("answer_health", "answer")
 
         compiled = graph.compile()
         logger.info("✅ Orchestrator graph compiled successfully")
@@ -1917,6 +1938,8 @@ class QueryOrchestrator:
         """
         # Instrumentation: track node entry
         self._increment_node_entry(state, "discovery")
+        # Boundary contract: discovery expects user_input and parsed intent
+        self._require_state_fields(state, ["user_input", "intent"], "discovery")
         debug_logger.agent_entry("discovery", dict(state))
         before_state = dict(state)
         
@@ -2159,6 +2182,12 @@ class QueryOrchestrator:
         """
         # Instrumentation: track node entry
         self._increment_node_entry(state, "join_sql")
+        # Boundary contract: join_sql expects intent, relevant_tables, schema_snippet, column_index
+        self._require_state_fields(
+            state,
+            ["intent", "relevant_tables", "schema_snippet", "column_index"],
+            "join_sql",
+        )
         debug_logger.agent_entry("join_sql", dict(state))
         before_state = dict(state)
 
@@ -2257,6 +2286,12 @@ class QueryOrchestrator:
         """
         # Instrumentation: track node entry
         self._increment_node_entry(state, "validate_sql")
+        # Boundary contract: validate_sql expects sql_query, join_plan, column_index
+        self._require_state_fields(
+            state,
+            ["sql_query", "join_plan", "column_index"],
+            "validate_sql",
+        )
         debug_logger.agent_entry("validate_sql", dict(state))
         before_state = dict(state)
 
@@ -2583,6 +2618,17 @@ class QueryOrchestrator:
         """
         # Instrumentation: track node entry
         self._increment_node_entry(state, "exec_recovery")
+        # Boundary contract: exec_recovery expects validated sql_query and retry_count
+        self._require_state_fields(state, ["sql_query"], "exec_recovery")
+        if "retry_count" not in state:
+            state["retry_count"] = 0
+        validation = state.get("validation_result")
+        if not (isinstance(validation, dict) and validation.get("is_valid", False)):
+            logger.warning(
+                "state_contract_violation: node=exec_recovery reason=missing_or_invalid_validation_result "
+                "validation_result=%r",
+                validation,
+            )
         debug_logger.agent_entry("exec_recovery", dict(state))
         before_state = dict(state)
         
@@ -3159,10 +3205,10 @@ class QueryOrchestrator:
         return await self._answer_node(state)
 
     async def _answer_health_node(self, state: BaseState) -> BaseState:
-        """Route to AnswerAgent for health check."""
+        """Collect health status and hand off to AnswerAgent."""
         logger.info("🏥 Answering health check...")
 
-        # Set operation to health_check so AnswerAgent knows what to return
+        # Set operation to health_check so downstream answer node knows what to return
         state.setdefault("intent", {})["operation"] = "health_check"
 
         try:
@@ -3175,8 +3221,9 @@ class QueryOrchestrator:
             }
         state["health_status"] = health_status
 
-        # Run answer agent
-        return await self._answer_node(state)
+        # Do not terminate here; the graph routes answer_health → answer → END so
+        # AnswerAgent remains the single terminal formatter.
+        return state
 
     async def _answer_error_node(self, state: BaseState) -> BaseState:
         """Route to AnswerAgent for error handling."""

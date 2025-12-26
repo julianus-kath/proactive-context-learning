@@ -212,6 +212,108 @@ class TestQueryOrchestrator:
         logger.info("✅ State contracts properly defined")
 
     @pytest.mark.asyncio
+    async def test_canonical_query_pipeline_golden_path(self):
+        """Golden-path: query should traverse the canonical pipeline and succeed."""
+        from langgraph_integration.orchestrator import QueryOrchestrator
+
+        orchestrator = QueryOrchestrator()
+
+        async def fake_index_database_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            # Minimal no-op indexing; just ensure catalog exists.
+            state.setdefault("catalog", {"tables": {}, "views": {}})
+            return state
+
+        async def fake_parse_intent_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            state = dict(state)
+            state["intent"] = {
+                "operation": "query",
+                "primary_entities": ["orders"],
+                "metrics": ["count"],
+                "filters": [],
+                "time_window": {},
+                "keywords_for_discovery": ["orders"],
+            }
+            return state
+
+        async def fake_concept_mapping_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            # Pass-through: concept mapping not needed for this golden-path smoke test.
+            return state
+
+        async def fake_discovery_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            state = dict(state)
+            state["relevant_tables"] = ["dbo.orders"]
+            state["schema_snippet"] = "dbo.orders(order_id int)"
+            state["candidate_views"] = []
+            state["column_index"] = {"dbo.orders": ["order_id"]}
+            return state
+
+        async def fake_join_sql_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            state = dict(state)
+            state["join_plan"] = {
+                "strategy": "single_table",
+                "primary_table": "dbo.orders",
+            }
+            state["sql_query"] = "SELECT COUNT(*) AS total_orders FROM dbo.orders"
+            return state
+
+        async def fake_validate_sql_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            state = dict(state)
+            state["validation_result"] = {
+                "is_valid": True,
+                "error_type": None,
+            }
+            return state
+
+        async def fake_exec_recovery_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            state = dict(state)
+            state["exec_result"] = {
+                "ok": True,
+                "data": [{"total_orders": 42}],
+                "row_count": 1,
+                "execution_time_ms": 5,
+                "truncated": False,
+                "warnings": [],
+            }
+            state.setdefault("sql_query", "SELECT COUNT(*) AS total_orders FROM dbo.orders")
+            state.setdefault("retry_count", 0)
+            return state
+
+        async def fake_result_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            # Keep validation_result as-is; in golden path it is already valid.
+            return state
+
+        async def fake_answer_node(state: Dict[str, Any]) -> Dict[str, Any]:
+            state = dict(state)
+            state["final_response"] = "There are 42 orders."
+            return state
+
+        # Patch orchestrator nodes for a fast, deterministic golden-path execution.
+        orchestrator._index_database_node = fake_index_database_node
+        orchestrator._parse_intent_node = fake_parse_intent_node
+        orchestrator._concept_mapping_node = fake_concept_mapping_node
+        orchestrator._discovery_node = fake_discovery_node
+        orchestrator._join_sql_node = fake_join_sql_node
+        orchestrator._validate_sql_node = fake_validate_sql_node
+        orchestrator._exec_recovery_node = fake_exec_recovery_node
+        orchestrator._result_validator_async = fake_result_validator_node
+        orchestrator._answer_node = fake_answer_node
+
+        # Rebuild the graph so it uses the patched node implementations.
+        orchestrator.graph = orchestrator._build_graph()
+
+        input_state: Dict[str, Any] = {
+            "user_input": "How many orders did we have last month?",
+        }
+
+        result = await orchestrator.ainvoke(input_state)
+
+        # Golden-path assertions
+        assert result.get("final_response"), "final_response should be populated on success"
+        assert result.get("sql_query"), "sql_query should be non-empty on success"
+        validation = result.get("validation_result") or {}
+        assert validation.get("is_valid") is True, "validation_result.is_valid should be True on golden path"
+
+    @pytest.mark.asyncio
     async def test_process_query_semantic_counters_and_eval_mode_defaults(self):
         """process_query should seed eval_mode and semantic counters deterministically."""
         from langgraph_integration.orchestrator import QueryOrchestrator

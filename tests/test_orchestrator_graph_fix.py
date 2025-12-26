@@ -154,7 +154,7 @@ def test_routing_function():
         ("schema_query", "discovery_for_schema", "Schema query"),
         ("clarify", "answer", "Clarification"),
         ("health_check", "answer_health", "Health check"),
-        ("execute_direct", "exec_recovery", "Direct SQL"),
+        ("execute_direct", "validate_sql", "Direct SQL (validated)"),
         ("error", "answer_error", "Error handling"),
     ]
     
@@ -171,7 +171,7 @@ def test_routing_function():
         elif operation == "health_check":
             target = "answer_health"
         elif operation == "execute_direct":
-            target = "exec_recovery"
+            target = "validate_sql"
         elif operation == "error":
             target = "answer_error"
         else:
