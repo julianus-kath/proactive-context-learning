@@ -104,14 +104,25 @@ class BaseState(TypedDict, total=False):
     #       normalize before mutating.
     error_info: Optional[Dict[str, Any]]  # {type, message, context, suggestion}
 
-    # 🆕 PHASE 10a: Result validation (catch silent failures)
-    validation_result: Dict[str, Any]  # {valid, issue, suggestion, retry_action}
+    # 🆕 PHASE 10a: Result / SQL validation (catch silent failures and structural issues)
+    # Structural validation (SQLValidatorAgent) populates:
+    #   - is_valid: bool
+    #   - error_type: str | None
+    #   - error_message: Optional[str]
+    #   - tables_used: List[str]
+    #   - tables_used_base: List[str]
+    #   - tables_used_canonical: List[str]
+    # Result validation (ResultValidator) augments with:
+    #   - valid / issue / issue_severity / suggestion
+    #   - retry_action: "accept" | "ask_user" | "try_next_candidate" | "replan_with_aggregation" | "replan_with_filter"
+    #   - semantic_status / semantic_retry_action / semantic_failure_reasons / contract_id
+    validation_result: Dict[str, Any]
 
     # Final answer
     final_response: str  # Natural language answer or explanation
 
     # Metadata
-    retry_count: int  # Number of retry attempts
+    retry_count: int  # Number of retry attempts (exec_recovery)
     session_described_tables: Optional[Dict[str, Any]]  # Cache of described table metadata
     health_status: Dict[str, Any]  # {ok, db_connected, tables_count, views_count, ...}
     eval_run_id: Optional[str]
@@ -142,6 +153,7 @@ class BaseState(TypedDict, total=False):
     exec_recovery_attempt_count: int  # Number of times exec_recovery has been invoked
     repair_no_progress_count: int  # Number of times a repeated repair signature was observed
     repair_signatures_seen: Dict[str, int]  # Map of repair_signature -> occurrence count
+    repair_attempts: int  # Number of SQL repair attempts performed by SQLValidatorAgent
     last_exec_error_signature: Optional[str]  # Last execution error signature used for diagnostics
     stop_reason: Optional[str]  # High-level reason why planning/repair stopped early
 
@@ -169,6 +181,9 @@ class BaseState(TypedDict, total=False):
     required_enforcement_attempts: int  # How many times required-table enforcement has been applied
     last_required_missing_tables: Optional[List[str]]  # Last missing required tables set
     forced_tables: List[str]  # Tables that must be included by discovery/join (canonical)
+    # Validator-derived table provenance used by guardrails and semantic scoring
+    validator_tables_used: List[str]  # Canonical table names observed during SQL validation
+    validator_tables_used_base: List[str]  # Base table names observed during SQL validation
 
     # Database dialect/schema (used by SQL helpers and future canonicalization)
     db_dialect: str  # "postgres" | "mssql"

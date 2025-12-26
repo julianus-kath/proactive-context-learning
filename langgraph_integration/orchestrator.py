@@ -798,6 +798,23 @@ class QueryOrchestrator:
         """
         validation = state.get("validation_result", {}) or {}
         retry_action = validation.get("retry_action", "accept") or "accept"
+        # Restrict retry_action to a small, supported set so
+        # downstream routing never depends on arbitrary strings.
+        allowed_retry_actions = {
+            "accept",
+            "try_next_candidate",
+            "replan_with_aggregation",
+            "replan_with_filter",
+            "ask_user",
+        }
+        if retry_action not in allowed_retry_actions:
+            logger.warning(
+                "validation_retry_action_unsupported: retry_action=%r, coercing to 'accept'",
+                retry_action,
+            )
+            retry_action = "accept"
+            validation["retry_action"] = "accept"
+            state["validation_result"] = validation
         semantic_status = validation.get("semantic_status")
         semantic_retry_action = validation.get("semantic_retry_action", "none") or "none"
 
@@ -1205,6 +1222,24 @@ class QueryOrchestrator:
             """
             validation = state.get("validation_result", {}) or {}
             retry_action = validation.get("retry_action", "accept") or "accept"
+            # Enforce the same bounded set of retry actions
+            # that the standalone helper uses so graph routing
+            # never depends on arbitrary strings.
+            allowed_retry_actions = {
+                "accept",
+                "try_next_candidate",
+                "replan_with_aggregation",
+                "replan_with_filter",
+                "ask_user",
+            }
+            if retry_action not in allowed_retry_actions:
+                logger.warning(
+                    "validation_retry_action_unsupported: retry_action=%r, coercing to 'accept'",
+                    retry_action,
+                )
+                retry_action = "accept"
+                validation["retry_action"] = "accept"
+                state["validation_result"] = validation
             semantic_status = validation.get("semantic_status")
             semantic_retry_action = validation.get("semantic_retry_action", "none") or "none"
 
@@ -2413,7 +2448,10 @@ class QueryOrchestrator:
             state["validation_result"] = {
                 "is_valid": False,
                 "error_type": "validation_error",
-                "error_message": str(e)
+                "error_message": str(e),
+                "tables_used": [],
+                "tables_used_base": [],
+                "tables_used_canonical": [],
             }
 
         logger.info("🔍 [VALIDATE_SQL] Validation complete")
@@ -2644,8 +2682,9 @@ class QueryOrchestrator:
 
         Contract:
         - Always requires sql_query.
-        - Assumes a prior validation_result for the canonical pipeline, but only
-          soft-enforces this via logging so legacy/direct callers can still run.
+        - Assumes a prior validation_result for the canonical pipeline and
+          enforces it as a hard gate unless allow_unvalidated_execution is set
+          explicitly for low-level debugging.
         """
         # Instrumentation: track node entry
         self._increment_node_entry(state, "exec_recovery")
@@ -2681,6 +2720,42 @@ class QueryOrchestrator:
         # Check for prior errors
         if error_info:
             logger.warning("⚡ [EXEC_RECOVERY] ⚠️  Prior error detected, will attempt recovery")
+
+        # Hard validation gate: do not execute SQL that failed or skipped
+        # structural validation, unless the caller explicitly opts out.
+        allow_unvalidated = bool(state.get("allow_unvalidated_execution"))
+        if not allow_unvalidated:
+            is_valid = isinstance(validation, dict) and bool(validation.get("is_valid", False))
+            if not is_valid:
+                reason = "missing_validation_result"
+                if isinstance(validation, dict):
+                    reason = "validation_failed"
+                logger.critical(
+                    "⚡ [EXEC_RECOVERY] Validation gate blocked execution "
+                    "reason=%s validation_result=%r",
+                    reason,
+                    validation,
+                )
+                merge_error_info(
+                    state,
+                    {
+                        "type": "SQL_VALIDATION_REQUIRED",
+                        "stage": "exec_recovery",
+                        "message": (
+                            "The system refused to execute SQL that did not pass "
+                            "the pre-execution validation and repair step."
+                        ),
+                        "suggestion": (
+                            "Try rephrasing the question so the planner can generate a valid query, "
+                            "or validate the SQL via the /agent/validate_sql endpoint before execution."
+                        ),
+                        "context": {
+                            "reason": reason,
+                        },
+                    },
+                )
+                debug_logger.agent_exit("exec_recovery", before_state, dict(state))
+                return state
 
         # Global execution budget: stop after too many exec attempts
         exec_attempt = state.get("exec_attempt_count", 0)

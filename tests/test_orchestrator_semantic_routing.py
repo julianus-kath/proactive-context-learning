@@ -142,3 +142,103 @@ class TestSemanticRouting:
         assert next_node == "answer"
         assert state.get("plan_attempt_count") == 0
         assert state.get("semantic_retry_count") == 0
+
+    def test_retry_action_try_next_candidate_routes_to_discovery(self):
+        """try_next_candidate should route back to discovery and increment retry counters."""
+        orch = QueryOrchestrator()
+
+        state = _base_state(
+            validation_result={"valid": True, "retry_action": "try_next_candidate"},
+        )
+
+        next_node = orch._route_validation_result_for_state(state)
+
+        assert next_node == "discovery"
+        assert state.get("retry_attempt_count") == 1
+        assert state.get("plan_attempt_count") == 1
+
+    def test_retry_action_replan_with_aggregation_routes_to_join(self):
+        """replan_with_aggregation should route back to join_sql and increment retry counters."""
+        orch = QueryOrchestrator()
+
+        state = _base_state(
+            validation_result={"valid": True, "retry_action": "replan_with_aggregation"},
+        )
+
+        next_node = orch._route_validation_result_for_state(state)
+
+        assert next_node == "join_sql"
+        assert state.get("retry_attempt_count") == 1
+        assert state.get("plan_attempt_count") == 1
+
+    def test_retry_action_ask_user_routes_to_answer_without_retries(self):
+        """ask_user should resolve to answer without incrementing retry counters."""
+        orch = QueryOrchestrator()
+
+        state = _base_state(
+            validation_result={"valid": True, "retry_action": "ask_user"},
+        )
+
+        next_node = orch._route_validation_result_for_state(state)
+
+        assert next_node == "answer"
+        assert state.get("retry_attempt_count") == 0
+        assert state.get("plan_attempt_count") == 0
+
+    def test_retry_action_accept_routes_to_answer(self):
+        """accept (or unknown) should route directly to answer."""
+        orch = QueryOrchestrator()
+
+        state = _base_state(
+            validation_result={"valid": True, "retry_action": "accept"},
+        )
+
+        next_node = orch._route_validation_result_for_state(state)
+
+        assert next_node == "answer"
+
+    def test_max_validation_attempts_cap_stops_repair_loop(self):
+        """When validation_attempt_count reaches its cap, further replans should stop."""
+        orch = QueryOrchestrator()
+
+        state = _base_state(
+            validation_attempt_count=3,
+            max_validation_attempts=3,
+            validation_result={"valid": False, "retry_action": "replan_with_filter"},
+        )
+
+        next_node = orch._route_validation_result_for_state(state)
+
+        assert next_node == "answer"
+        assert state.get("stop_reason") == "max_validation_attempts"
+
+    def test_max_exec_recovery_attempts_cap_stops_try_next_candidate(self):
+        """When exec_recovery_attempt_count reaches its cap, try_next_candidate should stop."""
+        orch = QueryOrchestrator()
+
+        state = _base_state(
+            exec_recovery_attempt_count=3,
+            max_exec_recovery_attempts=3,
+            validation_result={"valid": True, "retry_action": "try_next_candidate"},
+        )
+
+        next_node = orch._route_validation_result_for_state(state)
+
+        assert next_node == "answer"
+        assert state.get("stop_reason") == "max_exec_recovery_attempts"
+
+    def test_max_retries_per_candidate_set_cap(self):
+        """When retry_attempt_count reaches max_retries_per_candidate_set, routing stops with MAX_RETRIES_EXCEEDED."""
+        orch = QueryOrchestrator()
+
+        state = _base_state(
+            retry_attempt_count=3,
+            max_retries_per_candidate_set=3,
+            validation_result={"valid": True, "retry_action": "try_next_candidate"},
+        )
+
+        next_node = orch._route_validation_result_for_state(state)
+
+        assert next_node == "answer"
+        error = state.get("error_info") or {}
+        assert error.get("type") == "MAX_RETRIES_EXCEEDED"

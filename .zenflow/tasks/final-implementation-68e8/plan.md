@@ -128,7 +128,8 @@ Make Discovery explicitly “Scout search + deterministic schema linking” and 
     - Verify that a nonsense query results in a graceful “no tables found” style answer via the orchestrator, not a hang.
   - Manual check: inspect `/debug/logs` to see Discovery’s candidate tables and schema_snippet for a known query.
 
-### [ ] Step: Phase 4 – SQL Validation as Hard, Bounded Gate
+### [x] Step: Phase 4 – SQL Validation as Hard, Bounded Gate
+<!-- chat-id: 6ec89277-be32-444b-9c7c-937eb597e92e -->
 
 Ensure every SQL goes through a bounded validation/repair loop before any execution.
 
