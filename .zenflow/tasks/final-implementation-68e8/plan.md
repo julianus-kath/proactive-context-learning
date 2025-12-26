@@ -97,8 +97,9 @@ Expose lightweight HTTP endpoints to invoke individual agents (orchestration nod
       - 2xx responses.
       - Expected fields are present in the JSON body (e.g., `relevant_tables` for discovery, `validation_result` for validator).
     - Confirm that bad or incomplete state yields clear, localized errors (without running the full pipeline).
-  - Manual check:
+  - Manual checks & tooling:
     - Use curl/Postman to call, for example, `/agent/validate_sql` with a candidate `sql_query` and inspect validation behavior directly, without going through the entire pipeline.
+    - Provide a ready-to-import Postman collection JSON (e.g. `{@artifacts_path}/agent_endpoints.postman_collection.json`) with sample requests for each `/agent/*` route so you can exercise all agents from Postman immediately after this phase.
 
 ### [ ] Step: Phase 3 – Discovery as Scout + Schema Linking
 
