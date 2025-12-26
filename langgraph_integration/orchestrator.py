@@ -1137,7 +1137,7 @@ class QueryOrchestrator:
                 "discovery_for_schema": "discovery_for_schema",
                 "answer_health": "answer_health",
                 "exec_recovery": "exec_recovery",
-                 "validate_sql": "validate_sql",
+                "validate_sql": "validate_sql",
                 "answer_error": "answer_error",
                 "discovery": "discovery",
                 "interpret": "interpret",
@@ -1912,7 +1912,10 @@ class QueryOrchestrator:
         
         if operation == "query":
             logger.info(f"🚦 [ROUTE] ✅ Routing decision: QUERY PIPELINE")
-            logger.info(f"🚦 [ROUTE]    Path: discovery → join_sql → exec_recovery → answer")
+            logger.info(
+                "🚦 [ROUTE]    Path: discovery → join_sql → validate_sql → "
+                "exec_recovery → result_validator → answer"
+            )
         elif operation == "schema_query":
             logger.info(f"🚦 [ROUTE] ✅ Routing decision: SCHEMA QUERY")
             logger.info(f"🚦 [ROUTE]    Path: discovery_for_schema → answer_schema")
@@ -2182,10 +2185,12 @@ class QueryOrchestrator:
         """
         # Instrumentation: track node entry
         self._increment_node_entry(state, "join_sql")
-        # Boundary contract: join_sql expects intent, relevant_tables, schema_snippet, column_index
+        # Boundary contract: join_sql expects at minimum intent and relevant_tables.
+        # schema_snippet/column_index are recommended for analytic flows but may be
+        # intentionally absent in lighter or legacy paths.
         self._require_state_fields(
             state,
-            ["intent", "relevant_tables", "schema_snippet", "column_index"],
+            ["intent", "relevant_tables"],
             "join_sql",
         )
         debug_logger.agent_entry("join_sql", dict(state))
@@ -2286,12 +2291,15 @@ class QueryOrchestrator:
         """
         # Instrumentation: track node entry
         self._increment_node_entry(state, "validate_sql")
-        # Boundary contract: validate_sql expects sql_query, join_plan, column_index
-        self._require_state_fields(
-            state,
-            ["sql_query", "join_plan", "column_index"],
-            "validate_sql",
-        )
+        # Boundary contract:
+        # - All flows: require sql_query
+        # - Analytic query flows: also expect join_plan and column_index
+        intent = state.get("intent") or {}
+        operation = intent.get("operation", "query")
+        required_fields = ["sql_query"]
+        if operation == "query":
+            required_fields.extend(["join_plan", "column_index"])
+        self._require_state_fields(state, required_fields, "validate_sql")
         debug_logger.agent_entry("validate_sql", dict(state))
         before_state = dict(state)
 
@@ -2615,6 +2623,11 @@ class QueryOrchestrator:
         
         Executes query safely (row caps, timeouts) and recovers from errors via LLM repair.
         Output: exec_result, error_info, retry_count
+
+        Contract:
+        - Always requires sql_query.
+        - Assumes a prior validation_result for the canonical pipeline, but only
+          soft-enforces this via logging so legacy/direct callers can still run.
         """
         # Instrumentation: track node entry
         self._increment_node_entry(state, "exec_recovery")
