@@ -1437,6 +1437,16 @@ class JoinPlanAndSQLAgent:
                 if all(role in available_roles for role in required_roles):
                     return candidate
 
+        # DATE-SENSITIVE METRIC QUERIES:
+        # For actions that require a time window (e.g. sum_with_period,
+        # growth_analysis, comparative_analysis), prefer a fact candidate that
+        # actually exposes date_columns so downstream templates like
+        # MSSQLTemplateBuilder can produce valid WHERE clauses.
+        if required_action in {"sum_with_period", "growth_analysis", "comparative_analysis"}:
+            dated_candidates = [fc for fc in ranked if fc.date_columns]
+            if dated_candidates:
+                return dated_candidates[0]
+
         # NEW: For non-metric entity-count style queries (e.g. "How many customers"),
         # prefer a fact candidate whose table name matches the primary entity
         # derived from intent entities/keywords. This avoids defaulting to the
