@@ -66,7 +66,8 @@ If the feature is trivial and doesn't warrant full specification, update this wo
 
 Save to `{@artifacts_path}/plan.md`.
 
-### [ ] Step: Phase A – Capability Tools & State Contracts
+### [x] Step: Phase A – Capability Tools & State Contracts
+<!-- chat-id: 8153dad3-e600-4638-8f87-6f23f2ba3583 -->
 
 Implementation is broken into three phases aligned with `spec.md`: **Phase A – Tools & Contracts**, **Phase B – Supervisor Graph**, and **Phase C – Cleanup & Rollout**.
 
@@ -83,7 +84,7 @@ Each task below should be executed in order. For every task:
 - `execute_sql` is hard-gated in the wrapper and cannot execute without a valid `validation_result`.
 - A scripted capability-tool sequence reproduces current pipeline behavior on a shared reference query set (intent present, relevant_tables non-empty when expected, sql_query generated, validation_result populated).
 
-#### [ ] Task A1: Extend BaseState for Supervisor Fields
+#### [x] Task A1: Extend BaseState for Supervisor Fields
 
 Update `langgraph_integration/contracts/state.py`:
 - Add optional supervisor-related fields to `BaseState`:
@@ -100,7 +101,7 @@ Verification:
 - `python -m pytest tests/test_orchestrator_integration.py::TestQueryOrchestrator::test_orchestrator_initialization -q`
 - (If fast) `python -m pytest tests/test_orchestrator_integration.py -q`
 
-#### [ ] Task A2: Define Shared Tool Envelope Types
+#### [x] Task A2: Define Shared Tool Envelope Types
 
 Update `langgraph_integration/contracts/state.py` (or a small adjacent module) to define:
 - A `TypedDict` (e.g., `ToolCallResult`) capturing:
@@ -113,7 +114,7 @@ Update `langgraph_integration/contracts/state.py` (or a small adjacent module) t
 Verification:
 - Type check informally by importing and using types in a small unit test or REPL snippet.
 
-#### [ ] Task A3: Implement Capability Tool Wrappers Module
+#### [x] Task A3: Implement Capability Tool Wrappers Module
 
 Add `langgraph_integration/tools/capability_tools.py`:
 - Implement thin wrappers:
@@ -137,7 +138,7 @@ Verification:
   - Assert that expected keys are present (`tool_output`, `progress_signal`, etc.).
 - Run: `python -m pytest tests/test_capability_tools.py -q` (when added).
 
-#### [ ] Task A4: Enforce Execute_SQL Validation Gate in Wrapper
+#### [x] Task A4: Enforce Execute_SQL Validation Gate in Wrapper
 
 In `execute_sql_tool`:
 - Before calling `ExecAndRecoveryAgent`, enforce:
@@ -152,7 +153,7 @@ Verification:
 - Add tests exercising the negative path (no validation or validation_result.is_valid is False).
 - Run: `python -m pytest tests/test_capability_tools.py::TestExecuteSqlTool -q`
 
-#### [ ] Task A5: Add Reference Query Fixtures and Golden Expectations
+#### [x] Task A5: Add Reference Query Fixtures and Golden Expectations
 
 - Introduce (or wire in) a shared reference query set for both pipeline and supervisor-mode tests using:
   - `/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/datasets/cockpit_queries.jsonl` (source of 10–20 representative queries).
@@ -163,7 +164,7 @@ Verification:
 Verification:
 - `python -m pytest tests/test_query_fixtures.py -q` (or similar fixture-focused test file).
 
-#### [ ] Task A6: Validate Tool Behavior Against Current Pipeline
+#### [x] Task A6: Validate Tool Behavior Against Current Pipeline
 
 Create a small test or harness (e.g., `tests/test_capability_tools_vs_pipeline.py`) that:
 - For a subset of the reference queries (including the “top 10 products by total sales last 12 months” case):

@@ -7,6 +7,8 @@ BaseState is the union of all fields; individual agents only consume/produce the
 
 from typing import Any, Dict, List, Optional, TypedDict, Literal
 
+from .response_envelope import ErrorInfo as ErrorInfoModel
+
 
 class ParsedIntent(TypedDict, total=False):
     """
@@ -58,6 +60,32 @@ class ParsedIntent(TypedDict, total=False):
     # Template-specific parameters (e.g., {"metric": "profit_margin", "top_k": 10, "group_by": "product"})
     # Populated when analytic_template is set
     template_params: Optional[Dict[str, Any]]
+
+
+# Shared tool envelope types used by supervisor-capable tools.
+ProgressSignal = Literal["positive", "neutral", "negative"]
+SuggestedNextAction = Literal["rediscover", "replan", "clarify", "stop"]
+
+
+class ToolCallResult(TypedDict, total=False):
+    """
+    Normalized envelope for a single capability-tool invocation.
+
+    This keeps tool metadata consistent for both the fixed pipeline and
+    the ReAct-style supervisor loop without exposing raw chain-of-thought.
+    """
+
+    # Raw tool output / diff applied to state (tool-specific keys).
+    tool_output: Dict[str, Any]
+
+    # Normalized error information when the tool reports a failure.
+    error_info: Optional[Dict[str, Any]]
+
+    # Coarse-grained progress signal for supervisor orchestration.
+    progress_signal: ProgressSignal
+
+    # Hints to the supervisor about sensible next actions.
+    suggested_next_actions: List[SuggestedNextAction]
 
 
 class BaseState(TypedDict, total=False):
@@ -194,6 +222,21 @@ class BaseState(TypedDict, total=False):
     database_index: Optional[Dict]  # Deprecated
     query_results: Optional[str]  # Deprecated; use exec_result instead
     final_response_debug: Optional[str]  # Debug info
+
+    # ReAct-style supervisor orchestration (Phase: ReAct Supervisor).
+    supervisor_trace: List[Dict[str, Any]]  # High-level trace of supervisor decisions (no raw CoT)
+    supervisor_step_count: int  # Number of supervisor loop iterations executed
+    max_supervisor_steps: int  # Budget: maximum allowed supervisor iterations
+    last_tool_name: Optional[str]  # Name of the last capability tool invoked
+    last_tool_progress_signal: Optional[str]  # Cached progress signal from last tool
+    no_progress_repeat_count: int  # How many times we've seen no-progress in a row
+    orchestration_mode: Optional[str]  # "pipeline" | "react_supervisor"
+
+    # Shared tool envelope fields populated by capability tools.
+    tool_output: Dict[str, Any]  # Tool-specific output snapshot (e.g., new intent, sql_query)
+    progress_signal: ProgressSignal  # Supervisor-friendly progress indicator
+    suggested_next_actions: List[SuggestedNextAction]  # Hints for next supervisor decisions
+    last_tool_result: ToolCallResult  # Full envelope of the last capability tool call
 
 
 class JoinPlanJoinEdge(TypedDict, total=False):
@@ -396,3 +439,41 @@ def merge_error_info(state: BaseState, payload: Dict[str, Any]) -> None:
         existing.update(payload)
 
     state["error_info"] = existing
+
+
+def normalize_error_info_payload(error: Any) -> Optional[Dict[str, Any]]:
+    """
+    Normalize arbitrary error payloads into a dict using ErrorInfo semantics.
+
+    This is a lightweight, shared helper for tools and supervisors so they
+    can safely consume error structures without depending on orchestrator
+    internals. It mirrors the behavior of ErrorInfo's coercion logic.
+    """
+    if not error:
+        return None
+
+    try:
+        if isinstance(error, ErrorInfoModel):
+            model = error
+        else:
+            model = ErrorInfoModel.model_validate(error)
+        return model.model_dump(exclude_none=True)
+    except Exception:
+        # Best-effort fallback that still respects ErrorInfo shape.
+        raw_type = getattr(error, "type", None) or getattr(
+            error, "__class__", type("Err", (), {})
+        ).__name__
+        raw_message = getattr(error, "message", None) or getattr(
+            error, "error", None
+        ) or str(error)
+        try:
+            fallback = ErrorInfoModel(
+                type=str(raw_type or "UNKNOWN_ERROR"),
+                message=str(raw_message or "Unknown error"),
+            )
+            return fallback.model_dump(exclude_none=True)
+        except Exception:
+            return {
+                "type": str(raw_type or "UNKNOWN_ERROR"),
+                "message": str(raw_message or "Unknown error"),
+            }
