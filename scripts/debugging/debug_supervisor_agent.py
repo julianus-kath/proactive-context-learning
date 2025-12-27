@@ -138,8 +138,14 @@ async def stream_supervisor_steps(
 
                         log_type = entry.get("type")
                         data = entry.get("data") or {}
+                        event = data.get("event")
 
-                        if log_type == "SUPERVISOR_STEP" and isinstance(data, dict):
+                        # Be tolerant: some entries may be identified by type,
+                        # others by event field depending on logging evolution.
+                        if (
+                            (log_type == "SUPERVISOR_STEP" or event == "supervisor_step")
+                            and isinstance(data, dict)
+                        ):
                             print(format_supervisor_step(data))
 
                     await asyncio.sleep(0.5)
@@ -181,4 +187,3 @@ if __name__ == "__main__":
         asyncio.run(stream_supervisor_steps(args.url, args.api_key))
     except KeyboardInterrupt:
         print(f"\n{C.YELLOW}👋 Stopped supervisor debug stream{C.END}")
-

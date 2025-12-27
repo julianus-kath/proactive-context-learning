@@ -385,6 +385,7 @@ Verification:
 - Manual review of the ADR for consistency with `requirements.md`, `spec.md`, and this plan.
 
 ### [ ] Step: Reasoning Steps in Frontend
+<!-- chat-id: d84fe602-2ea0-45ce-ac02-0054210b3077 -->
 
 We added the reasoning steps using the ReAct Supervisor over our entire agent architecture. I want to have the reasoning steps be shown to the user, so it can be followed what the agent is doing, what queries he is executing and what data he is extracting and how he is processing it etc etc. All internal workings I want to have shown in plain text in the chatbot interface directly. Can you explore where i would implement that and make those changes?
 

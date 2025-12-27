@@ -3571,6 +3571,7 @@ class QueryOrchestrator:
         orch_mode = str(raw_orch_mode or "pipeline").strip().lower()
         if orch_mode not in ("pipeline", "react_supervisor"):
             orch_mode = "pipeline"
+        logger.info("PROCESS_QUERY orchestration_mode=%s", orch_mode)
         initial_state["orchestration_mode"] = orch_mode
 
         try:
