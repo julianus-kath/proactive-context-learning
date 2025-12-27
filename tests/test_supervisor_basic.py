@@ -147,3 +147,116 @@ async def test_run_supervisor_respects_step_budget(
     assert result.get("stop_reason") in {"budget_exhausted", "success"}
     assert result.get("final_response"), "final_response should be populated even on budget stop"
 
+
+@pytest.mark.asyncio
+async def test_supervisor_respects_llm_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    LLM budget should be enforced based on the latest total_llm_calls
+    value on state, not just the value at supervisor entry.
+    """
+    import langgraph_integration.supervisor as supervisor_module
+
+    async def fake_invoke_tool(tool_name, state: BaseState) -> BaseState:
+        # Simulate a tool that spends one LLM call on every invocation.
+        total = int(state.get("total_llm_calls", 0) or 0)
+        state["total_llm_calls"] = total + 1
+        state["progress_signal"] = "neutral"
+        state["suggested_next_actions"] = []
+        return state
+
+    monkeypatch.setattr(
+        supervisor_module, "_invoke_tool", fake_invoke_tool, raising=True
+    )
+    monkeypatch.setattr(
+        supervisor_module,
+        "_select_initial_tool",
+        lambda state, last_tool_name: "dummy_tool",
+        raising=True,
+    )
+    monkeypatch.setattr(
+        supervisor_module,
+        "_select_next_tool",
+        lambda state, last_tool_name: "dummy_tool",
+        raising=True,
+    )
+
+    initial_state: BaseState = {
+        "user_input": "How many orders did we have last month?",
+        "total_llm_calls": 0,
+        "max_llm_calls": 2,
+    }
+    config = SupervisorConfig(
+        max_supervisor_steps=10,
+        max_llm_calls_total=2,
+        max_no_progress_repeats=5,
+    )
+
+    result = await run_supervisor(initial_state, config=config)
+
+    assert result.get("stop_reason") == "budget_exhausted"
+    trace = result.get("supervisor_trace") or []
+    assert any(
+        entry.get("tool") == "__budget_stop__"
+        and (entry.get("tool_inputs_digest") or {}).get("reason") == "max_llm_calls"
+        for entry in trace
+    )
+
+
+@pytest.mark.asyncio
+async def test_supervisor_no_progress_budget_triggers_stop_with_trace(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    No-progress budget should eventually stop the supervisor and record a
+    trace entry explaining the reason.
+    """
+    import langgraph_integration.supervisor as supervisor_module
+
+    async def fake_invoke_tool(tool_name, state: BaseState) -> BaseState:
+        # Simulate repeated non-progress: same tool, neutral signal, no answer.
+        state["progress_signal"] = "neutral"
+        state["suggested_next_actions"] = []
+        return state
+
+    monkeypatch.setattr(
+        supervisor_module, "_invoke_tool", fake_invoke_tool, raising=True
+    )
+    monkeypatch.setattr(
+        supervisor_module,
+        "_select_initial_tool",
+        lambda state, last_tool_name: "dummy_tool",
+        raising=True,
+    )
+    monkeypatch.setattr(
+        supervisor_module,
+        "_select_next_tool",
+        lambda state, last_tool_name: "dummy_tool",
+        raising=True,
+    )
+
+    initial_state: BaseState = {
+        "user_input": "How many orders did we have last month?",
+        # Disable LLM budget so no-progress is the limiting factor.
+        "total_llm_calls": 0,
+        "max_llm_calls": 0,
+    }
+    config = SupervisorConfig(
+        max_supervisor_steps=10,
+        max_llm_calls_total=None,
+        max_no_progress_repeats=2,
+    )
+
+    result = await run_supervisor(initial_state, config=config)
+
+    assert result.get("stop_reason") == "budget_exhausted"
+    assert int(result.get("no_progress_repeat_count", 0)) >= 2
+
+    trace = result.get("supervisor_trace") or []
+    assert any(
+        entry.get("tool") == "__budget_stop__"
+        and (entry.get("tool_inputs_digest") or {}).get("reason")
+        == "no_progress_repeats"
+        for entry in trace
+    )

@@ -86,7 +86,6 @@ class ReactSupervisor:
                 else state_max_llm
             )
 
-        total_llm_calls = int(current.get("total_llm_calls", 0) or 0)
         last_tool_name: Optional[ToolName] = current.get("last_tool_name")
         last_progress: ProgressSignal = current.get("progress_signal") or "neutral"
 
@@ -96,6 +95,10 @@ class ReactSupervisor:
         while True:
             step = int(current.get("supervisor_step_count", 0) or 0)
             max_steps = int(current.get("max_supervisor_steps") or self.config.max_supervisor_steps)
+
+            # Refresh LLM usage on each loop iteration so supervisor-level
+            # budget checks reflect the latest state after tool invocations.
+            total_llm_calls = int(current.get("total_llm_calls", 0) or 0)
 
             # Step-budget stop condition
             if step >= max_steps:
@@ -190,6 +193,14 @@ class ReactSupervisor:
                     self.config.max_no_progress_repeats,
                 )
                 current["stop_reason"] = "budget_exhausted"
+                _append_trace_entry(
+                    current,
+                    step=step,
+                    tool_name="__budget_stop__",
+                    thought_summary="Stopped because no-progress budget was exhausted.",
+                    tool_inputs_digest={"reason": "no_progress_repeats"},
+                    observation_summary="Supervisor terminated after repeated non-progress signals.",
+                )
                 current = await _ensure_final_answer(current)
                 break
 
@@ -544,4 +555,3 @@ def _normalize_stop_reason(state: BaseState) -> None:
 
     # Conservative fallback: treat as fatal_error.
     state["stop_reason"] = "fatal_error"
-
