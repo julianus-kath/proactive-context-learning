@@ -79,6 +79,11 @@ Each task below should be executed in order. For every task:
 
 ### Phase A – Capability Tools & State Contracts
 
+**Definition of Done (Phase A)**
+- All 7 capability tools exist and use a consistent shared tool envelope.
+- `execute_sql` is hard-gated in the wrapper and cannot execute without a valid `validation_result`.
+- A scripted capability-tool sequence reproduces current pipeline behavior on a shared reference query set (intent present, relevant_tables non-empty when expected, sql_query generated, validation_result populated).
+
 #### [ ] Task A1: Extend BaseState for Supervisor Fields
 
 Update `langgraph_integration/contracts/state.py`:
@@ -148,14 +153,29 @@ Verification:
 - Add tests exercising the negative path (no validation or validation_result.is_valid is False).
 - Run: `python -m pytest tests/test_capability_tools.py::TestExecuteSqlTool -q`
 
-#### [ ] Task A5: Validate Tool Behavior Against Current Pipeline
+#### [ ] Task A5: Add Reference Query Fixtures and Golden Expectations
+
+- Introduce (or wire in) a shared reference query set for both pipeline and supervisor-mode tests using:
+  - `/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/datasets/cockpit_queries.jsonl` (source of 10–20 representative queries).
+- Add a small fixture/helper in `tests/` that:
+  - Loads a subset of these queries (or a mirrored copy in the repo, if needed).
+  - Provides expected shapes for comparison (e.g., `intent.operation`, `tables_used_base` non-empty, presence of `sql_query`, `stop_reason`).
+
+Verification:
+- `python -m pytest tests/test_query_fixtures.py -q` (or similar fixture-focused test file).
+
+#### [ ] Task A6: Validate Tool Behavior Against Current Pipeline
 
 Create a small test or harness (e.g., `tests/test_capability_tools_vs_pipeline.py`) that:
-- For 1–2 representative queries (including the “top 10 products by total sales last 12 months” case):
+- For a subset of the reference queries (including the “top 10 products by total sales last 12 months” case):
   - Runs the current pipeline via `QueryOrchestrator.process_query(..., orchestration_mode="pipeline")` (or default).
   - Runs the same sequence of agents via capability tools in a scripted order:
     - `interpret_query` → `discover_schema` → `plan_sql` → `validate_sql` → `execute_sql` → `evaluate_result`.
-- Compares key intermediates (e.g., presence of intent, non-empty relevant_tables, non-empty sql_query) rather than strict equality.
+- Compares key intermediates and invariants:
+  - `intent` present and reasonable.
+  - `relevant_tables` and/or `tables_used_base` non-empty where expected.
+  - `sql_query` non-empty.
+  - `validation_result` present with required fields even on failures.
 
 Verification:
 - `python -m pytest tests/test_capability_tools_vs_pipeline.py -q`
@@ -163,6 +183,12 @@ Verification:
 ---
 
 ### Phase B – ReAct Supervisor Graph Integration
+
+**Definition of Done (Phase B)**
+- `react_supervisor` mode runs end-to-end via `QueryOrchestrator.process_query`.
+- `supervisor_trace` is populated with summary-only decisions (no raw chain-of-thought).
+- Budgets (steps, total LLM calls, no-progress) stop cleanly and map to `stop_reason`.
+- There is an explicit test proving no execution occurs without prior validation (validation gate enforced in supervisor mode).
 
 #### [ ] Task B1: Implement Supervisor Module
 
@@ -247,6 +273,7 @@ Verification:
 - Add targeted tests for budget exhaustion and no-progress:
   - Artificially small budgets to force early stop.
   - Assert `stop_reason="budget_exhausted"` and a clear final message.
+- Add tests confirming supervisor LLM calls increment the same `total_llm_calls` / `llm_usage` counters used by agents (no separate budget namespace).
 
 #### [ ] Task B5: Ensure Validation Gate Enforcement End-to-End
 
@@ -266,6 +293,11 @@ Verification:
 ---
 
 ### Phase C – Cleanup, Simplification, and Rollout
+
+**Definition of Done (Phase C)**
+- Deprecated routing helpers and pipeline-only glue are either removed or clearly isolated behind pipeline mode.
+- No dead or unreachable code executes in `react_supervisor` mode.
+- An ADR documenting the ReAct supervisor decision is written and accepted.
 
 #### [ ] Task C1: Identify Redundant Orchestrator Logic
 
@@ -287,7 +319,7 @@ Verification:
 
 For each confirmed redundant cluster:
 - Either:
-  - Remove the code (when fully unused by runtime paths and tests), or
+  - Remove the code (when fully unused by pipeline mode, runtime paths, and tests) – preferred.
   - Replace with a stub clearly marked:
     - `DEPRECATED: ReAct supervisor migration`.
 - Keep public API compatibility where needed (e.g., `graph_definition.py`-style stubs).
@@ -323,3 +355,25 @@ As a final check:
 
 Verification:
 - Prefer automated tests where possible; otherwise, document manual runs and outcomes in a short note linked from this plan.
+
+#### [ ] Task C5: Author ADR 00XX – ReAct Supervisor Orchestration Mode
+
+Create a new ADR in `adrs/` (e.g., `00XX-react-supervisor-orchestration-mode.md`) capturing:
+- Context / problem:
+  - Fixed pipeline brittleness, lack of adaptive control, and semantic failure modes.
+- Decision:
+  - Supervisor-driven ReAct loop using capability tools, with existing SQL validation and execution gates preserved.
+- Alternatives considered:
+  - Keep the fixed pipeline with heuristics.
+  - Full rewrite around a single monolithic agent.
+  - Hybrid approaches without a supervisor.
+- Consequences:
+  - New `supervisor_trace`, budgets, and dual-mode orchestration.
+  - Removal / deprecation of legacy routing logic.
+  - Tool contracts and MCP isolation guarantees.
+- Rollout:
+  - `orchestration_mode` as the feature flag.
+  - Migration path and deprecation timeline for pipeline-only code.
+
+Verification:
+- Manual review of the ADR for consistency with `requirements.md`, `spec.md`, and this plan.

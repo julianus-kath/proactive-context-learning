@@ -288,6 +288,7 @@ Wherever possible, these tools should reuse existing orchestrator methods (e.g.,
 - Integration with existing budgets:
   - `total_llm_calls` and `max_llm_calls` already tracked in `BaseState`:
     - Capability tools increment `llm_usage` and `total_llm_calls` (existing patterns).
+    - Supervisor LLM invocations count toward the same `total_llm_calls` and `llm_usage` counters; there is a single shared LLM budget across supervisor and agents.
     - Supervisor reads remaining budget to decide whether to call more LLM-heavy tools.
   - `total_graph_cycles` and `max_graph_cycles` remain as safety nets for the existing pipeline; for supervisor mode, we can reuse `total_graph_cycles` as the count of major re-plan cycles.
 
