@@ -66,7 +66,7 @@ If the feature is trivial and doesn't warrant full specification, update this wo
 
 Save to `{@artifacts_path}/plan.md`.
 
-### [ ] Step: Implementation
+### [ ] Step: Phase A – Capability Tools & State Contracts
 
 Implementation is broken into three phases aligned with `spec.md`: **Phase A – Tools & Contracts**, **Phase B – Supervisor Graph**, and **Phase C – Cleanup & Rollout**.
 
@@ -74,7 +74,6 @@ Each task below should be executed in order. For every task:
 - Update the checkbox when complete
 - Run the listed verification commands (or closest equivalent) where feasible
 - Capture notable outcomes or deviations directly under the task as bullet points
-
 ---
 
 ### Phase A – Capability Tools & State Contracts
@@ -182,7 +181,9 @@ Verification:
 
 ---
 
-### Phase B – ReAct Supervisor Graph Integration
+### [ ] Step: Phase B – ReAct Supervisor Graph Integration
+
+Implementation is broken into three phases aligned with `spec.md`: **Phase A – Tools & Contracts**, **Phase B – Supervisor Graph**, and **Phase C – Cleanup & Rollout**.
 
 **Definition of Done (Phase B)**
 - `react_supervisor` mode runs end-to-end via `QueryOrchestrator.process_query`.
@@ -292,7 +293,9 @@ Verification:
 
 ---
 
-### Phase C – Cleanup, Simplification, and Rollout
+### [ ] Step: Phase C – Cleanup, Simplification, and Rollout
+
+Implementation is broken into three phases aligned with `spec.md`: **Phase A – Tools & Contracts**, **Phase B – Supervisor Graph**, and **Phase C – Cleanup & Rollout**.
 
 **Definition of Done (Phase C)**
 - Deprecated routing helpers and pipeline-only glue are either removed or clearly isolated behind pipeline mode.
