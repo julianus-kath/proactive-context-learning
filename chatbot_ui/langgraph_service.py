@@ -445,8 +445,8 @@ async def process_query(
     try:
         logger.info(f"📝 Processing query: {request.user_input[:100]}...")
 
-        # Build metadata payload for orchestrator, including optional eval headers
-        # and per-query semantic contracts used in benchmark mode.
+        # Build metadata payload for orchestrator, including optional eval headers,
+        # per-query semantic contracts, and orchestration mode.
         metadata: Dict[str, Any] = {}
         if request.query_contract is not None:
             metadata["query_contract"] = request.query_contract
@@ -458,6 +458,12 @@ async def process_query(
         # If any eval identifiers are present, mark this query as a benchmark run.
         if x_eval_run_id or x_eval_query_id:
             metadata.setdefault("eval_mode", "benchmark")
+
+        # Allow environment to select orchestration mode for all requests
+        # (e.g., ORCHESTRATION_MODE=pipeline|react_supervisor).
+        orch_mode = os.getenv("ORCHESTRATION_MODE")
+        if orch_mode:
+            metadata.setdefault("orchestration_mode", orch_mode)
         
         # Process the query through multi-agent orchestrator
         orchestrator_result = await orchestrator.process_query(
@@ -617,7 +623,8 @@ async def process_conversation(
         logger.info(f"📝 Last user message: {last_user_message[:100]}...")
         logger.info(f"📝 Conversation ID: {request.conversation_id}")
 
-        # Build metadata payload for orchestrator, including optional eval headers.
+        # Build metadata payload for orchestrator, including optional eval headers
+        # and orchestration mode.
         metadata: Dict[str, Any] = {}
         if x_eval_run_id:
             metadata["eval_run_id"] = x_eval_run_id
@@ -625,6 +632,10 @@ async def process_conversation(
             metadata["eval_query_id"] = x_eval_query_id
         if x_eval_run_id or x_eval_query_id:
             metadata.setdefault("eval_mode", "benchmark")
+
+        orch_mode = os.getenv("ORCHESTRATION_MODE")
+        if orch_mode:
+            metadata.setdefault("orchestration_mode", orch_mode)
 
         # Process through multi-agent orchestrator with full conversation context
         result = await orchestrator.process_query(
