@@ -998,6 +998,49 @@ class DebugLogger:
         }
         self._add_to_buffer(message, "MCP_RESULT", structured_payload)
     
+    def supervisor_step(
+        self,
+        *,
+        step: int,
+        tool: str,
+        thought_summary: str,
+        observation_summary: str,
+        progress_signal: Optional[str],
+        suggested_next_actions: Optional[List[str]],
+        budgets: Dict[str, Any],
+    ) -> None:
+        """
+        Log a single supervisor loop step for ReAct-style orchestration.
+
+        This is intentionally lightweight: a short message plus a structured
+        payload that can be consumed by streaming debuggers without exposing
+        raw chain-of-thought.
+        """
+        title = f"Supervisor step {step} → {tool}"
+        data = {
+            "step": int(step),
+            "tool": str(tool),
+            "thought_summary": thought_summary,
+            "observation_summary": observation_summary,
+            "progress_signal": progress_signal,
+            "suggested_next_actions": suggested_next_actions or [],
+            "budgets": budgets or {},
+        }
+        message = self._log_entry(
+            LogLevel.DECISION,
+            title,
+            data,
+            nested=False,
+        )
+        # Use INFO so these appear in logs but do not spam as errors.
+        self.logger.info(message)
+
+        structured_payload = {
+            "event": "supervisor_step",
+            **data,
+        }
+        self._add_to_buffer(message, "SUPERVISOR_STEP", structured_payload)
+
     def _add_to_buffer(
         self,
         message: str,

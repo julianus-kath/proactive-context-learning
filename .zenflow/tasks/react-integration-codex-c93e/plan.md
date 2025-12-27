@@ -387,3 +387,7 @@ Verification:
 ### [ ] Step: Reasoning Steps in Frontend
 
 We added the reasoning steps using the ReAct Supervisor over our entire agent architecture. I want to have the reasoning steps be shown to the user, so it can be followed what the agent is doing, what queries he is executing and what data he is extracting and how he is processing it etc etc. All internal workings I want to have shown in plain text in the chatbot interface directly. Can you explore where i would implement that and make those changes?
+
+### [ ] Step: Add Diagram to ADR
+
+I would like to have an architecture diagram in ADR 0029. This is missing currently. Also some documentation regarding how to initiate/ communicate with the Supervisor

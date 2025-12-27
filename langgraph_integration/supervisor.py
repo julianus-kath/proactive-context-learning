@@ -18,14 +18,13 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-from langgraph_integration.contracts.state import (
-    BaseState,
-    ProgressSignal,
-)
+from langgraph_integration.contracts.state import BaseState, ProgressSignal
 from langgraph_integration.tools import capability_tools
+from langgraph_integration.debug_logger import get_debug_logger
 
 
 logger = logging.getLogger(__name__)
+debug_logger = get_debug_logger()
 
 
 ToolName = str
@@ -505,18 +504,31 @@ def _append_trace_entry(
         "max_llm_calls": int(state.get("max_llm_calls", 0) or 0),
         "no_progress_repeat_count": int(state.get("no_progress_repeat_count", 0) or 0),
     }
-    trace.append(
-        {
-            "step": int(step),
-            "tool": tool_name,
-            "thought_summary": str(thought_summary)[:512],
-            "tool_inputs_digest": tool_inputs_digest,
-            "observation_summary": str(observation_summary)[:512],
-            "progress_signal": state.get("progress_signal"),
-            "budgets": budgets,
-        }
-    )
+    entry = {
+        "step": int(step),
+        "tool": tool_name,
+        "thought_summary": str(thought_summary)[:512],
+        "tool_inputs_digest": tool_inputs_digest,
+        "observation_summary": str(observation_summary)[:512],
+        "progress_signal": state.get("progress_signal"),
+        "budgets": budgets,
+    }
+    trace.append(entry)
     state["supervisor_trace"] = trace
+
+    try:
+        debug_logger.supervisor_step(
+            step=entry["step"],
+            tool=entry["tool"],
+            thought_summary=entry["thought_summary"],
+            observation_summary=entry["observation_summary"],
+            progress_signal=entry["progress_signal"],
+            suggested_next_actions=list(state.get("suggested_next_actions") or []),
+            budgets=budgets,
+        )
+    except Exception:
+        # Debug logging must never disrupt supervisor execution.
+        logger.debug("Failed to log supervisor_step to debug_logger", exc_info=True)
 
 
 def _normalize_stop_reason(state: BaseState) -> None:
