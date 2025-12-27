@@ -798,6 +798,13 @@ class QueryOrchestrator:
 
         return state
 
+    # NOTE (ReAct Phase C cleanup):
+    # This helper remains intentionally pipeline-only and is exercised by
+    # tests/test_orchestrator_semantic_routing.py. The ReAct supervisor path
+    # relies on capability tools and supervisor policy instead of this routing
+    # logic. When pipeline mode is fully retired, this method is a prime
+    # candidate for deletion under the Ruthless Code Removal Policy
+    # (see .zenflow/tasks/react-integration-codex-c93e/requirements.md §9).
     def _route_validation_result_for_state(self, state: BaseState) -> str:
         """
         Internal helper to interpret validation and semantic fields and decide routing.
@@ -1823,6 +1830,28 @@ class QueryOrchestrator:
 
         try:
             logger.info(f"🧠 [PARSE_INTENT] Query: \"{user_input}\"")
+
+            # Fast-path: use the legacy simple intent parser for cheap, deterministic
+            # classification of health/schema queries before invoking the full
+            # IntentParserAgent subgraph. This keeps health checks and basic schema
+            # questions LLM-free and aligns with tests that exercise
+            # _simple_intent_parser directly.
+            try:
+                simple_intent = self._simple_intent_parser(user_input)
+            except Exception:
+                simple_intent = {"operation": "query"}
+
+            op = (simple_intent or {}).get("operation", "query")
+            if op in ("health_check", "schema_query"):
+                logger.info(
+                    "🧠 [PARSE_INTENT] Using simple intent parser shortcut for operation=%s",
+                    op,
+                )
+                state["intent"] = simple_intent
+                debug_logger.intent_parsed_phase9(simple_intent, parsing_method="SimpleIntentParser")
+                debug_logger.agent_exit("parse_intent", before_state, dict(state))
+                return state
+
             logger.info("🧠 [PARSE_INTENT] Building IntentParserAgent subgraph...")
 
             # LLM budget check
@@ -2925,21 +2954,26 @@ class QueryOrchestrator:
         try:
             # DEBUG: Log what we received
             user_input = state.get("user_input", "")
+            intent = state.get("intent", {}) or {}
+            operation = intent.get("operation", "query")
             exec_result_raw = state.get("exec_result")
             logger.info(f"✨ [ANSWER] exec_result_raw from state: {exec_result_raw} (type: {type(exec_result_raw)})")
-            exec_result = self._coerce_exec_result(exec_result_raw)
-            state["exec_result"] = exec_result
-            logger.info(f"✨ [ANSWER] exec_result normalized: {exec_result}")
+            # Normalize exec_result only when we have a payload or when handling data queries.
+            if exec_result_raw is None and operation != "query":
+                exec_result = None
+            else:
+                exec_result = self._coerce_exec_result(exec_result_raw)
+                state["exec_result"] = exec_result
+                logger.info(f"✨ [ANSWER] exec_result normalized: {exec_result}")
             error_info = state.get("error_info")
             logger.info(f"✨ [ANSWER] exec_result present: {bool(exec_result)}")
             logger.info(f"✨ [ANSWER] exec_result type: {type(exec_result)}")
             logger.info(f"✨ [ANSWER] exec_result keys: {list(exec_result.keys()) if isinstance(exec_result, dict) else 'Not a dict'}")
             logger.info(f"✨ [ANSWER] exec_result.ok: {exec_result.get('ok') if isinstance(exec_result, dict) else 'Not a dict'}")
             logger.info(f"✨ [ANSWER] error_info: {error_info}")
-            logger.info(f"✨ [ANSWER] intent.operation: {state.get('intent', {}).get('operation')}")
+            logger.info(f"✨ [ANSWER] intent.operation: {operation}")
 
             # HIGHEST PRIORITY: Handle clarification requests from intent parsing
-            intent = state.get("intent", {}) or {}
             needs_clarification = intent.get("needs_clarification", False)
             if needs_clarification:
                 clarification_question = intent.get("clarification_question", "Could you please clarify your request?")
@@ -2948,17 +2982,17 @@ class QueryOrchestrator:
 
                 logger.info(f"✨ [ANSWER] 📝 Handling clarification request: {clarification_question}")
 
-                response_parts = [
-                    f"I need a bit more information to help you effectively. {clarification_question}",
-                    f"\n\nReason: {ambiguity_reason}"
-                ]
-
-                if suggested_options:
-                    response_parts.append(f"\n\nHere are some options to consider:")
-                    for i, option in enumerate(suggested_options, 1):
-                        response_parts.append(f"{i}. {option}")
-
-                state["final_response"] = "".join(response_parts)
+                # Keep clarification envelopes simple and machine-friendly:
+                # - final_response is exactly the clarification question
+                # - clarify flag and clarification_question are surfaced on state
+                state["final_response"] = clarification_question
+                state["clarify"] = True
+                state["clarification_question"] = clarification_question
+                intent["needs_clarification"] = True
+                state["intent"] = intent
+                # Optionally preserve ambiguity_reason for downstream logging/UX.
+                if ambiguity_reason:
+                    state.setdefault("ambiguity_reason", ambiguity_reason)
                 logger.info(f"✨ [ANSWER] ✅ Clarification response generated")
                 debug_logger.agent_exit("answer", before_state, dict(state))
                 return state
@@ -2974,7 +3008,6 @@ class QueryOrchestrator:
             }
 
             # Deterministic data-based fallback when execution succeeded
-            operation = intent.get("operation", "query")
             is_data_query = operation == "query"
             exec_ok = exec_result.get("ok", False) if isinstance(exec_result, dict) else False
             row_count = exec_result.get("row_count") if isinstance(exec_result, dict) else None
@@ -3337,6 +3370,18 @@ class QueryOrchestrator:
             }
         state["health_status"] = health_status
 
+        # Provide a neutral exec_result envelope for direct callers so tests and
+        # downstream formatters can rely on a consistent shape.
+        state.setdefault(
+            "exec_result",
+            {
+                "ok": False,
+                "data": [],
+                "row_count": 0,
+                "truncated": False,
+            },
+        )
+
         # Do not terminate here; the graph routes answer_health → answer → END so
         # AnswerAgent remains the single terminal formatter.
         return state
@@ -3572,6 +3617,17 @@ class QueryOrchestrator:
                 result.setdefault("final_response", result.get("final_answer"))
                 result.setdefault("final_answer", result.get("final_response"))
 
+                # For health-check style queries, keep the API surface simple by
+                # omitting any internal exec_result envelope from the public
+                # response. Tests and callers treat health checks as metadata-only.
+                try:
+                    intent_payload = result.get("intent") or {}
+                    if isinstance(intent_payload, dict) and intent_payload.get("operation") == "health_check":
+                        result["exec_result"] = None
+                except Exception:
+                    # Never let health-specific postprocessing break the envelope.
+                    pass
+
                 final_response = result.get("final_response") or result.get("final_answer")
                 if not final_response:
                     # Synthesize a short, actionable message from error_info when present.
@@ -3657,27 +3713,6 @@ async def create_orchestrator(
         query_timeout_seconds=query_timeout_seconds,
         orchestration_mode=orchestration_mode,
     )
-
-
-async def _result_validator_async(self, state: BaseState) -> BaseState:
-    """
-    Async wrapper for result validator node so we can attach instrumentation.
-
-    NOTE: This is defined at module scope and then bound onto QueryOrchestrator
-    to avoid issues with older bytecode caches during migration.
-    """
-    # Instrumentation: track node entry
-    try:
-        self._increment_node_entry(state, "result_validator")
-    except Exception:
-        pass
-    return build_result_validator_node(state)
-
-
-# Ensure QueryOrchestrator exposes _result_validator_async even if older
-# bytecode caches omit the in-class definition.
-if hasattr(QueryOrchestrator, "__mro__"):
-    setattr(QueryOrchestrator, "_result_validator_async", _result_validator_async)
 
 async def _format_execution_results(
     execution_result: Dict[str, Any],
@@ -3768,67 +3803,6 @@ async def _format_execution_results(
             "but I had trouble formatting them for display."
         )
 
-    async def _probe_candidate_counts(self, table_names: List[str]) -> Dict[str, int]:
-        """Quickly probe row counts per candidate to prioritize tables with data."""
-        counts: Dict[str, int] = {}
-        for t in table_names:
-            if not t:
-                continue
-            qualified_t = self._qualify_table_name(str(t))
-            sql = f"SELECT COUNT(*) AS c FROM {qualified_t}"
-            try:
-                result = await self.mcp.query_bounded(sql, max_rows=1, timeout_ms=5000)
-                if isinstance(result, dict) and result.get("ok"):
-                    data = result.get("data") or []
-                    if isinstance(data, list) and data:
-                        row0 = data[0]
-                        if isinstance(row0, dict):
-                            try:
-                                counts[t] = int(next(iter(row0.values())))
-                                continue
-                            except Exception:
-                                counts[t] = counts.get(t, 0)
-                                continue
-                    row_count = result.get("row_count")
-                    if isinstance(row_count, (int, float)):
-                        counts[t] = int(row_count)
-                        continue
-                counts[t] = counts.get(t, 0)
-            except Exception:
-                counts[t] = counts.get(t, 0)
-        return counts
-
-    async def _get_catalog_from_mcp(self) -> Optional[Dict[str, Any]]:
-        """Get catalog data directly from MCP server."""
-        try:
-            # Try to access the catalog through the MCP client's scout runner
-            logger.info("🔧 Attempting to get catalog data from MCP scout runner")
-
-            # Check if the MCP client has access to scout runner
-            # This is a bit of a hack, but we need to access the catalog somehow
-            if hasattr(self.mcp, '_scout_runner') and self.mcp._scout_runner:
-                catalog = self.mcp._scout_runner.get_catalog()
-                if catalog:
-                    logger.info(f"🔧 Retrieved catalog with {len(catalog.get('tables', {}))} tables")
-                    return catalog
-
-            # Alternative: Try to load catalog from the known file path
-            import os
-            catalog_path = "data/catalog/scout_catalog.json"
-            if os.path.exists(catalog_path):
-                import json
-                with open(catalog_path, 'r', encoding='utf-8') as f:
-                    catalog = json.load(f)
-                logger.info(f"🔧 Loaded catalog from file with {len(catalog.get('tables', {}))} tables")
-                return catalog
-
-            logger.warning("🔧 Could not access catalog data")
-            return None
-
-        except Exception as e:
-            logger.warning(f"🔧 Could not get catalog from MCP: {e}")
-            return None
-
     async def _perform_local_semantic_search(self, catalog: Dict[str, Any], intent: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Perform semantic search locally using TableRanker."""
         try:
@@ -3882,110 +3856,137 @@ async def _format_execution_results(
             logger.error(f"🔧 Local semantic search failed: {e}")
             return []
 
-    async def invoke_agent(self, agent_name: str, state: Optional[BaseState] = None, options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        normalized_name = (agent_name or "").strip().lower()
-        if not normalized_name:
-            raise ValueError("agent_name is required")
-        handler = self._get_agent_handler(normalized_name)
-        if handler is None:
-            raise ValueError(f"Unknown agent '{agent_name}'")
-        state_payload: BaseState = copy.deepcopy(state or {})
-        if options and isinstance(options, dict):
-            overrides = options.get("state_overrides")
-            if isinstance(overrides, dict):
-                for key, value in overrides.items():
-                    state_payload[key] = copy.deepcopy(value)
-            extra = {k: v for k, v in options.items() if k != "state_overrides"}
-            if extra:
-                state_payload["agent_options"] = copy.deepcopy(extra)
-        before_snapshot: BaseState = copy.deepcopy(state_payload)
-        start = time.perf_counter()
-        result_state = await handler(state_payload)
-        if not isinstance(result_state, dict):
-            raise ValueError(f"Agent '{normalized_name}' returned invalid state")
-        normalized_state: BaseState = copy.deepcopy(result_state)
-        exec_envelope: Optional[Dict[str, Any]] = None
-        if normalized_state.get("exec_result") is not None:
-            normalized_state["exec_result"] = self._coerce_exec_result(normalized_state.get("exec_result"))
-            exec_envelope = normalized_state.get("exec_result")
-        error_info = self._normalize_error_info(normalized_state.get("error_info"))
-        if error_info:
-            normalized_state["error_info"] = error_info
-        data = []
-        row_count = None
-        truncated = False
-        exec_error = None
-        exec_ok = True
-        if exec_envelope:
-            data = exec_envelope.get("data") or []
-            row_count = exec_envelope.get("row_count")
-            truncated = bool(exec_envelope.get("truncated", False))
-            exec_error = exec_envelope.get("error")
-            exec_ok = bool(exec_envelope.get("ok", True))
-        delta = self._compute_state_delta(before_snapshot, normalized_state)
-        elapsed_ms = int((time.perf_counter() - start) * 1000)
-        warnings = normalized_state.get("warnings") or []
-        if not isinstance(warnings, list):
-            warnings = [str(warnings)]
-        overall_ok = exec_ok and not bool(error_info)
-        return {
-            "agent": normalized_name,
-            "ok": overall_ok,
-            "data": data,
-            "row_count": row_count,
-            "execution_time_ms": elapsed_ms,
-            "truncated": truncated,
-            "warnings": warnings,
-            "error": exec_error,
-            "error_info": error_info,
-            "input_state": before_snapshot,
-            "output_state": normalized_state,
-            "state_delta": delta,
-        }
+async def _invoke_agent_impl(
+    self,
+    agent_name: str,
+    state: Optional[BaseState] = None,
+    options: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Helper implementation for invoking a single agent subgraph.
 
-    def _get_agent_handler(self, normalized_name: str):
-        mapping = {
-            "intent_parser": self._parse_intent_node,
-            "parse_intent": self._parse_intent_node,
-            "discovery": self._discovery_node,
-            "join_sql": self._join_sql_node,
-            "sql_validator": self._validate_sql_node,
-            "validate_sql": self._validate_sql_node,
-            "exec_recovery": self._exec_recovery_node,
-            "execution": self._exec_recovery_node,
-            "result_validator": self._result_validator_async,
-            "interpretation": self._interpret_node,
-            "interpret": self._interpret_node,
-            "answer": self._answer_node,
-        }
-        return mapping.get(normalized_name)
+    Bound onto QueryOrchestrator.invoke_agent at module import time so it
+    remains available even if older bytecode caches omit the in-class
+    definition.
+    """
+    normalized_name = (agent_name or "").strip().lower()
+    if not normalized_name:
+        raise ValueError("agent_name is required")
 
-    async def _result_validator_async(self, state: BaseState) -> BaseState:
-        """
-        Async wrapper for result validator node so we can attach instrumentation.
-        """
-        # Instrumentation: track node entry
-        self._increment_node_entry(state, "result_validator")
-        return build_result_validator_node(state)
+    handler = self._get_agent_handler(normalized_name)
+    if handler is None:
+        raise ValueError(f"Unknown agent '{agent_name}'")
 
-    def _compute_state_delta(self, before_state: BaseState, after_state: BaseState) -> Dict[str, Any]:
-        delta = {
-            "added": {},
-            "removed": [],
-            "updated": {},
-        }
-        for key, value in after_state.items():
-            if key not in before_state:
-                delta["added"][key] = value
-            elif before_state[key] != value:
-                delta["updated"][key] = {
-                    "before": before_state[key],
-                    "after": value,
-                }
-        for key in before_state.keys():
-            if key not in after_state:
-                delta["removed"].append(key)
-        return delta
+    state_payload: BaseState = copy.deepcopy(state or {})
+    if options and isinstance(options, dict):
+        overrides = options.get("state_overrides")
+        if isinstance(overrides, dict):
+            for key, value in overrides.items():
+                state_payload[key] = copy.deepcopy(value)
+        extra = {k: v for k, v in options.items() if k != "state_overrides"}
+        if extra:
+            state_payload["agent_options"] = copy.deepcopy(extra)
+
+    before_snapshot: BaseState = copy.deepcopy(state_payload)
+    start = time.perf_counter()
+    result_state = await handler(state_payload)
+    if not isinstance(result_state, dict):
+        raise ValueError(f"Agent '{normalized_name}' returned invalid state")
+
+    normalized_state: BaseState = copy.deepcopy(result_state)
+    exec_envelope: Optional[Dict[str, Any]] = None
+    if normalized_state.get("exec_result") is not None:
+        normalized_state["exec_result"] = self._coerce_exec_result(
+            normalized_state.get("exec_result")
+        )
+        exec_envelope = normalized_state.get("exec_result")
+
+    error_info = self._normalize_error_info(normalized_state.get("error_info"))
+    if error_info:
+        normalized_state["error_info"] = error_info
+
+    data = []
+    row_count = None
+    truncated = False
+    exec_error = None
+    exec_ok = True
+    if exec_envelope:
+        data = exec_envelope.get("data") or []
+        row_count = exec_envelope.get("row_count")
+        truncated = bool(exec_envelope.get("truncated", False))
+        exec_error = exec_envelope.get("error")
+        exec_ok = bool(exec_envelope.get("ok", True))
+
+    # Compute a simple state delta for debugging and API responses.
+    added = {k: v for k, v in normalized_state.items() if k not in before_snapshot}
+    removed = [k for k in before_snapshot.keys() if k not in normalized_state]
+    updated = {
+        k: {"before": before_snapshot[k], "after": normalized_state[k]}
+        for k in normalized_state.keys()
+        if k in before_snapshot and before_snapshot[k] != normalized_state[k]
+    }
+    delta: Dict[str, Any] = {
+        "added": added,
+        "removed": removed,
+        "updated": updated,
+    }
+
+    elapsed_ms = int((time.perf_counter() - start) * 1000)
+    warnings = normalized_state.get("warnings") or []
+    if not isinstance(warnings, list):
+        warnings = [str(warnings)]
+    overall_ok = exec_ok and not bool(error_info)
+
+    return {
+        "agent": normalized_name,
+        "ok": overall_ok,
+        "data": data,
+        "row_count": row_count,
+        "execution_time_ms": elapsed_ms,
+        "truncated": truncated,
+        "warnings": warnings,
+        "error": exec_error,
+        "error_info": error_info,
+        "input_state": before_snapshot,
+        "output_state": normalized_state,
+        "state_delta": delta,
+    }
+
+
+def _get_agent_handler_impl(self, normalized_name: str):
+    mapping = {
+        "intent_parser": self._parse_intent_node,
+        "parse_intent": self._parse_intent_node,
+        "discovery": self._discovery_node,
+        "join_sql": self._join_sql_node,
+        "sql_validator": self._validate_sql_node,
+        "validate_sql": self._validate_sql_node,
+        "exec_recovery": self._exec_recovery_node,
+        "execution": self._exec_recovery_node,
+        "result_validator": self._result_validator_async,
+        "interpretation": self._interpret_node,
+        "interpret": self._interpret_node,
+        "answer": self._answer_node,
+    }
+    return mapping.get(normalized_name)
+
+
+async def _result_validator_async_impl(self, state: BaseState) -> BaseState:
+    """
+    Async wrapper for result validator node so we can attach instrumentation.
+    """
+    self._increment_node_entry(state, "result_validator")
+    return build_result_validator_node(state)
+
+
+# Bind helper implementations onto QueryOrchestrator for backwards compatibility.
+if hasattr(QueryOrchestrator, "__mro__"):
+    if not hasattr(QueryOrchestrator, "invoke_agent"):
+        setattr(QueryOrchestrator, "invoke_agent", _invoke_agent_impl)
+    if not hasattr(QueryOrchestrator, "_get_agent_handler"):
+        setattr(QueryOrchestrator, "_get_agent_handler", _get_agent_handler_impl)
+    if not hasattr(QueryOrchestrator, "_result_validator_async"):
+        setattr(QueryOrchestrator, "_result_validator_async", _result_validator_async_impl)
 
 
 # ============= Factory and export functions =============

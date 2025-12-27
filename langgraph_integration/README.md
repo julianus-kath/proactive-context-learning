@@ -118,6 +118,38 @@ result = await orchestrator.ainvoke(
 )
 ```
 
+### Orchestration Modes (`pipeline` vs `react_supervisor`)
+
+The orchestrator now supports two orchestration modes:
+
+- `pipeline` (default): the original fixed LangGraph pipeline described above.
+- `react_supervisor`: a ReAct-style supervisor loop that calls the same agents via
+  capability tools and enforces the same validation/execution gates.
+
+You can configure the mode in three ways:
+
+```python
+# 1) Constructor default (process_query fallback)
+orchestrator = QueryOrchestrator(orchestration_mode="react_supervisor")
+
+# 2) Per-request override via metadata
+result = await orchestrator.process_query(
+    user_question,
+    messages=conversation,
+    metadata={"orchestration_mode": "react_supervisor"},
+)
+
+# 3) Environment variable default (used when constructor arg is None)
+# export ORCHESTRATION_MODE=react_supervisor
+orchestrator = QueryOrchestrator()  # picks up env default
+```
+
+Notes:
+- `pipeline` and `react_supervisor` share the same `BaseState` contracts and
+  safety gates (validation must succeed before execution).
+- When experimenting with the supervisor, keep `pipeline` as a fallback path
+  until you have validated quality on your own workloads.
+
 ### Using via FastAPI
 
 ```python

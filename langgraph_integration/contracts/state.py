@@ -223,6 +223,11 @@ class BaseState(TypedDict, total=False):
     query_results: Optional[str]  # Deprecated; use exec_result instead
     final_response_debug: Optional[str]  # Debug info
 
+    # Clarification envelope (when the system needs more information from the user).
+    clarify: bool  # True when the current response is a clarification request
+    clarification_question: Optional[str]  # Human-facing clarification question
+    ambiguity_reason: Optional[str]  # Short explanation of why clarification is needed
+
     # ReAct-style supervisor orchestration (Phase: ReAct Supervisor).
     supervisor_trace: List[Dict[str, Any]]  # High-level trace of supervisor decisions (no raw CoT)
     supervisor_step_count: int  # Number of supervisor loop iterations executed

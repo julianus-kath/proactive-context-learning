@@ -56,9 +56,13 @@
       - Provides `/health` and `/diag` for diagnostics.
       - `POST /query` endpoint is **explicitly deprecated** and now returns HTTP 410 with a migration guide pointing to MCP `/mcp` and tools like `query_bounded`.
 
-- **Agent and graph layer**
-  - Implemented under `langgraph_integration/`:
-    - Orchestrator: `langgraph_integration/orchestrator.py` (class `QueryOrchestrator`).
+  - **Agent and graph layer**
+    - Implemented under `langgraph_integration/`:
+      - Orchestrator: `langgraph_integration/orchestrator.py` (class `QueryOrchestrator`).
+        - Supports two orchestration modes:
+          - `pipeline` – fixed multi‑agent graph (Phase 9/10 pipeline, current default).
+          - `react_supervisor` – ReAct‑style supervisor that calls the same agents via capability tools.
+        - Mode is selected via the `orchestration_mode` argument, `metadata["orchestration_mode"]` on `process_query`, or the `ORCHESTRATION_MODE` environment variable.
     - State contracts: `langgraph_integration/contracts/state.py`.
     - Agents:
       - `agents/intent_parser/agent.py` – `IntentParserAgent` (LangGraph subgraph).
