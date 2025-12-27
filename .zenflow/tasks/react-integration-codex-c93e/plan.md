@@ -36,6 +36,22 @@ Save to `{@artifacts_path}/spec.md` with:
 - Delivery phases (incremental, testable milestones)
 - Verification approach using project lint/test commands
 
+### [x] Step: Technical Specification
+<!-- auto-complete: spec.md created and aligned with current architecture -->
+
+Create a technical specification based on the PRD in `{@artifacts_path}/requirements.md`.
+
+1. Review existing codebase architecture and identify reusable components
+2. Define the implementation approach
+
+Save to `{@artifacts_path}/spec.md` with:
+- Technical context (language, dependencies)
+- Implementation approach referencing existing code patterns
+- Source code structure changes
+- Data model / API / interface changes
+- Delivery phases (incremental, testable milestones)
+- Verification approach using project lint/test commands
+
 ### [ ] Step: Planning
 
 Create a detailed implementation plan based on `{@artifacts_path}/spec.md`.
