@@ -182,7 +182,8 @@ Verification:
 
 ---
 
-### [ ] Step: Phase B – ReAct Supervisor Graph Integration
+### [x] Step: Phase B – ReAct Supervisor Graph Integration
+<!-- chat-id: 854231c6-92be-4ecb-a20d-1e1b60187141 -->
 
 Implementation is broken into three phases aligned with `spec.md`: **Phase A – Tools & Contracts**, **Phase B – Supervisor Graph**, and **Phase C – Cleanup & Rollout**.
 
@@ -192,7 +193,7 @@ Implementation is broken into three phases aligned with `spec.md`: **Phase A –
 - Budgets (steps, total LLM calls, no-progress) stop cleanly and map to `stop_reason`.
 - There is an explicit test proving no execution occurs without prior validation (validation gate enforced in supervisor mode).
 
-#### [ ] Task B1: Implement Supervisor Module
+#### [x] Task B1: Implement Supervisor Module
 
 Add `langgraph_integration/supervisor.py`:
 - Define a `SupervisorConfig` (dataclass or simple config class) containing:
@@ -214,7 +215,7 @@ Verification:
   - Assert that `supervisor_trace` is populated and that at least one tool ran.
 - Run: `python -m pytest tests/test_supervisor_basic.py -q`
 
-#### [ ] Task B2: Wire Supervisor into QueryOrchestrator
+#### [x] Task B2: Wire Supervisor into QueryOrchestrator
 
 Update `langgraph_integration/orchestrator.py`:
 - Constructor:
@@ -241,7 +242,7 @@ Verification:
 - Run:
   - `python -m pytest tests/test_orchestrator_integration.py -q`
 
-#### [ ] Task B3: Implement Supervisor Trace and Stop Reason Mapping
+#### [x] Task B3: Implement Supervisor Trace and Stop Reason Mapping
 
 Ensure `run_supervisor` and `_invoke_supervisor`:
 - Append a trace entry to `supervisor_trace` on each loop iteration:
@@ -258,7 +259,7 @@ Verification:
   - Assert that `supervisor_trace` has at least one entry.
   - Assert that `stop_reason` aligns with the scenario (e.g., budget exhaustion → `budget_exhausted`).
 
-#### [ ] Task B4: Add Budget and No-Progress Enforcement in Supervisor
+#### [x] Task B4: Add Budget and No-Progress Enforcement in Supervisor
 
 Within `run_supervisor`:
 - Track:
@@ -277,7 +278,7 @@ Verification:
   - Assert `stop_reason="budget_exhausted"` and a clear final message.
 - Add tests confirming supervisor LLM calls increment the same `total_llm_calls` / `llm_usage` counters used by agents (no separate budget namespace).
 
-#### [ ] Task B5: Ensure Validation Gate Enforcement End-to-End
+#### [x] Task B5: Ensure Validation Gate Enforcement End-to-End
 
 Add integration-level checks to confirm:
 - No supervisor path can call `execute_sql` before:

@@ -360,6 +360,45 @@ class TestQueryOrchestrator:
         assert result_clamped.get("semantic_retry_count") == 1
 
     @pytest.mark.asyncio
+    async def test_process_query_react_supervisor_basic(self, monkeypatch: pytest.MonkeyPatch):
+        """process_query should route to the ReAct supervisor when orchestration_mode is set."""
+        from langgraph_integration.orchestrator import QueryOrchestrator
+        import langgraph_integration.supervisor as supervisor_module
+
+        orchestrator = QueryOrchestrator()
+
+        async def failing_ainvoke(input_state, **kwargs):
+            raise AssertionError("ainvoke should not be called in react_supervisor mode")
+
+        orchestrator.ainvoke = failing_ainvoke  # type: ignore[assignment]
+
+        captured: Dict[str, Any] = {}
+
+        async def fake_run_supervisor(state, config=None):
+            captured["state"] = dict(state)
+            result_state = dict(state)
+            result_state["final_response"] = "supervisor answer"
+            result_state["stop_reason"] = "success"
+            result_state.setdefault(
+                "supervisor_trace",
+                [{"step": 1, "tool": "interpret_query", "thought_summary": "", "observation_summary": "", "budgets": {}}],
+            )
+            return result_state
+
+        monkeypatch.setattr(
+            supervisor_module, "run_supervisor", fake_run_supervisor, raising=True
+        )
+
+        result = await orchestrator.process_query(
+            "hello world",
+            metadata={"orchestration_mode": "react_supervisor"},
+        )
+
+        assert result.get("final_response") == "supervisor answer"
+        assert result.get("stop_reason") == "success"
+        assert captured["state"]["orchestration_mode"] == "react_supervisor"
+
+    @pytest.mark.asyncio
     async def test_process_query_handles_invalid_numeric_metadata(self):
         """Invalid numeric metadata should not crash process_query and should fall back to defaults."""
         from langgraph_integration.orchestrator import QueryOrchestrator

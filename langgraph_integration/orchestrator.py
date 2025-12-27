@@ -104,7 +104,8 @@ class QueryOrchestrator:
         max_joins: int = 3,
         max_retries: int = 2,
         row_limit: int = 1000,
-        query_timeout_seconds: int = 30
+        query_timeout_seconds: int = 30,
+        orchestration_mode: Optional[str] = None,
     ):
         """
         Initialize QueryOrchestrator with all agents.
@@ -138,6 +139,15 @@ class QueryOrchestrator:
         self.max_no_progress_repeats = get_max_no_progress_repeats()
         # Default answer formatting strategy (LLM vs deterministic-from-data)
         self.default_answer_mode = get_default_answer_mode()
+
+        # Orchestration mode: "pipeline" (default) or "react_supervisor"
+        raw_mode = orchestration_mode
+        if raw_mode is None:
+            raw_mode = os.getenv("ORCHESTRATION_MODE", "pipeline")
+        normalized_mode = str(raw_mode or "pipeline").strip().lower()
+        if normalized_mode not in ("pipeline", "react_supervisor"):
+            normalized_mode = "pipeline"
+        self.orchestration_mode: str = normalized_mode
 
         # Initialize specialized agents
         logger.info("🚀 Initializing multi-agent orchestrator (Phase 9)...")
@@ -3506,12 +3516,55 @@ class QueryOrchestrator:
             max_total_plans,
         )
 
+        # Determine orchestration mode for this request.
+        # Priority: metadata override → instance default → "pipeline".
+        raw_orch_mode: Optional[str] = None
+        if metadata and isinstance(metadata, dict):
+            raw_orch_mode = metadata.get("orchestration_mode")
+        if raw_orch_mode is None:
+            raw_orch_mode = getattr(self, "orchestration_mode", "pipeline")
+        orch_mode = str(raw_orch_mode or "pipeline").strip().lower()
+        if orch_mode not in ("pipeline", "react_supervisor"):
+            orch_mode = "pipeline"
+        initial_state["orchestration_mode"] = orch_mode
+
         try:
             # Server-side timeout for full orchestration to avoid client-level timeouts.
             # Use the same query_timeout_seconds as an upper bound for now.
             timeout_s = max(self.query_timeout_seconds, 60)
             import asyncio as _asyncio
-            result = await _asyncio.wait_for(self.ainvoke(initial_state), timeout=timeout_s)
+            if orch_mode == "react_supervisor":
+                # Initialize supervisor-specific fields with safe defaults.
+                initial_state.setdefault("supervisor_trace", [])
+                initial_state["supervisor_step_count"] = int(
+                    initial_state.get("supervisor_step_count", 0) or 0
+                )
+                initial_state.setdefault(
+                    "max_supervisor_steps",
+                    initial_state.get("max_supervisor_steps") or self.max_graph_cycles or 12,
+                )
+                initial_state["no_progress_repeat_count"] = int(
+                    initial_state.get("no_progress_repeat_count", 0) or 0
+                )
+                from langgraph_integration.supervisor import SupervisorConfig, run_supervisor
+
+                supervisor_config = SupervisorConfig(
+                    max_supervisor_steps=int(
+                        initial_state.get("max_supervisor_steps")
+                        or self.max_graph_cycles
+                        or 12
+                    ),
+                    max_llm_calls_total=int(initial_state.get("max_llm_calls") or 0) or None,
+                    max_no_progress_repeats=int(
+                        initial_state.get("max_no_progress_repeats") or self.max_no_progress_repeats or 3
+                    ),
+                )
+                result = await _asyncio.wait_for(
+                    run_supervisor(initial_state, config=supervisor_config),
+                    timeout=timeout_s,
+                )
+            else:
+                result = await _asyncio.wait_for(self.ainvoke(initial_state), timeout=timeout_s)
 
             # Normalize terminal answer fields so API callers always see a usable answer.
             if isinstance(result, dict):
@@ -3587,6 +3640,7 @@ async def create_orchestrator(
     max_retries: int = 2,
     row_limit: int = 1000,
     query_timeout_seconds: int = 30,
+    orchestration_mode: Optional[str] = None,
 ) -> QueryOrchestrator:
     """
     Thin async factory for QueryOrchestrator.
@@ -3601,6 +3655,7 @@ async def create_orchestrator(
         max_retries=max_retries,
         row_limit=row_limit,
         query_timeout_seconds=query_timeout_seconds,
+        orchestration_mode=orchestration_mode,
     )
 
 
@@ -3941,7 +3996,8 @@ def create_query_orchestrator(
     max_joins: int = 3,
     max_retries: int = 2,
     row_limit: int = 1000,
-    query_timeout_seconds: int = 30
+    query_timeout_seconds: int = 30,
+    orchestration_mode: Optional[str] = None,
 ) -> QueryOrchestrator:
     """
     Factory function to create a QueryOrchestrator instance.
@@ -3972,7 +4028,8 @@ def create_query_orchestrator(
         max_joins=max_joins,
         max_retries=max_retries,
         row_limit=row_limit,
-        query_timeout_seconds=query_timeout_seconds
+        query_timeout_seconds=query_timeout_seconds,
+        orchestration_mode=orchestration_mode,
     )
 
 
