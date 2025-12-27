@@ -77,6 +77,7 @@ This spec introduces an additional orchestration layer – a **ReAct Supervisor 
 - **Action Selection**
   - Current: Routing is deterministic and encoded in `orchestrator._build_graph()` and helper functions.
   - New: Supervisor uses LLM reasoning (via `langgraph-supervisor`) to choose among capability tools at each step, guided by tool metadata and `suggested_next_actions`.
+  - In `react_supervisor` mode, the supervisor is the sole authority for agent sequencing; no fixed pipeline routing logic may be executed implicitly.
 
 - **Topology**
   - Current: Topology is fixed; cycles only occur via conditional edges (e.g., `result_validator` → `discovery|join_sql|answer`).
@@ -267,6 +268,15 @@ Wherever possible, these tools should reuse existing orchestrator methods (e.g.,
       - Avoid bypassing validation/exec gates.
       - Stop when budgets or no-progress conditions are met.
       - Prefer deterministic signals (validation, result checks) over extra LLM calls.
+  - Supervisor entry conditions:
+    - On entry, the supervisor MUST begin with either:
+      - `interpret_query`, or
+      - a no-op state check when a valid intent already exists (e.g., structured follow-ups).
+    - The supervisor MUST NOT assume discovery or planning has already happened.
+
+- Supervisor reasoning representation:
+  - Supervisor “thoughts” stored in `supervisor_trace` are decision summaries, not raw chain-of-thought.
+  - These summaries MUST NOT include hidden reasoning tokens or verbatim internal prompts.
 
 ### 5.2 Budget Enforcement
 
@@ -383,4 +393,3 @@ The design is consistent with the current safety model: validation and execution
     - Current system behavior (`pipeline`).
     - Supervisor behavior (`react_supervisor`).
   - For representative queries to ensure the spec and implementation stay aligned over time.
-
