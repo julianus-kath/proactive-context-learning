@@ -1,199 +1,299 @@
-# ReAct Integration (Codex) – Product Requirements
+# ReAct Supervisor Integration – SDD Requirements
 
-## 1. Problem & Context
+## 1. Motivation
 
-- The current LangGraph-based `QueryOrchestrator` in `langgraph_integration/orchestrator.py` follows a mostly fixed pipeline of agents (intent → discovery → join_sql → validate_sql → exec → result formatting / validation).
-- This pipeline is good at structural correctness (valid SQL, safe execution) but brittle when semantics are slightly off:
-  - It can “lock in” to an early discovery / join plan and then push it through to execution even when the result clearly does not answer the user’s question.
-  - Guardrails, templates, and result validation have been added incrementally, but they are tightly coupled to the pipeline order and are harder to extend.
+- The current LangGraph-based `QueryOrchestrator` in `langgraph_integration/orchestrator.py` is a deterministic controller with bounded retries, not a true ReAct-style supervisor.
+- It owns a global `BaseState`, enforces budgets (`plan_attempt_count`, `retry_attempt_count`, `semantic_retry_count`, `validation_attempt_count`, `exec_recovery_attempt_count`, `total_llm_calls`), and centralizes routing / error policy via helpers like `_route_validation_result_for_state()`.
+- However, it still behaves like a static, rule-based pipeline:
+  - Graph topology and node order are fixed (intent → discovery → join_sql → validate_sql → exec → result_validator → answer, plus some conditional branches).
+  - Agents are graph nodes, not dynamic tools; the orchestrator routes based on hard-coded edges and retry_action enums, not on LLM-driven reasoning.
+  - There is no explicit “thought → act(tool) → observe” loop; agents run because the graph routes to them, not because a supervisor decided they were needed.
+- This leads to the core failure mode:
+  - Once a semantically wrong plan (wrong entity, metric, join path, or aggregation shape) enters the pipeline, the system can only try to repair *within that plan*.
+  - It cannot step back and re-run discovery/planning with new constraints based on semantic evidence from results.
+- Guardrails, templates, semantic validators, and contracts have been added to mitigate this, but they are layered on top of a rigid pipeline, making the system brittle and harder to extend.
 - The repo already includes:
-  - Specialized agents (`IntentParserAgent`, `DiscoveryAgent`, `JoinPlanAndSQLAgent`, `SQLValidatorAgent`, `ExecAndRecoveryAgent`, result validation, answer) under `langgraph_integration/agents`.
-  - A LangGraph orchestrator that composes these as nodes with retry logic and budgets (LLM call caps, validation/exec retry limits, no-progress detection).
+  - Specialized agents (`IntentParserAgent`, `DiscoveryAgent`, `JoinPlanAndSQLAgent`, `SQLValidatorAgent`, `ExecAndRecoveryAgent`, result validation, `AnswerAgent`, `InterpretationAgent`) under `langgraph_integration/agents`.
+  - A LangGraph orchestrator graph with budgets and safety gates.
   - MCP as the substrate for catalog, relations, and execution.
-- We now want to introduce a LangGraph Supervisor running a ReAct-style loop (think → act(tool) → observe → repeat), using the existing agents as tools instead of a fixed one-way pipeline.
 
-## 2. Goals (What Success Looks Like)
+**Motivating insight:** You already have state, budgets, safety, and observability. What is missing is a thin ReAct-style supervisory layer above this that:
+- Uses LLM reasoning to decide *which tool to invoke next*.
+- Treats existing agents as tools.
+- Runs a bounded ReAct loop.
+- Delegates SQL validation and execution safety to the existing machinery.
 
-### 2.1 Functional Goals
+## 2. End Goal
 
-- Replace the rigid “single-path” agent pipeline with a supervisor-driven loop that:
-  - Treats the main agents (intent, discovery, join_sql, validate_sql, exec, result validation, answer) as tools that can be invoked in different orders and multiple times as needed.
-  - Runs an explicit ReAct-style cycle: the supervisor “thinks” (LLM reasoning over current state and history), chooses a tool to “act” with, observes the result, then decides the next action.
-  - Remains compatible with current query types (data queries, schema queries, health checks, follow-ups) and continues to use MCP for catalog/relations/execution.
-- Enable the system to:
-  - Detect when an answer or intermediate output does not match the user question (e.g., wrong entity, wrong metric, wrong slice) and trigger replanning instead of finalizing.
-  - Proactively gather missing information (e.g., schema details, relations, metrics) via MCP-backed tools and discovery utilities when the supervisor judges that more context is needed.
-  - Try different candidate paths (different discovery candidates, different join strategies, or alternative filters/aggregations) when the current path stalls or yields low-quality results.
-  - Stop early (with a clear explanation) when budgets or safety limits are reached, rather than hanging or looping indefinitely.
+- Introduce a LangGraph Supervisor that:
+  - Runs a bounded ReAct loop: **reason → choose tool → act → observe → decide next**.
+  - Uses existing pipeline components as **capability tools**, not a fixed workflow.
+  - Keeps execution safety rigid (no change to validation/exec safety rules).
+- The supervisor should:
+  - Re-run discovery and planning when evidence (from results, validators, or contracts) suggests the current plan is wrong.
+  - Converge toward semantically correct answers with fewer brittle assumptions and templates.
+  - Stop safely and transparently when budgets are hit, explaining why.
 
-### 2.2 Non-Functional / Quality Goals
+## 3. Scope
 
-- **Autonomy, bounded by budgets**
-  - Supervisor can autonomously choose the next step without a pre-baked route, but:
-    - Must honor existing and new caps (e.g., `max_llm_calls`, `max_graph_cycles`, `max_validation_attempts`, `max_exec_recovery_attempts`, `max_total_plans`, `max_no_progress_repeats`).
-    - Must surface budget usage and stopping reasons in the state (so callers and logs can see why the loop stopped).
-- **Correct-by-construction at critical gates**
-  - SQL cannot be executed without passing through validation (existing SQL validator / AST checks remain mandatory).
-  - Semantic correctness checks (result validator, additional semantic gates) can trigger replans, but cannot bypass validation or execution safety.
-- **Debuggability / Observability**
-  - Every supervisor step is inspectable as:
-    - The thought (LLM reasoning or summary of why a tool was chosen).
-    - The tool call (which agent/tool, with what inputs).
-    - The observation (structured output of the tool, including error_info).
-  - Logs and state should make failure modes obvious:
-    - Why a specific tool was chosen.
-    - Why the loop stopped (success, budget, ambiguity, persistent error, user clarification needed).
-- **Extensibility**
-  - Adding new specialized agents or tools (e.g., metric lookup, heuristic join path search, contract-based semantic validation) should require minimal changes to the supervisor wiring and no large restructuring of the orchestrator core.
+### 3.1 In Scope
 
-## 3. Users & Use Cases
+- Introduce a **Supervisor graph** (ReAct-style loop) as an alternative orchestration path.
+- Wrap existing agents into **seven capability tools** with a common contract:
+  1. `interpret_query` – intent parsing / interpretation (intent vs. follow-up).
+  2. `discover_schema` – discovery + schema snippet (Scout / catalog).
+  3. `plan_sql` – join planning and SQL generation.
+  4. `validate_sql` – SQL validation & repair (mandatory gate).
+  5. `execute_sql` – safe SQL execution via MCP (mandatory gate).
+  6. `evaluate_result` – semantic/result validation and replanning hints.
+  7. `finalize_answer` – answer formatting and clarification messages.
+- Ensure the supervisor interacts with MCP **only via tools** (discovery, validation, execution paths).
+- Add **structured step traces** per supervisor loop iteration, including:
+  - `thought_summary` (short, no raw chain-of-thought leakage).
+  - `action` (tool selected).
+  - `observation` / `observation_summary`.
+  - `progress_signal`.
+  - `budgets` snapshot.
 
-- **Primary user:** End-user in chat UI asking enterprise data questions (via `chatbot_ui` / FastAPI).
-  - Wants: correct and trustworthy answers to natural language questions about ERP/analytics data.
-  - Typical queries:
-    - “Show me top 10 products by revenue this quarter.”
-    - “Which customers churned after price increases?”
-    - “What tables contain project profitability by month?”
-- **Secondary user:** Internal developers and SREs operating and debugging the system.
-  - Wants:
-    - Clear logs and traces when an answer is wrong or missing.
-    - Simple ways to reproduce and inspect the supervisor loop for a given conversation.
-    - Confidence that budget limits and safety constraints are reliably enforced.
-- **Tertiary user:** Evaluation harnesses and benchmarks.
-  - Wants:
-    - Deterministic-ish behavior under constrained settings (benchmark mode).
-    - Explicit signals for semantic retries, contract-based execution, and final stop reasons so metrics can be computed.
+### 3.2 Out of Scope
 
-## 4. Scope
+- MCP server redesign.
+- New UI visualizations beyond using existing logs/state traces.
+- Major rewrites of all agent internals; only refactors needed to:
+  - Expose them as tools/subgraphs.
+  - Clean up contracts for the seven capability tools.
 
-### 4.1 In Scope
+## 4. Hard Constraints (Non-Negotiable)
 
-- Introduce a ReAct-style supervisor graph (likely using `langgraph-supervisor` and/or `create_react_agent`) that:
-  - Wraps existing agents as tools/subgraphs.
-  - Manages the overall loop until a final answer or stop condition is reached.
-- Keep MCP as the only way to:
-  - Access database/catalog.
-  - Execute SQL.
-- Integrate with the existing orchestrator entry points (`QueryOrchestrator` / API layer) so that:
-  - The external API surface (FastAPI endpoints, orchestrator factory/getter) is preserved or minimally adjusted.
-  - Callers can opt-in to the supervisor mode without a breaking change, or default to it when ready.
-- Preserve the current guardrail semantics:
-  - Required relations and schema checks.
-  - Row limits and timeouts.
-  - Result validation logic that can trigger retries/replans.
-
-### 4.2 Out of Scope (for this task)
-
-- Major redesign of MCP server internals or Windows-side ranking logic.
-- New UI surfaces or visualization of the supervisor loop (beyond using existing logs and potential minimal event structures).
-- Large changes to data contracts or schema of persisted data; any changes should be additive / backward compatible.
-- Rewriting all existing agents; they should be reused as much as possible and only lightly refactored for tool compatibility.
+1. **Validation gate for execution**
+   - No SQL execution without passing validation.
+   - Supervisor MUST enforce that `execute_sql` can only be invoked on SQL that `validate_sql` has marked as valid (e.g., `validation_result.is_valid == True`).
+2. **Supervisor–MCP isolation**
+   - Supervisor MUST NOT call MCP directly.
+   - All catalog, schema, relation, and execution access goes through tools built on top of existing MCP clients.
+3. **Bounded autonomy**
+   - Supervisor MUST enforce and respect budgets including:
+     - `max_llm_calls_total` (existing, e.g., 20).
+     - `max_supervisor_steps` (loop iterations).
+     - `max_no_progress_steps` (consecutive negative/neutral progress).
+     - `max_replans_per_tool` (per-tool retries).
+   - On budget exhaustion, supervisor MUST stop and return a safe explanation.
+4. **No raw chain-of-thought leakage**
+   - External surfaces (API responses, logs likely to reach end users) MUST only include short `thought_summary` fields, not full internal reasoning traces.
+   - Richer traces may be stored internally for debugging, but must not be surfaced directly to end users.
 
 ## 5. Functional Requirements
 
-### 5.1 Supervisor Loop Behavior
+### FR‑1: Supervisor Loop
 
-- The system MUST implement a supervisor that:
-  - Receives user input and conversation history as its initial context.
-  - Maintains a message/state history that includes:
-    - User messages.
-    - Supervisor thoughts (LLM responses with tool decisions).
-    - Tool calls and tool outputs.
-  - Repeats the cycle:
-    1. Reason over current state (“thought”).
-    2. Choose a tool (or decide to finalize).
-    3. Call the tool.
-    4. Observe and integrate tool output into state.
-  - Stops when:
-    - A final answer is ready and validated.
-    - A budget or safety cap is reached.
-    - The supervisor determines that it needs user clarification.
+- The system MUST run a ReAct-style loop:
+  - **reason**: generate a short `thought_summary` based on current state and history.
+  - **choose tool**: pick one tool from the fixed toolset `{interpret_query, discover_schema, plan_sql, validate_sql, execute_sql, evaluate_result, finalize_answer}`.
+  - **act**: call the tool with the current state / relevant inputs.
+  - **observe**: record tool output and integrate it into state.
+  - **update**: update budgets and progress metrics.
+  - **stop** when any of the following is true:
+    - Supervisor deems the answer ready (success).
+    - Supervisor needs user clarification (clarify).
+    - Budgets are reached (budget).
+    - A non-recoverable error occurs (fatal).
 
-### 5.2 Agent-as-Tool Design
+### FR‑2: Tool Contract (All Capability Tools)
 
-- The following existing agents MUST be available as tools to the supervisor:
-  - Intent / interpretation:
-    - `IntentParserAgent` (intent parsing and operation routing).
-    - `InterpretationAgent` (follow-ups over prior results) where appropriate.
-  - Planning & data access:
-    - `DiscoveryAgent` (tables/views discovery, schema snippet).
-    - `JoinPlanAndSQLAgent` (join planning + SQL generation).
-    - `SQLValidatorAgent` (SQL validation & repair).
-    - `ExecAndRecoveryAgent` (safe execution).
-    - Result validation node/tool built from `build_result_validator_node`.
-  - Answering:
-    - `AnswerAgent` (final answer formatting, clarification questions).
-- Tools MUST:
-  - Accept and return data compatible with existing `BaseState` and contracts, or a thin adapter layer must be provided.
-  - Emit structured `error_info` when failing, so the supervisor can reason about recovery vs. final failure.
+- Each tool MUST:
+  - Accept a shared state object (directly compatible with `BaseState` or via a thin adapter).
+  - Return a structured payload including:
+    - `tool_output`: structured result (e.g., intent object, candidate tables, SQL text, execution result, validation verdict).
+    - `error_info`: structured, typed error (compatible with `ErrorInfo` model), or `None`.
+    - `progress_signal`: one of `{positive, neutral, negative}`.
+    - `suggested_next_actions`: a small, enumerated list of recommended next actions (e.g., `["rediscover", "replan", "clarify", "stop"]`).
+- Supervisor MAY use `suggested_next_actions` as hints but retains final authority on which tool to call next.
 
-### 5.3 Semantic Correctness & Replanning
+### FR‑3: Re‑entrant Discover/Plan
 
-- When result validator (or other semantic tools) indicates that:
-  - The answer is inconsistent with intent (wrong entity/metric/slice).
-  - Candidate coverage is poor (e.g., missing required relations, low row counts when high coverage expected).
-  - The plan is flapping (no-progress cycles).
-  - …the supervisor MUST be able to:
-    - Trigger a fresh discovery or join planning pass with updated constraints (e.g., different seed tables, modified filters, or explicit “must include entity X” constraints).
-    - Try alternative candidate paths (e.g., next-ranked tables/views).
-    - Choose to ask the user for clarification instead of blindly continuing.
-- All replans and retries MUST respect global and per-stage budgets; the supervisor cannot bypass caps by re-wrapping calls.
+- Supervisor MUST be able to:
+  - Re-run discovery with updated constraints (e.g., “must include products table”, alternative seed tables, or stricter entity/metric hints).
+  - Re-run planning with different fact/dimension assumptions or templates.
+  - Attempt alternative candidate sets when current ones lead to poor results or no-progress cycles.
+- Discovery and planning tools MUST be designed to be safely re-entrant and respect cumulative state (e.g., `tried_candidate_tables`, `skip_tables`, or similar fields).
 
-### 5.4 Budgeting & Safety
+### FR‑4: Result Semantics Drive Replanning
 
-- Supervisor MUST track:
-  - LLM call count (across supervisor and tools where feasible).
-  - Supervisor loop iterations / graph cycles.
-  - Validation/exec retries and result-validation-induced retries.
-- When a configured budget is reached, supervisor MUST:
-  - Stop additional tool calls.
-  - Produce a safe, user-facing message explaining that the system could not find a stable plan within a safe number of attempts and suggest ways to simplify or refine the query.
-  - Record the specific stop reason in state (`stop_reason`, `error_info.type`, etc.).
-- SQL execution MUST always go through:
-  - SQL validation gate (no direct execution of unvalidated SQL).
-  - Execution safety guardrails already present in `ExecAndRecoveryAgent` (timeouts, row caps, error handling).
+- `evaluate_result` MUST, at minimum, detect:
+  - **Wrong entity** (e.g., user requested products, but grouping is by orders or unrelated IDs).
+  - **Wrong metric type** (e.g., summing non-numeric or address-like fields).
+  - **Wrong aggregation shape** (e.g., scalar aggregate when top‑k list requested).
+  - **Missing dimension labeling** when requested (e.g., no product name/identifier in result).
+- When `evaluate_result` produces a negative `progress_signal`, it MUST recommend one or more of:
+  - `rediscover` – re-run discovery with refined constraints.
+  - `replan` – re-run SQL planning/aggregation with adjusted assumptions.
+  - `clarify` – ask user for clarification.
+  - `stop` – terminate with a safe failure message.
 
-### 5.5 Debuggability & Logging
+### FR‑5: Finalization
 
-- For each supervisor step, the system MUST make it possible (via logs and/or structured state) to reconstruct:
-  - Thought text or a summary of why a tool was chosen.
-  - Tool name and arguments (sanitized of PII/credentials).
-  - Tool output (or at least key fields and error_info).
-- The system SHOULD:
-  - Integrate with the existing `debug_logger` in `langgraph_integration/debug_logger.py` where appropriate.
-  - Make it easy for tests or playground scripts to capture the full supervisor trace for a single query.
+- `finalize_answer` MUST produce a response envelope that always includes:
+  - `final_response`: human-readable answer or clarification question.
+  - `stop_reason`: one of `{success, clarify, budget_exhausted, fatal_error}`.
+- It SHOULD also include when available:
+  - `sql_query`: final SQL used (if any).
+  - `tables_used`: list of tables/views involved.
+  - `budget_usage`: summary of consumed vs. configured budgets.
+  - `trace_id`: an identifier to correlate with logs/traces.
 
-## 6. Non-Functional Requirements
+## 6. Non‑Functional Requirements
 
-- **Performance**
-  - ReAct loop should not significantly degrade latency for “easy” queries (e.g., queries where the first discovery/join path is correct).
-  - Supervisor should have a reasonable default budget (e.g., similar to current `max_llm_calls` and plan budgets) to bound worst-case latency and cost.
-- **Reliability**
-  - On MCP or database failures, supervisor should surface clear error messages and not hang.
-  - Fallback behavior should prefer “safe failure with explanation” over infinite loops or silent partial answers.
-- **Compatibility**
-  - Existing orchestrator tests and APIs should either:
-    - Continue to pass using the new supervisor-based orchestration; or
-    - Be updated in a controlled way with clear migration notes (outside this Requirements step).
+### NFR‑1: Safety
 
-## 7. Assumptions
+- Validation and execution safety rules from the existing orchestrator MUST remain unchanged:
+  - SQL validation and AST checks remain mandatory.
+  - Execution continues to respect row caps, timeouts, and error handling already implemented in `ExecAndRecoveryAgent`.
+- Supervisor MUST not introduce any bypasses around validation or safety guards.
 
-- `langgraph-supervisor` and LangGraph ReAct-style patterns are available and compatible with the project’s existing LangGraph version.
-- Existing agents are mostly correct and will be reused; only minimal refactoring will be needed to expose them as tools and/or subgraphs.
-- MCP server interface (catalog, relations, execution) remains stable; changes needed for better semantics will be handled in separate tasks.
-- Evaluation harnesses and configuration helpers (e.g., `get_max_llm_calls`, `get_max_graph_cycles`) can be reused to supply budget values to the supervisor.
+### NFR‑2: Debuggability
 
-## 8. Open Questions / Clarifications Needed
+- Each supervisor iteration MUST append a trace item to a `supervisor_trace` structure, for example:
 
-- Should the supervisor run:
-  - For all query types (including simple schema/health checks), or only for complex data queries?
-  - As the default mode in production, or only in a separate “experimental” path behind a feature flag?
-- How much of the supervisor trace should be surfaced to:
-  - End users (e.g., as “reasoning traces” in the UI)?
-  - Internal users (e.g., dedicated debug endpoint vs. logs only)?
-- Are there additional semantic validators (e.g., contract-based metric/entity verification, benchmark-oriented gates) that should be first-class tools in the supervisor loop, or should they remain internal to result validation?
-- What are the acceptable upper bounds for:
-  - LLM calls per query in production.
-  - Maximum supervisor iterations.
-  - Time-to-first-answer for typical vs. worst-case queries?
+```json
+{
+  "step": 3,
+  "thought_summary": "Metric looks wrong; likely using orders instead of order_details",
+  "action": "plan_sql",
+  "tool_inputs_digest": "...",
+  "observation_summary": "...",
+  "progress_signal": "negative",
+  "budgets": {"llm_remaining": 12, "steps_remaining": 9}
+}
+```
+
+- The trace MUST be easily accessible for:
+  - Unit/integration tests (e.g., assertions on step count and stop reason).
+  - Developers using existing debug tools / logs.
+
+### NFR‑3: Performance
+
+- For “easy” queries, supervisor SHOULD typically converge within:
+  - ~1 discovery + 1 plan + 1 validate + 1 exec + 1 answer (no unnecessary loops).
+- Tool implementations MUST:
+  - Prefer MCP metadata and deterministic heuristics over extra LLM calls where possible.
+  - Avoid redundant heavy operations (e.g., repeated catalog fetches without need).
+
+### NFR‑4: Compatibility
+
+- Existing orchestrator tests and APIs MUST:
+  - Continue to pass when running in “pipeline” mode.
+  - Either pass or be updated in a controlled way for “react_supervisor” mode, with minimal breaking changes to external callers.
+
+## 7. Compatibility & Rollout
+
+- Introduce a configuration flag to control orchestration mode, e.g.:
+  - `orchestration_mode = "pipeline" | "react_supervisor"`.
+- Rollout phases:
+  - **Phase A:** Supervisor behind feature flag, dev-only. Pipeline remains default.
+  - **Phase B:** Optional “shadow mode” where supervisor runs in parallel for tracing only (no user-visible changes), if feasible.
+  - **Phase C:** Supervisor becomes default for selected routes or user segments once stability/quality is validated.
+
+## 8. Acceptance Criteria (Pass/Fail)
+
+1. **Top‑k analytic query quality**
+   - For “top 10 products by total sales last 12 months”, the final plan and SQL MUST:
+     - Include a product dimension (name/identifier).
+     - Use a correct metric expression (e.g., `unit_price * quantity` or equivalent).
+     - Produce a top‑k shape (`ORDER BY metric DESC LIMIT 10` or SQL Server equivalent).
+     - Apply an appropriate time filter via orders date joins.
+2. **Supervisor trace clarity**
+   - The supervisor MUST emit a readable, structured step trace and stop with an explicit `stop_reason`.
+3. **Validation gate enforced**
+   - No SQL executes without passing validation; any attempt to bypass MUST be impossible by construction.
+4. **Budgets respected**
+   - LLM calls and supervisor steps MUST not exceed configured budgets; on attempted excess, the system MUST stop with a clear explanation.
+
+## 9. Ruthless Code Removal Policy (for this branch)
+
+### Principle
+
+- If code is not required for:
+  - ReAct Supervisor.
+  - The seven capability tools.
+  - MCP safety gates.
+  - API entrypoints.
+  - Tests that exercise these paths.
+- …then it SHOULD be removed or archived.
+
+### Removal Rules
+
+- **Delete code** when **all** of the following hold:
+  1. No imports in active runtime paths.
+  2. Not referenced by tests.
+  3. Not referenced by CLIs/scripts used in normal run workflows.
+  4. Not required for the seven tool interfaces or MCP substrate.
+- **Convert to deprecated stub** when:
+  - It is part of a public API path that will be removed later.
+  - It MUST be clearly marked, e.g.:
+    - `DEPRECATED: ReAct supervisor migration`.
+
+### Preferred cleanup targets
+
+1. **Duplicate orchestrators / legacy routing**
+   - Any alternate “old pipeline” variants that will not be used once the supervisor is the default.
+2. **Benchmark-mode-only scaffolding**
+   - Keep only what is required for evaluation; remove scaffolding that mutates runtime behavior without improving core answers.
+3. **Template explosion**
+   - Keep a minimal set of templates needed for MVP; prefer supervisor-driven replanning over large numbers of brittle templates.
+4. **Unused direct DB paths**
+   - If MCP is the enforced substrate, remove alternative DB clients unless explicitly needed for migration.
+5. **Duplicate canonicalization utilities**
+   - Converge on a single canonical utility module / source of truth.
+
+### Cleanup Deliverables
+
+- For each deletion cluster, maintain:
+  - “Find usages” proof (e.g., documented evidence that code is unused).
+- A running test set including:
+  - Unit tests for tool wrappers and validation/exec gates.
+  - 1–2 E2E queries via existing FastAPI endpoints.
+- A short architecture note or ADR update explaining:
+  - What was removed.
+  - Why it was safe to remove (to avoid future archaeology).
+
+## 10. Implementation Potential vs Current Architecture
+
+### 10.1 Existing Strengths (Proto-Supervisor Behavior)
+
+- The current `QueryOrchestrator` already provides:
+  - Global state ownership (`BaseState`) across agents.
+  - Budget tracking and enforcement (`plan_attempt_count`, `retry_attempt_count`, `validation_attempts`, `exec_recovery_attempts`, `total_llm_calls`, `max_total_plans`, etc.).
+  - Centralized routing and policy via `_route_validation_result_for_state()` and related helpers.
+  - Error interpretation that maps validation/execution issues into retry/clarify/answer decisions.
+- These are **supervisor-like capabilities** that can be reused rather than discarded.
+
+### 10.2 Gaps vs ReAct / LangGraph Supervisor Patterns
+
+- Missing pieces relative to ReAct-style supervisors and resources like:
+  - LangChain/LangGraph `create_agent` / `create_react_agent`.
+  - `langgraph-supervisor` prebuilt supervisors.
+  - ReAct papers and example implementations.
+- Key gaps:
+  - No autonomous action selection; routing is driven purely by rule-based `retry_action` enums and static edges.
+  - Fixed graph topology; no dynamic tool choice or re-ordering beyond predeclared conditional edges.
+  - No explicit **thought → act → observe** loop exposed in state.
+  - Agents are not exposed as tools; orchestrator cannot call the same agent with different reasoning contexts as a first-class decision.
+
+### 10.3 Mapping to a Supervisor-Based Design
+
+- The project already depends on `langgraph` and `langgraph-supervisor`, and includes a tutorial notebook (`scripts/agent_supervisor.ipynb`) that demonstrates:
+  - Creating worker agents.
+  - Wrapping them with `create_react_agent`.
+  - Building a supervisor that hands off control via tools and routes control back.
+- Implementation potential is high because:
+  - Existing agents can be wrapped as tools or subgraphs with thin adapters (to satisfy the tool contract defined in FR‑2).
+  - A supervisor node can be created using ReAct-style helpers (e.g., `create_react_agent`) wired with the seven capability tools.
+  - The supervisor graph can be added on top of the existing orchestrator substrate:
+    - Reusing `BaseState`, error models, and budget helpers.
+    - Reusing SQL validation and execution gates unchanged.
+  - The feature-flagged `orchestration_mode` enables incremental rollout without breaking existing callers.
+
+- This SDD assumes that:
+  - The existing orchestrator becomes more of a **safety and execution substrate**, while the ReAct supervisor provides the **cognitive control loop**.
+  - Subsequent Technical Specification and Planning steps will define the exact division of responsibility (what stays in `QueryOrchestrator` vs. what moves into the supervisor graph) and the concrete tool APIs.
 
