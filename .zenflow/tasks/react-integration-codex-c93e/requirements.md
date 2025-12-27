@@ -81,6 +81,9 @@
 4. **No raw chain-of-thought leakage**
    - External surfaces (API responses, logs likely to reach end users) MUST only include short `thought_summary` fields, not full internal reasoning traces.
    - Richer traces may be stored internally for debugging, but must not be surfaced directly to end users.
+5. **Supervisor authority**
+   - For data queries, the ReAct Supervisor MUST be the sole component responsible for sequencing agent/tool execution.
+   - The legacy pipeline (intent → discovery → join → validate → exec → answer) MUST NOT be executed automatically as a fixed path; it may only be entered via supervisor-initiated tool calls (or via an explicit “pipeline mode” feature flag when supervisor is disabled).
 
 ## 5. Functional Requirements
 
@@ -170,6 +173,15 @@
   - Unit/integration tests (e.g., assertions on step count and stop reason).
   - Developers using existing debug tools / logs.
 
+**Supervisor Reasoning Representation**
+
+- The supervisor MAY internally reason using hidden LLM chain-of-thought.
+- Persisted state and logs MUST store only:
+  - A short, human-readable decision summary (e.g., “Result mismatched intent → replanning discovery”).
+  - The chosen action/tool.
+  - The observed outcome (or summarized observation).
+- Raw chain-of-thought MUST NOT be logged or returned in API responses.
+
 ### NFR‑3: Performance
 
 - For “easy” queries, supervisor SHOULD typically converge within:
@@ -219,6 +231,11 @@
   - API entrypoints.
   - Tests that exercise these paths.
 - …then it SHOULD be removed or archived.
+
+**Codebase Simplification Requirement**
+
+- As part of this integration, redundant orchestration logic, unused routing branches, deprecated agents, and pipeline-specific glue code MUST be removed where they are no longer reachable or necessary under the supervisor-driven architecture.
+- Backward compatibility inside this branch is not required unless explicitly stated; deprecation stubs are only needed for public entrypoints that external callers still rely on.
 
 ### Removal Rules
 
@@ -296,4 +313,3 @@
 - This SDD assumes that:
   - The existing orchestrator becomes more of a **safety and execution substrate**, while the ReAct supervisor provides the **cognitive control loop**.
   - Subsequent Technical Specification and Planning steps will define the exact division of responsibility (what stays in `QueryOrchestrator` vs. what moves into the supervisor graph) and the concrete tool APIs.
-
