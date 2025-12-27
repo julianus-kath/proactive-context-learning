@@ -212,6 +212,27 @@ class ReactSupervisor:
             next_tool = _select_next_tool(current, last_tool_name)
 
         _normalize_stop_reason(current)
+
+        # Emit a final supervisor summary to the debug logger so that
+        # downstream tools can inspect outcomes without reading full state.
+        try:
+            trace = current.get("supervisor_trace") or []
+            budgets = {
+                "supervisor_step_count": int(current.get("supervisor_step_count", 0) or 0),
+                "max_supervisor_steps": int(current.get("max_supervisor_steps", 0) or 0),
+                "total_llm_calls": int(current.get("total_llm_calls", 0) or 0),
+                "max_llm_calls": int(current.get("max_llm_calls", 0) or 0),
+                "no_progress_repeat_count": int(current.get("no_progress_repeat_count", 0) or 0),
+            }
+            debug_logger.supervisor_final(
+                final_response=str(current.get("final_response") or ""),
+                stop_reason=str(current.get("stop_reason") or ""),
+                budgets=budgets,
+                trace_length=len(trace),
+            )
+        except Exception:
+            logger.debug("Failed to log supervisor_final to debug_logger", exc_info=True)
+
         return current
 
 

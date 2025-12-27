@@ -1041,6 +1041,45 @@ class DebugLogger:
         }
         self._add_to_buffer(message, "SUPERVISOR_STEP", structured_payload)
 
+    def supervisor_final(
+        self,
+        *,
+        final_response: str,
+        stop_reason: Optional[str],
+        budgets: Dict[str, Any],
+        trace_length: int,
+    ) -> None:
+        """
+        Log the final outcome of a supervisor-driven run.
+
+        This provides a single, consolidated record containing:
+        - final_response
+        - stop_reason
+        - budgets at termination
+        - number of supervisor steps executed
+        """
+        title = "Supervisor final result"
+        data = {
+            "final_response": final_response,
+            "stop_reason": stop_reason,
+            "trace_length": trace_length,
+            "budgets": budgets or {},
+        }
+        message = self._log_entry(
+            LogLevel.DECISION,
+            title,
+            data,
+            nested=False,
+        )
+        # Log as INFO; this is high-level summary, not an error.
+        self.logger.info(message)
+
+        structured_payload = {
+            "event": "supervisor_final",
+            **data,
+        }
+        self._add_to_buffer(message, "SUPERVISOR_FINAL", structured_payload)
+
     def _add_to_buffer(
         self,
         message: str,

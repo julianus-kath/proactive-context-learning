@@ -94,6 +94,45 @@ def format_supervisor_step(data: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def format_supervisor_final(data: Dict[str, Any]) -> str:
+    """Format the final supervisor outcome for a run."""
+    final_response = data.get("final_response") or ""
+    stop_reason = data.get("stop_reason") or ""
+    trace_length = data.get("trace_length")
+    budgets = data.get("budgets") or {}
+
+    header = (
+        f"\n{C.BOLD}{C.GREEN}{'═' * 100}{C.END}\n"
+        f"{C.BOLD}{C.GREEN}✅ SUPERVISOR FINAL RESULT{C.END}\n"
+        f"{C.BOLD}{C.GREEN}{'═' * 100}{C.END}\n"
+    )
+
+    lines: List[str] = [header]
+
+    lines.append(f"{C.GREEN}stop_reason{C.END}: {C.WHITE}{stop_reason}{C.END}")
+    if trace_length is not None:
+        lines.append(f"{C.GREEN}steps_executed{C.END}: {C.WHITE}{trace_length}{C.END}")
+
+    if budgets:
+        bs = []
+        for k in [
+            "supervisor_step_count",
+            "max_supervisor_steps",
+            "total_llm_calls",
+            "max_llm_calls",
+            "no_progress_repeat_count",
+        ]:
+            if k in budgets:
+                bs.append(f"{k}={budgets[k]}")
+        if bs:
+            lines.append(f"{C.GREEN}budgets{C.END}: {C.WHITE}{', '.join(str(b) for b in bs)}{C.END}")
+
+    if final_response:
+        lines.append(f"\n{C.GREEN}final_response{C.END}:\n{C.WHITE}{final_response}{C.END}")
+
+    return "\n".join(lines)
+
+
 async def stream_supervisor_steps(
     service_url: str = "http://localhost:5001",
     api_key: str = "supersecretapikey",
@@ -140,13 +179,19 @@ async def stream_supervisor_steps(
                         data = entry.get("data") or {}
                         event = data.get("event")
 
-                        # Be tolerant: some entries may be identified by type,
-                        # others by event field depending on logging evolution.
+                        # Supervisor loop iterations
                         if (
                             (log_type == "SUPERVISOR_STEP" or event == "supervisor_step")
                             and isinstance(data, dict)
                         ):
                             print(format_supervisor_step(data))
+
+                        # Final outcome for a run
+                        elif (
+                            (log_type == "SUPERVISOR_FINAL" or event == "supervisor_final")
+                            and isinstance(data, dict)
+                        ):
+                            print(format_supervisor_final(data))
 
                     await asyncio.sleep(0.5)
 
