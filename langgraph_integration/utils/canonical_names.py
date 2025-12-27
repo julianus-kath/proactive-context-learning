@@ -88,7 +88,12 @@ def canonical_table_name(raw_name: str, dialect: str, schema: str) -> str:
     #   provided default or a sensible dialect-specific fallback.
     if dialect == "postgres":
         if schema_part:
-            schema_clean = schema_part.strip().lower()
+            candidate = schema_part.strip().lower()
+            if candidate in {"dbo", "db_owner"}:
+                fallback = (schema or "public").strip().lower() or "public"
+                schema_clean = fallback
+            else:
+                schema_clean = candidate
         else:
             schema_clean = (schema or "public").strip().lower()
     else:

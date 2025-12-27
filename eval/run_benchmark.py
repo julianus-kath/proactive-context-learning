@@ -505,7 +505,7 @@ def main():
     )
     parser.add_argument(
         "--dataset",
-        default="eval/datasets/cockpit_queries_top5.jsonl",
+        default="/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/datasets/cockpit_queries.jsonl",
         help="Path to benchmark dataset (JSONL format). Default runs 5 representative queries; use cockpit_queries.jsonl for full 12.",
     )
     parser.add_argument(

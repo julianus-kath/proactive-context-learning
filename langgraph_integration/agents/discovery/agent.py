@@ -17,7 +17,7 @@ import asyncio
 import concurrent.futures
 import difflib
 import re
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 
