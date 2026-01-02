@@ -362,27 +362,6 @@ class MCPTools:
                 }
             ),
             MCPTool(
-                name="query",
-                description="Execute a SELECT query against the database (legacy - use query_bounded for production)",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "sql": {
-                            "type": "string",
-                            "description": "SQL SELECT query to execute"
-                        },
-                        "limit": {
-                            "type": "integer",
-                            "description": "Maximum number of rows to return (default: 100, max: 1000)",
-                            "default": 100,
-                            "minimum": 1,
-                            "maximum": 1000
-                        }
-                    },
-                    "required": ["sql"]
-                }
-            ),
-            MCPTool(
                 name="query_bounded",
                 description="Execute a bounded SELECT query with comprehensive safety controls (validation, row caps, timeout, redaction)",
                 inputSchema={

@@ -5,13 +5,14 @@ Provides HTTP endpoints for the chatbot UI to interact with the LangGraph workfl
 
 import os
 import sys
+import json
 import asyncio
 import logging
 from typing import Dict, Any, Optional, List
-from fastapi import FastAPI, HTTPException, Body, Header
+from fastapi import FastAPI, HTTPException, Body, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse
 from pydantic import BaseModel, ValidationError, Field
 import uvicorn
 from dotenv import load_dotenv
@@ -127,6 +128,65 @@ class DebugLogsResponse(BaseModel):
 orchestrator = None
 debug_logger = None
 logger = logging.getLogger(__name__)
+
+ANSI_KEY = "\033[96m"
+ANSI_VALUE = "\033[92m"
+ANSI_PUNCT = "\033[95m"
+ANSI_RESET = "\033[0m"
+
+
+def _determine_log_format(request: Request, format_override: Optional[str]) -> str:
+    if format_override:
+        fmt = format_override.lower()
+        if fmt in ("json", "text"):
+            return fmt
+    user_agent = request.headers.get("user-agent", "").lower()
+    if "curl" in user_agent:
+        return "text"
+    return "json"
+
+
+def _colorize_json_output(text: str) -> str:
+    colored_lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        indent_length = len(line) - len(line.lstrip())
+        indent = line[:indent_length]
+        if not stripped:
+            colored_lines.append(line)
+            continue
+        if stripped in {"{", "}", "[", "]", "},", "],"}:
+            colored_lines.append(f"{indent}{ANSI_PUNCT}{stripped}{ANSI_RESET}")
+            continue
+        if stripped.startswith("\""):
+            colon_index = stripped.find(":")
+            if colon_index != -1:
+                key = stripped[:colon_index]
+                rest = stripped[colon_index + 1:]
+                colored_lines.append(
+                    f"{indent}{ANSI_KEY}{key}{ANSI_RESET}:{ANSI_VALUE}{rest}{ANSI_RESET}"
+                )
+                continue
+        colored_lines.append(f"{indent}{ANSI_VALUE}{stripped}{ANSI_RESET}")
+    return "\n".join(colored_lines)
+
+
+def _render_logs_response(
+    logs: List[Dict[str, Any]],
+    status: str,
+    request: Request,
+    format_override: Optional[str],
+    color_override: Optional[bool],
+):
+    fmt = _determine_log_format(request, format_override)
+    colorize = color_override if color_override is not None else fmt == "text"
+    payload = {"logs": logs, "status": status}
+    if fmt == "text":
+        pretty = json.dumps(payload, indent=2, ensure_ascii=False)
+        if colorize:
+            pretty = _colorize_json_output(pretty)
+        return PlainTextResponse(content=pretty)
+    return JSONResponse(content=payload)
 
 
 def _validate_api_key(provided_key: Optional[str]):
