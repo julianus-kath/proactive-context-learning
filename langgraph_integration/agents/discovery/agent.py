@@ -1936,7 +1936,7 @@ class DiscoveryAgent:
             extra.extend(["Umsatz", "VKPosition", "Rechnungsposition"])
 
         # Deduplicate while preserving order and drop anything already present in the
-        # primary keywords to avoid redundant calls.
+        # primary keywords to avoid archive calls.
         seen = set()
         filtered: List[str] = []
         for term in extra:

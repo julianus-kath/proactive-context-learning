@@ -5,7 +5,7 @@ Phase 7 Enhancement:
 - Smart hybrid matching: fuzzy for German/non-English, exact for others
 - Ranked results with confidence scoring
 - Relations traversal via foreign keys
-- Session-level caching to avoid redundant searches
+- Session-level caching to avoid archive searches
 - Fallback to on-demand search if Scout Mode unavailable
 
 Usage:
@@ -45,7 +45,7 @@ class TableMatch:
 
 
 class SessionTableCache:
-    """Session-level cache for table searches to avoid redundant lookups."""
+    """Session-level cache for table searches to avoid archive lookups."""
     
     def __init__(self, ttl_seconds: int = 300):
         """

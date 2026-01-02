@@ -9,7 +9,7 @@ Legacy proxy mode has been removed in favor of the single MCP interface.
 
 PHASE 1 ENHANCEMENT: Schema Caching & Selective Loading
 --------------------------------------------------------
-This module integrates with the schema cache to eliminate redundant
+This module integrates with the schema cache to eliminate archive
 schema discovery calls and supports selective table loading for smaller prompts.
 
 Changes:
@@ -90,7 +90,7 @@ class ProxyDatabaseClient:
         """
         Get the database schema as a formatted string.
         
-        PHASE 1 ENHANCEMENT: Now uses schema cache to avoid redundant discovery.
+        PHASE 1 ENHANCEMENT: Now uses schema cache to avoid archive discovery.
         First call indexes the schema, subsequent calls use cached data.
         
         Args:

@@ -416,7 +416,7 @@ class QueryOrchestrator:
         """
         Build a stable, hashable fingerprint for discovery inputs.
 
-        Used to detect redundant discovery invocations and enable caching.
+        Used to detect archive discovery invocations and enable caching.
         """
         user_input = (state.get("user_input") or "").strip().lower()
         intent = state.get("intent") or {}
@@ -528,7 +528,7 @@ class QueryOrchestrator:
         """
         Build a stable fingerprint for join/SQL generation inputs.
 
-        Captures relevant_tables + intent signature so we can detect redundant
+        Captures relevant_tables + intent signature so we can detect archive
         join planning/SQL generation cycles.
         """
         raw_tables = state.get("relevant_tables") or []

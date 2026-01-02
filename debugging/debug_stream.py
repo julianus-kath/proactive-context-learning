@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-🔬 DEEP WORKFLOW DEBUGGER - Phase 9 Intent Parser Investigation
+🔬 DEEP WORKFLOW DEBUGGER
 
 Real-time debug monitor that PAINFULLY SHOWS:
 ✓ Exact agent name and execution stage

@@ -40,7 +40,7 @@ class ViewDependencyAnalyzer:
     
     Optimizes query planning by:
     - Preferring materialized views (faster execution)
-    - Avoiding redundant joins when view already includes logic
+    - Avoiding archive joins when view already includes logic
     """
     
     def __init__(self, catalog: Dict[str, TableInfo]):

@@ -246,12 +246,78 @@ X-Eval-Run-Id: 20251213_170456_northwind_v1
 X-Eval-Query-Id: Q1
 ```
 
-These headers should be:
-1. Extracted by the LangGraph service
-2. Included in the state passed through the agent pipeline
-3. Used to emit trace events to the eval service (via `eval_client.emit_event()`)
+These headers must be extracted by the LangGraph service, propagated through the orchestrator state, and used when emitting trace events via `eval_client.emit_event()`.
 
-See `chatbot_ui/langgraph_service.py` for instrumentation hooks.
+### Instrumentation Steps
+
+1. **Import EvalClient** – add `from eval.eval_client import get_eval_client` near the top of `chatbot_ui/langgraph_service.py`.
+2. **Capture headers** – extend the FastAPI handler signature with `x_eval_run_id: Optional[str] = Header(None)` and `x_eval_query_id: Optional[str] = Header(None)`, defaulting to a UUID and `"standalone"` when absent.
+3. **Attach to state** – include `eval_run_id` and `eval_query_id` in the orchestrator state object so every agent can log against the same identifiers.
+4. **Emit stage events** – before and after each major pipeline phase (intent parsing, discovery, join/SQL, validation, execution, answer formatting) call `eval_client.emit_event_sync(...)` with `event_type="stage_start"` / `"stage_complete"` and any contextual `data` payload.
+5. **Persist final artifact** – once a query completes, call `eval_client.save_query_artifact_sync(eval_run_id, eval_query_id, artifact)` containing the normalized response envelope, SQL text, tables used, latency, retries, and semantic status.
+
+Minimal pattern:
+
+```python
+from eval.eval_client import get_eval_client
+
+eval_client = get_eval_client()
+eval_run_id = x_eval_run_id or str(uuid.uuid4())
+eval_query_id = x_eval_query_id or "standalone"
+
+try:
+    eval_client.emit_event_sync(
+        run_id=eval_run_id,
+        query_id=eval_query_id,
+        event_type="stage_start",
+        stage="intent_parsing",
+    )
+    intent = await orchestrator.parse_intent(state)
+    eval_client.emit_event_sync(
+        run_id=eval_run_id,
+        query_id=eval_query_id,
+        event_type="stage_complete",
+        stage="intent_parsing",
+        data={"intent": intent},
+    )
+    # ...additional stages...
+finally:
+    artifact = {
+        "query_id": eval_query_id,
+        "question": request.user_input,
+        "final_answer_text": result.get("final_response"),
+        "sql_executed": [result.get("exec_result", {}).get("sql_query", "")],
+        "tables_used": result.get("exec_result", {}).get("tables_used", []),
+        "row_count": result.get("exec_result", {}).get("row_count"),
+        "latency_ms_total": int((time.time() - start_time) * 1000),
+    }
+    eval_client.save_query_artifact_sync(eval_run_id, eval_query_id, artifact)
+```
+
+### Event Types
+
+- `stage_start`
+- `stage_complete`
+- `error`
+- `retry`
+- `final_result`
+
+### Event Data Guidelines
+
+- Discovery: `tables_found`, `table_confidence`
+- SQL generation: `sql_generated`, `tables_referenced`
+- Execution: `row_count`, `sql_executed`, `tables_used`, `execution_time_ms`
+- Answer formatting: `final_answer`, `answer_length`
+
+### Non-Blocking Behavior
+
+`emit_event_sync` and `save_query_artifact_sync` swallow network exceptions and log them at DEBUG level. Set `LOG_LEVEL=DEBUG` to surface instrumentation failures without interrupting user traffic.
+
+### Testing Instrumentation
+
+Add regression coverage (see `tests/test_eval_integration.py`) to ensure the eval client never raises on network failure and that artifacts land in `eval/runs/<run_id>/` when a local service is running.
+
+Refer to `chatbot_ui/langgraph_service.py` for the current integration points.
 
 ## Scoring & Analysis
 
