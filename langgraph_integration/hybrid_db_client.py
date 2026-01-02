@@ -13,7 +13,7 @@ import os
 # Add the project root to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from mcp_server.db import db_manager
+from mcp_server.database.db import db_manager
 
 logger = logging.getLogger(__name__)
 

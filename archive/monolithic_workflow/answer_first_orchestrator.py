@@ -24,11 +24,11 @@ import logging
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 
-from mcp_server.intent_parser import parse_intent, IntentType, ParsedIntent
-from mcp_server.table_ranker import rank_tables, RankedTable
-from mcp_server.query_blueprints import generate_blueprint
-from mcp_server.query_formatter import QueryFormatter
-from mcp_server.observability import (
+from mcp_server.yellow.intent_parser import parse_intent, IntentType, ParsedIntent
+from mcp_server.tools.table_ranker import rank_tables, RankedTable
+from mcp_server.green.query_blueprints import generate_blueprint
+from mcp_server.green.query_formatter import QueryFormatter
+from mcp_server.server.observability import (
     AnswerFirstExecutionMetrics,
     IntentParsingMetrics,
     TableRankingMetrics,
@@ -263,7 +263,7 @@ class AnswerFirstOrchestrator:
                     debug_info["sql_initial"] = sql_1
 
                     # Validate (preflight limit=1)
-                    from mcp_server.bounded_query import execute_bounded_query
+                    from mcp_server.tools.bounded_query import execute_bounded_query
                     preflight_1 = await execute_bounded_query(
                         query=sql_1,
                         db_adapter=self.db_adapter,
@@ -412,7 +412,7 @@ class AnswerFirstOrchestrator:
 
             # Preflight validation using bounded query (LIMIT/TOP 1)
             try:
-                from mcp_server.bounded_query import execute_bounded_query
+                from mcp_server.tools.bounded_query import execute_bounded_query
             except Exception:
                 execute_bounded_query = None
 
@@ -749,7 +749,7 @@ class AnswerFirstOrchestrator:
         if not table_full_names:
             return snippet
         try:
-            from mcp_server.discovery_tools import DiscoveryTools
+            from mcp_server.tools.discovery_tools import DiscoveryTools
             for full in table_full_names[:3]:
                 try:
                     resp = await DiscoveryTools.describe_table(

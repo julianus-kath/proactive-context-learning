@@ -3807,7 +3807,7 @@ async def _format_execution_results(
     async def _perform_local_semantic_search(self, catalog: Dict[str, Any], intent: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Perform semantic search locally using TableRanker."""
         try:
-            from mcp_server.table_ranker import TableRanker
+            from mcp_server.tools.table_ranker import TableRanker
 
             # Extract entities and operations from intent
             entities = []
