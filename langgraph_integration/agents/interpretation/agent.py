@@ -99,3 +99,8 @@ Provide only the final answer, no explanations.
             return state
 
 
+def build_interpretation_graph():
+    agent = InterpretationAgent()
+    return agent.build_subgraph()
+
+

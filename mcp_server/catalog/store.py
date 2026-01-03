@@ -1,6 +1,6 @@
 """
 Catalog Store for Scout Mode
-Phase 1: Atomic writes, TTL, compression, and versioning.
+Atomic writes, TTL, compression, and versioning.
 
 Handles persistence of Scout-generated schema catalogs with:
 - GZIP compression for space efficiency

@@ -18,6 +18,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
+from langgraph.graph import StateGraph, END
 from langgraph_integration.contracts.state import BaseState, ProgressSignal
 from langgraph_integration.tools import capability_tools
 from langgraph_integration.debug_logger import get_debug_logger
@@ -588,3 +589,16 @@ def _normalize_stop_reason(state: BaseState) -> None:
 
     # Conservative fallback: treat as fatal_error.
     state["stop_reason"] = "fatal_error"
+
+
+def build_supervisor_graph():
+    graph = StateGraph(BaseState)
+
+    async def supervisor_node(state: BaseState) -> BaseState:
+        config = SupervisorConfig()
+        return await run_supervisor(state, config=config)
+
+    graph.add_node("react_supervisor", supervisor_node)
+    graph.set_entry_point("react_supervisor")
+    graph.add_edge("react_supervisor", END)
+    return graph.compile()

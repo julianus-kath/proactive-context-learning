@@ -222,7 +222,7 @@ class IntentParserAgent:
 
         conversation_context = self._format_message_history(state.get("messages", []))
 
-        # For data queries, do initial analysis
+        # For data queries, do initial analysis #TODO: give him intent options
         prompt = f"""
 Analyze this database query and provide initial intent classification.
 
@@ -1086,3 +1086,8 @@ Keep the question clear and actionable.
             return True
 
         return False
+
+
+def build_intent_parser_graph():
+    agent = IntentParserAgent()
+    return agent.build_subgraph()

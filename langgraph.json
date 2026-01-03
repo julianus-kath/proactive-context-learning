@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/langchain-ai/langgraph/main/langgraph.schema.json",
+  "graphs": {
+    "main_orchestrator": "langgraph_integration.orchestrator:build_graph",
+    "intent_parser_agent": "langgraph_integration.agents.intent_parser.agent:build_intent_parser_graph",
+    "discovery_agent": "langgraph_integration.agents.discovery.agent:build_discovery_graph",
+    "join_sql_agent": "langgraph_integration.agents.join_sql.agent:build_join_sql_graph",
+    "validate_sql_agent": "langgraph_integration.agents.sql_validator.agent:build_sql_validator_graph",
+    "exec_recovery_agent": "langgraph_integration.agents.exec_recovery.agent:build_exec_recovery_graph",
+    "result_validator_agent": "langgraph_integration.agents.result_validator.agent:build_result_validator_graph",
+    "interpretation_agent": "langgraph_integration.agents.interpretation.agent:build_interpretation_graph",
+    "supervisor_react": "langgraph_integration.supervisor:build_supervisor_graph",
+    "answer_agent": "langgraph_integration.agents.answer.agent:build_answer_graph"
+  }
+}

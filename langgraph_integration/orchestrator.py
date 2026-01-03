@@ -32,7 +32,6 @@ import time
 import re
 from typing import Dict, Any, List, Optional
 from langchain_openai import ChatOpenAI
-from langgraph.graph import StateGraph, START, END
 from pydantic import ValidationError
 
 from langgraph_integration.contracts.state import BaseState, merge_error_info
@@ -140,14 +139,16 @@ class QueryOrchestrator:
         # Default answer formatting strategy (LLM vs deterministic-from-data)
         self.default_answer_mode = get_default_answer_mode()
 
-        # Orchestration mode: "pipeline" (default) or "react_supervisor"
-        raw_mode = orchestration_mode
-        if raw_mode is None:
-            raw_mode = os.getenv("ORCHESTRATION_MODE", "pipeline")
-        normalized_mode = str(raw_mode or "pipeline").strip().lower()
-        if normalized_mode not in ("pipeline", "react_supervisor"):
-            normalized_mode = "pipeline"
-        self.orchestration_mode: str = normalized_mode
+        requested_mode = str(
+            orchestration_mode
+            or os.getenv("ORCHESTRATION_MODE", "react_supervisor")
+            or "react_supervisor"
+        ).strip().lower()
+        if requested_mode and requested_mode != "react_supervisor":
+            logger.warning(
+                "Pipeline orchestration has been removed; defaulting to react_supervisor",
+            )
+        self.orchestration_mode = "react_supervisor"
 
         # Initialize specialized agents
         logger.info("🚀 Initializing multi-agent orchestrator (Phase 9)...")
@@ -194,8 +195,6 @@ class QueryOrchestrator:
 
         # Cache last successful execution for interpretation follow-ups
         self._previous_exec_cache: Dict[str, Any] = {}
-
-        self.graph = self._build_graph()
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -1029,571 +1028,20 @@ class QueryOrchestrator:
 
     async def ainvoke(self, input_state: Dict, **kwargs):
         """
-        Invoke the orchestrator graph with sensible defaults.
-        
-        Sets default recursion_limit=1500 if not provided (needed because
-        subgraphs, nested agent calls, and internal tool invocations
-        consume many recursion steps across the call stack).
+        Legacy entrypoint that previously executed the fixed pipeline graph.
         """
-        config = kwargs.pop("config", {})
-        if "recursion_limit" not in config:
-            config["recursion_limit"] = 1500
-        result = await self.graph.ainvoke(input_state, config=config, **kwargs)
-        if isinstance(result, dict):
-            result.setdefault("answer", result.get("final_response", ""))
-        return result
-
-    def _build_graph(self) -> StateGraph:
-        """
-        Build the complete orchestrator graph.
-        
-        Returns:
-            Compiled LangGraph StateGraph ready for execution
-        """
-        from typing import Literal
-        
-        logger.info("🏗️  Building orchestrator graph...")
-        graph = StateGraph(BaseState)
-
-        # ============= Define all nodes (registered as async for ainvoke) =============
-        # For ainvoke() compatibility, register nodes as their native async methods
-        graph.add_node("index_database", self._index_database_node)
-        graph.add_node("parse_intent", self._parse_intent_node)
-        graph.add_node("concept_mapping", self._concept_mapping_node)
-        graph.add_node("route_operation", self._route_operation_node)
-
-        # Agent nodes (main flow) - register async implementations directly
-        graph.add_node("discovery", self._discovery_node)
-        graph.add_node("join_sql", self._join_sql_node)
-        graph.add_node("validate_sql", self._validate_sql_node)
-        graph.add_node("exec_recovery", self._exec_recovery_node)
-        # 🆕 Phase 10a: Result validation node (catches silent failures)
-        # Wrap result validator in an orchestrator method so we can instrument node entry/LLM usage.
-        graph.add_node("result_validator", self._result_validator_async)
-        graph.add_node("answer", self._answer_node)
-        # interpretation node is added once above
-
-        # Special operation nodes - register async implementations directly
-        graph.add_node("answer_schema", self._answer_schema_node)
-        graph.add_node("answer_health", self._answer_health_node)
-        graph.add_node("answer_error", self._answer_error_node)
-        # Interpretation node implementation
-        graph.add_node("interpret", self._interpret_node)
-
-        # ============= Define edges =============
-        # Initial path: index → parse → route
-        graph.add_edge(START, "index_database")
-        graph.add_edge("index_database", "parse_intent")
-        graph.add_edge("parse_intent", "concept_mapping")
-        graph.add_edge("concept_mapping", "route_operation")
-
-        # ============= CONDITIONAL ROUTING FROM route_operation =============
-        # Based on operation type, route to appropriate handler
-        def route_to_operation(state: BaseState) -> str:
-            """
-            Route to appropriate handler based on intent operation.
-
-            Priority order:
-            1. needs_clarification: Ask user for clarification (highest priority)
-            2. error_info: Handle errors
-            3. operation type: Route based on intent operation
-
-            Branches:
-            - "clarify": Ask user for clarification (needs_clarification=True)
-            - "error": Handle errors (error_info present)
-            - "schema_query": Discover tables/views and explain schema
-            - "health_check": Check system health
-            - "execute_direct": Validate & execute pre-written SQL
-            - "query" (default): Full query pipeline
-            """
-            intent = state.get("intent", {})
-            operation = intent.get("operation", "query")
-            needs_clarification = intent.get("needs_clarification", False)
-            error_info = state.get("error_info")
-
-            logger.info(f"🚦 [ROUTE_TO_OPERATION] intent: {intent}")
-            logger.info(f"🚦 [ROUTE_TO_OPERATION] operation: {operation}")
-            logger.info(f"🚦 [ROUTE_TO_OPERATION] needs_clarification: {needs_clarification}")
-            logger.info(f"🚦 [ROUTE_TO_OPERATION] error_info: {error_info}")
-
-            # HIGHEST PRIORITY: Check for clarification needs
-            if needs_clarification:
-                logger.info("🚦 [ROUTE_TO_OPERATION] ⚠️  Query needs clarification, routing to answer")
-                return "answer"
-
-            # SECOND PRIORITY: Check for errors
-            if error_info:
-                logger.info("🚦 [ROUTE_TO_OPERATION] ❌ Error detected, routing to answer_error")
-                return "answer_error"
-
-            # THIRD PRIORITY: Route by required_action (refinement/interpretation)
-            result = None
-            try:
-                required_action = intent.get("required_action")
-                if required_action == "refine_previous":
-                    logger.info("🚦 [ROUTE_TO_OPERATION] 🔄 Refinement query detected → discovery")
-                    target_tables = intent.get("target_tables", [])
-                    if target_tables:
-                        logger.info(f"🚦 [ROUTE_TO_OPERATION]    Target tables: {target_tables}")
-                        state["forced_tables"] = target_tables
-                    return "discovery"
-                elif required_action == "interpret_previous" and (state.get("previous_exec_result") or state.get("exec_result")):
-                    logger.info("🚦 [ROUTE_TO_OPERATION] 🎯 Follow-up interpretation detected → interpret")
-                    return "interpret"
-            except Exception as e:
-                logger.warning(f"🚦 [ROUTE_TO_OPERATION] Error checking required_action: {e}")
-                pass
-            if operation == "clarify":
-                result = "answer"
-            elif operation == "schema_query":
-                result = "discovery_for_schema"
-            elif operation == "health_check":
-                result = "answer_health"
-            elif operation == "execute_direct":
-                # Canonical path for direct SQL:
-                # validate_sql → exec_recovery → result_validator → answer
-                result = "validate_sql"
-            elif operation == "error":
-                result = "answer_error"
-            else:
-                # Default: query → discovery → join_sql → validate_sql → exec_recovery → result_validator → answer
-                result = "discovery"
-
-            logger.info(f"🚦 [ROUTE_TO_OPERATION] Routing to: {result}")
-            return result
-
-        # Add conditional edges from route_operation with explicit mapping
-        graph.add_conditional_edges(
-            "route_operation",
-            route_to_operation,
-            {
-                "answer": "answer",
-                "discovery_for_schema": "discovery_for_schema",
-                "answer_health": "answer_health",
-                "exec_recovery": "exec_recovery",
-                "validate_sql": "validate_sql",
-                "answer_error": "answer_error",
-                "discovery": "discovery",
-                "interpret": "interpret",
-            }
+        raise RuntimeError(
+            "Pipeline orchestration has been removed. Use process_query() or the "
+            "ReAct supervisor helpers instead."
         )
 
-        # ============= QUERY PIPELINE =============
-        # Standard query flow: discovery → join_sql → validate_sql → exec_recovery → result_validator → (conditional) answer
-        def route_discovery_result(state: BaseState) -> str:
-            intent = state.get("intent") or {}
-            if intent.get("needs_clarification"):
-                logger.info("🔍 [DISCOVERY_ROUTE] Clarification requested after discovery → answer")
-                return "answer"
-            error = state.get("error_info") or {}
-            if error:
-                # Special-case: when discovery explicitly reports that no candidates
-                # exist, we treat this as a clarify-style answer rather than a hard
-                # pipeline error so the user gets a clear explanation instead of
-                # a generic failure path.
-                error_type = None
-                if isinstance(error, dict):
-                    error_type = error.get("type") or error.get("error_type")
-                else:
-                    try:
-                        error_type = getattr(error, "type", None) or getattr(error, "error_type", None)
-                    except Exception:
-                        error_type = None
+    def _build_graph(self) -> None:
+        """
+        Deprecated pipeline builder retained as a stub for historical reference.
+        """
+        raise RuntimeError("Pipeline graph has been removed; use supervisor mode only.")
 
-                if error_type == "DISCOVERY_NO_CANDIDATES":
-                    logger.info("🔍 [DISCOVERY_ROUTE] DISCOVERY_NO_CANDIDATES → answer")
-                    return "answer"
 
-                logger.info("🔍 [DISCOVERY_ROUTE] Error detected after discovery → answer_error")
-                return "answer_error"
-            relevant_tables = state.get("relevant_tables") or []
-            if not relevant_tables:
-                logger.info("🔍 [DISCOVERY_ROUTE] No relevant tables found → answer")
-                return "answer"
-            return "join_sql"
-
-        graph.add_conditional_edges(
-            "discovery",
-            route_discovery_result,
-            {
-                "join_sql": "join_sql",
-                "answer": "answer",
-                "answer_error": "answer_error",
-            }
-        )
-        graph.add_edge("join_sql", "validate_sql")
-        graph.add_edge("validate_sql", "exec_recovery")
-        # 🆕 Phase 10a: After exec, validate result before answering
-        graph.add_edge("exec_recovery", "result_validator")
-        
-        # 🆕 Phase 10a: Conditional routing from result_validator based on validation outcome
-        def route_validation_result(state: BaseState) -> str:
-            """
-            Route based on validation result.
-            Retry actions:
-            - accept: validation passed, proceed to answer
-            - try_next_candidate: validation failed, try next discovery candidate
-            - replan_with_aggregation: missing GROUP BY, regenerate SQL
-            - replan_with_filter: missing WHERE, regenerate SQL
-            - ask_user: validation unclear, ask user for clarification
-            """
-            validation = state.get("validation_result", {}) or {}
-            retry_action = validation.get("retry_action", "accept") or "accept"
-            # Enforce the same bounded set of retry actions
-            # that the standalone helper uses so graph routing
-            # never depends on arbitrary strings.
-            allowed_retry_actions = {
-                "accept",
-                "try_next_candidate",
-                "replan_with_aggregation",
-                "replan_with_filter",
-                "ask_user",
-            }
-            if retry_action not in allowed_retry_actions:
-                logger.warning(
-                    "validation_retry_action_unsupported: retry_action=%r, coercing to 'accept'",
-                    retry_action,
-                )
-                retry_action = "accept"
-                validation["retry_action"] = "accept"
-                state["validation_result"] = validation
-            semantic_status = validation.get("semantic_status")
-            semantic_retry_action = validation.get("semantic_retry_action", "none") or "none"
-
-            eval_mode = state.get("eval_mode")
-            is_benchmark = eval_mode == "benchmark"
-            semantic_retry_count = int(state.get("semantic_retry_count", 0) or 0)
-            max_semantic_retries = int(state.get("max_semantic_retries", 0) or 0)
-            plan_attempt = int(state.get("plan_attempt_count", 0) or 0)
-            max_plans = int(state.get("max_total_plans", 0) or 0) or 4
-
-            # Semantic-aware routing is only active in benchmark mode; interactive mode
-            # treats semantic findings as logging-only so UX remains unchanged.
-            semantic_driven_retry = False
-
-            logger.info(
-                "🚦 [VALIDATION_ROUTE] retry_action=%s semantic_status=%s semantic_retry_action=%s "
-                "semantic_retry_count=%s/%s plan_attempt_count=%s/%s eval_mode=%s",
-                retry_action,
-                semantic_status,
-                semantic_retry_action,
-                semantic_retry_count,
-                max_semantic_retries,
-                plan_attempt,
-                max_plans,
-                eval_mode,
-            )
-
-            # Phase 2b: Repair loop caps & no-progress detection
-            validation_attempts = state.get("validation_attempt_count", 0)
-            exec_recovery_attempts = state.get("exec_recovery_attempt_count", 0)
-            max_validation_attempts = state.get("max_validation_attempts", 0) or getattr(self, "max_validation_attempts", 2)
-            max_exec_recovery_attempts = state.get("max_exec_recovery_attempts", 0) or getattr(self, "max_exec_recovery_attempts", 2)
-            max_no_progress_repeats = state.get("max_no_progress_repeats", 0) or getattr(self, "max_no_progress_repeats", 2)
-
-            logger.info(
-                "🚦 [VALIDATION_ROUTE] attempts: validation=%s/%s exec_recovery=%s/%s",
-                validation_attempts,
-                max_validation_attempts,
-                exec_recovery_attempts,
-                max_exec_recovery_attempts,
-            )
-
-            # No-progress detector: track repeated (SQL,error) signatures
-            try:
-                sig = self._repair_signature(state)
-                seen = state.get("repair_signatures_seen") or {}
-                count = seen.get(sig, 0) + 1
-                seen[sig] = count
-                state["repair_signatures_seen"] = seen
-                state["repair_no_progress_count"] = state.get("repair_no_progress_count", 0) + (1 if count > 1 else 0)
-
-                if count >= max_no_progress_repeats and max_no_progress_repeats > 0:
-                    logger.warning(
-                        "🚦 [VALIDATION] Repair no-progress detected for signature %s (count=%s/%s)",
-                        sig,
-                        count,
-                        max_no_progress_repeats,
-                    )
-                    state["stop_reason"] = "repair_no_progress"
-                    preview_sql = (state.get("sql_query", "") or "").strip()
-                    preview_sql = preview_sql[:300] + ("..." if len(preview_sql) > 300 else "")
-                    merge_error_info(
-                        state,
-                        {
-                            "type": "REPAIR_NO_PROGRESS",
-                            "stage": "validate_sql",
-                            "message": "Validation/repair cycles repeated the same failing SQL and error without improvement.",
-                            "suggestion": (
-                                "Try narrowing the question (fewer tables/metrics) or phrasing it in a simpler way. "
-                                "You can also try referencing specific tables if you know them."
-                            ),
-                            "context": {
-                                "sql_preview": preview_sql,
-                                "last_error_signature": state.get("last_exec_error_signature"),
-                            },
-                        },
-                    )
-                    return "answer"
-            except Exception as e:
-                logger.warning(f"🚦 [VALIDATION] Failed to compute repair signature: {e}")
-
-            # ===================== Semantic-aware routing (benchmark mode only) =====================
-            if is_benchmark:
-                if semantic_status and semantic_status not in ("OK", "CONTRACT_MISSING", "UNSUPPORTED_METRIC"):
-                    if semantic_retry_action == "replan":
-                        # Enforce semantic-specific budget and shared global plan budget.
-                        if max_semantic_retries > 0 and semantic_retry_count >= max_semantic_retries:
-                            logger.warning(
-                                "🚦 [SEMANTIC] Max semantic replans reached (%s/%s); "
-                                "disabling further semantic retries",
-                                semantic_retry_count,
-                                max_semantic_retries,
-                            )
-                            # Preserve any existing stop_reason but record semantic cap exhaustion.
-                            if not state.get("stop_reason"):
-                                state["stop_reason"] = "max_semantic_retries"
-                        elif plan_attempt + semantic_retry_count >= max_plans:
-                            logger.warning(
-                                "🚦 [SEMANTIC] Global plan budget exhausted for semantic replans "
-                                "(plan_attempt_count=%s, semantic_retry_count=%s, max_total_plans=%s)",
-                                plan_attempt,
-                                semantic_retry_count,
-                                max_plans,
-                            )
-                        else:
-                            # Map semantic failures to existing retry actions without introducing
-                            # new graph nodes or edges. Join-path issues tend to benefit from
-                            # trying a new candidate set, while entity/metric mismatches are
-                            # better served by a fresh plan over the current candidates.
-                            if semantic_status in ("JOIN_PATH_INVALID", "NO_VALID_JOIN_PATH"):
-                                mapped_retry = "try_next_candidate"
-                            else:
-                                mapped_retry = "replan_with_aggregation"
-
-                            logger.info(
-                                "🚦 [SEMANTIC] Mapping semantic_status=%s to retry_action=%s",
-                                semantic_status,
-                                mapped_retry,
-                            )
-                            retry_action = mapped_retry
-                            validation["retry_action"] = mapped_retry
-                            state["validation_result"] = validation
-                            semantic_driven_retry = True
-                    else:
-                        logger.info(
-                            "🚦 [SEMANTIC] semantic_retry_action=%s does not request replanning; "
-                            "semantic_status=%s will be reported without extra retries",
-                            semantic_retry_action,
-                            semantic_status,
-                        )
-
-            # 🧠 Budget-aware routing: if we are at or below the safety margin,
-            # stop sending the graph back to discovery/join (which would require
-            # additional LLM calls) and move toward answering with existing data.
-            llm_usage = state.get("llm_usage") or {}
-            max_calls = state.get("max_llm_calls", 0) or 20
-            total_usage = llm_usage.get("total", state.get("total_llm_calls", 0) or 0)
-            remaining_budget = max_calls - int(total_usage)
-            safety_margin = state.get("llm_budget_safety_margin", 0) or 0
-            if remaining_budget <= safety_margin:
-                logger.warning(
-                    "🚦 [VALIDATION] Remaining LLM budget at/below safety margin "
-                    f"(remaining={remaining_budget}, safety_margin={safety_margin}); "
-                    "disabling discovery/join retries and routing to 'answer'."
-                )
-                # Force accept-path so downstream goes directly to answer.
-                validation["retry_action"] = "accept"
-                state["validation_result"] = validation
-                return "answer"
-
-            # 🆕 Global plan budget: stop after too many plan/validate cycles
-            plan_attempt = state.get("plan_attempt_count", 0)
-            max_plans = state.get("max_total_plans", 6)
-            if plan_attempt >= max_plans:
-                logger.warning(
-                    "🚦 [VALIDATION] Global plan budget exceeded "
-                    f"({plan_attempt}/{max_plans}), routing to 'answer'"
-                )
-                 # Convert into a clarification-style failure to avoid burning more tokens
-                intent = state.get("intent") or {}
-                intent["operation"] = "clarify"
-                intent["needs_clarification"] = True
-                intent["clarification_question"] = intent.get(
-                    "clarification_question",
-                    "This question requires a complex analytic query and I could not find a stable plan within a safe number of attempts. Could you narrow down the scope or specify the main metric you care about?"
-                )
-                intent["ambiguity_reason"] = intent.get(
-                    "ambiguity_reason",
-                    "Maximum planning retries exceeded; query was too broad or complex for an automatic plan."
-                )
-                state["intent"] = intent
-                merge_error_info(
-                    state,
-                    {
-                        "type": "MAX_RETRIES_EXCEEDED",
-                        "message": (
-                            "The system attempted multiple discovery and planning cycles "
-                            "but could not produce a stable query plan."
-                        ),
-                    },
-                )
-                return "answer"
-
-            # Phase 2b: Hard caps on validation and exec_recovery attempts
-            if retry_action in ("try_next_candidate", "replan_with_aggregation", "replan_with_filter"):
-                if validation_attempts >= max_validation_attempts:
-                    logger.warning(
-                        "🚦 [VALIDATION] Max validation attempts reached (%s/%s); stopping repair loop",
-                        validation_attempts,
-                        max_validation_attempts,
-                    )
-                    state["stop_reason"] = "max_validation_attempts"
-                    merge_error_info(
-                        state,
-                        {
-                            "type": "REPAIR_LOOP_STUCK",
-                            "stage": "validate_sql",
-                            "message": (
-                                "The system attempted to validate and repair the SQL multiple times "
-                                "but could not produce a stable, executable query."
-                            ),
-                            "suggestion": (
-                                "Try narrowing the question (fewer tables/metrics) or specifying a clearer metric "
-                                "so the planner can generate a simpler query."
-                            ),
-                        },
-                    )
-                    return "answer"
-
-            if retry_action == "try_next_candidate" and exec_recovery_attempts >= max_exec_recovery_attempts:
-                logger.warning(
-                    "🚦 [VALIDATION] Max exec_recovery attempts reached (%s/%s); stopping repair loop",
-                    exec_recovery_attempts,
-                    max_exec_recovery_attempts,
-                )
-                state["stop_reason"] = "max_exec_recovery_attempts"
-                merge_error_info(
-                    state,
-                    {
-                        "type": "REPAIR_LOOP_STUCK",
-                        "stage": "exec_recovery",
-                        "message": (
-                            "The system attempted to execute and repair the query multiple times "
-                            "but could not complete execution safely."
-                        ),
-                        "suggestion": (
-                            "Consider asking a simpler question or focusing on a smaller subset of data."
-                        ),
-                    },
-                )
-                return "answer"
-            # Increment plan attempt count when we're about to take a retry action
-            if retry_action in ("try_next_candidate", "replan_with_aggregation", "replan_with_filter"):
-                state["plan_attempt_count"] = plan_attempt + 1
-                if is_benchmark and semantic_driven_retry:
-                    state["semantic_retry_count"] = semantic_retry_count + 1
-
-            # 🆕 Circuit breaker: stop retrying per candidate set
-            retry_attempt = state.get("retry_attempt_count", 0)
-            max_retries = state.get("max_retries_per_candidate_set", 2)
-            
-            if retry_attempt >= max_retries:
-                logger.warning(
-                    f"🚦 [VALIDATION] Max retries exceeded "
-                    f"({retry_attempt}/{max_retries}), routing to 'answer'"
-                )
-                merge_error_info(
-                    state,
-                    {
-                        "type": "MAX_RETRIES_EXCEEDED",
-                        "message": (
-                            "All discovery candidates have been tried but the query "
-                            "could not be executed successfully."
-                        ),
-                    },
-                )
-                return "answer"
-            
-            if retry_action == "try_next_candidate":
-                state["retry_attempt_count"] = retry_attempt + 1
-                logger.info(
-                    f"🔄 Validation: Trying next candidate "
-                    f"(attempt {state['retry_attempt_count']}/{max_retries})"
-                )
-                return "discovery"
-            elif retry_action in ["replan_with_aggregation", "replan_with_filter"]:
-                state["retry_attempt_count"] = retry_attempt + 1
-                logger.info(
-                    f"🔄 Validation: Replanning with {retry_action} "
-                    f"(attempt {state['retry_attempt_count']}/{max_retries})"
-                )
-                return "join_sql"
-            elif retry_action == "ask_user":
-                logger.info("❓ Validation: Asking user for clarification")
-                return "answer"
-            else:  # accept or unknown
-                logger.info("✅ Validation: Result accepted, proceeding to answer")
-                return "answer"
-        
-        graph.add_conditional_edges(
-            "result_validator",
-            route_validation_result,
-            {
-                "discovery": "discovery",
-                "join_sql": "join_sql",
-                "answer": "answer",
-            }
-        )
-
-        # ============= SCHEMA QUERY PIPELINE =============
-        # Schema discovery flow: discovery_for_schema → answer_schema
-        # (We use a separate entry point node name to make the graph topology clear)
-        graph.add_node("discovery_for_schema", self._discovery_node)  # Same implementation
-        graph.add_edge("discovery_for_schema", "answer_schema")
-
-        # ============= TERMINAL NODES & HEALTH ROUTING =============
-        # Only these nodes terminate the graph.
-        graph.add_edge("answer", END)
-        graph.add_edge("answer_schema", END)
-        graph.add_edge("answer_error", END)
-        graph.add_edge("interpret", END)
-        # Health check is handled by answer_health node then funneled through answer.
-        graph.add_edge("answer_health", "answer")
-
-        compiled = graph.compile()
-        logger.info("✅ Orchestrator graph compiled successfully")
-        logger.info(f"   Graph nodes: {list(compiled.nodes.keys())}")
-        logger.info(f"   Query path: discovery → join_sql → validate_sql → exec_recovery → result_validator (conditional) → discovery|join_sql|answer")
-        return compiled
-
-    # Legacy-simple intent parser for tests and quick routes
-    def _simple_intent_parser(self, text: str) -> Dict[str, Any]: #TODO remove?
-        t = (text or "").lower()
-        intent: Dict[str, Any] = {"operation": "query", "primary_entities": [], "entities": [], "metrics": [], "filters": []}
-        # Health
-        if any(k in t for k in ["health", "working", "status"]):
-            intent["operation"] = "health_check"
-            return intent
-        # Schema
-        if any(k in t for k in ["tables", "schema", "views"]):
-            intent["operation"] = "schema_query"
-        # Count
-        if any(k in t for k in ["how many", "count", "anzahl", "wie viele"]):
-            intent.setdefault("metrics", []).append("count")
-        # Naive entities
-        for word in ["customers", "customer", "products", "product", "orders", "sales"]:
-            if word in t:
-                intent.setdefault("primary_entities", []).append(word)
-                intent.setdefault("entities", []).append(word)
-        # Discovery keywords (used by DiscoveryAgent)
-        kws = []
-        for w in ["customers", "products", "orders", "sales"]:
-            if w in t:
-                kws.append(w)
-        if kws:
-            intent["keywords_for_discovery"] = list(dict.fromkeys(kws))
-        return intent
 
     # ============= Catalog Management =============
 
@@ -3561,39 +3009,31 @@ class QueryOrchestrator:
             max_total_plans,
         )
 
-        # Determine orchestration mode for this request.
-        # Priority: metadata override → instance default → "pipeline".
-        raw_orch_mode: Optional[str] = None
-        if metadata and isinstance(metadata, dict):
-            raw_orch_mode = metadata.get("orchestration_mode")
-        if raw_orch_mode is None:
-            raw_orch_mode = getattr(self, "orchestration_mode", "pipeline")
-        orch_mode = str(raw_orch_mode or "pipeline").strip().lower()
-        if orch_mode not in ("pipeline", "react_supervisor"):
-            orch_mode = "pipeline"
-        logger.info("PROCESS_QUERY orchestration_mode=%s", orch_mode)
-        initial_state["orchestration_mode"] = orch_mode
+        # Force supervisor orchestration for every query.
+        initial_state["orchestration_mode"] = "react_supervisor"
+        initial_state.setdefault("supervisor_trace", [])
+        initial_state["supervisor_step_count"] = int(
+            initial_state.get("supervisor_step_count", 0) or 0
+        )
+        initial_state.setdefault(
+            "max_supervisor_steps",
+            initial_state.get("max_supervisor_steps") or self.max_graph_cycles or 12,
+        )
+        initial_state["no_progress_repeat_count"] = int(
+            initial_state.get("no_progress_repeat_count", 0) or 0
+        )
+
+        # Ensure MCP + catalog prerequisites before the supervisor loop runs.
+        initial_state = await self._index_database_node(initial_state)
 
         try:
-            # Server-side timeout for full orchestration to avoid client-level timeouts.
-            # Use the same query_timeout_seconds as an upper bound for now.
-            timeout_s = max(self.query_timeout_seconds, 60)
             import asyncio as _asyncio
-            if orch_mode == "react_supervisor":
-                # Initialize supervisor-specific fields with safe defaults.
-                initial_state.setdefault("supervisor_trace", [])
-                initial_state["supervisor_step_count"] = int(
-                    initial_state.get("supervisor_step_count", 0) or 0
-                )
-                initial_state.setdefault(
-                    "max_supervisor_steps",
-                    initial_state.get("max_supervisor_steps") or self.max_graph_cycles or 12,
-                )
-                initial_state["no_progress_repeat_count"] = int(
-                    initial_state.get("no_progress_repeat_count", 0) or 0
-                )
-                from langgraph_integration.supervisor import SupervisorConfig, run_supervisor
+            from langgraph_integration.supervisor import SupervisorConfig, run_supervisor
 
+            if initial_state.get("error_info"):
+                result = initial_state
+            else:
+                timeout_s = max(self.query_timeout_seconds, 60)
                 supervisor_config = SupervisorConfig(
                     max_supervisor_steps=int(
                         initial_state.get("max_supervisor_steps")
@@ -3602,15 +3042,15 @@ class QueryOrchestrator:
                     ),
                     max_llm_calls_total=int(initial_state.get("max_llm_calls") or 0) or None,
                     max_no_progress_repeats=int(
-                        initial_state.get("max_no_progress_repeats") or self.max_no_progress_repeats or 3
+                        initial_state.get("max_no_progress_repeats")
+                        or self.max_no_progress_repeats
+                        or 3
                     ),
                 )
                 result = await _asyncio.wait_for(
                     run_supervisor(initial_state, config=supervisor_config),
                     timeout=timeout_s,
                 )
-            else:
-                result = await _asyncio.wait_for(self.ainvoke(initial_state), timeout=timeout_s)
 
             # Normalize terminal answer fields so API callers always see a usable answer.
             if isinstance(result, dict):
@@ -4051,16 +3491,11 @@ def get_orchestrator() -> QueryOrchestrator:
 
 def build_graph():
     """
-    Build and return the compiled multi-agent orchestrator graph.
-    
-    This function is used by LangGraph Studio (referenced in langgraph.json).
-    It creates a fresh QueryOrchestrator instance and returns its compiled graph.
-    
-    Returns:
-        Compiled LangGraph StateGraph ready for execution
+    Legacy entrypoint retained for LangGraph Studio compatibility.
     """
-    orchestrator = create_query_orchestrator()
-    return orchestrator.graph
+    raise RuntimeError(
+        "Pipeline graph has been removed. Supervisor mode does not expose a LangGraph graph."
+    )
 
 
 if __name__ == "__main__":

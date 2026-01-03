@@ -214,13 +214,13 @@ echo -e "${GREEN}✅ MCP_SERVER_URL is configured: ${MCP_SERVER_URL}${NC}"
 # Feature toggles
 # ============================================
 # Enable/disable LangGraph Studio (default: off to avoid interference)
-ENABLE_STUDIO="${ENABLE_STUDIO:-1}"
+ENABLE_STUDIO="${ENABLE_STUDIO:0}"
 
 # Enable Cloudflare tunnel for Studio (default: disabled for local-only access)
-ENABLE_STUDIO_TUNNEL="${ENABLE_STUDIO_TUNNEL:-1}"
+ENABLE_STUDIO_TUNNEL="${ENABLE_STUDIO_TUNNEL:0}"
 
 # Enable/disable Evaluation & Tracking Service (default: enabled)
-ENABLE_EVAL="${ENABLE_EVAL:-1}"
+ENABLE_EVAL="${ENABLE_EVAL:0}"
 
 # Auto-open debugger in new terminal (default: off, shows instructions instead)
 # Set to 1 to automatically open a new terminal with debugger output

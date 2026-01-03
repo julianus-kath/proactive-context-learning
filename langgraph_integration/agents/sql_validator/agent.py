@@ -655,3 +655,8 @@ class SQLValidatorAgent:
         state["sql_warnings"] = validation_result.get("warnings", [])
 
         return state
+
+
+def build_sql_validator_graph():
+    agent = SQLValidatorAgent()
+    return agent.graph

@@ -17,9 +17,11 @@ from typing import Any, Dict, List, Literal, Optional, TypedDict
 from dataclasses import dataclass
 
 from pydantic import ValidationError
+from langgraph.graph import StateGraph, END
 
 from langgraph_integration.contracts.response_envelope import ResponseEnvelope
 from langgraph_integration.contracts.semantic_contracts import QueryContract
+from langgraph_integration.contracts.state import BaseState
 
 logger = logging.getLogger(__name__)
 
@@ -502,6 +504,18 @@ def build_result_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
         logger.info("🔍 [RESULT_VALIDATOR] Escalating to clarification mode")
 
     return state
+
+
+def _result_validator_node(state: BaseState) -> BaseState:
+    return build_result_validator_node(dict(state))
+
+
+def build_result_validator_graph():
+    graph = StateGraph(BaseState)
+    graph.add_node("result_validator", _result_validator_node)
+    graph.set_entry_point("result_validator")
+    graph.add_edge("result_validator", END)
+    return graph.compile()
 
 
 def _apply_semantic_validation(state: Dict[str, Any], validation: ValidationResult) -> None:
