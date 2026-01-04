@@ -44,14 +44,14 @@ class SupervisorConfig:
     """
 
     # Maximum supervisor loop iterations (tool invocations)
-    max_supervisor_steps: int = 12
+    max_supervisor_steps: int = 20
 
     # Optional hard cap on total LLM calls (in addition to BaseState.max_llm_calls).
     # When None, the supervisor relies solely on BaseState.max_llm_calls.
     max_llm_calls_total: Optional[int] = None
 
     # Maximum number of consecutive "no progress" iterations (same tool + non-positive signal)
-    max_no_progress_repeats: int = 3
+    max_no_progress_repeats: int = 6
 
 
 class ReactSupervisor:
