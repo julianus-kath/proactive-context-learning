@@ -2791,6 +2791,14 @@ class QueryOrchestrator:
             return result
         except TimeoutError:
             logger.error("❌ [PROCESS_QUERY] Orchestrator timed out before completion", exc_info=True)
+            try:
+                debug_logger.workflow_error(
+                    "PROCESS_QUERY_TIMEOUT",
+                    "Orchestrator timed out before completion",
+                    context={"user_input": user_input[:200]},
+                )
+            except Exception:
+                logger.debug("Failed to log PROCESS_QUERY_TIMEOUT to debug_logger", exc_info=True)
             return {
                 "user_input": user_input,
                 "intent": {},
@@ -2808,6 +2816,14 @@ class QueryOrchestrator:
             }
         except Exception as exc:
             logger.error("❌ [PROCESS_QUERY] Graph execution failed: %s", exc, exc_info=True)
+            try:
+                debug_logger.workflow_error(
+                    "PROCESS_QUERY_FAILURE",
+                    f"Graph execution failed: {exc}",
+                    context={"user_input": user_input[:200]},
+                )
+            except Exception:
+                logger.debug("Failed to log PROCESS_QUERY_FAILURE to debug_logger", exc_info=True)
             return {
                 "user_input": user_input,
                 "intent": {},
