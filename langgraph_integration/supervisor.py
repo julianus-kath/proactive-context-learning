@@ -89,6 +89,97 @@ class ReactSupervisor:
         # Temperature 0 for deterministic, testable behavior given the same state.
         self.llm = ChatOpenAI(model=model, temperature=0.0)
 
+    async def _summarize_step_llm(
+        self,
+        tool_name: ToolName,
+        before_state: BaseState,
+        after_state: BaseState,
+    ) -> Tuple[str, str]:
+        """
+        Use the supervisor LLM to summarize what it just did and observed.
+
+        This produces the thought_summary and observation_summary that are
+        logged in supervisor_trace. If the LLM call fails for any reason,
+        falls back to the deterministic heuristic summarizer.
+        """
+        try:
+            intent_before = before_state.get("intent") or {}
+            intent_after = after_state.get("intent") or {}
+            validation_after = after_state.get("validation_result") or {}
+            exec_after = after_state.get("exec_result") or {}
+            error_after = after_state.get("error_info") or {}
+
+            summary_payload: Dict[str, Any] = {
+                "tool_name": tool_name,
+                "intent_before": {
+                    "operation": intent_before.get("operation"),
+                    "primary_entities": intent_before.get("primary_entities") or [],
+                    "metrics": intent_before.get("metrics") or [],
+                },
+                "intent_after": {
+                    "operation": intent_after.get("operation"),
+                    "primary_entities": intent_after.get("primary_entities") or [],
+                    "metrics": intent_after.get("metrics") or [],
+                    "needs_clarification": bool(intent_after.get("needs_clarification")),
+                },
+                "validation_after": {
+                    "is_valid": bool(validation_after.get("is_valid", False)),
+                    "retry_action": validation_after.get("retry_action"),
+                },
+                "exec_result_after": {
+                    "ok": bool(exec_after.get("ok")) if isinstance(exec_after, dict) else False,
+                    "row_count": exec_after.get("row_count") if isinstance(exec_after, dict) else None,
+                },
+                "error_info_after": {
+                    "type": error_after.get("type") if isinstance(error_after, dict) else None,
+                },
+                "progress_signal": after_state.get("progress_signal") or "neutral",
+                "suggested_next_actions": list(after_state.get("suggested_next_actions") or []),
+            }
+
+            system = (
+                "You are the supervisor for an ERP multi-agent system. "
+                "A capability tool has just finished running. "
+                "Based on the summarized before/after state, explain in ONE short sentence "
+                "what you were thinking when choosing this tool (thought_summary), and in ONE "
+                "short sentence what you observed from its result (observation_summary). "
+                "Do not include raw SQL, user PII, or multi-step chain-of-thought. "
+                "Respond ONLY with a JSON object: "
+                "{\"thought\": \"...\", \"observation\": \"...\"}."
+            )
+
+            user = (
+                "Here is the summarized state around the tool execution (JSON):\n"
+                f"{json.dumps(summary_payload, ensure_ascii=False)}\n"
+                "Return JSON with keys 'thought' and 'observation'."
+            )
+
+            response = await self.llm.ainvoke(
+                [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ]
+            )
+            text = (getattr(response, "content", "") or "").strip()
+            try:
+                parsed = json.loads(text)
+            except Exception:
+                # Try to strip code fences if present.
+                if "```" in text:
+                    inner = text.split("```", 2)[1]
+                    parsed = json.loads(inner)
+                else:
+                    raise
+
+            thought = str(parsed.get("thought") or "").strip()
+            observation = str(parsed.get("observation") or "").strip()
+            if not thought or not observation:
+                raise ValueError("LLM summary missing required fields")
+            return thought, observation
+        except Exception:
+            logger.debug("Supervisor LLM summarization failed; falling back to heuristic summary", exc_info=True)
+            return _summarize_step_heuristic(tool_name, before_state, after_state)
+
     async def _llm_select_next_tool(
         self,
         state: BaseState,
@@ -186,13 +277,22 @@ class ReactSupervisor:
             # Take the first token/word as the tool name.
             candidate = text.split()[0] if text else ""
             if candidate in allowed_tools:
-                # Guardrail: for data queries without an execution result yet,
+                # Guardrail 1: for data queries without an execution result yet,
                 # do not allow the supervisor LLM to skip execution or stop.
                 op = (intent.get("operation") or "").lower()
                 has_exec = isinstance(exec_result, dict) and bool(exec_result.get("ok"))
                 if op == "query" and not has_exec and candidate in {"finalize_answer", "__STOP__"}:
                     logger.debug(
                         "Supervisor LLM suggested %r before execution; falling back to heuristic pipeline",
+                        candidate,
+                    )
+                    return None
+                # Guardrail 2: after execute_sql has run, always route through
+                # evaluate_result so semantic validation can run before answering.
+                if last_tool_name == "execute_sql" and candidate in {"finalize_answer", "__STOP__"}:
+                    logger.debug(
+                        "Supervisor LLM suggested %r immediately after execute_sql; "
+                        "forcing evaluate_result via heuristic policy",
                         candidate,
                     )
                     return None
@@ -316,8 +416,8 @@ class ReactSupervisor:
                     current["no_progress_repeat_count"] = 0
             last_progress = progress
 
-            # Supervisor trace: short, summary-only decision and observation.
-            thought_summary, obs_summary = _summarize_step(
+            # Supervisor trace: LLM-backed thought + observation summaries.
+            thought_summary, obs_summary = await self._summarize_step_llm(
                 tool_name=next_tool,
                 before_state=before_snapshot,
                 after_state=current,
@@ -596,7 +696,7 @@ def _summarize_inputs(state: BaseState) -> Dict[str, Any]:
     }
 
 
-def _summarize_step(
+def _summarize_step_heuristic(
     tool_name: ToolName,
     before_state: BaseState,
     after_state: BaseState,
