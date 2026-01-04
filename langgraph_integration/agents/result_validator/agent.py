@@ -75,7 +75,7 @@ class ResultValidator:
     4. All NULLs = probably bad join
     5. Suspicious values = all same, NaN, etc.
     """
-    
+
     def __init__(self, config: Optional[ValidatorConfig] = None):
         """Initialize validator with optional config."""
         self.config = config or ValidatorConfig()
@@ -457,8 +457,16 @@ class ResultValidator:
 def build_result_validator_node(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     LangGraph node for result validation.
-    
-    This is the wrapper that LangGraph calls.
+
+    BaseState contract:
+    - Consumes: user_input, intent, relevant_tables, sql_query, exec_result
+    - Produces/updates:
+      - validation_result (deterministic + semantic fields; also sets is_valid)
+      - exec_result (may be cleared when retry_action requests a new candidate/plan)
+      - intent (may switch operation→clarify on ask_user)
+      - error_info (cleared for retry-oriented retry_action values)
+
+    This is the wrapper that LangGraph and the supervisor / capability tools call.
     """
     validator = ResultValidator()
     

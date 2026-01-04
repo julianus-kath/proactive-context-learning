@@ -57,8 +57,13 @@ class ExecAndRecoveryAgent:
     """
     Agent for executing queries with automatic error recovery.
     
-    Input contract: {sql_query, retry_count, join_plan, schema_snippet}
-    Output contract: {exec_result, error_info, sql_query, retry_count}
+    BaseState contract:
+    - Consumes: sql_query, retry_count, join_plan, schema_snippet
+    - Produces/updates:
+      - exec_result (normalized ResponseEnvelope dict)
+      - error_info (on execution/repair failures)
+      - sql_query (may be updated after repair/simplification)
+      - retry_count
     """
 
     def __init__(
@@ -81,7 +86,9 @@ class ExecAndRecoveryAgent:
         """
         self.mcp = get_shared_mcp_tool()
         self.llm = ChatOpenAI(model=llm_model, temperature=llm_temp)
-        self.max_retries = max_retries
+        # Enforce a strict upper bound so the internal graph performs at most
+        # one repair-based retry and one simplified retry.
+        self.max_retries = min(max_retries, 2)
         self.row_limit = row_limit
         self.query_timeout_seconds = query_timeout_seconds
 
@@ -334,274 +341,7 @@ class ExecAndRecoveryAgent:
             logger.error(f"❌ {error['type']}: {error['message']}")
             return {**state, "error_info": error}
 
-    async def _check_result_node(self, state: BaseState) -> BaseState:
-        """Check if query was successful."""
-        # If the query succeeded but intent implies a TOP-K SUM, and SQL is exploratory (SELECT *),
-        # synthesize an aggregate query and replace the result when possible.
-        try:
-            exec_result = state.get("exec_result", {}) or {}
-            if isinstance(exec_result, dict) and exec_result.get("ok"):
-                sql = state.get("sql_query", "") or ""
-                intent = state.get("intent", {}) or {}
-                user_text = (state.get("user_input") or "").lower()
-                metrics = [m.lower() for m in (intent.get("metrics") or [])]
-                wants_sum = ("sum" in metrics) or ("total" in metrics) or ("top" in user_text)
-
-                # Detect exploratory SELECT * pattern
-                sql_upper = sql.upper()
-                is_exploratory = sql_upper.startswith("SELECT TOP ") and ("* FROM" in sql_upper) and ("SUM(" not in sql_upper)
-
-                if wants_sum and is_exploratory:
-                    import re, json as _json
-                    # Parse TOP-K
-                    m = re.search(r"top\s+(\d{1,3})", user_text, flags=re.IGNORECASE)
-                    try:
-                        top_k = int(m.group(1)) if m else (5 if "top" in user_text else 5)
-                    except Exception:
-                        top_k = 5
-
-                    # Extract table after FROM
-                    m2 = re.search(r"FROM\s+([\w\[\]\.]+)", sql_upper)
-                    table_name = m2.group(1) if m2 else None
-
-                    if table_name:
-                        probe_sql = f"SELECT TOP 1 * FROM {table_name}"
-                        col_result = await self.mcp.query_bounded(probe_sql, max_rows=1, timeout_ms=5000)
-                        cols = []
-                        if isinstance(col_result, dict) and col_result.get("ok"):
-                            candidate_cols = col_result.get("columns") or []
-                            if isinstance(candidate_cols, list):
-                                cols = [str(c) for c in candidate_cols]
-                            if not cols:
-                                rows = col_result.get("data") or []
-                                if rows and isinstance(rows[0], dict):
-                                    cols = list(rows[0].keys())
-
-                        # Pick sum and group-by columns
-                        def pick_sum_column(columns):
-                            tokens = ["umsatz", "betrag", "amount", "total", "summe", "value", "preis", "gesamtpreis", "netto", "brutto", "warenwert"]
-                            lc = [c.lower() for c in columns]
-                            for t in tokens:
-                                for i, name in enumerate(lc):
-                                    if t in name:
-                                        return columns[i]
-                            return None
-
-                        def pick_group_column(columns):
-                            tokens = ["kunde", "kundennr", "kundennummer", "debitor", "debitorennummer", "adress", "customer", "matchcode", "name"]
-                            lc = [c.lower() for c in columns]
-                            for t in tokens:
-                                for i, name in enumerate(lc):
-                                    if t in name:
-                                        return columns[i]
-                            return None
-
-                        sum_col = pick_sum_column(cols)
-                        group_col = pick_group_column(cols)
-
-                        if sum_col and group_col:
-                            agg_sql = (
-                                f"SELECT TOP {max(1, top_k)} {group_col} AS customer, SUM({sum_col}) AS total_value "
-                                f"FROM {table_name} GROUP BY {group_col} ORDER BY total_value DESC"
-                            )
-                            try:
-                                timeout_ms = self.query_timeout_seconds * 1000
-                                agg_parsed = await self._query_with_recording(
-                                    state,
-                                    agg_sql,
-                                    label="auto_aggregate_topk",
-                                    max_rows=self.row_limit,
-                                    timeout_ms=timeout_ms,
-                                )
-                                if agg_parsed.get("ok") and agg_parsed.get("row_count", 0) > 0:
-                                    logger.info("🔁 Replaced exploratory SELECT * with aggregated TOP-K SUM result")
-                                    state["sql_query"] = agg_sql
-                                    state["exec_result"] = agg_parsed
-                            except Exception:
-                                pass
-                        elif sum_col:
-                            # Try heuristic join with a customer dimension if present in relevant_tables
-                            try:
-                                rel_tabs = state.get("relevant_tables", []) or []
-                                # Pick likely customer table
-                                cust_table = None
-                                for rt in rel_tabs:
-                                    n = (rt or "").lower()
-                                    if any(tok in n for tok in ["khkadressen", "adressen", "adresse", "customer", "kunde", "kunden"]):
-                                        cust_table = rt
-                                        break
-                                if cust_table and cust_table != table_name:
-                                    # Probe customer columns
-                                    c_res = await self.mcp.query_bounded(f"SELECT TOP 1 * FROM {cust_table}", max_rows=1, timeout_ms=5000)
-                                    c_cols = []
-                                    if isinstance(c_res, dict) and c_res.get("ok"):
-                                        candidate = c_res.get("columns") or []
-                                        if isinstance(candidate, list):
-                                            c_cols = [str(c) for c in candidate]
-                                        if not c_cols:
-                                            c_rows = c_res.get("data") or []
-                                            if c_rows and isinstance(c_rows[0], dict):
-                                                c_cols = list(c_rows[0].keys())
-
-                                    def pick_key(columns):
-                                        lc = [c.lower() for c in columns]
-                                        # Generic key-like: endswith/id, contains 'id' or 'nr' or 'number'
-                                        for i, name in enumerate(lc):
-                                            if name == 'id' or name.endswith('_id') or name.endswith('id'):
-                                                return columns[i]
-                                        for i, name in enumerate(lc):
-                                            if 'nr' in name or 'number' in name:
-                                                return columns[i]
-                                        # fallback to first integer-like column is too heavy here; return None
-                                        return None
-
-                                    p_key = pick_key(cols)
-                                    c_key = pick_key(c_cols)
-
-                                    def pick_name(columns):
-                                        lc = [c.lower() for c in columns]
-                                        for i, name in enumerate(lc):
-                                            if 'name' in name or 'label' in name or 'title' in name:
-                                                return columns[i]
-                                        # fallback to the key itself
-                                        return pick_key(columns) or (columns[0] if columns else None)
-
-                                    c_name = pick_name(c_cols)
-
-                                    if p_key and c_key and c_name:
-                                        j_sql = (
-                                            f"SELECT TOP {max(1, top_k)} c.{c_name} AS customer, SUM(p.{sum_col}) AS total_value "
-                                            f"FROM {table_name} p INNER JOIN {cust_table} c ON p.{p_key} = c.{c_key} "
-                                            f"GROUP BY c.{c_name} ORDER BY total_value DESC"
-                                        )
-                                        try:
-                                            timeout_ms = self.query_timeout_seconds * 1000
-                                            j_parsed = await self._query_with_recording(
-                                                state,
-                                                j_sql,
-                                                label="auto_aggregate_join",
-                                                max_rows=self.row_limit,
-                                                timeout_ms=timeout_ms,
-                                            )
-                                            if j_parsed.get("ok") and j_parsed.get("row_count", 0) > 0:
-                                                logger.info("🔁 Replaced exploratory SELECT * with aggregated TOP-K SUM via heuristic customer join")
-                                                state["sql_query"] = j_sql
-                                                state["exec_result"] = j_parsed
-                                        except Exception:
-                                            pass
-                            except Exception:
-                                pass
-
-        except Exception:
-            pass
-
-        # If the query succeeded but did not aggregate (no SUM/GROUP BY) for a SUM intent, try to synthesize an aggregate strictly from discovered sources
-        try:
-            exec_result = state.get("exec_result", {}) or {}
-            if isinstance(exec_result, dict) and exec_result.get("ok"):
-                sql = state.get("sql_query", "") or ""
-                intent = state.get("intent", {}) or {}
-                metrics = [m.lower() for m in (intent.get("metrics") or [])]
-                wants_sum = ("sum" in metrics) or ("total" in metrics) or ((intent.get("required_action") or "").lower() == "topk_sum_by_customer")
-                up = sql.upper()
-                lacks_agg = ("SUM(" not in up) or ("GROUP BY" not in up)
-                if wants_sum and lacks_agg:
-                    # Build candidate pool from discovery
-                    pool = []
-                    for c in (state.get("relevant_tables") or []):
-                        if isinstance(c, str):
-                            pool.append(c)
-                    for cv in (state.get("candidate_views") or []):
-                        if isinstance(cv, str):
-                            pool.append(cv)
-                        elif isinstance(cv, dict):
-                            nm = cv.get("table_name") or cv.get("name") or cv.get("full_name")
-                            if nm:
-                                pool.append(nm)
-                    # Probe for sales-like with amount columns
-                    def looks_salesy(name: str) -> bool:
-                        n = (name or "").lower()
-                        return any(t in n for t in ["vk","verkauf","rechnung","beleg","position","umsatz","invoice","order"]) and not any(a in n for a in ["archiv","archive","ek","projekt"])
-                    chosen = None
-                    col_index = {}
-                    for name in pool:
-                        if not looks_salesy(name):
-                            continue
-                        # get columns
-                        try:
-                            cols_res = await self.mcp.get_column_index(name)  # may return list
-                            if isinstance(cols_res, list) and cols_res:
-                                cols = [str(x) for x in cols_res if x]
-                            else:
-                                probe = await self.mcp.query_bounded(f"SELECT TOP 1 * FROM {name}", max_rows=1, timeout_ms=5000)
-                                cols = []
-                                if isinstance(probe, dict) and probe.get("ok"):
-                                    probe_cols = probe.get("columns") or []
-                                    if isinstance(probe_cols, list):
-                                        cols = [str(x) for x in probe_cols if x]
-                                    if not cols:
-                                        probe_rows = probe.get("data") or []
-                                        if probe_rows and isinstance(probe_rows[0], dict):
-                                            cols = list(probe_rows[0].keys())
-                        except Exception:
-                            cols = []
-                        col_index[name] = cols
-                        # detect amount-like
-                        lc = [c.lower() for c in (cols or [])]
-                        if any(t in nm for nm in lc for t in ["umsatz","betrag","amount","total","summe","preis","gesamtpreis","wert","vkpreis","verkaufspreis","vkwert","verkaufswert"]):
-                            chosen = name
-                            break
-                    if chosen:
-                        cols = col_index.get(chosen, [])
-                        lc = [c.lower() for c in (cols or [])]
-                        # pick sum and group candidates
-                        sumc = None
-                        for t in ["umsatz","betrag","amount","total","summe","preis","gesamtpreis","wert","vkpreis","verkaufspreis","vkwert","verkaufswert"]:
-                            for i, nm in enumerate(lc):
-                                if t in nm:
-                                    sumc = cols[i]
-                                    break
-                            if sumc:
-                                break
-                        group = None
-                        for t in ["kunde","kunden","customer","matchcode","name","firma","company","kundennr","kdnr","debitor","debitornr","adressid","kundenid","customerid"]:
-                            for i, nm in enumerate(lc):
-                                if t in nm:
-                                    group = cols[i]
-                                    break
-                            if group:
-                                break
-                        top_k = int(intent.get("top_k") or 5)
-                        agg_sql = f"SELECT TOP {max(1, top_k)} "
-                        if group:
-                            agg_sql += f"{group} AS customer, "
-                        if sumc:
-                            agg_sql += f"SUM({chosen}.{sumc}) AS total_value FROM {chosen}"
-                        else:
-                            agg_sql += f"COUNT(*) AS total_value FROM {chosen}"
-                        if group:
-                            agg_sql += f" GROUP BY {group} ORDER BY total_value DESC"
-                        else:
-                            agg_sql += " ORDER BY (SELECT NULL)"
-                        try:
-                            timeout_ms = self.query_timeout_seconds * 1000
-                            aparsed = await self._query_with_recording(
-                                state,
-                                agg_sql,
-                                label="auto_aggregate_catalog",
-                                max_rows=self.row_limit,
-                                timeout_ms=timeout_ms,
-                            )
-                            if aparsed.get("ok") and aparsed.get("row_count", 0) > 0:
-                                state["sql_query"] = agg_sql
-                                state["exec_result"] = aparsed
-                        except Exception:
-                            pass
-        except Exception:
-            pass
-
-        # Routing happens in graph edges
-        return state
+    # NOTE: legacy heuristic _check_result_node implementation removed.
 
     async def _repair_sql_node(self, state: BaseState) -> BaseState:
         """
@@ -708,6 +448,30 @@ class ExecAndRecoveryAgent:
     async def _check_retry_result_node(self, state: BaseState) -> BaseState:
         """Check if retry was successful."""
         # Routing happens in graph edges
+        return state
+
+    async def _check_result_node(self, state: BaseState) -> BaseState:
+        """
+        Lightweight post-execution check.
+
+        This override intentionally avoids any additional discovery, planning,
+        or aggregate synthesis. It leaves `exec_result` exactly as produced by
+        `_execute_query_node` so that:
+        - Result semantics are evaluated by ResultValidator, and
+        - Any retries or replans are owned by the supervisor.
+        """
+        exec_result = state.get("exec_result") or {}
+        if isinstance(exec_result, dict) and exec_result.get("ok"):
+            logger.info(
+                "⚡ [EXEC_RECOVERY] Execution succeeded "
+                f"rows={exec_result.get('row_count')} "
+                f"time_ms={exec_result.get('execution_time_ms')}"
+            )
+        else:
+            logger.warning(
+                "⚡ [EXEC_RECOVERY] Execution did not succeed; "
+                "leaving retry/clarification decisions to supervisor/result_validator"
+            )
         return state
 
     async def _simplify_query_node(self, state: BaseState) -> BaseState:

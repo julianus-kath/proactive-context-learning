@@ -16,6 +16,7 @@ import logging
 import asyncio
 import concurrent.futures
 import difflib
+import os
 import re
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 from langchain_openai import ChatOpenAI
@@ -73,8 +74,21 @@ class DiscoveryAgent:
     """
     Agent for discovering and vetting relevant tables/views.
     
-    Input contract: {user_input, intent, session_described_tables}
-    Output contract: {relevant_tables, schema_snippet, candidate_views, session_described_tables, error_info}
+    Input contract (BaseState fields consumed):
+    - user_input
+    - intent
+    - session_described_tables (optional cache)
+    - seed_tables / forced_tables / skip_tables (optional hints/constraints)
+    - discovery_log (optional, extended in-place)
+
+    Output contract (BaseState fields produced/updated):
+    - relevant_tables
+    - schema_snippet
+    - candidate_views
+    - session_described_tables
+    - column_index
+    - discovery_role_hints / discovery_result (where available from MCP)
+    - error_info (on discovery failures)
     """
 
     def __init__(self, llm_model: str = "gpt-4o", llm_temp: float = 0.0):
@@ -91,45 +105,17 @@ class DiscoveryAgent:
         self.view_role_coverage_threshold = 0.70  # Views-first if coverage >= this
 
         # Token dictionaries to help infer semantic roles from catalog metadata.
-        # These operate on actual table/column identifiers (not fallback keywords).
-        self.date_signal_tokens: Set[str] = {
-            "date",
-            "datum",
-            "day",
-            "monat",
-            "month",
-            "jahr",
-            "year",
-            "woche",
-            "week",
-            "quarter",
-            "quartal",
-            "zeit",
-            "timestamp",
-            "erstellt",
-            "created",
-            "updated",
-            "modified",
-        }
-        self.id_signal_tokens: Set[str] = {
-            "id",
-            "nr",
-            "nummer",
-            "no",
-            "key",
-            "ident",
-            "code",
-            "guid",
-        }
-        self.label_signal_tokens: Set[str] = {
-            "name",
-            "bezeichnung",
-            "beschreibung",
-            "desc",
-            "title",
-            "label",
-            "anzeige",
-        }
+        # These operate on actual table/column identifiers (not fallback keywords)
+        # and can be overridden via environment for deployment-specific tuning.
+        self.date_signal_tokens: Set[str] = set(
+            os.getenv("DISCOVERY_DATE_TOKENS", "date,datum,month,year,timestamp,created,updated").split(",")
+        )
+        self.id_signal_tokens: Set[str] = set(
+            os.getenv("DISCOVERY_ID_TOKENS", "id,nr,number,key,code,guid").split(",")
+        )
+        self.label_signal_tokens: Set[str] = set(
+            os.getenv("DISCOVERY_LABEL_TOKENS", "name,title,label,bezeichnung,beschreibung").split(",")
+        )
 
         # Canonical entity mapping to ensure downstream templates can rely on stable keys.
         self.entity_canonical_map = {
@@ -227,7 +213,6 @@ class DiscoveryAgent:
         Prefers views first (role_coverage >= 0.70).
         """
         logger.info("🔍 DiscoveryAgent: Searching candidates...")
-        logger.critical("🚨🚨🚨 SEARCH_CANDIDATES_NODE IS RUNNING 🚨🚨🚨")
         
         user_input = state.get("user_input", "")
         intent = state.get("intent", {})
@@ -287,27 +272,19 @@ class DiscoveryAgent:
             return {**state, "error_info": error}
         
         try:
-            # PHASE 5: Use strategic discovery for complex queries
-            required_action = intent.get("required_action", "")
-            strategic_actions = ["growth_analysis", "department_productivity", "comparative_analysis"]
+            # Core discovery: a single, primary catalog search driven by intent keywords.
+            query_str = " ".join(primary_tokens).strip() or user_input
+            if not query_str:
+                query_str = user_input
 
             candidates: List[Dict[str, Any]] = []
-            query_str = user_input
-            if required_action in strategic_actions:
-                logger.info(f"🔍 [STRATEGIC] Using strategic discovery for {required_action}")
-                strategic_candidates = await self._strategic_query_discovery(user_input, intent)
-                candidates.extend(strategic_candidates)
-            else:
-                # Standard search for simple queries
-                query_str = " ".join(primary_tokens).strip() or user_input
-                if not query_str:
-                    query_str = user_input
             logger.debug(f"  Searching primary keywords: '{query_str}'")
+
+            # Primary table search
             try:
                 result = await self.mcp.search_tables(query_str, page=1, page_size=10, intent_data=intent)
                 parsed = self._parse_search_result(result)
 
-                # Log raw search results
                 logger.info(f"🔍 SEARCH RESULTS for '{query_str}': {len(parsed)} tables found")
                 for i, table in enumerate(parsed[:8]):  # Log first 8 results
                     name = table.get('table_name', table.get('name', 'unknown'))
@@ -318,7 +295,8 @@ class DiscoveryAgent:
                 candidates.extend(parsed)
             except Exception as e:
                 logger.warning(f"  Joined search (tables) failed: {e}")
-            # Also search views-first and merge results
+
+            # Views-first pass and merge
             try:
                 vres = await self.mcp.search_views(query_str, page=1, page_size=10, include_empty=False)
                 vparsed = self._parse_search_result(vres)
@@ -328,21 +306,7 @@ class DiscoveryAgent:
             except Exception as e:
                 logger.warning(f"  Joined search (views) failed: {e}")
 
-            # Intent-driven enrichment (very limited to avoid noise)
-            try:
-                enrichment_terms = self._enrichment_queries(intent)
-                for term in enrichment_terms[:4]:
-                    if not term or term.lower() == query_str.lower():
-                        continue
-                    try:
-                        logger.debug(f"  Enrichment search: '{term}'")
-                        eres = await self.mcp.search_tables(term, page=1, page_size=5, intent_data=intent)
-                        eparsed = self._parse_search_result(eres)
-                        candidates.extend(eparsed)
-                    except Exception as ee:
-                        logger.debug(f"  Enrichment search failed for '{term}': {ee}")
-            except Exception as enrich_exc:
-                logger.debug(f"  Skipping enrichment search due to error: {enrich_exc}")
+            # Seed tables remain a soft injection from supervisor/intent; no extra multi-pass loops here.
 
             # Deduplicate by table name
             seen = set()
@@ -428,163 +392,6 @@ class DiscoveryAgent:
         if not candidates:
             return True
         return all(c.get("relevance_score", 0) < 0.4 for c in candidates)
-
-    async def _fallback_business_table_discovery(self) -> List[Dict[str, Any]]:
-        """Intelligent, intent-aware fallback discovery for business-relevant tables when semantic search fails."""
-        logger.info("🔍 Trying intelligent fallback: searching for tables with relevant data patterns...")
-
-        # Test if MCP search is working at all first
-        try:
-            logger.debug("🔍 Testing MCP search connectivity...")
-            test_result = await self.mcp.search_tables("customer", page=1, page_size=3)
-            test_parsed = self._parse_search_result(test_result)
-            logger.debug(f"🔍 MCP test search returned {len(test_parsed)} results")
-        except Exception as e:
-            logger.warning(f"🔍 MCP search test failed: {e}")
-
-        # Intent-aware patterns (prefer entity-focused synonyms if present)
-        intent = getattr(self, "_last_intent", None)
-        product_synonyms = [
-            # German
-            "artikel", "artikelstamm", "artikelstammdaten", "artikelliste", "artikelnummer",
-            # English
-            "product", "products", "item", "items", "material", "inventory"
-        ]
-        customer_synonyms = [
-            "kunde", "kunden", "khkadressen", "customer", "customers", "address"
-        ]
-        revenue_synonyms = [
-            # German sales/revenue domain
-            "umsatz", "verkauf", "vk", "vkbeleg", "vkbelege", "vkposition", "vkpositionen",
-            "rechnung", "rechnungen", "rechnungsposition", "rechnungspositionen", "beleg", "belege",
-            # English
-            "revenue", "sales", "invoice", "invoices", "order", "orders", "orderline", "orderlines"
-        ]
-        project_synonyms = [
-            # German/English projects
-            "projekt", "projekte", "projekten", "projektliste", "projektstamm", "projects", "project"
-        ]
-        generic_patterns = []
-        # Always seed with core product synonyms to avoid missing German article masters
-        seed_patterns = ["artikel", "artikelstamm", "product", "products"]
-        generic_patterns.extend(seed_patterns)
-        if intent and any(ent.lower().startswith("product") or ent.lower().startswith("artikel") for ent in intent.get("primary_entities", [])):
-            generic_patterns.extend([p for p in product_synonyms if p not in generic_patterns])
-        elif intent and any(ent.lower().startswith("customer") or ent.lower().startswith("kunde") for ent in intent.get("primary_entities", [])):
-            generic_patterns.extend([p for p in customer_synonyms if p not in generic_patterns])
-            # If metrics indicate revenue/sum, prepend revenue patterns to bias towards sales data sources
-            metrics = [m.lower() for m in (intent.get("metrics") or [])]
-            if any(m in ["sum", "total"] for m in metrics) or any(k in (intent.get("keywords_for_discovery") or []) for k in ["revenue", "sales", "umsatz"]):
-                generic_patterns = [p for p in revenue_synonyms if p not in generic_patterns] + generic_patterns
-        elif intent and any(ent.lower().startswith("project") or ent.lower().startswith("projekt") for ent in intent.get("primary_entities", [])):
-            generic_patterns.extend([p for p in project_synonyms if p not in generic_patterns])
-        else:
-            # Fallback to broad business entities
-            generic_patterns.extend(["customer", "order", "transaction", "invoice", "item"]) 
-
-        try:
-            logger.debug(f"🔍 Fallback discovery intent: entities={intent.get('primary_entities') if intent else None}, metrics={intent.get('metrics') if intent else None}")
-            logger.debug(f"🔍 Fallback discovery patterns: {generic_patterns}")
-        except Exception:
-            pass
-
-        candidates = []
-        for pattern in generic_patterns[:8]:  # Limit searches to avoid overload but broaden slightly
-            try:
-                logger.debug(f"🔍 Searching for generic pattern: '{pattern}'")
-                result = await self.mcp.search_tables(pattern, page=1, page_size=10)
-                parsed = self._parse_search_result(result)
-                if parsed:
-                    logger.debug(f"🔍 Pattern '{pattern}' returned {len(parsed)} results")
-                    candidates.extend(parsed)
-            except Exception as e:
-                logger.debug(f"🔍 Search for '{pattern}' failed: {e}")
-                continue
-
-        # Deduplicate and score intelligently
-        seen = set()
-        unique_candidates = []
-        for c in candidates:
-            table_name = c.get("full_name") or c.get("table_name") or c.get("name") or ""
-            if table_name not in seen and table_name:
-                seen.add(table_name)
-
-                # Calculate intelligent relevance score
-                base_score = c.get("relevance_score", 0)
-
-                # Bonus for tables with actual data
-                data_bonus = 0.3 if c.get("estimated_rows", 0) > 10 else 0
-
-                # Bonus for tables with many columns (more likely to be main tables)
-                column_bonus = min(c.get("column_count", 0) / 50, 0.2)
-
-                # Bonus for well-connected tables (FK relationships)
-                fk_bonus = min(c.get("fk_count", 0) / 5, 0.2)
-
-                # Penalty for empty tables
-                empty_penalty = -0.5 if c.get("estimated_rows", 0) == 0 else 0
-
-                # Intent-aware name bonus/penalty
-                name = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
-                keyword_bonus = 0.0
-                if generic_patterns == product_synonyms:
-                    if any(k in name for k in product_synonyms):
-                        keyword_bonus += 0.6
-                    # De-emphasize obviously unrelated domains
-                    if any(x in name for x in ["projekt", "project", "crm", "archiv", "archive"]):
-                        keyword_bonus -= 0.4
-                elif generic_patterns == customer_synonyms:
-                    if any(k in name for k in customer_synonyms + ["adresse", "adressen"]):
-                        keyword_bonus += 0.6
-                elif generic_patterns == project_synonyms:
-                    if any(k in name for k in project_synonyms + ["projektstamm", "projektliste", "projectlist"]):
-                        keyword_bonus += 0.6
-                
-                c["relevance_score"] = base_score + data_bonus + column_bonus + fk_bonus + empty_penalty + keyword_bonus
-                c["fallback_discovered"] = True
-                unique_candidates.append(c)
-
-        # Sort by intelligent relevance score
-        unique_candidates.sort(key=lambda x: x.get("relevance_score", 0), reverse=True)
-
-        # Filter out very low scoring tables
-        good_candidates = [c for c in unique_candidates if c.get("relevance_score", 0) > 0.1]
-
-        # Intent-specific pruning: for product counts, drop project/archive/CRM lists outright
-        try:
-            if intent and any(ent.lower().startswith(("product", "artikel")) for ent in intent.get("primary_entities", [])):
-                filtered = []
-                for c in good_candidates:
-                    n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
-                    if any(b in n for b in ["projekt", "projektliste", "project", "crm", "archiv", "archive"]):
-                        continue
-                    filtered.append(c)
-                good_candidates = filtered
-            # For revenue/sum intents, strongly down-rank archive tables/views
-            metrics = [m.lower() for m in (intent.get("metrics") or [])]
-            if any(m in ["sum", "total"] for m in metrics) or any(k in (intent.get("keywords_for_discovery") or []) for k in ["revenue", "sales", "umsatz"]):
-                filtered = []
-                archives = []
-                for c in good_candidates:
-                    n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
-                    if "archiv" in n or "archive" in n:
-                        archives.append(c)
-                    else:
-                        filtered.append(c)
-                # Keep archives only if nothing else remains
-                good_candidates = filtered or archives
-        except Exception:
-            pass
-
-        logger.info(f"📊 Intelligent fallback found {len(good_candidates)} relevant tables:")
-        for i, c in enumerate(good_candidates[:8]):
-            score = c.get("relevance_score", 0)
-            rows = c.get("estimated_rows", 0)
-            cols = c.get("column_count", 0)
-            logger.info(f"  {i+1}. {c.get('full_name')} (score: {score:.3f}, rows: {rows}, cols: {cols})")
-
-        # Return top candidates (more than before to give better selection)
-        return good_candidates[:12]
 
     async def _rank_candidates_node(self, state: BaseState) -> BaseState:
         """
@@ -710,42 +517,11 @@ class DiscoveryAgent:
             # Filter by confidence threshold
             filtered = [c for c in candidates if c.get("score", 0) >= MIN_SCORE]
             
-            if not filtered:
-                error = {
-                    "type": "LOW_CONFIDENCE",
-                    "message": f"All candidates scored < {MIN_SCORE}. Top candidate: {candidates[0]}",
-                    "context": {"top_candidate": candidates[0] if candidates else None}
-                }
-                logger.warning(f"⚠️  {error['message']}")
-                # Targeted fallback: try business-pattern discovery and merge, then re-rank
-                try:
-                    # Make intent available to fallback discovery
-                    try:
-                        self._last_intent = intent
-                    except Exception:
-                        pass
-                    alt = await self._fallback_business_table_discovery()
-                    if alt:
-                        logger.info(f"🔄 Merging {len(alt)} fallback candidate(s) and re-ranking")
-                        merged = candidates + alt
-                        # Re-score merged
-                        re_scored = []
-                        for cand in merged:
-                            s = self._score_candidate(cand, intent)
-                            cand2 = dict(cand)
-                            cand2["score"] = s
-                            re_scored.append(cand2)
-                        # Replace candidates and use threshold
-                        candidates = re_scored
-                        filtered = [c for c in candidates if c.get("score", 0) >= MIN_SCORE]
-                        if not filtered:
-                            filtered = sorted(candidates, key=lambda x: x.get("score", 0), reverse=True)[:1]
-                    else:
-                        # Still use the best candidate even if below threshold
-                        filtered = candidates[:1]
-                except Exception:
-                    # Still use the best candidate even if below threshold
-                    filtered = candidates[:1]
+            if not filtered and candidates:
+                # Low-confidence candidates – keep the best one and let the
+                # supervisor/result validator decide whether to rediscover or clarify.
+                top = sorted(candidates, key=lambda x: x.get("score", 0), reverse=True)[:1]
+                filtered = top
             
             # Prefer non-empty entities and higher estimated_rows, then by score
             def rank_key(c):
@@ -771,23 +547,11 @@ class DiscoveryAgent:
                 # Helper: is this table an archive/admin/config table?
                 def is_junk(c):
                     n = (c.get("table_name") or c.get("name") or c.get("full_name") or "").lower()
-                    # Archive tables
-                    if any(tok in n for tok in ["archiv", "archive"]):
-                        return True
-                    # Permission/auth/admin tables
-                    if any(tok in n for tok in ["berecht", "berechtigung", "permission", "rechte", "user", "users", "benutzer", "rolle", "role", "zugriff", "auth"]):
-                        return True
-                    # Config/setup tables
-                    if any(tok in n for tok in ["belegart", "belegnummer", "nummernkreis", "config", "konfiguration", "einstellung", "settings"]):
-                        return True
-                    # Log/audit tables
-                    if any(tok in n for tok in ["log", "logs", "audit", "protokoll"]):
-                        return True
-                    # UI/Grid/Template tables (NOT business data)
-                    if any(tok in n for tok in ["grid", "template", "kennzeichen", "druckbeleg", "erfassungstyp", "layout"]):
-                        return True
-                    # HR / payroll / salary tables (not revenue facts)
-                    if any(tok in n for tok in ["personal", "lohn", "abrechnung", "salary", "payroll"]):
+                    junk_tokens = os.getenv(
+                        "DISCOVERY_JUNK_TABLE_TOKENS",
+                        "archiv,archive,berecht,permission,rechte,user,benutzer,rolle,role,zugriff,auth,config,konfiguration,einstellung,settings,log,logs,audit,protokoll,grid,template,kennzeichen,druckbeleg,erfassungstyp,layout,payroll"
+                    ).split(",")
+                    if any(tok in n for tok in junk_tokens):
                         return True
                     return False
                 
@@ -1065,33 +829,10 @@ class DiscoveryAgent:
                 except Exception:
                     continue
 
-            # If all describes invalid, attempt an intent-aware fallback to find better candidates
+            # If all describes invalid, do not perform additional internal discovery;
+            # leave decisions about rediscovery/clarification to the supervisor.
             if not valid_described:
-                try:
-                    logger.info("🔁 No valid describes; invoking intent-aware fallback discovery for alternates")
-                    alt = await self._fallback_business_table_discovery()
-                    if alt:
-                        # Describe top 3 alternates quickly
-                        alt = alt[:3]
-                        alt_described = []
-                        for a in alt:
-                            tname = a.get("table_name") or a.get("name") or a.get("full_name", "")
-                            if not tname:
-                                continue
-                            try:
-                                if a.get("is_view", False):
-                                    r = await self.mcp.describe_view(tname, include_sample=False)
-                                else:
-                                    r = await self.mcp.describe_table(tname, include_sample=False)
-                                parsed = self._parse_describe_result(r, tname)
-                                if isinstance(parsed.get("columns"), list) and parsed.get("columns"):
-                                    alt_described.append(parsed)
-                            except Exception:
-                                continue
-                        if alt_described:
-                            valid_described = alt_described
-                except Exception:
-                    pass
+                valid_described = []
 
             # Finalize candidates for downstream nodes
             state["candidate_views"] = valid_described if valid_described else described
@@ -1918,34 +1659,9 @@ class DiscoveryAgent:
         logger.info(f"📌 Using intent keywords (exact): {base}")
         return base
 
-    def _enrichment_queries(self, intent: Dict[str, Any]) -> List[str]:
-        """
-        Build a small set of intent-driven enrichment queries. These are executed
-        separately so they cannot drown out the primary signal.
-        """
-        entities = [e.lower() for e in (intent.get("primary_entities") or [])]
-        metrics = [m.lower() for m in (intent.get("metrics") or [])]
-        base = [k.lower() for k in (intent.get("keywords_for_discovery") or []) if k]
-
-        extra: List[str] = []
-        if any(e in ["customer", "customers", "kunde", "kunden"] for e in entities + base):
-            extra.extend(["KHKAdressen", "Kunde", "Kunden"])
-        if any(e in ["product", "products", "produkt", "produkte", "artikel", "artikelstamm"] for e in entities + base):
-            extra.extend(["Artikelstamm", "Produkte", "Artikel"])
-        if any(m in ["sum", "total"] for m in metrics) or any(k in ["umsatz", "revenue", "sales"] for k in base):
-            extra.extend(["Umsatz", "VKPosition", "Rechnungsposition"])
-
-        # Deduplicate while preserving order and drop anything already present in the
-        # primary keywords to avoid archive calls.
-        seen = set()
-        filtered: List[str] = []
-        for term in extra:
-            key = term.lower()
-            if key in seen or key in base:
-                continue
-            seen.add(key)
-            filtered.append(term)
-        return filtered
+    # NOTE: legacy enrichment query generation has been removed. Discovery now
+    # relies on intent-derived keywords as soft hints for a single primary
+    # catalog search instead of issuing additional enrichment probes.
     
     def _parse_search_result(self, result: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Parse MCP search_tables result with robust JSON extraction."""
@@ -2120,111 +1836,11 @@ class DiscoveryAgent:
         except Exception:
             return min(1.0, score)
 
-    async def _strategic_query_discovery(self, user_input: str, intent: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Enhanced discovery for strategic/complex queries requiring multi-keyword search."""
-        logger.info(f"🔍 [STRATEGIC_DISCOVERY] Starting strategic discovery for: {user_input}")
-
-        required_action = intent.get("required_action", "")
-        entities = intent.get("primary_entities", [])
-        keywords = intent.get("keywords_for_discovery", [])
-
-        # Define search strategies based on query type
-        search_strategies = {
-            "growth_analysis": {
-                "primary_keywords": ["kunde", "kunden", "customer", "customers", "adress", "adressen"],
-                "secondary_keywords": ["datum", "date", "created", "erfass"],
-                "boost_patterns": ["adressen", "kunden", "customer"],
-                "exclude_patterns": ["grid", "template", "kennzeichen", "druckbeleg"]
-            },
-            "department_productivity": {
-                "primary_keywords": ["mitarbeiter", "employee", "personal", "staff", "abteilung", "department"],
-                "secondary_keywords": ["produktivität", "productivity", "leistung", "performance", "effizienz"],
-                "boost_patterns": ["mitarbeiter", "employee", "abteilung", "department"],
-                "exclude_patterns": ["grid", "template", "config", "setup"]
-            },
-            "comparative_analysis": {
-                "primary_keywords": ["umsatz", "revenue", "verkauf", "sales", "betrag", "amount"],
-                "secondary_keywords": ["datum", "date", "quartal", "quarter", "monat", "month"],
-                "boost_patterns": ["vkposition", "rechnung", "invoice", "umsatz", "revenue"],
-                "exclude_patterns": ["grid", "template", "kennzeichen", "config"]
-            }
-        }
-
-        strategy = search_strategies.get(required_action, {
-            "primary_keywords": keywords + entities,
-            "secondary_keywords": [],
-            "boost_patterns": entities,
-            "exclude_patterns": ["grid", "template", "kennzeichen", "druckbeleg", "config"]
-        })
-
-        # Perform multi-keyword search
-        all_candidates = []
-
-        # Search primary keywords
-        for keyword in strategy["primary_keywords"][:3]:  # Limit to avoid overload
-            try:
-                logger.debug(f"🔍 [STRATEGIC] Searching primary keyword: '{keyword}'")
-                result = await self.mcp.search_tables(keyword, page=1, page_size=15)
-                parsed = self._parse_search_result(result)
-                if parsed:
-                    all_candidates.extend(parsed)
-            except Exception as e:
-                logger.debug(f"🔍 [STRATEGIC] Primary search for '{keyword}' failed: {e}")
-
-        # Search secondary keywords if we have few results
-        if len(all_candidates) < 5 and strategy["secondary_keywords"]:
-            for keyword in strategy["secondary_keywords"][:2]:
-                try:
-                    logger.debug(f"🔍 [STRATEGIC] Searching secondary keyword: '{keyword}'")
-                    result = await self.mcp.search_tables(keyword, page=1, page_size=10)
-                    parsed = self._parse_search_result(result)
-                    if parsed:
-                        all_candidates.extend(parsed)
-                except Exception as e:
-                    logger.debug(f"🔍 [STRATEGIC] Secondary search for '{keyword}' failed: {e}")
-
-        # Deduplicate and apply strategic scoring
-        seen = set()
-        unique_candidates = []
-        for candidate in all_candidates:
-            table_name = candidate.get("table_name", "")
-            if table_name and table_name not in seen:
-                seen.add(table_name)
-
-                # Apply strategic scoring boosts
-                score = candidate.get("relevance_score", 0.0)
-
-                # Boost for strategy patterns
-                table_lower = table_name.lower()
-                for pattern in strategy["boost_patterns"]:
-                    if pattern.lower() in table_lower:
-                        score = min(1.0, score + 0.3)
-                        break
-
-                # Penalize excluded patterns
-                for pattern in strategy["exclude_patterns"]:
-                    if pattern.lower() in table_lower:
-                        score = max(0.0, score - 0.5)
-                        break
-
-                candidate["relevance_score"] = score
-                unique_candidates.append(candidate)
-
-        # Sort by strategic score
-        unique_candidates.sort(key=lambda x: (
-            -x.get("relevance_score", 0),
-            -x.get("estimated_rows", 0),
-            x.get("table_name", "")
-        ))
-
-        # Take top candidates
-        top_candidates = unique_candidates[:8]
-
-        logger.info(f"🔍 [STRATEGIC_DISCOVERY] Found {len(top_candidates)} strategic candidates")
-        for i, c in enumerate(top_candidates[:3]):
-            logger.info(f"🔍 [STRATEGIC] {i+1}. {c.get('table_name')} (score: {c.get('relevance_score', 0):.2f})")
-
-        return top_candidates
+    # NOTE: legacy strategic discovery has been removed. Complex, multi-keyword
+    # search is now handled by the primary catalog search using intent-derived
+    # keywords. This keeps DiscoveryAgent single-pass; higher-level strategies
+    # (e.g., growth analysis) should be expressed via intent and handled by
+    # supervisor-driven replans rather than bespoke discovery loops here.
 
     def _finalize_discovery_payload(self, state: BaseState) -> BaseState:
         """Validate and normalize discovery payload before handing off to downstream agents."""

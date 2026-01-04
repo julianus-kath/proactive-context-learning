@@ -71,3 +71,7 @@ dist/
 build/
 .cache/
 *.log
+
+# Python test artifacts
+.pytest_cache/
+.coverage

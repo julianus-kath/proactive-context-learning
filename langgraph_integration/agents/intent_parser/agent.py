@@ -58,8 +58,12 @@ class IntentParserAgent:
     """
     LangGraph subgraph for agentic intent parsing with multi-step reasoning.
 
-    Input: {user_input, messages (optional)}
-    Output: {intent: ParsedIntent, needs_clarification: bool, clarification_question: str}
+    BaseState contract:
+    - Consumes: user_input, messages (optional conversation history)
+    - Produces/updates:
+      - intent (ParsedIntent) including operation, entities, metrics, filters,
+        time_window, keywords_for_discovery and clarification flags/fields
+      - clarify / clarification_question / ambiguity_reason (for ambiguous queries)
 
     Graph nodes:
     1. analyze_query: Initial LLM analysis of user intent
@@ -339,20 +343,6 @@ Respond ONLY with JSON.
                 "target_tables": classification.get("target_tables", [])
             })
 
-            # Hard guard: avoid routing clearly analytic business questions
-            # into clarification. If the LLM chose "clarify" but the text
-            # looks like an analytic data query, override to "query" so that
-            # downstream extraction and discovery can proceed.
-            try:
-                op = intent.get("operation")
-                if op == "clarify" and self._looks_like_analytic_query(user_input):
-                    logger.info("🧠 [CLASSIFY] Overriding LLM operation 'clarify' → 'query' for analytic business question")
-                    intent["operation"] = "query"
-                    intent["classification_reasoning"] = f"{intent.get('classification_reasoning', '')} | Overridden to 'query' based on analytic heuristic"
-            except Exception:
-                # Heuristic override is best-effort; never fail classification on it
-                pass
-
             logger.info(f"🧠 [CLASSIFY] Classified as: {intent['operation']} (confidence: {intent.get('operation_confidence')})")
             if intent.get("required_action") == "refine_previous":
                 logger.info(f"🧠 [CLASSIFY] 🔄 Detected refinement query with target tables: {intent.get('target_tables')}")
@@ -471,10 +461,6 @@ Respond ONLY with JSON.
             })
             intent["raw_query"] = user_input
 
-            # Derived action hints for downstream agents (discovery/planning/execution)
-            derived = self._derive_action_hints(state.get("user_input", ""), intent)
-            intent.update(derived)
-            
             # Infer analytic template using comprehensive template-based classifier
             template_name, required_action, template_params = infer_template_and_action(
                 user_input=state.get("user_input", ""),
@@ -488,22 +474,10 @@ Respond ONLY with JSON.
                 intent["template_params"] = template_params
                 intent["required_action"] = required_action
                 logger.info(f"🎯 [TEMPLATE] Inferred template: {template_name}, action: {required_action}, params: {template_params}")
-            
-            # Expand keywords with German translations and related terms
-            base_keywords = intent.get("keywords_for_discovery", [])
-            expanded_keywords = self._expand_keywords_with_translations(base_keywords, intent.get("primary_entities", []))
-            intent["keywords_for_discovery"] = expanded_keywords[:10]
 
-            # Merge derived extra keywords into discovery keywords (dedup + cap)
-            try:
-                if derived.get("extra_keywords"):
-                    merged_kw = expanded_keywords + list(derived.get("extra_keywords") or [])
-                    # deduplicate preserving order
-                    seen = set()
-                    merged_kw = [k for k in merged_kw if not (k in seen or seen.add(k))]
-                    intent["keywords_for_discovery"] = merged_kw[:10]
-            except Exception:
-                pass
+            # Rely on LLM-provided keywords_for_discovery; only normalize length.
+            kw = intent.get("keywords_for_discovery") or []
+            intent["keywords_for_discovery"] = kw[:10]
 
             logger.info(f"🧠 [EXTRACT] Entities: {intent['primary_entities']}, Keywords: {intent['keywords_for_discovery']}")
             return {**state, "intent": intent}
@@ -696,34 +670,6 @@ Keep the question clear and actionable.
 
         return has_metric and has_entity
 
-    def _detect_derived_metrics(self, text: str, metrics: List[str]) -> List[str]:
-        """
-        Detect derived metrics (profit_margin, ROI, contribution_margin, etc.)
-        that require computation from base columns rather than direct selection.
-        
-        Returns list of derived metric names to append to metrics.
-        """
-        derived = []
-        text_lower = text.lower()
-        
-        profit_keywords = ["profit margin", "profit_margin", "marge", "margin", "profitabilität", "profitability"]
-        if any(kw in text_lower for kw in profit_keywords) and "profit_margin" not in metrics:
-            derived.append("profit_margin")
-        
-        roi_keywords = ["roi", "return on investment", "return-on-investment", "rentabilität"]
-        if any(kw in text_lower for kw in roi_keywords) and "roi" not in metrics:
-            derived.append("roi")
-        
-        contrib_keywords = ["contribution margin", "contribution_margin", "deckungsbeitrag"]
-        if any(kw in text_lower for kw in contrib_keywords) and "contribution_margin" not in metrics:
-            derived.append("contribution_margin")
-        
-        cogs_keywords = ["cogs margin", "cogs_margin", "cost margin"]
-        if any(kw in text_lower for kw in cogs_keywords) and "cogs_margin" not in metrics:
-            derived.append("cogs_margin")
-        
-        return derived
-
     def _detect_analytic_template(self, user_input: str, intent: dict) -> tuple[Optional[str], Optional[Dict[str, Any]]]:
         """
         Detect if the user query matches a known analytic template archetype.
@@ -787,153 +733,13 @@ Keep the question clear and actionable.
         return (None, None)
 
     def _derive_action_hints(self, user_input: str, intent: dict) -> dict:
-        """Derive structured action hints from user input and extracted intent.
-
-        Produces fields to guide discovery and planning:
-        - required_action: one of ["count", "topk_sum_by_customer", "sum_with_period", "trend_series", "month_count", "ranked_metrics", "interpret_previous"]
-        - group_by: e.g., "customer" or "product"
-        - top_k: integer if applicable
-        - time_granularity: "year"|"month" for trends
         """
-        text = (user_input or "").lower()
-        entities = [e.lower() for e in (intent.get("primary_entities") or [])]
-        metrics = [m.lower() for m in (intent.get("metrics") or [])]
-        
-        if any(m in ["sales", "umsatz", "revenue", "verkauf", "total_sales"] for m in metrics) and "sum" not in metrics:
-            metrics.append("sum")
+        Legacy heuristic action-hint derivation (kept for reference).
 
-        # Detect derived metrics (profit margin, ROI, contribution margin, etc.)
-        derived_metrics = self._detect_derived_metrics(text, metrics)
-        if derived_metrics:
-            metrics.extend(derived_metrics)
-
-        # Heuristic enrichment if metrics missing
-        if not metrics:
-            if any(k in text for k in ["sum", "total", "umsatz", "verkauf", "revenue", "improved"]):
-                metrics.append("sum")
-            if any(k in text for k in ["count", "how many", "wie viele", "number of"]):
-                metrics.append("count")
-            if any(k in text for k in ["average", "avg", "mean", "durchschnitt", "mittelwert"]):
-                metrics.append("avg")
-
-        # Detect ranking keywords (highest, top, most, best, largest, biggest, smallest, lowest)
-        ranking_keywords = ["highest", "top", "most", "best", "largest", "biggest", "smallest", "lowest", "best performing", "worst performing"]
-        has_ranking_keyword = any(kw in text for kw in ranking_keywords)
-
-        # top_k detection - enhanced with ranking keywords
-        top_k = None
-        try:
-            m = re.search(r"top\s+(\d{1,3})", text)
-            if m:
-                top_k = int(m.group(1))
-            elif has_ranking_keyword and top_k is None:
-                top_k = 10
-        except Exception:
-            top_k = None
-
-        # group_by detection for customers and products
-        group_by = None
-        if any(e in ["customer", "customers", "kunde", "kunden", "client", "clients"] for e in entities):
-            group_by = "customer"
-        elif any(e in ["product", "products", "produkt", "produkte", "artikel", "items"] for e in entities):
-            group_by = "product"
-
-        # time granularity
-        time_granularity = None
-        if any(kw in text for kw in ["per year", "yearly", "years", "letzten jahren", "jahre"]):
-            time_granularity = "year"
-        if any(kw in text for kw in ["per month", "monthly", "months", "monat", "monate"]):
-            time_granularity = time_granularity or "month"
-
-        # action classification
-        required_action = None
-        # Follow-up interpretation on prior results (no new DB query)
-        if any(p in text for p in [
-            "these results", "those results", "previous results", "previous answer", "last answer",
-            "that table", "above table", "from that list", "in that list", "in those rows",
-            "sort them", "filter them", "group them", "format them", "explain these"
-        ]):
-            required_action = "interpret_previous"
-        
-        metrics_lower = [m.lower() for m in metrics]
-        
-        # NEW: Handle derived metrics with ranking (profit_margin, roi, contribution_margin, etc.)
-        if has_ranking_keyword and group_by and any(dm in metrics_lower for dm in ["profit_margin", "roi", "contribution_margin", "margin", "cogs_margin"]):
-            required_action = "ranked_metrics"
-            if top_k is None:
-                top_k = 10
-        
-        wants_sum = (
-            "sum" in metrics_lower
-            or "total" in metrics_lower
-            or "sales" in metrics_lower
-            or "revenue" in metrics_lower
-            or "umsatz" in text
-            or "verkauf" in text
-            or "sales" in text
-        )
-        
-        if required_action is None:
-            if wants_sum and group_by == "customer":
-                required_action = "topk_sum_by_customer" if ("top" in text or top_k or has_ranking_keyword) else "sum_by_customer"
-            elif wants_sum and group_by == "product":
-                required_action = "topk_sum_by_product" if ("top" in text or top_k or has_ranking_keyword) else "sum_by_product"
-            elif ("count" in metrics) and any(m in text for m in ["october", "oktober", "january", "februar", "march", "april", "mai", "juni", "juli", "august", "september", "november", "dezember"]):
-                required_action = "month_count"
-            elif any(kw in text for kw in ["over the last", "last \\d+ years", "last \\d+ months", "entwickel", "trend"]):
-                required_action = "trend_series"
-            elif any(kw in text for kw in ["growth", "wachstum", "increase", "gewachsen", "entwicklung"]) and any(kw in text for kw in ["over", "last", "years", "jahre", "time"]):
-                required_action = "growth_analysis"
-            elif any(kw in text for kw in ["productivity", "produktivität", "performance", "leistung", "efficiency", "effizienz"]) and any(kw in text for kw in ["department", "abteilung", "bereich", "by department"]):
-                required_action = "department_productivity"
-            elif any(kw in text for kw in ["vs", "versus", "compared", "comparison", "vergleich", "gegenüber", "gegen", "quarter", "quartal"]):
-                required_action = "comparative_analysis"
-            # NEW: SUM/TOTAL + temporal period (e.g., "sales from Sept to Oct", "improved from Sept to Oct")
-            elif ("sum" in metrics or "total" in metrics or "umsatz" in text or "verkauf" in text or "sales" in text) and \
-                 any(m in text for m in ["october", "oktober", "january", "februar", "march", "april", "mai", "juni", "juli", "august", "september", "november", "dezember", "january", "february"]):
-                required_action = "sum_with_period"
-            # Temporal queries with words like "improved", "changed", "from X to Y"
-            elif any(k in text for k in ["improved", "changed", "growth", "increased", "decreased", "from", "between"]) and \
-                 any(m in text for m in ["october", "oktober", "september", "juni", "juli", "august", "januar", "februar", "march", "april", "mai", "november", "dezember"]):
-                required_action = "sum_with_period"
-            elif "count" in metrics or "how many" in text or "wie viele" in text:
-                required_action = "count"
-
-        # Ensure top_k is set for ranking queries
-        if required_action in ["topk_sum_by_customer", "topk_sum_by_product", "ranked_metrics"] and top_k is None:
-            if has_ranking_keyword or "top" in text:
-                top_k = 10
-            elif required_action == "topk_sum_by_customer" or required_action == "topk_sum_by_product":
-                top_k = 5
-
-        # PHASE 6: Clarification loop for ambiguous queries
-        needs_clarification = self._check_needs_clarification(text, entities, metrics, required_action)
-
-        # Enrich discovery keywords for specific actions (kept within intent parsing)
-        extra_keywords: list[str] = []
-        try:
-            if required_action in [
-                "topk_sum_by_customer",
-                "sum_by_customer",
-                "topk_sum_by_product",
-                "sum_by_product",
-                "sum_with_period",
-            ]:
-                extra_keywords = [
-                    # sales/revenue domain (DE/EN)
-                    "umsatz", "verkauf", "vk", "rechnung", "rechnungen", "rechnungsposition", "position", "positionen",
-                    "invoice", "invoices", "order", "orders", "faktura", "amount", "betrag", "preis", "wert"
-                ]
-        except Exception:
-            extra_keywords = []
-
-        return {
-            "required_action": required_action,
-            "group_by": group_by,
-            "top_k": top_k,
-            "time_granularity": time_granularity,
-            "extra_keywords": extra_keywords
-        }
+        The active pipeline now relies on LLM-derived templates and intent
+        fields; this method is no longer invoked in production.
+        """
+        return {}
 
 
     def _format_message_history(self, messages: List[Dict[str, Any]], limit: int = 6) -> str:
@@ -951,47 +757,13 @@ Keep the question clear and actionable.
         return "\n".join(formatted)
 
     def _expand_keywords_with_translations(self, base_keywords: list, entities: list) -> list:
-        """Expand keywords with German translations and related terms for better table discovery."""
-        expanded = list(base_keywords)  # Start with original keywords
+        """
+        Legacy keyword expansion helper (no longer used).
 
-        # Entity-specific translations
-        entity_translations = {
-            "customer": ["kunde", "kunden", "client", "adressen", "contacts"],
-            "customers": ["kunde", "kunden", "client", "adressen", "contacts"],
-            "product": ["produkt", "produkte", "artikel", "item", "artikel"],
-            "products": ["produkt", "produkte", "artikel", "item", "artikel"],
-            "project": ["projekt", "projekte", "task", "job"],
-            "projects": ["projekt", "projekte", "task", "job"],
-            "sales": ["verkauf", "umsatz", "revenue", "rechnung", "invoice"],
-            "inventory": ["lager", "stock", "bestand", "inventory"],
-            "order": ["auftrag", "bestellung", "order"],
-            "orders": ["auftrag", "bestellung", "order"],
-            "supplier": ["lieferant", "supplier", "vendor"],
-            "suppliers": ["lieferant", "supplier", "vendor"]
-        }
-
-        # Add translations for recognized entities
-        for entity in entities:
-            entity_lower = entity.lower()
-            if entity_lower in entity_translations:
-                expanded.extend(entity_translations[entity_lower])
-
-        # Add common German business terms
-        german_business_terms = [
-            "khk", "adressen", "kontakt", "firma", "unternehmen",
-            "position", "positionen", "kopf", "zeile"
-        ]
-        expanded.extend(german_business_terms)
-
-        # Remove duplicates while preserving order
-        seen = set()
-        deduplicated = []
-        for keyword in expanded:
-            if keyword not in seen:
-                seen.add(keyword)
-                deduplicated.append(keyword)
-
-        return deduplicated
+        Kept only for historical reference; current flows rely on LLM-provided
+        keywords_for_discovery with minimal normalization.
+        """
+        return list(base_keywords)
 
     def _is_schema_query(self, user_lower: str) -> bool:
         """Detect schema/structure queries."""

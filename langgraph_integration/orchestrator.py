@@ -1,25 +1,18 @@
 """
-Multi-Agent Orchestrator - ACTIVE PRODUCTION SYSTEM (Phase 9)
+Supervisor-first multi-agent orchestrator (production path).
 
-Composes 5 specialized agents to answer any ERP question:
-0. IntentParserAgent: Semantic intent parsing (🆕 Phase 9: fixes double-keyword-extraction)
-1. DiscoveryAgent: Finds relevant tables/views (Scout mode, semantic ranking, role-based)
-2. JoinPlanAndSQLAgent: Plans joins and generates MSSQL queries (views-first strategy, FK analysis)
-3. ExecAndRecoveryAgent: Executes safely and recovers from errors (row caps, timeouts, repair logic)
-4. AnswerAgent: Formats results naturally (1-2 sentence summaries)
+This module wires together the core agents and shared resources
+(LLM client, MCP client, runtime config) and exposes a small
+`QueryOrchestrator` facade.
 
-This orchestrator replaces the monolithic DatabaseWorkflow with a modular, composable design
-that enables better reasoning, testability, and maintenance.
+`QueryOrchestrator.process_query()` prepares `BaseState` and delegates
+all query processing to the ReAct-style supervisor defined in
+`langgraph_integration.supervisor`, which calls agents via capability
+tools.
 
-ARCHITECTURE CHANGE (Phase 9):
-- BEFORE: _simple_intent_parser() → naive regex, double extraction by discovery
-- AFTER: IntentParserAgent() → LLM-based semantic parsing, clean structured keywords
-- BENEFIT: Discovery called ONCE with clean keywords, ~3 candidates instead of 943×N
-
-ARCHITECTURE CHANGE (ADR-0019):
-- BEFORE: Single DatabaseWorkflow class (12+ methods, mixed concerns)
-- AFTER: 5 specialized agents composed by orchestrator (separation of concerns)
-- BENEFIT: Each agent focuses on its phase; reasoning is optimized per phase
+Legacy fixed pipeline graphs have been removed; any remaining pipeline
+entrypoints are thin stubs kept only for backwards compatibility and
+should not be used for new code.
 """
 
 import logging
@@ -75,25 +68,20 @@ debug_logger = get_debug_logger()
 
 class QueryOrchestrator:
     """
-    Orchestrates query processing through 4 specialized agents.
-    
-    Flow:
-    1. index_database: Load Scout catalog (MCP health check)
-    2. parse_intent: Extract operation type (query/schema_query/health_check/clarify)
-    3. route_operation: Conditional routing based on operation
-    
-    For data queries:
-    ├─ DiscoveryAgent: Find relevant tables/views (Scout semantic search, role-based ranking)
-    ├─ JoinPlanAndSQLAgent: Plan joins, generate MSSQL (views-first, FK analysis)
-    ├─ ExecAndRecoveryAgent: Execute safely, auto-repair on error (row caps, timeouts)
-    └─ AnswerAgent: Format results (1-2 sentence natural language)
-    
-    For schema queries:
-    ├─ DiscoveryAgent: List available tables/views
-    └─ AnswerAgent: Explain schema structure
-    
-    For health checks/errors:
-    └─ AnswerAgent: Handle directly
+    Thin facade around the ReAct-style supervisor used in production.
+
+    Responsibilities:
+    - Initialize shared LLM + MCP clients and runtime configuration.
+    - Provide `process_query()` as the high-level entrypoint used by the
+      FastAPI service.
+    - Expose `invoke_agent()` for targeted agent debugging (intent,
+      discovery, join/SQL, validation, execution, answer) without
+      rebuilding the full supervisor loop.
+
+    The legacy fixed LangGraph pipeline
+    (index_database → parse_intent → route_operation → …) has been
+    retired; routing and retries are now owned by `ReactSupervisor` in
+    `langgraph_integration.supervisor`.
     """
 
     def __init__(
@@ -797,235 +785,6 @@ class QueryOrchestrator:
 
         return state
 
-    # NOTE (ReAct Phase C cleanup):
-    # This helper remains intentionally pipeline-only and is exercised by
-    # tests/test_orchestrator_semantic_routing.py. The ReAct supervisor path
-    # relies on capability tools and supervisor policy instead of this routing
-    # logic. When pipeline mode is fully retired, this method is a prime
-    # candidate for deletion under the Ruthless Code Removal Policy
-    # (see .zenflow/tasks/react-integration-codex-c93e/requirements.md §9).
-    def _route_validation_result_for_state(self, state: BaseState) -> str:
-        """
-        Internal helper to interpret validation and semantic fields and decide routing.
-
-        This mirrors the logic used by the route_validation_result closure in the
-        compiled graph so it can be exercised directly in unit tests without
-        depending on LangGraph internals.
-        """
-        validation = state.get("validation_result", {}) or {}
-        retry_action = validation.get("retry_action", "accept") or "accept"
-        # Restrict retry_action to a small, supported set so
-        # downstream routing never depends on arbitrary strings.
-        allowed_retry_actions = {
-            "accept",
-            "try_next_candidate",
-            "replan_with_aggregation",
-            "replan_with_filter",
-            "ask_user",
-        }
-        if retry_action not in allowed_retry_actions:
-            logger.warning(
-                "validation_retry_action_unsupported: retry_action=%r, coercing to 'accept'",
-                retry_action,
-            )
-            retry_action = "accept"
-            validation["retry_action"] = "accept"
-            state["validation_result"] = validation
-        semantic_status = validation.get("semantic_status")
-        semantic_retry_action = validation.get("semantic_retry_action", "none") or "none"
-
-        eval_mode = state.get("eval_mode")
-        is_benchmark = eval_mode == "benchmark"
-        semantic_retry_count = int(state.get("semantic_retry_count", 0) or 0)
-        max_semantic_retries = int(state.get("max_semantic_retries", 0) or 0)
-        plan_attempt = int(state.get("plan_attempt_count", 0) or 0)
-        max_plans = int(state.get("max_total_plans", 0) or 0) or 4
-
-        # Semantic-aware routing is only active in benchmark mode; interactive mode
-        # treats semantic findings as logging-only so UX remains unchanged.
-        semantic_driven_retry = False
-
-        # Phase 2b: Repair loop caps & no-progress detection
-        validation_attempts = state.get("validation_attempt_count", 0)
-        exec_recovery_attempts = state.get("exec_recovery_attempt_count", 0)
-        max_validation_attempts = state.get("max_validation_attempts", 0) or getattr(self, "max_validation_attempts", 2)
-        max_exec_recovery_attempts = state.get("max_exec_recovery_attempts", 0) or getattr(self, "max_exec_recovery_attempts", 2)
-        max_no_progress_repeats = state.get("max_no_progress_repeats", 0) or getattr(self, "max_no_progress_repeats", 2)
-
-        # No-progress detector: track repeated (SQL,error) signatures
-        try:
-            sig = self._repair_signature(state)
-            seen = state.get("repair_signatures_seen") or {}
-            count = seen.get(sig, 0) + 1
-            seen[sig] = count
-            state["repair_signatures_seen"] = seen
-            state["repair_no_progress_count"] = state.get("repair_no_progress_count", 0) + (1 if count > 1 else 0)
-
-            if count >= max_no_progress_repeats and max_no_progress_repeats > 0:
-                state["stop_reason"] = "repair_no_progress"
-                preview_sql = (state.get("sql_query", "") or "").strip()
-                preview_sql = preview_sql[:300] + ("..." if len(preview_sql) > 300 else "")
-                merge_error_info(
-                    state,
-                    {
-                        "type": "REPAIR_NO_PROGRESS",
-                        "stage": "validate_sql",
-                        "message": "Validation/repair cycles repeated the same failing SQL and error without improvement.",
-                        "suggestion": (
-                            "Try narrowing the question (fewer tables/metrics) or phrasing it in a simpler way. "
-                            "You can also try referencing specific tables if you know them."
-                        ),
-                        "context": {
-                            "sql_preview": preview_sql,
-                            "last_error_signature": state.get("last_exec_error_signature"),
-                        },
-                    },
-                )
-                return "answer"
-        except Exception:
-            # Defensive guard – routing should continue even if repair signature fails.
-            pass
-
-        # ===================== Semantic-aware routing (benchmark mode only) =====================
-        if is_benchmark:
-            if semantic_status and semantic_status not in ("OK", "CONTRACT_MISSING", "UNSUPPORTED_METRIC"):
-                if semantic_retry_action == "replan":
-                    # Enforce semantic-specific budget and shared global plan budget.
-                    if max_semantic_retries > 0 and semantic_retry_count >= max_semantic_retries:
-                        if not state.get("stop_reason"):
-                            state["stop_reason"] = "max_semantic_retries"
-                    elif plan_attempt + semantic_retry_count >= max_plans:
-                        # Shared global plan budget exhausted; fall through to existing plan cap.
-                        pass
-                    else:
-                        # Map semantic failures to existing retry actions without introducing
-                        # new graph nodes or edges. Join-path issues tend to benefit from
-                        # trying a new candidate set, while entity/metric mismatches are
-                        # better served by a fresh plan over the current candidates.
-                        if semantic_status in ("JOIN_PATH_INVALID", "NO_VALID_JOIN_PATH"):
-                            mapped_retry = "try_next_candidate"
-                        else:
-                            mapped_retry = "replan_with_aggregation"
-
-                        retry_action = mapped_retry
-                        validation["retry_action"] = mapped_retry
-                        state["validation_result"] = validation
-                        semantic_driven_retry = True
-
-        # 🧠 Budget-aware routing: if we are at or below the safety margin,
-        # stop sending the graph back to discovery/join (which would require
-        # additional LLM calls) and move toward answering with existing data.
-        llm_usage = state.get("llm_usage") or {}
-        max_calls = state.get("max_llm_calls", 0) or 20
-        total_usage = llm_usage.get("total", state.get("total_llm_calls", 0) or 0)
-        remaining_budget = max_calls - int(total_usage)
-        safety_margin = state.get("llm_budget_safety_margin", 0) or 0
-        if remaining_budget <= safety_margin:
-            # Force accept-path so downstream goes directly to answer.
-            validation["retry_action"] = "accept"
-            state["validation_result"] = validation
-            return "answer"
-
-        # 🆕 Global plan budget: stop after too many plan/validate cycles
-        if plan_attempt >= max_plans:
-            # Convert into a clarification-style failure to avoid burning more tokens
-            intent = state.get("intent") or {}
-            intent["operation"] = "clarify"
-            intent["needs_clarification"] = True
-            intent["clarification_question"] = intent.get(
-                "clarification_question",
-                "This question requires a complex analytic query and I could not find a stable plan within a safe number of attempts. Could you narrow down the scope or specify the main metric you care about?"
-            )
-            intent["ambiguity_reason"] = intent.get(
-                "ambiguity_reason",
-                "Maximum planning retries exceeded; query was too broad or complex for an automatic plan."
-            )
-            state["intent"] = intent
-            merge_error_info(
-                state,
-                {
-                    "type": "MAX_RETRIES_EXCEEDED",
-                    "message": (
-                        "The system attempted multiple discovery and planning cycles "
-                        "but could not produce a stable query plan."
-                    ),
-                },
-            )
-            return "answer"
-
-        # Phase 2b: Hard caps on validation and exec_recovery attempts
-        if retry_action in ("try_next_candidate", "replan_with_aggregation", "replan_with_filter"):
-            if validation_attempts >= max_validation_attempts:
-                state["stop_reason"] = "max_validation_attempts"
-                merge_error_info(
-                    state,
-                    {
-                        "type": "REPAIR_LOOP_STUCK",
-                        "stage": "validate_sql",
-                        "message": (
-                            "The system attempted to validate and repair the SQL multiple times "
-                            "but could not produce a stable, executable query."
-                        ),
-                        "suggestion": (
-                            "Try narrowing the question (fewer tables/metrics) or specifying a clearer metric "
-                            "so the planner can generate a simpler query."
-                        ),
-                    },
-                )
-                return "answer"
-
-        if retry_action == "try_next_candidate" and exec_recovery_attempts >= max_exec_recovery_attempts:
-            state["stop_reason"] = "max_exec_recovery_attempts"
-            merge_error_info(
-                state,
-                {
-                    "type": "REPAIR_LOOP_STUCK",
-                    "stage": "exec_recovery",
-                    "message": (
-                        "The system attempted to execute and repair the query multiple times "
-                        "but could not complete execution safely."
-                    ),
-                    "suggestion": (
-                        "Consider asking a simpler question or focusing on a smaller subset of data."
-                    ),
-                },
-            )
-            return "answer"
-
-        # Increment plan attempt count when we're about to take a retry action
-        if retry_action in ("try_next_candidate", "replan_with_aggregation", "replan_with_filter"):
-            state["plan_attempt_count"] = plan_attempt + 1
-            if is_benchmark and semantic_driven_retry:
-                state["semantic_retry_count"] = semantic_retry_count + 1
-
-        # 🆕 Circuit breaker: stop retrying per candidate set
-        retry_attempt = state.get("retry_attempt_count", 0)
-        max_retries = state.get("max_retries_per_candidate_set", 2)
-
-        if retry_attempt >= max_retries:
-            merge_error_info(
-                state,
-                {
-                    "type": "MAX_RETRIES_EXCEEDED",
-                    "message": (
-                        "All discovery candidates have been tried but the query "
-                        "could not be executed successfully."
-                    ),
-                },
-            )
-            return "answer"
-
-        if retry_action == "try_next_candidate":
-            state["retry_attempt_count"] = retry_attempt + 1
-            return "discovery"
-        elif retry_action in ["replan_with_aggregation", "replan_with_filter"]:
-            state["retry_attempt_count"] = retry_attempt + 1
-            return "join_sql"
-        elif retry_action == "ask_user":
-            return "answer"
-        else:  # accept or unknown
-            return "answer"
-
     async def ainvoke(self, input_state: Dict, **kwargs):
         """
         Legacy entrypoint that previously executed the fixed pipeline graph.
@@ -1189,7 +948,7 @@ class QueryOrchestrator:
                 debug_logger.agent_exit("index_database", before_state, dict(result_state))
                 return result_state
 
-            logger.info("📚 [INDEX_DATABASE] ✅ All prerequisites satisfied, pipeline may proceed")
+            logger.info("📚 [INDEX_DATABASE] ✅ All prerequisites satisfied, supervisor loop may proceed")
             # Load last execution result for interpretation follow-ups (memory → disk)
             cache = self._previous_exec_cache or {}
             if cache:
@@ -1278,27 +1037,6 @@ class QueryOrchestrator:
 
         try:
             logger.info(f"🧠 [PARSE_INTENT] Query: \"{user_input}\"")
-
-            # Fast-path: use the legacy simple intent parser for cheap, deterministic
-            # classification of health/schema queries before invoking the full
-            # IntentParserAgent subgraph. This keeps health checks and basic schema
-            # questions LLM-free and aligns with tests that exercise
-            # _simple_intent_parser directly.
-            try:
-                simple_intent = self._simple_intent_parser(user_input)
-            except Exception:
-                simple_intent = {"operation": "query"}
-
-            op = (simple_intent or {}).get("operation", "query")
-            if op in ("health_check", "schema_query"):
-                logger.info(
-                    "🧠 [PARSE_INTENT] Using simple intent parser shortcut for operation=%s",
-                    op,
-                )
-                state["intent"] = simple_intent
-                debug_logger.intent_parsed_phase9(simple_intent, parsing_method="SimpleIntentParser")
-                debug_logger.agent_exit("parse_intent", before_state, dict(state))
-                return state
 
             logger.info("🧠 [PARSE_INTENT] Building IntentParserAgent subgraph...")
 
@@ -1430,44 +1168,6 @@ class QueryOrchestrator:
         state["discovery_log"] = log_payload
         # In benchmark mode, lock metric + template to the per-query semantic contract.
         state = self._resolve_metric_and_template_from_contract(state)
-        return state
-
-    async def _route_operation_node(self, state: BaseState) -> BaseState:
-        """
-        Routing node (actual routing done via conditional_edges).
-        
-        This determines which branch to take based on intent operation.
-        """
-        debug_logger.agent_entry("route_operation", dict(state))
-        before_state = dict(state)
-        
-        logger.info("🚦 [ROUTE] ════════════════════════════════════════")
-        logger.info("🚦 [ROUTE] CONDITIONAL ROUTING DECISION")
-        logger.info("🚦 [ROUTE] ════════════════════════════════════════")
-        
-        intent = state.get("intent", {})
-        operation = intent.get("operation", "query")
-        
-        logger.info(f"🚦 [ROUTE] operation field: '{operation}'")
-        
-        if operation == "query":
-            logger.info(f"🚦 [ROUTE] ✅ Routing decision: QUERY PIPELINE")
-            logger.info(
-                "🚦 [ROUTE]    Path: discovery → join_sql → validate_sql → "
-                "exec_recovery → result_validator → answer"
-            )
-        elif operation == "schema_query":
-            logger.info(f"🚦 [ROUTE] ✅ Routing decision: SCHEMA QUERY")
-            logger.info(f"🚦 [ROUTE]    Path: discovery_for_schema → answer_schema")
-        elif operation == "health_check":
-            logger.info(f"🚦 [ROUTE] ✅ Routing decision: HEALTH CHECK")
-            logger.info(f"🚦 [ROUTE]    Path: answer_health")
-        else:
-            logger.warning(f"🚦 [ROUTE] ⚠️  Unknown operation: {operation}")
-            logger.info(f"🚦 [ROUTE]    Defaulting to: query pipeline")
-        
-        logger.info(f"🚦 [ROUTE] ✅ Routing complete, conditional_edges will take it from here")
-        debug_logger.agent_exit("route_operation", before_state, dict(state))
         return state
 
     # ============= Agent nodes (subgraph invocations) =============
@@ -2867,11 +2567,6 @@ class QueryOrchestrator:
             return state
 
     # ============= Helper methods =============
-
-    # ❌ DEPRECATED: _simple_intent_parser removed in Phase 9
-    # Replaced with IntentParserAgent.parse() for semantic parsing
-    # Reason: Naive regex caused double-keyword-extraction problem
-    # See: CHANGES_SUMMARY.md "Intent Parsing Architecture Gap"
 
     async def process_query(
         self,

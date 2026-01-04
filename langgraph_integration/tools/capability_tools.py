@@ -2,15 +2,15 @@
 Capability tool wrappers for ReAct-style supervision.
 
 Each function in this module:
-- Invokes the corresponding orchestrator agent/subgraph.
-- Populates a shared tool envelope on the state:
-  - tool_output
-  - error_info (normalized)
-  - progress_signal
-  - suggested_next_actions
-  - last_tool_name / last_tool_progress_signal
-- Leaves existing orchestrator metrics (node_entry_counts, llm_usage)
-  to the underlying agent implementations.
+ - Invokes the corresponding orchestrator agent/subgraph.
+ - Populates a shared tool envelope on BaseState:
+   - tool_output (tool-specific diff, e.g. intent / sql_query / exec_result)
+   - error_info (normalized via ErrorInfo model)
+   - progress_signal (coarse: positive | neutral | negative)
+   - suggested_next_actions (bounded hints: rediscover | replan | clarify | stop)
+   - last_tool_name / last_tool_progress_signal / last_tool_result
+ - Leaves existing orchestrator metrics (node_entry_counts, llm_usage)
+   to the underlying agent implementations.
 """
 
 from __future__ import annotations
@@ -356,4 +356,3 @@ def _attach_tool_envelope(
     state["last_tool_progress_signal"] = progress_signal
 
     return state
-

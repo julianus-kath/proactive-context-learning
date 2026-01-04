@@ -150,6 +150,15 @@ class DebugLogger:
             log_dir: Directory for log files (default: ./logs)
         """
         self.name = name
+        # Logging verbosity flags (env-driven):
+        # - LANGGRAPH_DEBUG_VERBOSE=1 → include full state snapshots in agent logs
+        #   and other high-volume payloads.
+        # - Default (unset/0) → keep concise, high-value logs only.
+        self.verbose_state_logging = os.getenv("LANGGRAPH_DEBUG_VERBOSE", "0") in (
+            "1",
+            "true",
+            "True",
+        )
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
         
@@ -795,9 +804,13 @@ class DebugLogger:
             "event": "agent_entry",
             "agent": agent_name,
             "state_keys": state_keys,
-            "state_snapshot": state,
             "intent": intent,
         }
+        # Full state snapshots are useful during deep debugging but can be
+        # very large. Guard them behind LANGGRAPH_DEBUG_VERBOSE to keep
+        # production logs lightweight by default.
+        if self.verbose_state_logging:
+            structured_payload["state_snapshot"] = state
         self._add_to_buffer(message, "AGENT_ENTRY", structured_payload)
     
     def agent_exit(self, agent_name: str, before_state: Dict[str, Any], after_state: Dict[str, Any]):
@@ -870,9 +883,12 @@ class DebugLogger:
             "added_keys": list(added_keys),
             "removed_keys": list(removed_keys),
             "modified_keys": changed_keys,
-            "before_state": before_state,
-            "after_state": after_state,
         }
+        # Only attach full before/after snapshots when verbose logging is
+        # explicitly enabled to avoid bloating JSONL logs and log files.
+        if self.verbose_state_logging:
+            structured_payload["before_state"] = before_state
+            structured_payload["after_state"] = after_state
         if duration_ms is not None:
             structured_payload["duration_ms"] = round(duration_ms, 2)
         if "intent" in changed_keys:

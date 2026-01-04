@@ -1,4 +1,4 @@
-# LangGraph Orchestrator - Multi-Agent Query Pipeline (Phase 10b)
+# LangGraph Orchestrator – Supervisor-First Multi-Agent Flow
 
 ## Why
 
@@ -30,10 +30,29 @@ These issues prevented state propagation through the complete pipeline, causing 
 3. **Fixed Async Initialization** (`sql_validator/agent.py` line 46)
    - Removed erroneous `await` on synchronous `get_shared_mcp_tool()` call
 
-4. **Added Default Recursion Limit** (`orchestrator.py` lines 153-164)
-   - Added `ainvoke()` wrapper that sets `recursion_limit=500` by default
-   - Necessary because subgraphs and nested tool calls consume many recursion steps
-   - Allows callers to override via config if needed
+4. **Legacy Recursion Limit Handling** (pipeline graph)
+   - The old fixed LangGraph pipeline used an `ainvoke()` wrapper with an increased
+     `recursion_limit` to account for deep subgraphs and tool calls.
+   - In the current supervisor-first design, recursion limits are replaced by
+     explicit, testable budgets (`max_supervisor_steps`, `max_llm_calls_total`).
+
+### Current Orchestration (React Supervisor)
+
+The production path no longer executes the fixed LangGraph pipeline graph. Instead:
+
+- `QueryOrchestrator.process_query()` builds an initial `BaseState` (user input,
+  budgets, DB config) and delegates to the ReAct-style supervisor
+  (`ReactSupervisor` in `langgraph_integration/supervisor.py`).
+- The supervisor invokes capability tools (`interpret_query`, `discover_schema`,
+  `plan_sql`, `validate_sql`, `execute_sql`, `evaluate_result`, `finalize_answer`)
+  and owns retries, budgets, and stop conditions.
+- Individual agents are single-pass tools that write well-defined fields on
+  `BaseState` (`intent`, `relevant_tables`, `sql_query`, `validation_result`,
+  `exec_result`, `final_response`, etc.) without implementing their own
+  cross-agent loops.
+
+The pipeline description below is kept for historical context. New integrations
+should treat the supervisor path as the only supported orchestration model.
 
 ### Pipeline Architecture
 
@@ -79,12 +98,13 @@ from langgraph_integration.orchestrator import QueryOrchestrator
 async def test():
     orchestrator = QueryOrchestrator(llm_model="gpt-4o")
     
-    result = await orchestrator.ainvoke({
-        'user_input': 'Show me top 5 products by sales',
-        'conversation_history': []
-    })
+    result = await orchestrator.process_query(
+        "Show me top 5 products by sales",
+        messages=[],
+        metadata={"eval_mode": "interactive"},
+    )
     
-    print(f"✅ Answer: {result.get('answer', '')[:100]}")
+    print(f"✅ Answer: {result.get('final_response', '')[:200]}")
 
 asyncio.run(test())
 EOF
@@ -105,34 +125,31 @@ orchestrator = QueryOrchestrator(
     query_timeout_seconds=30
 )
 
-# Use with default recursion_limit=500
-result = await orchestrator.ainvoke({
-    'user_input': user_question,
-    'conversation_history': conversation
-})
-
-# Or override recursion_limit
-result = await orchestrator.ainvoke(
-    {'user_input': user_question, 'conversation_history': conversation},
-    config={'recursion_limit': 1000}
+# High-level entrypoint used in production
+result = await orchestrator.process_query(
+    user_question,
+    messages=conversation,
+    metadata={"eval_mode": "interactive"},
 )
 ```
 
-### Orchestration Modes (`pipeline` vs `react_supervisor`)
+### Orchestration Mode (`react_supervisor`)
 
-The orchestrator now supports two orchestration modes:
+The orchestrator now exposes a single supported orchestration mode:
 
-- `pipeline` (default): the original fixed LangGraph pipeline described above.
-- `react_supervisor`: a ReAct-style supervisor loop that calls the same agents via
-  capability tools and enforces the same validation/execution gates.
+- `react_supervisor`: a ReAct-style supervisor loop that calls the agents via
+  capability tools and enforces validation/execution gates.
+
+Any other requested mode (constructor arg, metadata, or env var) is coerced to
+`react_supervisor` with a warning; the legacy `pipeline` graph has been removed.
 
 You can configure the mode in three ways:
 
 ```python
-# 1) Constructor default (process_query fallback)
+# 1) Constructor (optional explicit mode)
 orchestrator = QueryOrchestrator(orchestration_mode="react_supervisor")
 
-# 2) Per-request override via metadata
+# 2) Per-request metadata (still coerced to react_supervisor today)
 result = await orchestrator.process_query(
     user_question,
     messages=conversation,
@@ -145,10 +162,9 @@ orchestrator = QueryOrchestrator()  # picks up env default
 ```
 
 Notes:
-- `pipeline` and `react_supervisor` share the same `BaseState` contracts and
-  safety gates (validation must succeed before execution).
-- When experimenting with the supervisor, keep `pipeline` as a fallback path
-  until you have validated quality on your own workloads.
+- All orchestration goes through the supervisor path; `BaseState` contracts and
+  safety gates (validation before execution) are enforced by capability tools +
+  supervisor policy.
 
 ### Using via FastAPI
 
@@ -258,6 +274,47 @@ Each agent handles one phase:
 - **ResultValidatorAgent**: Validate result quality, decide retries
 - **AnswerAgent**: Format results naturally
 
+**Simplified behavior (Phase C clean‑up):**
+
+- **LLM‑first intent & templates**:
+  - IntentParserAgent relies on LLM prompts and template classifiers for
+    `operation`, entities/metrics, `keywords_for_discovery`, and
+    `required_action`. Python logic only normalizes lengths and stores fields.
+  - Legacy keyword/metric heuristics are no longer used to override LLM
+    decisions.
+- **Single‑pass discovery with light, configurable hints**:
+  - DiscoveryAgent runs a single catalog search (tables + views) driven by
+    `keywords_for_discovery` and optional `seed_tables` / `skip_tables`.
+  - Column role and junk‑table heuristics are kept minimal and can be tuned via
+    `DISCOVERY_DATE_TOKENS`, `DISCOVERY_ID_TOKENS`,
+    `DISCOVERY_LABEL_TOKENS`, and `DISCOVERY_JUNK_TABLE_TOKENS`.
+  - It does not run its own strategic/enrichment/fallback discovery loops;
+    rediscovery decisions are left to the supervisor.
+- **Bounded execution recovery**:
+  - ExecAndRecoveryAgent executes a validated `sql_query` via MCP and may
+    perform at most one LLM repair + retry and one LLM simplification + final
+    retry (`max_retries <= 2` enforced in code).
+  - It never rewrites queries based on local business heuristics; it only
+    returns `exec_result` / `error_info` for the supervisor and ResultValidator.
+- **Result‑driven routing**:
+  - ResultValidator remains a deterministic checker that maps `exec_result`
+    plus intent to a small `retry_action` enum
+    (`accept`, `ask_user`, `try_next_candidate`, `replan_with_aggregation`,
+    `replan_with_filter`).
+  - The ReactSupervisor interprets these hints and owns all rediscovery,
+    re‑planning, and clarification loops.
+
+At the orchestration level, the **ReactSupervisor** acts as a project
+manager for these agents:
+
+- Maintains a world view over `BaseState` (intent, schema context,
+  SQL, validation/execution results, and budgets).
+- Decides which capability tool to call next based on
+  `progress_signal`, `retry_action`, and `suggested_next_actions`.
+- Owns all cross-agent loops (rediscovery, replan, revalidate,
+  re-execute, fallback to clarification), so individual agents remain
+  single-pass and stateless aside from their edits to `BaseState`.
+
 ### Trust Model for Execution
 
 - Execute once, trust the result
@@ -271,13 +328,13 @@ Each agent handles one phase:
 - Fall back to raw tables only if views don't cover intent
 - Reduces join complexity and improves query quality
 
-### Recursion Limit Handling
+### Recursion / Budget Handling
 
-- Default `ainvoke(recursion_limit=500)` accounts for:
-  - Subgraph invocations (each node can be a graph)
-  - Tool calls and retries
-  - Internal LLM loops and decision points
-- Callers can override if they know they need more/less
+- The supervisor loop is bounded by explicit budgets:
+  - `max_supervisor_steps` – maximum tool invocations per query
+  - `max_llm_calls` / `max_llm_calls_total` – global LLM call caps
+- `process_query()` seeds safe defaults; callers can override per request via
+  `metadata` (for example `{"max_supervisor_steps": 20}`) when needed.
 
 ## Observability
 
@@ -309,6 +366,15 @@ debug_logger.intent_parsed(intent, method="llm")
 debug_logger.tool_called("search_tables", args, duration_ms)
 ```
 
+Debug verbosity is controlled via environment variables:
+
+- `LANGGRAPH_DEBUG_VERBOSE=1` – include full before/after state
+  snapshots in `agent_entry`/`agent_exit` JSONL logs for deep
+  debugging.
+- Default / `LANGGRAPH_DEBUG_VERBOSE=0` – keep concise, high-value
+  logs (agent names, changed keys, supervisor decisions, tool calls)
+  without dumping entire state payloads.
+
 ## Notes
 
 ### Limitations
@@ -321,7 +387,8 @@ debug_logger.tool_called("search_tables", args, duration_ms)
 
 ### Known Constraints
 
-- **Recursion Limit**: May need adjustment for very deep/complex queries (increase `config['recursion_limit']`)
+- **Supervisor Budgets**: For very deep/complex queries, you may need to increase
+  `max_supervisor_steps` and/or LLM budgets via `metadata` on `process_query`.
 - **Cold Start**: First query ~2-3s (LLM models loading), subsequent queries ~1s
 - **MCP Availability**: System depends on Windows MCP server being reachable over network
 

@@ -21,7 +21,11 @@ logger = logging.getLogger(__name__)
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from langgraph_integration.orchestrator import QueryOrchestrator, create_orchestrator
+from langgraph_integration.orchestrator import (
+    QueryOrchestrator,
+    create_orchestrator,
+    build_graph,
+)
 from langgraph_integration.contracts.state import BaseState
 
 
@@ -49,54 +53,21 @@ async def test_orchestrator_initialization(orchestrator):
 
 @pytest.mark.asyncio
 async def test_orchestrator_graph_build(orchestrator):
-    """Test orchestrator graph compilation."""
-    logger.info("🔍 Test: Orchestrator graph build")
+    """Pipeline graph has been removed; build_graph should raise."""
+    logger.info("🔍 Test: Orchestrator build_graph stub")
 
-    graph = orchestrator.build_graph()
-    assert graph is not None
+    with pytest.raises(RuntimeError):
+        build_graph()
 
-    logger.info("✅ Orchestrator graph compiled successfully")
+    logger.info("✅ build_graph stub raises RuntimeError as expected")
 
 
-def test_orchestrator_has_timeout_attr(self):
+def test_orchestrator_has_timeout_attr():
     from langgraph_integration.orchestrator import QueryOrchestrator
 
     orch = QueryOrchestrator(query_timeout_seconds=42)
     assert hasattr(orch, "query_timeout_seconds")
     assert orch.query_timeout_seconds == 42
-
-
-@pytest.mark.asyncio
-async def test_simple_intent_parser(orchestrator):
-    """Test simple intent parser."""
-    logger.info("🔍 Test: Simple intent parser")
-
-    test_cases = [
-        {
-            "input": "What tables are in the database?",
-            "expected_operation": "schema_query"
-        },
-        {
-            "input": "Is the system healthy?",
-            "expected_operation": "health_check"
-        },
-        {
-            "input": "Show me sales data",
-            "expected_operation": "query"
-        },
-        {
-            "input": "How many customers do we have?",
-            "expected_operation": "query"
-        }
-    ]
-
-    for case in test_cases:
-        intent = orchestrator._simple_intent_parser(case["input"])
-        assert intent["operation"] == case["expected_operation"], \
-            f"Expected {case['expected_operation']}, got {intent['operation']} for: {case['input']}"
-        logger.debug(f"  ✅ {case['input'][:50]}... → {intent['operation']}")
-
-    logger.info("✅ Intent parser working correctly")
 
 
 @pytest.mark.asyncio
