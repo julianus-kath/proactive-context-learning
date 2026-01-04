@@ -89,6 +89,109 @@ class ReactSupervisor:
         # Temperature 0 for deterministic, testable behavior given the same state.
         self.llm = ChatOpenAI(model=model, temperature=0.0)
 
+    async def _llm_select_next_tool(
+        self,
+        state: BaseState,
+        last_tool_name: Optional[ToolName],
+    ) -> Optional[ToolName]:
+        """
+        Use the supervisor LLM to choose the next capability tool.
+
+        The LLM sees a compact summary of the current world state (intent,
+        validation, execution, budgets, last tool, progress) and must select one
+        of the known tools or "__STOP__".
+        """
+        try:
+            intent = state.get("intent") or {}
+            validation = state.get("validation_result") or {}
+            exec_result = state.get("exec_result") or {}
+            error_info = state.get("error_info") or {}
+
+            summary: Dict[str, Any] = {
+                "intent": {
+                    "operation": intent.get("operation"),
+                    "needs_clarification": bool(intent.get("needs_clarification")),
+                    "primary_entities": intent.get("primary_entities") or [],
+                    "metrics": intent.get("metrics") or [],
+                },
+                "have_relevant_tables": bool(state.get("relevant_tables")),
+                "have_sql_query": bool((state.get("sql_query") or "").strip()),
+                "validation_result": {
+                    "is_valid": bool(validation.get("is_valid", False)),
+                    "retry_action": validation.get("retry_action"),
+                },
+                "exec_result": {
+                    "ok": bool(exec_result.get("ok")) if isinstance(exec_result, dict) else False,
+                    "row_count": exec_result.get("row_count") if isinstance(exec_result, dict) else None,
+                },
+                "error_info_type": error_info.get("type") if isinstance(error_info, dict) else None,
+                "last_tool_name": last_tool_name,
+                "progress_signal": state.get("progress_signal"),
+                "suggested_next_actions": list(state.get("suggested_next_actions") or []),
+                "budgets": {
+                    "supervisor_step_count": int(state.get("supervisor_step_count", 0) or 0),
+                    "max_supervisor_steps": int(state.get("max_supervisor_steps", 0) or 0),
+                    "total_llm_calls": int(state.get("total_llm_calls", 0) or 0),
+                    "max_llm_calls": int(state.get("max_llm_calls", 0) or 0),
+                    "no_progress_repeat_count": int(state.get("no_progress_repeat_count", 0) or 0),
+                },
+            }
+
+            allowed_tools: List[ToolName] = [
+                "interpret_query",
+                "discover_schema",
+                "plan_sql",
+                "validate_sql",
+                "execute_sql",
+                "evaluate_result",
+                "finalize_answer",
+                "__STOP__",
+            ]
+
+            system = (
+                "You are the supervisor for an ERP multi-agent system. "
+                "Your job is to choose the NEXT capability tool to run, based on the current state. "
+                "Tools:\n"
+                "- interpret_query: parse intent / clarify what the user wants.\n"
+                "- discover_schema: find relevant tables/views using the catalog.\n"
+                "- plan_sql: build a join plan and generate SQL from intent + discovered tables.\n"
+                "- validate_sql: check/repair SQL syntax and structure.\n"
+                "- execute_sql: run a validated SQL query against the database.\n"
+                "- evaluate_result: check result quality and decide if retry/replan is needed.\n"
+                "- finalize_answer: format the final answer for the user.\n"
+                "- __STOP__: stop the loop (only when an answer is ready or budgets are exhausted).\n\n"
+                "Constraints:\n"
+                "- Do NOT call execute_sql before there is a non-empty sql_query.\n"
+                "- Prefer validate_sql before execute_sql when sql_query is present but not validated.\n"
+                "- If intent.operation is 'health_check', you usually go directly to finalize_answer.\n"
+                "- If intent.operation is 'schema_query' and no relevant_tables yet, call discover_schema.\n"
+                "- If evaluate_result suggests try_next_candidate or replan_with_*, you may pick discover_schema or plan_sql.\n"
+                "- Respect budgets and avoid infinite loops."
+            )
+
+            user = (
+                "Current state summary (JSON):\n"
+                f"{json.dumps(summary, ensure_ascii=False)}\n\n"
+                "Respond with ONLY the name of the next tool to run, exactly one of:\n"
+                f"{', '.join(allowed_tools)}\n"
+            )
+
+            response = await self.llm.ainvoke(
+                [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ]
+            )
+            text = (getattr(response, "content", "") or "").strip()
+            # Take the first token/word as the tool name.
+            candidate = text.split()[0] if text else ""
+            if candidate in allowed_tools:
+                return candidate  # type: ignore[return-value]
+            logger.debug("Supervisor LLM returned unsupported tool %r; falling back to heuristic policy", candidate)
+        except Exception:
+            logger.debug("Supervisor LLM decision failed; falling back to heuristic policy", exc_info=True)
+        return None
+
     async def run(self, state: BaseState) -> BaseState:
         """
         Run the supervisor loop until a terminal condition or budget is reached.
@@ -283,110 +386,6 @@ async def run_supervisor(state: BaseState, config: Optional[SupervisorConfig] = 
     """
     supervisor = ReactSupervisor(config=config)
     return await supervisor.run(state)
-
-
-    async def _llm_select_next_tool(
-        self,
-        state: BaseState,
-        last_tool_name: Optional[ToolName],
-    ) -> Optional[ToolName]:
-        """
-        Use the supervisor LLM to choose the next capability tool.
-
-        The LLM sees a compact summary of the current world state (intent,
-        validation, execution, budgets, last tool, progress) and must select one
-        of the known tools or "__STOP__".
-        """
-        try:
-            intent = state.get("intent") or {}
-            validation = state.get("validation_result") or {}
-            exec_result = state.get("exec_result") or {}
-            error_info = state.get("error_info") or {}
-
-            summary: Dict[str, Any] = {
-                "intent": {
-                    "operation": intent.get("operation"),
-                    "needs_clarification": bool(intent.get("needs_clarification")),
-                    "primary_entities": intent.get("primary_entities") or [],
-                    "metrics": intent.get("metrics") or [],
-                },
-                "have_relevant_tables": bool(state.get("relevant_tables")),
-                "have_sql_query": bool((state.get("sql_query") or "").strip()),
-                "validation_result": {
-                    "is_valid": bool(validation.get("is_valid", False)),
-                    "retry_action": validation.get("retry_action"),
-                },
-                "exec_result": {
-                    "ok": bool(exec_result.get("ok")) if isinstance(exec_result, dict) else False,
-                    "row_count": exec_result.get("row_count") if isinstance(exec_result, dict) else None,
-                },
-                "error_info_type": error_info.get("type") if isinstance(error_info, dict) else None,
-                "last_tool_name": last_tool_name,
-                "progress_signal": state.get("progress_signal"),
-                "suggested_next_actions": list(state.get("suggested_next_actions") or []),
-                "budgets": {
-                    "supervisor_step_count": int(state.get("supervisor_step_count", 0) or 0),
-                    "max_supervisor_steps": int(state.get("max_supervisor_steps", 0) or 0),
-                    "total_llm_calls": int(state.get("total_llm_calls", 0) or 0),
-                    "max_llm_calls": int(state.get("max_llm_calls", 0) or 0),
-                    "no_progress_repeat_count": int(state.get("no_progress_repeat_count", 0) or 0),
-                },
-            }
-
-            allowed_tools: List[ToolName] = [
-                "interpret_query",
-                "discover_schema",
-                "plan_sql",
-                "validate_sql",
-                "execute_sql",
-                "evaluate_result",
-                "finalize_answer",
-                "__STOP__",
-            ]
-
-            system = (
-                "You are the supervisor for an ERP multi-agent system. "
-                "Your job is to choose the NEXT capability tool to run, based on the current state. "
-                "Tools:\n"
-                "- interpret_query: parse intent / clarify what the user wants.\n"
-                "- discover_schema: find relevant tables/views using the catalog.\n"
-                "- plan_sql: build a join plan and generate SQL from intent + discovered tables.\n"
-                "- validate_sql: check/repair SQL syntax and structure.\n"
-                "- execute_sql: run a validated SQL query against the database.\n"
-                "- evaluate_result: check result quality and decide if retry/replan is needed.\n"
-                "- finalize_answer: format the final answer for the user.\n"
-                "- __STOP__: stop the loop (only when an answer is ready or budgets are exhausted).\n\n"
-                "Constraints:\n"
-                "- Do NOT call execute_sql before there is a non-empty sql_query.\n"
-                "- Prefer validate_sql before execute_sql when sql_query is present but not validated.\n"
-                "- If intent.operation is 'health_check', you usually go directly to finalize_answer.\n"
-                "- If intent.operation is 'schema_query' and no relevant_tables yet, call discover_schema.\n"
-                "- If evaluate_result suggests try_next_candidate or replan_with_*, you may pick discover_schema or plan_sql.\n"
-                "- Respect budgets and avoid infinite loops."
-            )
-
-            user = (
-                "Current state summary (JSON):\n"
-                f"{json.dumps(summary, ensure_ascii=False)}\n\n"
-                "Respond with ONLY the name of the next tool to run, exactly one of:\n"
-                f"{', '.join(allowed_tools)}\n"
-            )
-
-            response = await self.llm.ainvoke(
-                [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ]
-            )
-            text = (getattr(response, "content", "") or "").strip()
-            # Take the first token/word as the tool name.
-            candidate = text.split()[0] if text else ""
-            if candidate in allowed_tools:
-                return candidate  # type: ignore[return-value]
-            logger.debug("Supervisor LLM returned unsupported tool %r; falling back to heuristic policy", candidate)
-        except Exception:
-            logger.debug("Supervisor LLM decision failed; falling back to heuristic policy", exc_info=True)
-        return None
 
 
 def _select_initial_tool(state: BaseState, last_tool_name: Optional[ToolName]) -> Optional[ToolName]:
