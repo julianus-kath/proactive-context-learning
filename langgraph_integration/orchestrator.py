@@ -2191,58 +2191,128 @@ class QueryOrchestrator:
                 return state
 
             # FIX 2: HARD GROUNDING GATE - Prevent ungrounded answers
-            # Check if we have meaningful execution results for a data query
+            # Check if we have meaningful execution results for a data query.
+            # Instead of fabricating an answer when no SQL was safely executed,
+            # surface a structured, intent-aware error that downstream UX can use.
             if is_data_query:
                 exec_result = state.get("exec_result") or {}
                 exec_ok = exec_result.get("ok", False) if isinstance(exec_result, dict) else False
                 exec_error = exec_result.get("error") if isinstance(exec_result, dict) else None
                 sql_query = state.get("sql_query", "").strip()
-                
-                # Hard gate: if no successful SQL execution for a data query, fail with structured error
+
+                # Hard gate: if no successful SQL execution for a data query, ensure we
+                # return a clear diagnostic instead of an ungrounded answer.
                 if not exec_ok or not sql_query or exec_error:
-                    logger.warning("✨ [ANSWER] ⚠️  GROUNDING GATE ACTIVATED: Data query without valid execution")
-                    logger.warning("✨   exec_ok=%s, has_sql=%s, exec_error=%s", exec_ok, bool(sql_query), exec_error)
+                    logger.warning(
+                        "✨ [ANSWER] ⚠️  GROUNDING GATE ACTIVATED: Data query without valid execution"
+                    )
+                    logger.warning(
+                        "✨   exec_ok=%s, has_sql=%s, exec_error=%s",
+                        exec_ok,
+                        bool(sql_query),
+                        exec_error,
+                    )
 
                     existing_error = state.get("error_info") or {}
-                    existing_type = existing_error.get("type") if isinstance(existing_error, dict) else None
-                    existing_message = existing_error.get("message") if isinstance(existing_error, dict) else None
-                    existing_suggestion = existing_error.get("suggestion") if isinstance(existing_error, dict) else None
+                    if not isinstance(existing_error, dict):
+                        existing_error = {}
 
-                    # Prefer a domain-aware diagnostic when we already have a structured error
-                    if isinstance(existing_error, dict) and existing_type:
-                        logger.warning("✨ [ANSWER] Using existing structured error_info for grounding gate: %s", existing_type)
-                        message_bits: List[str] = []
-                        if existing_message:
-                            message_bits.append(existing_message)
-                        else:
-                            message_bits.append("A structural issue in the query or schema prevented a safe answer.")
-                        if existing_suggestion:
-                            message_bits.append(existing_suggestion)
-                        else:
-                            message_bits.append(
-                                "You can often fix this by narrowing the question or specifying different tables or metrics."
-                            )
+                    existing_type = existing_error.get("type")
+                    existing_message = existing_error.get("message") or existing_error.get("error")
+                    existing_suggestion = existing_error.get("suggestion")
 
-                        state["final_response"] = " ".join(message_bits)
-                        state["error_info"] = existing_error
-                        debug_logger.agent_exit("answer", before_state, dict(state))
-                        return state
+                    # Prefer join-planner-aware diagnostics when no structured error exists yet.
+                    if not existing_type:
+                        join_plan = state.get("join_plan") or {}
+                        if isinstance(join_plan, dict):
+                            plan_status = join_plan.get("plan_status")
+                            issues = join_plan.get("plan_issues") or []
+                            issue_types = {
+                                str(i.get("type")).upper()
+                                for i in issues
+                                if isinstance(i, dict) and i.get("type")
+                            }
 
-                    # Otherwise, fall back to a generic but safe diagnostic
-                    error_msg = exec_error or "Query execution failed or produced no valid SQL"
-                    state["error_info"] = {
-                        "type": "UNGROUNDED_RESPONSE_PREVENTED",
-                        "message": f"Cannot answer this query: {error_msg}. Please try a more specific question.",
-                    }
-                    state["final_response"] = (
-                        "I wasn't able to retrieve the information needed to answer your question. "
-                        "This could be because:\n"
-                        "• The query was too vague\n"
-                        "• The requested data doesn't exist in the database\n"
-                        "• The relevant tables couldn't be identified\n\n"
-                        "Please try rephrasing your question with more specific details."
+                            if plan_status in {"incomplete", "unsupported"} or issue_types:
+                                if plan_status == "unsupported":
+                                    err_type = "PLAN_UNSUPPORTED"
+                                    message = (
+                                        "I couldn't build a supported SQL plan for this question "
+                                        "with the tables currently discovered."
+                                    )
+                                else:
+                                    err_type = "PLAN_INCOMPLETE"
+                                    message = (
+                                        "I couldn't build a complete SQL plan for this question "
+                                        "with the tables currently discovered."
+                                    )
+
+                                if "FACT_NOT_FOUND" in issue_types:
+                                    message = (
+                                        "I couldn't identify a suitable fact table for this question "
+                                        "with the current schema hints."
+                                    )
+                                elif "MISSING_DIMENSION" in issue_types:
+                                    message = (
+                                        "I couldn't find all of the required dimension tables for this "
+                                        "question in the current schema hints."
+                                    )
+                                elif "MISSING_JOIN_CONDITION" in issue_types:
+                                    message = (
+                                        "I couldn't infer safe join conditions between the tables needed "
+                                        "for this question."
+                                    )
+
+                                existing_error = {
+                                    "type": err_type,
+                                    "message": message,
+                                    "suggestion": (
+                                        "Try rephrasing the question with more specific tables, metrics, "
+                                        "or entity names, or ask about a simpler slice of the data."
+                                    ),
+                                }
+                                existing_type = existing_error["type"]
+                                existing_message = existing_error["message"]
+                                existing_suggestion = existing_error["suggestion"]
+
+                    # If we still don't have a structured error, synthesise a conservative one.
+                    if not existing_type:
+                        error_msg = exec_error or "query execution failed or produced no valid SQL"
+                        existing_error = {
+                            "type": "UNGROUNDED_RESPONSE_PREVENTED",
+                            "message": (
+                                "I couldn't safely answer this question because execution did not "
+                                f"produce a valid result: {error_msg}."
+                            ),
+                            "suggestion": (
+                                "Try narrowing the question or specifying different tables, "
+                                "metrics, or filters."
+                            ),
+                        }
+                        existing_type = existing_error["type"]
+                        existing_message = existing_error["message"]
+                        existing_suggestion = existing_error["suggestion"]
+
+                    # Ensure there is at least a basic suggestion for downstream UX.
+                    if existing_type and not existing_suggestion:
+                        existing_suggestion = (
+                            "Try narrowing the question or specifying different tables or metrics."
+                        )
+                        existing_error["suggestion"] = existing_suggestion
+
+                    # Present a concise, deterministic explanation instead of a generic fallback.
+                    logger.warning(
+                        "✨ [ANSWER] Using structured error_info for grounding gate: %s",
+                        existing_type,
                     )
-                    logger.warning("✨ [ANSWER] ✅ Ungrounded response prevented, generic diagnostic returned")
+                    message_bits: List[str] = []
+                    if existing_message:
+                        message_bits.append(str(existing_message))
+                    if existing_suggestion:
+                        message_bits.append(str(existing_suggestion))
+
+                    state["error_info"] = existing_error
+                    state["final_response"] = " ".join(bit.strip() for bit in message_bits if bit)
                     debug_logger.agent_exit("answer", before_state, dict(state))
                     return state
 

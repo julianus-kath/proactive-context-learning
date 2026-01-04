@@ -151,3 +151,17 @@ DO:
 DON'T:
 - Don’t add brittle tests that depend on specific table names or one-off heuristics; focus on contract‑level behavior (plan_status, error types, supervisor-visible signals).
 - Don’t hide UX issues behind opaque fallbacks—if behavior is ambiguous or surprising, prefer explicit errors that bubble up to the supervisor.
+
+### [x] Step: Reviewing the work
+<!-- chat-id: 15a8ead5-ab9d-4fe4-b204-5dfcf93483eb -->
+<!-- agent: CODEX -->
+
+I merged your changes and ran some test queries in the frontend, to see how the agent behaves. Ultimately, I got the output:
+I wasn't able to retrieve the information needed to answer your question. This could be because:
+• The query was too vague
+• The requested data doesn't exist in the database
+• The relevant tables couldn't be identified
+
+Please try rephrasing your question with more specific details.
+
+I want to sue this step to analyse whats going on and fix the underlying issues behind this symptom.
