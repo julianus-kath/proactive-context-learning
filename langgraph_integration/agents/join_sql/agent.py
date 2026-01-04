@@ -23,6 +23,7 @@ from langgraph_integration.contracts.discovery_models import DiscoveryRoleHints,
 from langgraph_integration.contracts.state import BaseState, JoinPlanAndSQLAgentInput, JoinPlanAndSQLAgentOutput
 from langgraph_integration.mcp_client import get_shared_mcp_tool, _extract_json_from_text
 from langgraph_integration.templates.mssql_template_builder import MSSQLTemplateBuilder, TemplateBuildError
+from langgraph_integration.utils.runtime_config import get_db_dialect
 
 logger = logging.getLogger(__name__)
 
@@ -211,6 +212,9 @@ class JoinPlanAndSQLAgent:
         logger.info("📋 Building join plan (template)")
 
         intent = state.get("intent", {}) or {}
+        plan_instructions = state.get("plan_sql_instructions") or {}
+        if not isinstance(plan_instructions, dict):
+            plan_instructions = {}
         fk_hints = state.get("fk_hints", []) or []
         raw_role_hints = state.get("discovery_role_hints") or {}
 
@@ -227,40 +231,116 @@ class JoinPlanAndSQLAgent:
             logger.warning(f"⚠️ Unable to parse discovery role hints after normalization: {exc}")
             role_hints = DiscoveryRoleHints()
 
-        fact_candidate = self._select_fact_candidate(role_hints, intent)
+        required_action = intent.get("required_action")
+
+        # Initialize a join_plan skeleton early so we can attach metadata even
+        # when fact/dimension selection fails.
+        join_plan: Dict[str, Any] = {
+            "strategy": "template",
+            "filters": intent.get("filters", []),
+            "time_window": intent.get("time_window"),
+            "joins": [],
+            "dimensions": {},
+            "fk_hints": fk_hints,
+            "required_action": required_action,
+        }
+        # Default planner metadata; refined below based on fact/dimension coverage.
+        join_plan["plan_status"] = "ok"
+        join_plan["plan_confidence"] = None
+        join_plan["plan_issues"] = []
+
+        fact_candidate = self._select_fact_candidate(role_hints, intent, plan_instructions)
         if fact_candidate is None:
+            issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+            message = "Unable to identify a fact table for this query."
+            issues.append(
+                {
+                    "type": "FACT_NOT_FOUND",
+                    "severity": "error",
+                    "message": message,
+                    "details": {},
+                }
+            )
+            join_plan["plan_status"] = "incomplete"
+            join_plan["plan_confidence"] = 0.0
+            join_plan["plan_issues"] = issues
+            state["join_plan"] = join_plan
+
             error = {
                 "type": "FACT_NOT_FOUND",
-                "message": "Unable to identify a fact table for this query.",
+                "message": message,
             }
             logger.error(error["message"])
             return {**state, "error_info": error}
 
         fact_table = fact_candidate.table
 
-        join_plan: Dict[str, Any] = {
-            "strategy": "template",
-            "fact_table": fact_table,
-            "primary_table": fact_table,
-            "metric_candidates": fact_candidate.metric_candidates,
-            "date_columns": fact_candidate.date_columns,
-            "entity_keys": fact_candidate.entity_keys,
-            "filters": intent.get("filters", []),
-            "time_window": intent.get("time_window"),
-            "joins": [],
-            "dimensions": {},
-            "fk_hints": fk_hints,
-            "required_action": intent.get("required_action"),
-            "fact_estimated_rows": fact_candidate.estimated_rows,
-        }
+        # Populate core fact metadata now that a candidate exists.
+        join_plan["fact_table"] = fact_table
+        join_plan["primary_table"] = fact_table
+        join_plan["metric_candidates"] = fact_candidate.metric_candidates
+        join_plan["date_columns"] = fact_candidate.date_columns
+        join_plan["entity_keys"] = fact_candidate.entity_keys
+        join_plan["fact_estimated_rows"] = fact_candidate.estimated_rows
 
-        required_action = intent.get("required_action")
+        # Normalized avoid-list for dimensions (from supervisor instructions).
+        avoid_tables_raw = plan_instructions.get("avoid_tables") or []
+
+        def _normalize_table_for_match(value: Optional[str]) -> str:
+            raw = (value or "").strip()
+            if not raw:
+                return ""
+            return raw.strip("[]").lower()
+
+        avoid_tables_normalized: List[str] = []
+        for entry in avoid_tables_raw:
+            if isinstance(entry, str):
+                norm = _normalize_table_for_match(entry)
+                if norm:
+                    avoid_tables_normalized.append(norm)
+
+        def _is_table_avoided(table_name: Optional[str]) -> bool:
+            if not avoid_tables_normalized:
+                return False
+            candidate_norm = _normalize_table_for_match(table_name)
+            if not candidate_norm:
+                return False
+            candidate_base = candidate_norm.split(".")[-1]
+            for avoided in avoid_tables_normalized:
+                if not avoided:
+                    continue
+                if candidate_norm == avoided:
+                    return True
+                avoided_base = avoided.split(".")[-1]
+                if candidate_base and candidate_base == avoided_base:
+                    return True
+            return False
 
         def attach_dimension(role_name: str, required: bool = False) -> Optional[RoleHintDimension]:
+            issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
             dimension = self._select_dimension(role_hints, role_name)
+            # Respect supervisor "avoid_tables" hints for dimensions.
+            if dimension and _is_table_avoided(dimension.table):
+                logger.info(
+                    f"ℹ️ Skipping dimension '{role_name}' on table '{dimension.table}' "
+                    "due to plan_sql_instructions.avoid_tables."
+                )
+                dimension = None
             if not dimension:
                 if required:
-                    logger.error(f"❌ Required dimension '{role_name}' missing from discovery role hints")
+                    msg = f"Required dimension '{role_name}' missing from discovery role hints"
+                    logger.error(f"❌ {msg}")
+                    issues.append(
+                        {
+                            "type": "MISSING_DIMENSION",
+                            "severity": "error",
+                            "message": msg,
+                            "details": {"role": role_name},
+                        }
+                    )
+                    join_plan["plan_status"] = "incomplete"
+                    join_plan["plan_confidence"] = 0.0
+                    join_plan["plan_issues"] = issues
                 return None
             canonical_role = self._canonical_entity(role_name)
             is_self_dimension = dimension.table == fact_table
@@ -279,9 +359,21 @@ class JoinPlanAndSQLAgent:
                     )
                     if not join_condition:
                         if required:
-                            logger.error(
-                                f"❌ Unable to synthesize join condition between {fact_table} and {dimension.table}"
+                            msg = (
+                                f"Unable to synthesize join condition between {fact_table} and {dimension.table}"
                             )
+                            logger.error(f"❌ {msg}")
+                            issues.append(
+                                {
+                                    "type": "MISSING_JOIN_CONDITION",
+                                    "severity": "error",
+                                    "message": msg,
+                                    "details": {"role": role_name, "dimension_table": dimension.table},
+                                }
+                            )
+                            join_plan["plan_status"] = "incomplete"
+                            join_plan["plan_confidence"] = 0.0
+                            join_plan["plan_issues"] = issues
                             return None
                         # Keep dimension metadata for optional joins (used for labels)
                         join_condition = None
@@ -330,6 +422,8 @@ class JoinPlanAndSQLAgent:
                     "message": "Customer dimension is required but was not identified in discovery.",
                 }
                 logger.error(error["message"])
+                # join_plan metadata already updated inside attach_dimension
+                state["join_plan"] = join_plan
                 return {**state, "error_info": error}
 
         if required_action in {"topk_sum_by_product", "sum_by_product"}:
@@ -340,10 +434,35 @@ class JoinPlanAndSQLAgent:
                     "message": "Product dimension is required but was not identified in discovery.",
                 }
                 logger.error(error["message"])
+                # join_plan metadata already updated inside attach_dimension
+                state["join_plan"] = join_plan
                 return {**state, "error_info": error}
 
         if required_action == "low_stock":
-            attach_dimension("product", required=False)
+            # Missing product dimension for low_stock is a warning-level issue,
+            # but does not invalidate the plan.
+            product_dim = attach_dimension("product", required=False)
+            if not product_dim:
+                issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                issues.append(
+                    {
+                        "type": "MISSING_DIMENSION",
+                        "severity": "warning",
+                        "message": "Optional product dimension for low_stock template was not identified.",
+                        "details": {"role": "product"},
+                    }
+                )
+                join_plan["plan_issues"] = issues
+
+        # Derive a coarse-grained confidence score based on coverage.
+        issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+        if join_plan.get("plan_status") == "incomplete":
+            confidence = 0.0
+        elif any(i.get("severity") == "warning" for i in issues):
+            confidence = 0.7
+        else:
+            confidence = 0.9
+        join_plan["plan_confidence"] = confidence
 
         state["join_plan"] = join_plan
         return state
@@ -366,9 +485,8 @@ class JoinPlanAndSQLAgent:
 
             # Fallback: issue a small probe and parse columns from the MCP JSON envelope.
             # Use LIMIT for Postgres and TOP for MSSQL to avoid dialect leakage.
-            import os as _os
-            dialect = (_os.getenv("DB_DIALECT") or "").strip().lower()
-            if dialect in {"postgres", "postgresql"}:
+            dialect = get_db_dialect(default="mssql")
+            if dialect == "postgres":
                 probe_sql = f"SELECT * FROM {table_name} LIMIT 1"
             else:
                 probe_sql = f"SELECT TOP 1 * FROM {table_name}"
@@ -422,6 +540,10 @@ class JoinPlanAndSQLAgent:
         join_plan = state.get("join_plan")
         schema_snippet = state.get("schema_snippet", "")
         intent = state.get("intent", {})
+        plan_instructions = state.get("plan_sql_instructions") or {}
+        dialect = (state.get("db_dialect") or get_db_dialect(default="mssql")).lower()
+        if not isinstance(plan_instructions, dict):
+            plan_instructions = {}
 
         logger.info(f"🔨 [SQL_GEN] join_plan: {join_plan}")
         logger.info(f"🔨 [SQL_GEN] intent: {intent}")
@@ -435,22 +557,166 @@ class JoinPlanAndSQLAgent:
             return {**state, "error_info": error}
 
         try:
+            # Ensure join_plan has metadata containers for downstream updates.
+            if isinstance(join_plan, dict):
+                if not isinstance(join_plan.get("plan_issues"), list):
+                    join_plan["plan_issues"] = join_plan.get("plan_issues") or []
+                if "plan_status" not in join_plan:
+                    join_plan["plan_status"] = "ok"
+                if "plan_confidence" not in join_plan:
+                    join_plan["plan_confidence"] = join_plan.get("plan_confidence")
+
+            def _finalize_sql(sql_text: str, exploratory: Optional[bool] = None) -> BaseState:
+                """Attach planner metadata and SQL to state in a single place."""
+                if not isinstance(join_plan, dict):
+                    state["sql_query"] = sql_text
+                    return state
+
+                issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                status = join_plan.get("plan_status")
+
+                # Heuristic exploratory detection if not explicitly provided.
+                if exploratory is None:
+                    up = (sql_text or "").upper()
+                    uses_row_cap = up.startswith("SELECT TOP ") or " LIMIT " in up
+                    exploratory = uses_row_cap and "* FROM" in up and "GROUP BY" not in up
+
+                if exploratory:
+                    join_plan["plan_status"] = "exploratory"
+                    if not any(i.get("type") == "EXPLORATORY_PLAN" for i in issues):
+                        issues.append(
+                            {
+                                "type": "EXPLORATORY_PLAN",
+                                "severity": "info",
+                                "message": "Planner returned an exploratory/sample query instead of a full analytic answer.",
+                                "details": {},
+                            }
+                        )
+                    # Confidence is not meaningful in exploratory mode.
+                    join_plan["plan_confidence"] = None
+                else:
+                    # Only default to "ok" when no stronger status was set earlier.
+                    if not status:
+                        join_plan["plan_status"] = "ok"
+                        if join_plan.get("plan_confidence") is None:
+                            join_plan["plan_confidence"] = 0.9
+
+                join_plan["plan_issues"] = issues
+                state["join_plan"] = join_plan
+                state["sql_query"] = sql_text
+                return state
+            # Normalize intent and analytic flags for downstream routing.
+            intent = state.get("intent", {}) or {}
+            metrics = intent.get("metrics") or []
+            required_action = (intent.get("required_action") or "").lower()
+            analytic_template = intent.get("analytic_template")
+
+            # Supervisor overrides for analytic vs exploratory mode.
+            mode = plan_instructions.get("mode")
+            treat_as_analytic = mode == "analytic"
+            treat_as_exploratory = mode == "exploratory_sample"
+
+            # If planning already concluded that the join plan is incomplete/unsupported
+            # for an analytic intent, decline SQL generation instead of guessing.
+            if isinstance(join_plan, dict):
+                status = join_plan.get("plan_status")
+                is_analytic_intent = bool(analytic_template) or bool(metrics) or required_action in {
+                    "topk_sum_by_customer",
+                    "sum_with_period",
+                    "sum_by_customer",
+                    "topk_sum_by_product",
+                    "sum_by_product",
+                    "low_stock",
+                    "growth_analysis",
+                    "comparative_analysis",
+                    "ranked_metrics",
+                    "trend_series",
+                    "month_count",
+                    "department_productivity",
+                }
+                if treat_as_analytic:
+                    is_analytic_intent = True
+                if treat_as_exploratory:
+                    is_analytic_intent = False
+                if is_analytic_intent and status in {"incomplete", "unsupported"}:
+                    issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                    issues.append(
+                        {
+                            "type": "PLAN_INCOMPLETE",
+                            "severity": "error",
+                            "message": "Join plan is incomplete/unsupported for analytic intent; declining SQL generation.",
+                            "details": {"plan_status": status},
+                        }
+                    )
+                    join_plan["plan_status"] = status or "incomplete"
+                    join_plan["plan_confidence"] = 0.0
+                    join_plan["plan_issues"] = issues
+                    state["join_plan"] = join_plan
+
+                    error = state.get("error_info") or {
+                        "type": "PLAN_INCOMPLETE",
+                        "message": "Join planner could not build a complete analytic plan for this intent.",
+                    }
+                    # Avoid returning stale SQL from a previous attempt.
+                    state.pop("sql_query", None)
+                    return {**state, "error_info": error}
+
             # Enhanced SQL generation based on intent and metrics
             strategy = join_plan.get("strategy", "joins")
-            intent = state.get("intent", {})
-            metrics = intent.get("metrics", [])
-            required_action = (intent.get("required_action") or "").lower()
 
             # Route based on analytic template if present
-            analytic_template = intent.get("analytic_template")
             if analytic_template:
                 logger.info(f"🎯 [TEMPLATE] Routing to template generator: {analytic_template}")
+                if isinstance(join_plan, dict):
+                    # Expose high-level analytic template on the join plan.
+                    join_plan["template"] = analytic_template
+
                 if analytic_template == "COUNT_ENTITY":
-                    return await self._generate_count_entity_sql(state)
+                    state = await self._generate_count_entity_sql(state)
                 elif analytic_template == "TOP_K_BY_METRIC":
-                    return await self._generate_top_k_by_metric_sql(state)
+                    state = await self._generate_top_k_by_metric_sql(state)
                 elif analytic_template == "PERIOD_COMPARISON":
-                    return await self._generate_period_comparison_sql(state)
+                    state = await self._generate_period_comparison_sql(state)
+                else:
+                    # Default to COUNT_ENTITY semantics for unknown templates, but still hard-gate.
+                    state = await self._generate_count_entity_sql(state)
+
+                # Hard gate: if the specialised generator declined or failed, do not fall back
+                # to heuristic aggregates or exploratory SELECTs.
+                error_info = state.get("error_info")
+                sql_text = state.get("sql_query")
+                if error_info or not sql_text:
+                    if isinstance(join_plan, dict):
+                        issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                        issues.append(
+                            {
+                                "type": "ANALYTIC_TEMPLATE_FAILED",
+                                "severity": "error",
+                                "message": "Analytic template generation failed; no SQL produced.",
+                                "details": {"analytic_template": analytic_template},
+                            }
+                        )
+                        current_status = join_plan.get("plan_status") or "incomplete"
+                        # Downgrade optimistic "ok" status to "incomplete" when the template fails.
+                        if current_status == "ok":
+                            join_plan["plan_status"] = "incomplete"
+                        else:
+                            join_plan["plan_status"] = current_status
+                        join_plan["plan_confidence"] = 0.0
+                        join_plan["plan_issues"] = issues
+                        state["join_plan"] = join_plan
+
+                    if not isinstance(error_info, dict):
+                        error_info = {
+                            "type": "ANALYTIC_TEMPLATE_FAILED",
+                            "message": f"Failed to generate SQL for analytic template {analytic_template}.",
+                        }
+                    # Ensure we do not leak a partially-built or empty SQL string.
+                    state.pop("sql_query", None)
+                    return {**state, "error_info": error_info}
+
+                # COUNT_ENTITY / TOP_K_BY_METRIC / PERIOD_COMPARISON are analytic, not exploratory.
+                return _finalize_sql(sql_text, exploratory=False)
 
             # Handle ranked_metrics (derived metrics like profit_margin with ranking)
             if required_action == "ranked_metrics":
@@ -472,12 +738,46 @@ class JoinPlanAndSQLAgent:
                 try:
                     template_result = builder.build()
                 except TemplateBuildError as exc:
+                    # Attach structured planner issues so the supervisor can reason about failure.
+                    if isinstance(join_plan, dict):
+                        issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                        msg = getattr(exc, "message", str(exc)) or "Template build error"
+                        details = getattr(exc, "details", {}) or {}
+                        text = msg.lower()
+                        issue_type = "TEMPLATE_BUILD_ERROR"
+                        if "dimension" in text and "not available" in text:
+                            issue_type = "MISSING_DIMENSION"
+                        elif "missing a join condition" in text:
+                            issue_type = "MISSING_JOIN_CONDITION"
+                        elif "fact table" in text:
+                            issue_type = "FACT_NOT_FOUND"
+
+                        issues.append(
+                            {
+                                "type": issue_type,
+                                "severity": "error",
+                                "message": msg,
+                                "details": details,
+                            }
+                        )
+                        join_plan["plan_status"] = "incomplete"
+                        join_plan["plan_confidence"] = 0.0
+                        join_plan["plan_issues"] = issues
+                        state["join_plan"] = join_plan
+
                     return {**state, "error_info": exc.as_error_info()}
 
-                state["sql_query"] = template_result["sql"]
-                join_plan.update(template_result.get("metadata", {}))
-                state["join_plan"] = join_plan
-                return state
+                metadata = template_result.get("metadata", {}) or {}
+                if isinstance(join_plan, dict):
+                    join_plan.update(metadata)
+                    # Deterministic template success implies a non-exploratory plan.
+                    if not join_plan.get("plan_status"):
+                        join_plan["plan_status"] = "ok"
+                    if join_plan.get("plan_confidence") is None:
+                        join_plan["plan_confidence"] = 0.9
+                    state["join_plan"] = join_plan
+
+                return _finalize_sql(template_result["sql"], exploratory=False)
 
             parsed_top_k = intent.get("top_k")
             group_by_hint = (intent.get("group_by") or "").lower()
@@ -521,6 +821,84 @@ class JoinPlanAndSQLAgent:
                 return {**state, "error_info": error}
 
             # Continue with legacy logic for unrecognized actions
+
+            # NEW: avoid heuristic aggregates when templates/specialised generators do not apply.
+            # For analytic intents we now decline planning; for non-analytic/detail intents we
+            # emit a simple exploratory sample instead of fabricating SUM/COUNT queries.
+            fallback_analytic_template = intent.get("analytic_template")
+            is_analytic_fallback = bool(fallback_analytic_template) or bool(metrics)
+            if treat_as_analytic:
+                is_analytic_fallback = True
+            if treat_as_exploratory:
+                is_analytic_fallback = False
+            if isinstance(join_plan, dict):
+                if is_analytic_fallback:
+                    issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                    issues.append(
+                        {
+                            "type": "PLAN_UNSUPPORTED",
+                            "severity": "error",
+                            "message": "Join planner does not support this analytic intent pattern with current templates.",
+                            "details": {
+                                "required_action": required_action,
+                                "analytic_template": fallback_analytic_template,
+                            },
+                        }
+                    )
+                    join_plan["plan_status"] = "unsupported"
+                    join_plan["plan_confidence"] = 0.0
+                    join_plan["plan_issues"] = issues
+                    state["join_plan"] = join_plan
+
+                    error = {
+                        "type": "PLAN_UNSUPPORTED",
+                        "message": "Planner cannot safely generate analytic SQL for this intent with current schema hints.",
+                    }
+                    # Ensure we don't leak any stale SQL from earlier attempts.
+                    state.pop("sql_query", None)
+                    return {**state, "error_info": error}
+
+            # Non-analytic / detail-style query: emit a simple exploratory sample.
+            primary_table = None
+            where_filters: List[Dict[str, Any]] = []
+            if isinstance(join_plan, dict):
+                primary_table = join_plan.get("primary_table") or join_plan.get("fact_table")
+                where_filters = join_plan.get("where_filters", [])
+
+            if not primary_table:
+                if isinstance(join_plan, dict):
+                    issues = join_plan.get("plan_issues") or []
+                    issues.append(
+                        {
+                            "type": "FACT_NOT_FOUND",
+                            "severity": "error",
+                            "message": "No primary table available for exploratory sample.",
+                            "details": {},
+                        }
+                    )
+                    join_plan["plan_status"] = "incomplete"
+                    join_plan["plan_confidence"] = 0.0
+                    join_plan["plan_issues"] = issues
+                    state["join_plan"] = join_plan
+                error = {
+                    "type": "FACT_NOT_FOUND",
+                    "message": "No primary table available for exploratory sample.",
+                }
+                state.pop("sql_query", None)
+                return {**state, "error_info": error}
+
+            if dialect == "postgres":
+                sql = f"SELECT * FROM {primary_table}"
+            else:
+                sql = f"SELECT TOP {self.row_limit} * FROM {primary_table}"
+            if where_filters:
+                where_conditions = self._build_where_conditions(where_filters)
+                if where_conditions:
+                    sql += " WHERE " + " AND ".join(where_conditions)
+            if dialect == "postgres":
+                sql += f" LIMIT {self.row_limit}"
+
+            return _finalize_sql(sql, exploratory=True)
 
             # Determine if this is an aggregation query
             has_aggregation = any(m.lower() in ["count", "sum", "total", "avg", "average", "max", "min", "most"] for m in metrics)
@@ -619,8 +997,7 @@ class JoinPlanAndSQLAgent:
                             f"WHERE {date_col} >= DATEADD(year, -{max(1,n)}, GETDATE()) "
                             f"GROUP BY YEAR({date_col}) ORDER BY period_year"
                         )
-                        state["sql_query"] = sql
-                        return state
+                        return _finalize_sql(sql, exploratory=False)
                     elif unit == "months":
                         sql = (
                             f"SELECT FORMAT({date_col}, 'yyyy-MM') AS period_month, COUNT(*) AS total_count "
@@ -628,8 +1005,7 @@ class JoinPlanAndSQLAgent:
                             f"WHERE {date_col} >= DATEADD(month, -{max(1,n)}, GETDATE()) "
                             f"GROUP BY FORMAT({date_col}, 'yyyy-MM') ORDER BY period_month"
                         )
-                        state["sql_query"] = sql
-                        return state
+                        return _finalize_sql(sql, exploratory=False)
 
             # Specific month (e.g., "October"): default to current year
             if wants_count and month_literal is not None:
@@ -641,8 +1017,7 @@ class JoinPlanAndSQLAgent:
                         f"SELECT COUNT(*) AS total_count FROM {primary_table} "
                         f"WHERE MONTH({date_col}) = {month_literal} AND YEAR({date_col}) = YEAR(GETDATE())"
                     )
-                    state["sql_query"] = sql
-                    return state
+                    return _finalize_sql(sql, exploratory=False)
 
             # Normalize desire for SUM aggregation (sometimes not explicitly classified)
             entities_lc = [e.lower() for e in (intent.get("primary_entities") or [])]
@@ -979,8 +1354,8 @@ class JoinPlanAndSQLAgent:
                     )
                 else:
                     sql = self._generate_aggregation_sql_with_hints(primary_table, ["count"], time_window, column_index)
-                state["sql_query"] = sql
-                return state
+                # COUNT over a time window is analytic, even when shape is simple.
+                return _finalize_sql(sql, exploratory=False)
             elif strategy == "view":
                 # View-based query
                 primary_table = join_plan.get("primary_table", "")
@@ -1102,8 +1477,8 @@ class JoinPlanAndSQLAgent:
             logger.info(f"✅ Generated SQL ({len(sql)} chars)")
             logger.debug(f"SQL: {sql[:200]}...")
 
-            state["sql_query"] = sql
-            return state
+            # Let finalize helper attach SQL and join-plan metadata.
+            return _finalize_sql(sql)
 
         except Exception as e:
             error = {
@@ -1398,10 +1773,34 @@ class JoinPlanAndSQLAgent:
 
         return roles
 
-    def _select_fact_candidate(self, role_hints: DiscoveryRoleHints, intent: Dict[str, Any]) -> Optional[RoleHintFact]:
+    def _select_fact_candidate(
+        self,
+        role_hints: DiscoveryRoleHints,
+        intent: Dict[str, Any],
+        plan_instructions: Optional[Dict[str, Any]] = None,
+    ) -> Optional[RoleHintFact]:
         """Choose the most appropriate fact table candidate for the current intent."""
         if not role_hints.fact_candidates:
             return None
+
+        instructions = plan_instructions or {}
+
+        def _normalize_table(value: Optional[str]) -> str:
+            raw = (value or "").strip()
+            if not raw:
+                return ""
+            return raw.strip("[]").lower()
+
+        def _tables_match(candidate: Optional[str], target: Optional[str]) -> bool:
+            cand_norm = _normalize_table(candidate)
+            target_norm = _normalize_table(target)
+            if not cand_norm or not target_norm:
+                return False
+            if cand_norm == target_norm:
+                return True
+            cand_base = cand_norm.split(".")[-1]
+            target_base = target_norm.split(".")[-1]
+            return bool(cand_base and target_base and cand_base == target_base)
 
         required_action = (intent.get("required_action") or "").lower()
         needs_metric = required_action in {
@@ -1416,6 +1815,23 @@ class JoinPlanAndSQLAgent:
         }
 
         ranked = list(role_hints.fact_candidates)
+        # Respect supervisor "avoid_tables" hints for fact candidate selection.
+        avoid_tables = instructions.get("avoid_tables") or []
+        avoid_norm = [
+            _normalize_table(t) for t in avoid_tables if isinstance(t, str) and _normalize_table(t)
+        ]
+        if avoid_norm:
+            filtered: List[RoleHintFact] = []
+            for candidate in ranked:
+                if any(_tables_match(candidate.table, t) for t in avoid_norm):
+                    continue
+                filtered.append(candidate)
+            ranked = filtered
+            if not ranked:
+                # All candidates were explicitly avoided; fail fast so the planner
+                # can surface a FACT_NOT_FOUND-style error instead of guessing.
+                return None
+
         required_roles = self._required_dimension_roles(required_action, intent)
 
         ranked.sort(
@@ -1425,6 +1841,13 @@ class JoinPlanAndSQLAgent:
             ),
             reverse=True,
         )
+
+        # Supervisor hint: prefer a specific fact table when it exists among candidates.
+        preferred_fact_table = instructions.get("preferred_fact_table")
+        if isinstance(preferred_fact_table, str):
+            for candidate in ranked:
+                if _tables_match(candidate.table, preferred_fact_table):
+                    return candidate
 
         if required_roles:
             for candidate in ranked:
@@ -1698,7 +2121,8 @@ class JoinPlanAndSQLAgent:
 
         amount_col = find_amount_column(cols)
         if not amount_col:
-            # Fallback: try to find any numeric column
+            # Fallback: try to find any numeric column on the fact table, but
+            # treat total absence as a hard failure instead of exploratory SQL.
             numeric_cols = []
             for col in cols:
                 col_lower = col.lower()
@@ -1706,10 +2130,32 @@ class JoinPlanAndSQLAgent:
                     numeric_cols.append(col)
             if numeric_cols:
                 amount_col = numeric_cols[0]
-            else:
-                # Last resort: use exploratory
-                sql = f"SELECT TOP {top_k} * FROM {primary_table}"
-                return {**state, "sql_query": sql}
+
+        if not amount_col:
+            message = (
+                f"Unable to identify a revenue/amount column on fact table {primary_table} "
+                "for TOP-K customer revenue query."
+            )
+            error = {
+                "type": "MISSING_METRIC_COLUMN",
+                "message": message,
+                "details": {"table": primary_table},
+            }
+            if isinstance(join_plan, dict):
+                issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                issues.append(
+                    {
+                        "type": "MISSING_METRIC_COLUMN",
+                        "severity": "error",
+                        "message": message,
+                        "details": {"table": primary_table},
+                    }
+                )
+                join_plan["plan_status"] = "incomplete"
+                join_plan["plan_confidence"] = 0.0
+                join_plan["plan_issues"] = issues
+                state["join_plan"] = join_plan
+            return {**state, "error_info": error}
 
         # Find customer key column (for GROUP BY)
         def find_customer_column(columns: List[str]) -> Optional[str]:
@@ -1815,20 +2261,31 @@ class JoinPlanAndSQLAgent:
             logger.info(f"🔨 [TOPK_REVENUE] Generated SQL: {sql}")
             return {**state, "sql_query": sql}
 
-        elif amount_col:
-            # Fallback: just sum by any available grouping column
-            group_col = customer_col or find_customer_column(cols) or cols[0] if cols else "*"
-            if group_col and group_col != "*":
-                sql = f"SELECT TOP {top_k} {group_col}, SUM({amount_col}) AS total_revenue FROM {primary_table} GROUP BY {group_col} ORDER BY total_revenue DESC"
-            else:
-                sql = f"SELECT TOP {top_k} * FROM {primary_table}"
-            return {**state, "sql_query": sql}
-
-        else:
-            # No amount column found, exploratory query
-            sql = f"SELECT TOP {top_k} * FROM {primary_table}"
-            logger.warning(f"🔨 [TOPK_REVENUE] No amount column found, using exploratory query")
-            return {**state, "sql_query": sql}
+        # No usable customer dimension found; decline instead of guessing a grouping column.
+        message = (
+            "Unable to identify a customer/grouping column for TOP-K revenue query; "
+            "join plan likely missing a customer dimension."
+        )
+        error = {
+            "type": "MISSING_DIMENSION",
+            "message": message,
+            "details": {"role": "customer", "table": primary_table},
+        }
+        if isinstance(join_plan, dict):
+            issues = join_plan.get("plan_issues") or []
+            issues.append(
+                {
+                    "type": "MISSING_DIMENSION",
+                    "severity": "error",
+                    "message": message,
+                    "details": {"role": "customer", "table": primary_table},
+                }
+            )
+            join_plan["plan_status"] = "incomplete"
+            join_plan["plan_confidence"] = 0.0
+            join_plan["plan_issues"] = issues
+            state["join_plan"] = join_plan
+        return {**state, "error_info": error}
 
     async def _generate_trend_series_sql(self, state: BaseState) -> BaseState:
         """Generate time-series trend SQL for queries like 'growth over last 3 years'."""
@@ -1884,21 +2341,48 @@ class JoinPlanAndSQLAgent:
             return None
 
         date_col = find_date_column(cols)
+        if not date_col:
+            message = (
+                f"Unable to identify a date column on fact table {primary_table} "
+                "required for TREND_SERIES analysis."
+            )
+            error = {
+                "type": "MISSING_DATE_COLUMN",
+                "message": message,
+                "details": {"table": primary_table},
+            }
+            if isinstance(join_plan, dict):
+                issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                issues.append(
+                    {
+                        "type": "MISSING_DATE_COLUMN",
+                        "severity": "error",
+                        "message": message,
+                        "details": {"table": primary_table},
+                    }
+                )
+                join_plan["plan_status"] = "incomplete"
+                join_plan["plan_confidence"] = 0.0
+                join_plan["plan_issues"] = issues
+                state["join_plan"] = join_plan
+            return {**state, "error_info": error}
 
         # Find count/sum column
         metrics = intent.get("metrics", [])
         if any(m.lower() in ["count"] for m in metrics):
             # Count query (e.g., "customer growth")
             if period == "years":
-                if date_col:
-                    sql = f"SELECT YEAR({date_col}) AS period, COUNT(*) AS total_count FROM {primary_table} WHERE {date_col} >= DATEADD(year, -{n}, GETDATE()) GROUP BY YEAR({date_col}) ORDER BY period"
-                else:
-                    sql = f"SELECT COUNT(*) AS total_count FROM {primary_table}"
+                sql = (
+                    f"SELECT YEAR({date_col}) AS period, COUNT(*) AS total_count "
+                    f"FROM {primary_table} WHERE {date_col} >= DATEADD(year, -{n}, GETDATE()) "
+                    f"GROUP BY YEAR({date_col}) ORDER BY period"
+                )
             else:  # months
-                if date_col:
-                    sql = f"SELECT FORMAT({date_col}, 'yyyy-MM') AS period, COUNT(*) AS total_count FROM {primary_table} WHERE {date_col} >= DATEADD(month, -{n}, GETDATE()) GROUP BY FORMAT({date_col}, 'yyyy-MM') ORDER BY period"
-                else:
-                    sql = f"SELECT COUNT(*) AS total_count FROM {primary_table}"
+                sql = (
+                    f"SELECT FORMAT({date_col}, 'yyyy-MM') AS period, COUNT(*) AS total_count "
+                    f"FROM {primary_table} WHERE {date_col} >= DATEADD(month, -{n}, GETDATE()) "
+                    f"GROUP BY FORMAT({date_col}, 'yyyy-MM') ORDER BY period"
+                )
         else:
             # Sum query (e.g., "revenue growth")
             amount_col = None
@@ -1912,13 +2396,44 @@ class JoinPlanAndSQLAgent:
                 if amount_col:
                     break
 
-            if amount_col and date_col:
-                if period == "years":
-                    sql = f"SELECT YEAR({date_col}) AS period, SUM({amount_col}) AS total_amount FROM {primary_table} WHERE {date_col} >= DATEADD(year, -{n}, GETDATE()) GROUP BY YEAR({date_col}) ORDER BY period"
-                else:
-                    sql = f"SELECT FORMAT({date_col}, 'yyyy-MM') AS period, SUM({amount_col}) AS total_amount FROM {primary_table} WHERE {date_col} >= DATEADD(month, -{n}, GETDATE()) GROUP BY FORMAT({date_col}, 'yyyy-MM') ORDER BY period"
+            if not amount_col:
+                message = (
+                    f"Unable to identify an amount/metric column on fact table {primary_table} "
+                    "for TREND_SERIES sum analysis."
+                )
+                error = {
+                    "type": "MISSING_METRIC_COLUMN",
+                    "message": message,
+                    "details": {"table": primary_table},
+                }
+                if isinstance(join_plan, dict):
+                    issues = join_plan.get("plan_issues") or []
+                    issues.append(
+                        {
+                            "type": "MISSING_METRIC_COLUMN",
+                            "severity": "error",
+                            "message": message,
+                            "details": {"table": primary_table},
+                        }
+                    )
+                    join_plan["plan_status"] = "incomplete"
+                    join_plan["plan_confidence"] = 0.0
+                    join_plan["plan_issues"] = issues
+                    state["join_plan"] = join_plan
+                return {**state, "error_info": error}
+
+            if period == "years":
+                sql = (
+                    f"SELECT YEAR({date_col}) AS period, SUM({amount_col}) AS total_amount "
+                    f"FROM {primary_table} WHERE {date_col} >= DATEADD(year, -{n}, GETDATE()) "
+                    f"GROUP BY YEAR({date_col}) ORDER BY period"
+                )
             else:
-                sql = f"SELECT TOP 100 * FROM {primary_table}"
+                sql = (
+                    f"SELECT FORMAT({date_col}, 'yyyy-MM') AS period, SUM({amount_col}) AS total_amount "
+                    f"FROM {primary_table} WHERE {date_col} >= DATEADD(month, -{n}, GETDATE()) "
+                    f"GROUP BY FORMAT({date_col}, 'yyyy-MM') ORDER BY period"
+                )
 
         return {**state, "sql_query": sql}
 
@@ -1973,9 +2488,30 @@ class JoinPlanAndSQLAgent:
 
         date_col = find_date_column(cols)
         if not date_col:
-            # Fallback: use exploratory
-            sql = f"SELECT TOP 50 * FROM {primary_table}"
-            return {**state, "sql_query": sql}
+            message = (
+                f"Unable to identify a date column on fact table {primary_table} "
+                "for MONTH_COUNT analysis."
+            )
+            error = {
+                "type": "MISSING_DATE_COLUMN",
+                "message": message,
+                "details": {"table": primary_table},
+            }
+            if isinstance(join_plan, dict):
+                issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                issues.append(
+                    {
+                        "type": "MISSING_DATE_COLUMN",
+                        "severity": "error",
+                        "message": message,
+                        "details": {"table": primary_table},
+                    }
+                )
+                join_plan["plan_status"] = "incomplete"
+                join_plan["plan_confidence"] = 0.0
+                join_plan["plan_issues"] = issues
+                state["join_plan"] = join_plan
+            return {**state, "error_info": error}
 
         # Generate SQL with month filter
         sql = f"SELECT COUNT(*) AS total_count FROM {primary_table} WHERE MONTH({date_col}) = {month_num} AND YEAR({date_col}) = YEAR(GETDATE())"
@@ -2053,15 +2589,64 @@ class JoinPlanAndSQLAgent:
         date_col = find_date_column(cols)
         amount_col = find_amount_column(cols)
 
-        # Generate SQL
-        if date_col and amount_col:
-            sql = f"SELECT SUM({amount_col}) AS total_sum FROM {primary_table} WHERE MONTH({date_col}) BETWEEN {month_start} AND {month_end} AND YEAR({date_col}) = YEAR(GETDATE())"
-        elif date_col:
-            # No amount column; fallback to COUNT
-            sql = f"SELECT COUNT(*) AS total_count FROM {primary_table} WHERE MONTH({date_col}) BETWEEN {month_start} AND {month_end} AND YEAR({date_col}) = YEAR(GETDATE())"
-        else:
-            # No date column; fallback to exploratory
-            sql = f"SELECT TOP 50 * FROM {primary_table}"
+        if not date_col:
+            message = (
+                f"Unable to identify a date column on fact table {primary_table} "
+                "for SUM_WITH_PERIOD analysis."
+            )
+            error = {
+                "type": "MISSING_DATE_COLUMN",
+                "message": message,
+                "details": {"table": primary_table},
+            }
+            if isinstance(join_plan, dict):
+                issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                issues.append(
+                    {
+                        "type": "MISSING_DATE_COLUMN",
+                        "severity": "error",
+                        "message": message,
+                        "details": {"table": primary_table},
+                    }
+                )
+                join_plan["plan_status"] = "incomplete"
+                join_plan["plan_confidence"] = 0.0
+                join_plan["plan_issues"] = issues
+                state["join_plan"] = join_plan
+            return {**state, "error_info": error}
+
+        if not amount_col:
+            message = (
+                f"Unable to identify an amount/metric column on fact table {primary_table} "
+                "for SUM_WITH_PERIOD analysis."
+            )
+            error = {
+                "type": "MISSING_METRIC_COLUMN",
+                "message": message,
+                "details": {"table": primary_table},
+            }
+            if isinstance(join_plan, dict):
+                issues = join_plan.get("plan_issues") or []
+                issues.append(
+                    {
+                        "type": "MISSING_METRIC_COLUMN",
+                        "severity": "error",
+                        "message": message,
+                        "details": {"table": primary_table},
+                    }
+                )
+                join_plan["plan_status"] = "incomplete"
+                join_plan["plan_confidence"] = 0.0
+                join_plan["plan_issues"] = issues
+                state["join_plan"] = join_plan
+            return {**state, "error_info": error}
+
+        # Generate SQL when both date and amount columns are available
+        sql = (
+            f"SELECT SUM({amount_col}) AS total_sum FROM {primary_table} "
+            f"WHERE MONTH({date_col}) BETWEEN {month_start} AND {month_end} "
+            f"AND YEAR({date_col}) = YEAR(GETDATE())"
+        )
 
         return {**state, "sql_query": sql}
 
@@ -2111,10 +2696,34 @@ class JoinPlanAndSQLAgent:
             return None
 
         date_col = find_date_column(cols)
+        if not date_col:
+            message = (
+                f"Unable to identify a date column on fact table {primary_table} "
+                "for GROWTH_ANALYSIS."
+            )
+            error = {
+                "type": "MISSING_DATE_COLUMN",
+                "message": message,
+                "details": {"table": primary_table},
+            }
+            if isinstance(join_plan, dict):
+                issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                issues.append(
+                    {
+                        "type": "MISSING_DATE_COLUMN",
+                        "severity": "error",
+                        "message": message,
+                        "details": {"table": primary_table},
+                    }
+                )
+                join_plan["plan_status"] = "incomplete"
+                join_plan["plan_confidence"] = 0.0
+                join_plan["plan_issues"] = issues
+                state["join_plan"] = join_plan
+            return {**state, "error_info": error}
 
         # Generate year-over-year growth SQL
-        if date_col:
-            sql = f"""
+        sql = f"""
             SELECT
                 YEAR({date_col}) AS year,
                 COUNT(*) AS total_count,
@@ -2132,9 +2741,6 @@ class JoinPlanAndSQLAgent:
             GROUP BY YEAR({date_col})
             ORDER BY year
             """
-        else:
-            sql = f"SELECT COUNT(*) AS total_count FROM {primary_table}"
-
         return {**state, "sql_query": sql}
 
     async def _generate_department_productivity_sql(self, state: BaseState) -> BaseState:
@@ -2178,12 +2784,62 @@ class JoinPlanAndSQLAgent:
         dept_col = find_department_column(cols)
         prod_col = find_productivity_column(cols)
 
-        if dept_col and prod_col:
-            sql = f"SELECT {dept_col}, AVG({prod_col}) AS avg_productivity, COUNT(*) AS employee_count FROM {primary_table} GROUP BY {dept_col} ORDER BY avg_productivity DESC"
-        elif dept_col:
-            sql = f"SELECT {dept_col}, COUNT(*) AS employee_count FROM {primary_table} GROUP BY {dept_col} ORDER BY employee_count DESC"
-        else:
-            sql = f"SELECT TOP 100 * FROM {primary_table}"
+        if not dept_col:
+            message = (
+                f"Unable to identify a department column on fact table {primary_table} "
+                "for DEPARTMENT_PRODUCTIVITY analysis."
+            )
+            error = {
+                "type": "MISSING_DIMENSION",
+                "message": message,
+                "details": {"role": "department", "table": primary_table},
+            }
+            if isinstance(join_plan, dict):
+                issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                issues.append(
+                    {
+                        "type": "MISSING_DIMENSION",
+                        "severity": "error",
+                        "message": message,
+                        "details": {"role": "department", "table": primary_table},
+                    }
+                )
+                join_plan["plan_status"] = "incomplete"
+                join_plan["plan_confidence"] = 0.0
+                join_plan["plan_issues"] = issues
+                state["join_plan"] = join_plan
+            return {**state, "error_info": error}
+
+        if not prod_col:
+            message = (
+                f"Unable to identify a productivity/metric column on fact table {primary_table} "
+                "for DEPARTMENT_PRODUCTIVITY analysis."
+            )
+            error = {
+                "type": "MISSING_METRIC_COLUMN",
+                "message": message,
+                "details": {"table": primary_table},
+            }
+            if isinstance(join_plan, dict):
+                issues = join_plan.get("plan_issues") or []
+                issues.append(
+                    {
+                        "type": "MISSING_METRIC_COLUMN",
+                        "severity": "error",
+                        "message": message,
+                        "details": {"table": primary_table},
+                    }
+                )
+                join_plan["plan_status"] = "incomplete"
+                join_plan["plan_confidence"] = 0.0
+                join_plan["plan_issues"] = issues
+                state["join_plan"] = join_plan
+            return {**state, "error_info": error}
+
+        sql = (
+            f"SELECT {dept_col}, AVG({prod_col}) AS avg_productivity, COUNT(*) AS employee_count "
+            f"FROM {primary_table} GROUP BY {dept_col} ORDER BY avg_productivity DESC"
+        )
 
         return {**state, "sql_query": sql}
 
@@ -2229,9 +2885,60 @@ class JoinPlanAndSQLAgent:
         date_col = find_date_column(cols)
         value_col = find_value_column(cols)
 
-        # Generate quarter-over-quarter comparison
-        if date_col and value_col:
-            sql = f"""
+        if not date_col:
+            message = (
+                f"Unable to identify a date column on fact table {primary_table} "
+                "for COMPARATIVE_ANALYSIS."
+            )
+            error = {
+                "type": "MISSING_DATE_COLUMN",
+                "message": message,
+                "details": {"table": primary_table},
+            }
+            if isinstance(join_plan, dict):
+                issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                issues.append(
+                    {
+                        "type": "MISSING_DATE_COLUMN",
+                        "severity": "error",
+                        "message": message,
+                        "details": {"table": primary_table},
+                    }
+                )
+                join_plan["plan_status"] = "incomplete"
+                join_plan["plan_confidence"] = 0.0
+                join_plan["plan_issues"] = issues
+                state["join_plan"] = join_plan
+            return {**state, "error_info": error}
+
+        if not value_col:
+            message = (
+                f"Unable to identify a value/metric column on fact table {primary_table} "
+                "for COMPARATIVE_ANALYSIS."
+            )
+            error = {
+                "type": "MISSING_METRIC_COLUMN",
+                "message": message,
+                "details": {"table": primary_table},
+            }
+            if isinstance(join_plan, dict):
+                issues = join_plan.get("plan_issues") or []
+                issues.append(
+                    {
+                        "type": "MISSING_METRIC_COLUMN",
+                        "severity": "error",
+                        "message": message,
+                        "details": {"table": primary_table},
+                    }
+                )
+                join_plan["plan_status"] = "incomplete"
+                join_plan["plan_confidence"] = 0.0
+                join_plan["plan_issues"] = issues
+                state["join_plan"] = join_plan
+            return {**state, "error_info": error}
+
+        # Generate quarter-over-quarter comparison when both date and value columns exist.
+        sql = f"""
             SELECT
                 DATEPART(year, {date_col}) AS year,
                 DATEPART(quarter, {date_col}) AS quarter,
@@ -2250,11 +2957,6 @@ class JoinPlanAndSQLAgent:
             GROUP BY DATEPART(year, {date_col}), DATEPART(quarter, {date_col})
             ORDER BY year, quarter
             """
-        elif value_col:
-            sql = f"SELECT SUM({value_col}) AS total_value FROM {primary_table}"
-        else:
-            sql = f"SELECT TOP 100 * FROM {primary_table}"
-
         return {**state, "sql_query": sql}
 
     def _generate_aggregation_sql_with_hints(self, primary_table: str, metrics: List[str], time_window: Optional[str], column_index: Dict[str, List[str]]) -> str:
@@ -2521,8 +3223,28 @@ class JoinPlanAndSQLAgent:
                     join_plan, group_by_hint, top_k, relevant_tables, column_index
                 )
             else:
-                logger.warning(f"⚠️ Unknown derived metric in {metrics}, falling back to simple top-k query")
-                sql = f"SELECT TOP {top_k} * FROM {join_plan.get('fact_table', relevant_tables[0])}"
+                message = f"Unknown or unsupported derived metric(s) for ranked_metrics: {metrics}"
+                logger.warning(f"⚠️ [RANKED_METRICS] {message}")
+                error = {
+                    "type": "RANKED_METRICS_UNSUPPORTED",
+                    "message": message,
+                    "details": {"metrics": metrics},
+                }
+                if isinstance(join_plan, dict):
+                    issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                    issues.append(
+                        {
+                            "type": "RANKED_METRICS_UNSUPPORTED",
+                            "severity": "error",
+                            "message": message,
+                            "details": {"metrics": metrics},
+                        }
+                    )
+                    join_plan["plan_status"] = "unsupported"
+                    join_plan["plan_confidence"] = 0.0
+                    join_plan["plan_issues"] = issues
+                    state["join_plan"] = join_plan
+                return {**state, "error_info": error}
 
             logger.info(f"🔨 [RANKED_METRICS] Generated SQL: {sql}")
             state["sql_query"] = sql
@@ -2719,10 +3441,44 @@ GROUP BY {group_by}
 ORDER BY metric DESC""".strip()
             logger.info(f"🎯 [TEMPLATE] TOP_K_BY_METRIC SQL (contract) generated: {sql[:120]}...")
         else:
-            metric = template_params.get("metric", "value")
-            group_by = template_params.get("group_by", "id")
+            metric = template_params.get("metric")
+            group_by = template_params.get("group_by")
             top_k = template_params.get("top_k", 10)
             order = template_params.get("order", "desc")
+
+            # In interactive mode we treat missing core template parameters as a hard failure
+            # instead of guessing metric/group_by columns.
+            missing_fields: List[str] = []
+            if not metric:
+                missing_fields.append("metric")
+            if not group_by:
+                missing_fields.append("group_by")
+
+            if missing_fields:
+                message = (
+                    f"TOP_K_BY_METRIC template is missing required parameter(s): "
+                    f"{', '.join(missing_fields)}."
+                )
+                error = {
+                    "type": "TEMPLATE_PARAMS_MISSING",
+                    "message": message,
+                    "missing_fields": missing_fields,
+                }
+                if isinstance(join_plan, dict):
+                    issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                    issues.append(
+                        {
+                            "type": "TEMPLATE_PARAMS_MISSING",
+                            "severity": "error",
+                            "message": message,
+                            "details": {"missing_fields": missing_fields},
+                        }
+                    )
+                    join_plan["plan_status"] = "incomplete"
+                    join_plan["plan_confidence"] = 0.0
+                    join_plan["plan_issues"] = issues
+                    state["join_plan"] = join_plan
+                return {**state, "error_info": error}
 
             sql = f"""SELECT TOP {top_k}
     {group_by},
@@ -2758,17 +3514,62 @@ ORDER BY avg_{metric} {order.upper()}""".strip()
 
         periods = template_params.get("periods", [])
         if not periods or not time_window:
-            logger.warning("🎯 [TEMPLATE] PERIOD_COMPARISON: missing periods or time_window, falling back to generic query")
-            sql = f"SELECT TOP 1000 * FROM {fact_table}"
-        else:
-            start = time_window.get("start")
-            end = time_window.get("end")
-            where_clause = ""
-            if start and end:
-                where_clause = f"WHERE order_date >= '{start}' AND order_date <= '{end}'"
+            message = (
+                "PERIOD_COMPARISON template requires non-empty 'periods' and a 'time_window' "
+                "with an explicit start/end range."
+            )
+            logger.warning(f"🎯 [TEMPLATE] PERIOD_COMPARISON: {message}")
+            error = {
+                "type": "TEMPLATE_PARAMS_MISSING",
+                "message": message,
+                "details": {"has_periods": bool(periods), "has_time_window": bool(time_window)},
+            }
+            if isinstance(join_plan, dict):
+                issues: List[Dict[str, Any]] = join_plan.get("plan_issues") or []
+                issues.append(
+                    {
+                        "type": "TEMPLATE_PARAMS_MISSING",
+                        "severity": "error",
+                        "message": message,
+                        "details": {"missing_fields": ["periods", "time_window"]},
+                    }
+                )
+                join_plan["plan_status"] = "incomplete"
+                join_plan["plan_confidence"] = 0.0
+                join_plan["plan_issues"] = issues
+                state["join_plan"] = join_plan
+            return {**state, "error_info": error}
 
-            group_by_clause = f"GROUP BY {group_by}" if group_by else ""
-            sql = f"""SELECT
+        start = time_window.get("start")
+        end = time_window.get("end") if isinstance(time_window, dict) else None
+        if not (start and end):
+            message = "PERIOD_COMPARISON time_window must provide both 'start' and 'end' values."
+            logger.warning(f"🎯 [TEMPLATE] PERIOD_COMPARISON: {message}")
+            error = {
+                "type": "TEMPLATE_PARAMS_MISSING",
+                "message": message,
+                "details": {"time_window": time_window},
+            }
+            if isinstance(join_plan, dict):
+                issues = join_plan.get("plan_issues") or []
+                issues.append(
+                    {
+                        "type": "TEMPLATE_PARAMS_MISSING",
+                        "severity": "error",
+                        "message": message,
+                        "details": {"missing_fields": ["time_window.start", "time_window.end"]},
+                    }
+                )
+                join_plan["plan_status"] = "incomplete"
+                join_plan["plan_confidence"] = 0.0
+                join_plan["plan_issues"] = issues
+                state["join_plan"] = join_plan
+            return {**state, "error_info": error}
+
+        where_clause = f"WHERE order_date >= '{start}' AND order_date <= '{end}'"
+
+        group_by_clause = f"GROUP BY {group_by}" if group_by else ""
+        sql = f"""SELECT
     {group_by or 'COUNT(*) AS count'},
     {metric} AS metric_value
 FROM {fact_table}

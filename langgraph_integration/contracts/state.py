@@ -62,6 +62,33 @@ class ParsedIntent(TypedDict, total=False):
     template_params: Optional[Dict[str, Any]]
 
 
+class PlanSQLInstructions(TypedDict, total=False):
+    """
+    Structured, supervisor-generated hints for the plan_sql capability.
+
+    This is intentionally small and high-level so the supervisor LLM can
+    steer planning without encoding complex routing logic in Python.
+    """
+
+    # Preferred fact/primary table name (schema-qualified or bare).
+    preferred_fact_table: Optional[str]
+
+    # Tables that the planner should avoid using as fact or dimensions.
+    avoid_tables: Optional[List[str]]
+
+    # High-level planning mode:
+    # - "analytic" – prefer full analytic templates when possible.
+    # - "exploratory_sample" – prefer simple/sample queries over strict templates.
+    mode: Optional[Literal["analytic", "exploratory_sample"]]
+
+    # Optional narrower discovery focus keywords the supervisor is exploring.
+    # Primarily used by the supervisor to re-run discovery with tighter scopes.
+    narrow_discovery_keywords: Optional[List[str]]
+
+    # Optional short, human-readable note for debugging/tracing.
+    notes: Optional[str]
+
+
 # Shared tool envelope types used by supervisor-capable tools.
 ProgressSignal = Literal["positive", "neutral", "negative"]
 SuggestedNextAction = Literal["rediscover", "replan", "clarify", "stop"]
@@ -121,6 +148,7 @@ class BaseState(TypedDict, total=False):
     discovery_result: Dict[str, Any]  # Summary info for downstream reporting
 
     # Join planning & SQL generation
+    plan_sql_instructions: Optional[PlanSQLInstructions]  # Supervisor-generated hints for plan_sql
     join_plan: "JoinPlan"  # Deterministic join graph and template metadata
     sql_query: str  # Generated MSSQL query
 
@@ -263,6 +291,24 @@ class JoinPlanJoinEdge(TypedDict, total=False):
     role: Optional[str]
 
 
+class JoinPlanIssue(TypedDict, total=False):
+    """
+    Structured issue describing a problem or caveat with a join plan.
+
+    These issues are intended to be machine-parseable signals for the supervisor
+    while remaining human-readable for debugging/logging.
+    """
+
+    # Short, machine-parseable code, e.g. "FACT_NOT_FOUND", "MISSING_DIMENSION".
+    type: str
+    # Coarse severity used by orchestration to reason about failures vs warnings.
+    severity: Literal["info", "warning", "error"]
+    # Optional human-readable description.
+    message: Optional[str]
+    # Optional structured context for the issue (e.g. {"role": "customer"}).
+    details: Optional[Dict[str, Any]]
+
+
 class JoinPlan(TypedDict, total=False):
     """
     Deterministic join plan used by JoinPlanAndSQLAgent and SQL templates.
@@ -302,6 +348,19 @@ class JoinPlan(TypedDict, total=False):
 
     # Optional planner metadata (used by templates and diagnostics)
     fact_estimated_rows: Optional[int]
+
+    # Planner world-view metadata for supervisor orchestration.
+    # "ok" – planner believes the plan can answer the intent.
+    # "exploratory" – planner intentionally returns a sample/detail query.
+    # "incomplete" – required components (fact, dimensions, time window, etc.) are missing or ambiguous.
+    # "unsupported" – requested analytic pattern is not supported by current templates/logic.
+    plan_status: Optional[Literal["ok", "exploratory", "incomplete", "unsupported"]]
+    # Best-effort confidence in plan correctness in [0.0, 1.0]; None when not meaningful (e.g. exploratory).
+    plan_confidence: Optional[float]
+    # Structured list of issues describing why a plan is incomplete/fragile or exploratory.
+    plan_issues: List[JoinPlanIssue]
+    # Template key used by deterministic builders or templates (e.g. "sum_with_period", "COUNT_ENTITY").
+    template: Optional[str]
 
 
 # Input/Output contracts per agent

@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from typing import Any, Dict
@@ -126,3 +127,91 @@ def test_select_next_tool_routes_based_on_retry_action() -> None:
 
     state["validation_result"]["retry_action"] = "replan_with_filter"
     assert sup._select_next_tool(state, "evaluate_result") == "plan_sql"
+
+
+@pytest.mark.asyncio
+async def test_llm_select_next_tool_summary_includes_join_plan_metadata_and_instructions() -> None:
+    """
+    _llm_select_next_tool must surface join plan metadata and any
+    existing plan_sql_instructions in the LLM summary payload.
+    """
+
+    class _DummyLLM:
+        def __init__(self) -> None:
+            self.last_messages = None
+
+        async def ainvoke(self, messages):  # type: ignore[override]
+            self.last_messages = messages
+
+            class _Result:
+                def __init__(self) -> None:
+                    self.content = '{"next_tool": "__STOP__", "plan_sql_instructions": null}'
+
+            return _Result()
+
+    config = SupervisorConfig(
+        max_supervisor_steps=5,
+        max_llm_calls_total=None,
+        max_no_progress_repeats=3,
+    )
+    supervisor = sup.ReactSupervisor(config=config)
+    dummy_llm = _DummyLLM()
+    supervisor.llm = dummy_llm  # type: ignore[assignment]
+
+    join_plan = {
+        "strategy": "template",
+        "fact_table": "dbo.FactOrders",
+        "primary_table": "dbo.FactOrders",
+        "plan_status": "incomplete",
+        "plan_confidence": 0.0,
+        "plan_issues": [],
+        "template": "sum_with_period",
+    }
+    plan_sql_instructions = {
+        "preferred_fact_table": "dbo.FactOrdersAlt",
+        "avoid_tables": ["dbo.BadFact"],
+        "mode": "analytic",
+        "narrow_discovery_keywords": ["orders"],
+        "notes": "unit-test",
+    }
+
+    state: BaseState = {
+        "intent": {
+            "operation": "query",
+            "primary_entities": ["orders"],
+            "metrics": ["sum"],
+        },
+        "join_plan": join_plan,
+        "plan_sql_instructions": plan_sql_instructions,
+        "validation_result": {},
+        "exec_result": {},
+        "error_info": {"type": "FACT_NOT_FOUND", "message": "No fact table"},
+        "supervisor_step_count": 0,
+        "max_supervisor_steps": 5,
+        "total_llm_calls": 0,
+        "max_llm_calls": 10,
+        "no_progress_repeat_count": 0,
+        "progress_signal": "negative",
+        "suggested_next_actions": ["rediscover", "replan"],
+    }
+
+    await supervisor._llm_select_next_tool(state, last_tool_name="plan_sql")
+
+    messages = getattr(dummy_llm, "last_messages", None)
+    assert isinstance(messages, list) and len(messages) == 2
+
+    user_content = messages[1]["content"]
+    prefix = "Current state summary (JSON):\n"
+    start = user_content.find(prefix)
+    assert start != -1
+    start += len(prefix)
+    end = user_content.find("\n\n", start)
+    summary_json = user_content[start:end]
+    summary = json.loads(summary_json)
+
+    assert summary["join_plan_status"] == "incomplete"
+    assert summary["join_plan_strategy"] == "template"
+    assert summary["join_plan_fact_table"] == "dbo.FactOrders"
+    assert summary["join_plan_template"] == "sum_with_period"
+    assert summary["error_info_type"] == "FACT_NOT_FOUND"
+    assert summary["plan_sql_instructions"]["preferred_fact_table"] == "dbo.FactOrdersAlt"

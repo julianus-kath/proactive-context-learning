@@ -92,9 +92,18 @@ async def plan_sql_tool(state: BaseState) -> BaseState:
     updated_state = result.get("output_state") or {}
     error_info = result.get("error_info")
 
+    join_plan = updated_state.get("join_plan")
+    if not isinstance(join_plan, dict):
+        join_plan = {}
+
     tool_output = {
-        "join_plan": updated_state.get("join_plan") or {},
+        "join_plan": join_plan,
         "sql_query": updated_state.get("sql_query") or "",
+        # Surface key planner metadata for the supervisor.
+        "plan_status": join_plan.get("plan_status"),
+        "plan_confidence": join_plan.get("plan_confidence"),
+        "plan_issues": join_plan.get("plan_issues") or [],
+        "template": join_plan.get("template"),
     }
     progress_signal, next_actions = _derive_progress_and_actions(
         "plan_sql", updated_state, error_info
@@ -270,14 +279,64 @@ def _derive_progress_and_actions(
     This is intentionally simple and deterministic so that supervisors can reason
     about progress without inspecting raw state or chain-of-thought.
     """
-    # Hard error path overrides other heuristics.
-    if error_info:
+    # Hard error path overrides other heuristics (except for plan_sql, which
+    # uses join_plan metadata for more nuanced progress signals).
+    if error_info and tool_name != "plan_sql":
         if tool_name in {"interpret_query", "discover_schema"}:
             return "negative", ["clarify", "stop"]
-        if tool_name in {"plan_sql", "validate_sql", "execute_sql", "evaluate_result"}:
+        if tool_name in {"validate_sql", "execute_sql", "evaluate_result"}:
             return "negative", ["replan", "clarify", "stop"]
         if tool_name == "finalize_answer":
             return "neutral", ["stop"]
+
+    if tool_name == "plan_sql":
+        join_plan = state.get("join_plan") or {}
+        if not isinstance(join_plan, dict):
+            join_plan = {}
+
+        plan_status = join_plan.get("plan_status")
+        sql_query = (state.get("sql_query") or "").strip()
+
+        # Normalize error payload so we can safely inspect its type.
+        normalized_error = normalize_error_info_payload(error_info) if error_info else None
+        error_type = ""
+        if isinstance(normalized_error, dict):
+            raw_type = normalized_error.get("type")
+            if raw_type:
+                error_type = str(raw_type).upper()
+
+        # Determine whether the underlying intent is analytic. We intentionally
+        # use a coarse heuristic here rather than duplicating planner routing.
+        intent = state.get("intent") or {}
+        analytic_template = intent.get("analytic_template")
+        metrics = intent.get("metrics") or []
+        is_analytic_intent = bool(analytic_template) or bool(metrics)
+
+        # Failed or incomplete plans (including explicit join-error types) are
+        # negative progress and should push the supervisor toward
+        # rediscovery/replanning/clarification instead of execution.
+        is_join_error = bool(normalized_error and error_type)
+        if is_join_error or plan_status in {"incomplete", "unsupported"}:
+            return "negative", ["rediscover", "replan", "clarify", "stop"]
+
+        # Exploratory plans are neutral (not positive) when the intent is
+        # clearly analytic; the supervisor should consider replanning or
+        # rediscovery rather than treating them as success.
+        if plan_status == "exploratory" and is_analytic_intent:
+            return "neutral", ["replan", "rediscover", "clarify", "stop"]
+
+        # A healthy plan with non-empty SQL is a positive step. For genuinely
+        # exploratory/detail intents, exploratory status is acceptable.
+        if sql_query and (plan_status in {None, "ok", "exploratory"}):
+            return "positive", ["replan", "stop"]
+
+        # Plans that claim to be OK but don't produce SQL should be treated as
+        # negative progress so the supervisor can take corrective action.
+        if plan_status == "ok" and not sql_query:
+            return "negative", ["replan", "rediscover", "clarify", "stop"]
+
+        # Conservative default when no SQL and no explicit failure metadata.
+        return "neutral", ["rediscover", "replan", "clarify", "stop"]
 
     if tool_name == "interpret_query":
         intent = state.get("intent") or {}

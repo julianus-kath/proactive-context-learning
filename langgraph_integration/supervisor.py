@@ -193,10 +193,23 @@ class ReactSupervisor:
         of the known tools or "__STOP__".
         """
         try:
+            # Core state slices used for decision-making.
             intent = state.get("intent") or {}
             validation = state.get("validation_result") or {}
             exec_result = state.get("exec_result") or {}
             error_info = state.get("error_info") or {}
+            join_plan = state.get("join_plan") or {}
+            if not isinstance(join_plan, dict):
+                join_plan = {}
+            plan_sql_instructions = state.get("plan_sql_instructions") or {}
+            if not isinstance(plan_sql_instructions, dict):
+                plan_sql_instructions = {}
+
+            # Join-plan metadata surfaced to the supervisor LLM.
+            join_plan_status = join_plan.get("plan_status")
+            join_plan_strategy = join_plan.get("strategy")
+            join_plan_fact_table = join_plan.get("fact_table") or join_plan.get("primary_table")
+            join_plan_template = join_plan.get("template")
 
             summary: Dict[str, Any] = {
                 "intent": {
@@ -215,10 +228,19 @@ class ReactSupervisor:
                     "ok": bool(exec_result.get("ok")) if isinstance(exec_result, dict) else False,
                     "row_count": exec_result.get("row_count") if isinstance(exec_result, dict) else None,
                 },
+                # High-level join planner signals.
+                "join_plan_status": join_plan_status,
+                "join_plan_strategy": join_plan_strategy,
+                "join_plan_fact_table": join_plan_fact_table,
+                "join_plan_template": join_plan_template,
                 "error_info_type": error_info.get("type") if isinstance(error_info, dict) else None,
+                # Result evaluation hints (after evaluate_result).
+                "result_retry_action": validation.get("retry_action"),
                 "last_tool_name": last_tool_name,
                 "progress_signal": state.get("progress_signal"),
                 "suggested_next_actions": list(state.get("suggested_next_actions") or []),
+                # Last-used planning instructions so the LLM can adjust them.
+                "plan_sql_instructions": plan_sql_instructions,
                 "budgets": {
                     "supervisor_step_count": int(state.get("supervisor_step_count", 0) or 0),
                     "max_supervisor_steps": int(state.get("max_supervisor_steps", 0) or 0),
@@ -241,7 +263,9 @@ class ReactSupervisor:
 
             system = (
                 "You are the supervisor for an ERP multi-agent system. "
-                "Your job is to choose the NEXT capability tool to run, based on the current state. "
+                "Your job is to choose the NEXT capability tool to run, based on the current state summary. "
+                "You see intent information, discovery status, join-planning metadata, SQL validation/result signals, "
+                "progress_signal / suggested_next_actions, and orchestration budgets.\n\n"
                 "Tools:\n"
                 "- interpret_query: parse intent / clarify what the user wants.\n"
                 "- discover_schema: find relevant tables/views using the catalog.\n"
@@ -251,20 +275,46 @@ class ReactSupervisor:
                 "- evaluate_result: check result quality and decide if retry/replan is needed.\n"
                 "- finalize_answer: format the final answer for the user.\n"
                 "- __STOP__: stop the loop (only when an answer is ready or budgets are exhausted).\n\n"
+                "Planner signals:\n"
+                "- join_plan_status: 'ok', 'exploratory', 'incomplete', or 'unsupported'.\n"
+                "- join_plan_strategy: 'view', 'template', or 'joins'.\n"
+                "- join_plan_fact_table: name of the current fact/primary table (if any).\n"
+                "- join_plan_template: analytic template key (if any).\n"
+                "- error_info_type: high-level error code (e.g. FACT_NOT_FOUND, PLAN_INCOMPLETE).\n"
+                "- result_retry_action: validator/reviewer hint after evaluate_result.\n"
+                "- plan_sql_instructions: structured hints (preferred_fact_table, avoid_tables, mode, etc.) "
+                "used for the last plan_sql call.\n\n"
+                "Decision guidance:\n"
+                "- When join_plan_status is 'incomplete' or 'unsupported', or error_info_type indicates a planning "
+                "failure (e.g. FACT_NOT_FOUND, PLAN_INCOMPLETE, PLAN_UNSUPPORTED), you should usually:\n"
+                "  - call discover_schema to adjust candidate tables, OR\n"
+                "  - call plan_sql again but with updated plan_sql_instructions, OR\n"
+                "  - call finalize_answer to ask the user for schema hints or constraints.\n"
+                "- When result_retry_action is 'try_next_candidate' or starts with 'replan_with_', prioritize "
+                "discover_schema or plan_sql (with updated plan_sql_instructions) instead of finalize_answer.\n"
+                "- Use progress_signal and suggested_next_actions as coarse hints, not hard rules.\n\n"
                 "Constraints:\n"
                 "- Do NOT call execute_sql before there is a non-empty sql_query.\n"
                 "- Prefer validate_sql before execute_sql when sql_query is present but not validated.\n"
                 "- If intent.operation is 'health_check', you usually go directly to finalize_answer.\n"
                 "- If intent.operation is 'schema_query' and no relevant_tables yet, call discover_schema.\n"
-                "- If evaluate_result suggests try_next_candidate or replan_with_*, you may pick discover_schema or plan_sql.\n"
-                "- Respect budgets and avoid infinite loops."
+                "- Respect budgets and avoid infinite loops.\n\n"
+                "Output protocol:\n"
+                "- Respond with a SINGLE JSON object of the form:\n"
+                '  {\"next_tool\": \"tool_name\", \"plan_sql_instructions\": { ...optional... }}\n'
+                "- next_tool must be exactly one of the allowed tools.\n"
+                "- Only include plan_sql_instructions when next_tool is 'plan_sql'; otherwise omit it or set it to null.\n"
+                "- Do not include any extra text, comments, or code fences."
             )
 
             user = (
                 "Current state summary (JSON):\n"
                 f"{json.dumps(summary, ensure_ascii=False)}\n\n"
-                "Respond with ONLY the name of the next tool to run, exactly one of:\n"
-                f"{', '.join(allowed_tools)}\n"
+                "Choose the next tool by returning a SINGLE JSON object with this shape:\n"
+                '{"next_tool": "<tool_name>", "plan_sql_instructions": { ...optional... }}\n'
+                "Where 'next_tool' is exactly one of:\n"
+                f"{', '.join(allowed_tools)}.\n"
+                "If you are not calling plan_sql, omit plan_sql_instructions or set it to null.\n"
             )
 
             response = await self.llm.ainvoke(
@@ -274,9 +324,38 @@ class ReactSupervisor:
                 ]
             )
             text = (getattr(response, "content", "") or "").strip()
-            # Take the first token/word as the tool name.
-            candidate = text.split()[0] if text else ""
+            candidate: Optional[ToolName] = None
+            parsed_plan_instructions: Optional[Dict[str, Any]] = None
+
+            # Primary path: parse structured JSON response.
+            try:
+                parsed = json.loads(text)
+            except Exception:
+                parsed = None
+                if "```" in text:
+                    try:
+                        inner = text.split("```", 2)[1]
+                        parsed = json.loads(inner)
+                    except Exception:
+                        parsed = None
+
+            if isinstance(parsed, dict):
+                raw_next = parsed.get("next_tool")
+                if isinstance(raw_next, str):
+                    candidate = raw_next.strip()
+                instructions = parsed.get("plan_sql_instructions")
+                if isinstance(instructions, dict):
+                    parsed_plan_instructions = instructions
+
+            # Backward-compatible fallback: treat response as plain tool name.
+            if not candidate:
+                candidate = text.split()[0] if text else ""
+
             if candidate in allowed_tools:
+                # Attach supervisor-provided planning instructions when applicable.
+                if candidate == "plan_sql" and parsed_plan_instructions:
+                    state["plan_sql_instructions"] = parsed_plan_instructions
+
                 # Guardrail 1: for data queries without an execution result yet,
                 # do not allow the supervisor LLM to skip execution or stop.
                 op = (intent.get("operation") or "").lower()
