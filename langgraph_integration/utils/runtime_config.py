@@ -104,12 +104,13 @@ def get_db_default_schema(
     return default or "public"
 
 
-def get_max_graph_cycles(default: int = 10) -> int:
+def get_max_graph_cycles(default: int = 20) -> int:
     """
     Resolve the maximum number of allowed validation-driven graph cycles.
 
     Controlled by MAX_GRAPH_CYCLES; currently used only for reporting
-    and future safety guards, with a default aligned to existing docs.
+    and future safety guards, with a default that allows more supervisor
+    steps per query before hitting the budget.
     """
     return _coerce_int(os.getenv("MAX_GRAPH_CYCLES"), default, "MAX_GRAPH_CYCLES")
 
