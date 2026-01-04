@@ -186,6 +186,16 @@ class ReactSupervisor:
             # Take the first token/word as the tool name.
             candidate = text.split()[0] if text else ""
             if candidate in allowed_tools:
+                # Guardrail: for data queries without an execution result yet,
+                # do not allow the supervisor LLM to skip execution or stop.
+                op = (intent.get("operation") or "").lower()
+                has_exec = isinstance(exec_result, dict) and bool(exec_result.get("ok"))
+                if op == "query" and not has_exec and candidate in {"finalize_answer", "__STOP__"}:
+                    logger.debug(
+                        "Supervisor LLM suggested %r before execution; falling back to heuristic pipeline",
+                        candidate,
+                    )
+                    return None
                 return candidate  # type: ignore[return-value]
             logger.debug("Supervisor LLM returned unsupported tool %r; falling back to heuristic policy", candidate)
         except Exception:
@@ -624,8 +634,13 @@ def _summarize_step(
         tables = after_state.get("relevant_tables") or []
         obs = f"Discovery found {len(tables)} relevant tables (progress={progress})."
     elif tool_name == "plan_sql":
-        sql_present = bool((after_state.get("sql_query") or "").strip())
-        obs = f"SQL planning {'succeeded' if sql_present else 'did not produce SQL'} (progress={progress})."
+        sql = (after_state.get("sql_query") or "").strip()
+        sql_present = bool(sql)
+        preview = (sql[:120] + "...") if sql and len(sql) > 120 else sql
+        if sql_present:
+            obs = f"SQL planning succeeded; sql_preview={preview!r} (progress={progress})."
+        else:
+            obs = f"SQL planning did not produce SQL (progress={progress})."
     elif tool_name == "validate_sql":
         validation = after_state.get("validation_result") or {}
         is_valid = bool(validation.get("is_valid", False))
