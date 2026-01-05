@@ -127,7 +127,7 @@ class BaseState(TypedDict, total=False):
     user_input: str  # Current user query
 
     # Intent analysis (from parse_intent node)
-    # 🆕 PHASE 9: Structured intent (ParsedIntent) replacing loose dict
+    # Structured intent (ParsedIntent) replacing loose dict
     # Produced by IntentParserAgent (semantic, LLM-based), consumed by Discovery & others
     intent: ParsedIntent  # Structured: operation, entities, metrics, filters, clean keywords
 
