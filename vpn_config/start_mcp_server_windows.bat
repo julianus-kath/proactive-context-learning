@@ -56,6 +56,13 @@ echo.
 set "CATALOG_FILE=%PROJECT_ROOT%\data\catalog\catalog.json.gz"
 set "METADATA_FILE=%PROJECT_ROOT%\data\catalog\metadata.json"
 set "TTL_THRESHOLD=3600"
+set "FORCE_REBUILD=0"
+if /i "%FORCE_REBUILD%"=="1" (
+  echo   🔄 Force rebuild enabled - rebuilding catalog
+  if exist "%CATALOG_FILE%" del /q "%CATALOG_FILE%" 2>nul
+  if exist "%METADATA_FILE%" del /q "%METADATA_FILE%" 2>nul
+  goto :rebuild_info
+)
 
 if exist "%CATALOG_FILE%" (
   if exist "%METADATA_FILE%" (
