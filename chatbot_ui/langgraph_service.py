@@ -17,16 +17,16 @@ from pydantic import BaseModel, ValidationError, Field
 import uvicorn
 from dotenv import load_dotenv
 
-from langgraph_integration.contracts.response_envelope import (
-    ErrorInfo as ErrorInfoModel,
-    ResponseEnvelope,
-)
-
-# Add the parent directory and langgraph_integration to the path
+# Add the parent directory and langgraph_integration to the path FIRST
 parent_dir = os.path.join(os.path.dirname(__file__), '..')
 langgraph_dir = os.path.join(parent_dir, 'langgraph_integration')
 sys.path.insert(0, parent_dir)
 sys.path.insert(0, langgraph_dir)
+
+from langgraph_integration.contracts.response_envelope import (
+    ErrorInfo as ErrorInfoModel,
+    ResponseEnvelope,
+)
 
 try:
     # Import the new multi-agent orchestrator (ACTIVE - Phase 8)

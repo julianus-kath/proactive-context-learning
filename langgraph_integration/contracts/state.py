@@ -8,6 +8,13 @@ BaseState is the union of all fields; individual agents only consume/produce the
 from typing import Any, Dict, List, Optional, TypedDict, Literal
 
 from .response_envelope import ErrorInfo as ErrorInfoModel
+# New compiler-style contracts for database reasoning rebuild
+from .intent_dsl import IntentDSL
+from .catalog_selection import CatalogSelection
+from .query_plan import QueryPlan
+from .sanity_report import SanityReport
+from .answer_envelope import AnswerEnvelope
+# Note: SQLStep is imported from langgraph_integration.sql.ast, not contracts
 
 
 class ParsedIntent(TypedDict, total=False):
@@ -131,6 +138,14 @@ class BaseState(TypedDict, total=False):
     # Produced by IntentParserAgent (semantic, LLM-based), consumed by Discovery & others
     intent: ParsedIntent  # Structured: operation, entities, metrics, filters, clean keywords
 
+    # 🆕 Phase 0: New compiler-style contracts for database reasoning rebuild
+    intent_dsl: Optional[IntentDSL]  # Strict structured intent (replaces loose ParsedIntent)
+    catalog_selection: Optional[CatalogSelection]  # Evidence-grounded table candidates from CatalogRAG
+    query_plan: Optional[QueryPlan]  # Deterministic query plan from SchemaMapping + JoinPlanner
+    sql_step: Optional[Dict[str, Any]]  # SQLStep from sql.ast (avoid circular import)
+    sanity_report: Optional[SanityReport]  # Post-execution result validation
+    answer_envelope: Optional[AnswerEnvelope]  # Final answer with provenance
+
     # Catalog + concept mediation
     catalog: Dict[str, Any]
     inferred_concepts: List[str]
@@ -203,6 +218,16 @@ class BaseState(TypedDict, total=False):
     max_total_plans: int  # Max allowed plan/validation cycles before giving up
     exec_attempt_count: int  # Number of execution/recovery cycles attempted
     max_exec_attempts: int  # Max allowed execution attempts before giving up
+
+    # 🆕 Phase 0: Additional budget fields for compiler-style pipeline
+    catalog_rag_iterations: int  # Number of CatalogRAG retrieve-grade-rewrite iterations
+    max_catalog_rag_iterations: int  # Max allowed CatalogRAG iterations (default: 2)
+    schema_describe_count: int  # Number of schema describes performed
+    max_schema_describes: int  # Max schema describes allowed (default: 8)
+    join_hop_count: int  # Number of FK hops in current join plan
+    max_join_hops: int  # Max FK hops allowed (default: 3)
+    repair_attempts: int  # Number of SQL repair attempts in current plan
+    max_repair_per_plan: int  # Max repairs per plan before trying next candidate (default: 2)
 
     # Phase 2b: Repair loop control (validation/exec caps + no-progress detector)
     validation_attempt_count: int  # Number of times result validation has been run
