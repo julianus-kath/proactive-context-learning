@@ -1,0 +1,165 @@
+"""
+Database tools for the SQL agent.
+
+These tools wrap the MCP client to provide simple interfaces
+for the ReAct agent to use.
+"""
+
+import asyncio
+import logging
+from typing import List, Optional
+from langchain_core.tools import tool
+
+from simple_sql_agent.db.mcp_client import get_mcp_client
+
+logger = logging.getLogger(__name__)
+
+
+def _run_async(coro):
+    """Run an async function synchronously."""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # We're in an async context, create a task
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, coro)
+                return future.result(timeout=60)
+        else:
+            return loop.run_until_complete(coro)
+    except RuntimeError:
+        return asyncio.run(coro)
+
+
+@tool
+def list_tables() -> str:
+    """
+    List all available tables in the database.
+
+    Use this tool FIRST to understand what data is available before writing queries.
+    Returns table names, schemas, and approximate row counts.
+
+    Returns:
+        A formatted list of available tables with their details.
+    """
+    async def _list():
+        client = get_mcp_client()
+        try:
+            return await client.list_tables(page=1, page_size=50)
+        finally:
+            await client.close()
+
+    try:
+        result = _run_async(_list())
+        return result if result else "No tables found. The database may be empty or inaccessible."
+
+    except Exception as e:
+        logger.error(f"list_tables failed: {e}")
+        return f"Error listing tables: {str(e)}"
+
+
+@tool
+def get_schema(table_names: List[str]) -> str:
+    """
+    Get detailed schema information for specific tables.
+
+    Use this tool to understand the columns, data types, and relationships
+    of tables before writing SQL queries.
+
+    Args:
+        table_names: List of table names to describe (e.g., ["dbo.Customers", "dbo.Orders"])
+
+    Returns:
+        Detailed schema information including columns, types, primary keys, and foreign keys.
+    """
+    async def _describe_all(names: List[str]):
+        client = get_mcp_client()
+        try:
+            results = []
+            for name in names[:5]:  # Limit to 5 tables
+                schema_text = await client.describe_table(name)
+                results.append(f"\n## {name}\n{schema_text}")
+            return results
+        finally:
+            await client.close()
+
+    try:
+        results = _run_async(_describe_all(table_names))
+        return "\n".join(results) if results else "No schema information available."
+
+    except Exception as e:
+        logger.error(f"get_schema failed: {e}")
+        return f"Error getting schema: {str(e)}"
+
+
+@tool
+def execute_query(sql: str) -> str:
+    """
+    Execute a SQL SELECT query and return the results.
+
+    IMPORTANT MSSQL SYNTAX RULES:
+    - Use TOP instead of LIMIT: SELECT TOP 10 * FROM table
+    - Always qualify table names: dbo.TableName
+    - Use brackets for names with spaces: [Order Details]
+    - Date functions: DATEADD, DATEDIFF, GETDATE()
+
+    Args:
+        sql: The SQL SELECT query to execute. Must be a SELECT statement.
+
+    Returns:
+        Query results formatted as a table, or an error message if execution fails.
+    """
+    async def _execute():
+        client = get_mcp_client()
+        try:
+            return await client.execute_query(sql, limit=100, timeout=30)
+        finally:
+            await client.close()
+
+    try:
+        result = _run_async(_execute())
+
+        # Check for errors
+        if result.get("error"):
+            error_msg = result.get("error") or result.get("error_message", "Unknown error")
+            return f"Query execution failed: {error_msg}\n\nSQL was:\n{sql}"
+
+        if not result.get("ok", True) and result.get("error_message"):
+            return f"Query execution failed: {result['error_message']}\n\nSQL was:\n{sql}"
+
+        # Format successful result
+        columns = result.get("columns", [])
+        rows = result.get("rows", result.get("data", []))
+        row_count = result.get("row_count", len(rows))
+        exec_time = result.get("execution_time_ms", "?")
+        truncated = result.get("truncated", False)
+
+        # Build output
+        lines = [f"Query executed successfully in {exec_time}ms"]
+        lines.append(f"Returned {row_count} rows" + (" (truncated)" if truncated else ""))
+        lines.append("")
+
+        if not rows:
+            lines.append("No results returned.")
+            return "\n".join(lines)
+
+        # Format as table (first 20 rows)
+        if columns:
+            lines.append("| " + " | ".join(str(c) for c in columns) + " |")
+            lines.append("|" + "|".join(["---"] * len(columns)) + "|")
+
+        for row in rows[:20]:
+            if isinstance(row, dict):
+                values = [str(row.get(c, "")) for c in columns]
+            else:
+                values = [str(v) for v in row]
+            lines.append("| " + " | ".join(values) + " |")
+
+        if len(rows) > 20:
+            lines.append(f"... and {len(rows) - 20} more rows")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.error(f"execute_query failed: {e}")
+        return f"Error executing query: {str(e)}\n\nSQL was:\n{sql}"

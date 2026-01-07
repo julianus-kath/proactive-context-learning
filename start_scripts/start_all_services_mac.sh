@@ -1,7 +1,7 @@
 #!/bin/bash
-# Mac Machine Startup Script - Web UI + LangGraph Service
+# Mac Machine Startup Script - Web UI + Simple SQL Agent
 # =============================================================================
-# This script starts the Web UI and LangGraph service on Mac.
+# This script starts the Web UI and Simple SQL Agent on Mac.
 # It does NOT start the MCP server; it only communicates with whatever MCP_SERVER_URL points to.
 # The MCP server can run either on Windows (remote) or locally on the Mac.
 #
@@ -71,23 +71,22 @@ kill_by_name() {
 echo -e "${BLUE}"
 echo "=========================================="
 echo "  Mac Services Startup"
-echo "  Web UI + LangGraph Service"
+echo "  Web UI + Simple SQL Agent"
 echo "=========================================="
 echo -e "${NC}"
 
 # ============================================
-# AGGRESSIVE CLEANUP: Kill ALL LangChain/LangGraph instances
+# AGGRESSIVE CLEANUP: Kill ALL service instances
 # ============================================
 echo -e "${BLUE}🔥 Aggressive Cleanup Phase...${NC}"
-echo -e "${YELLOW}   Killing ALL langchain/langgraph processes...${NC}"
+echo -e "${YELLOW}   Killing ALL service processes...${NC}"
 
 # Kill by process names (most aggressive)
+kill_by_name "simple_sql_agent"
 kill_by_name "langchain"
 kill_by_name "langgraph"
-#kill_by_name "uvicorn"
 
 # Kill Python processes that might be our services
-kill_by_name "langgraph_service"
 kill_by_name "web_app"
 
 # Kill known ports (Web UI, LangGraph Studio, LangGraph Service, Eval Service)
@@ -138,19 +137,18 @@ wait_for_service() {
 cleanup() {
     echo -e "\n${YELLOW}🛑 Shutting down services...${NC}"
 
-    # Kill all LangChain/LangGraph related processes
+    # Kill all service-related processes
+    kill_by_name "simple_sql_agent"
     kill_by_name "langchain"
     kill_by_name "langgraph"
-    #kill_by_name "uvicorn"
-    kill_by_name "langgraph_service"
     kill_by_name "web_app"
     kill_by_name "debug_langgraph_comprehensive"
     kill_by_name "eval.service"
 
     # Kill services on known ports (NOT 8000 - that's on Windows)
     kill_port 3000  # Web UI
-    kill_port 2024  # LangGraph Studio
-    kill_port 5001  # LangGraph Service
+    kill_port 2024  # LangGraph Studio (if enabled)
+    kill_port 5001  # SQL Agent
     kill_port 7001  # Evaluation & Tracking Service
 
     echo -e "${GREEN}✅ All Mac services stopped${NC}"
@@ -323,11 +321,11 @@ python3 -m pip install --upgrade pip setuptools wheel || {
     exit 1
 }
 
-# Install LangGraph integration dependencies
-if [ -f "langgraph_integration/requirements.txt" ]; then
-    echo -e "${YELLOW}   Installing LangGraph integration dependencies...${NC}"
-    pip3 install -r langgraph_integration/requirements.txt || {
-        echo -e "${RED}❌ Failed to install LangGraph dependencies${NC}"
+# Install Simple SQL Agent dependencies
+if [ -f "simple_sql_agent/requirements.txt" ]; then
+    echo -e "${YELLOW}   Installing Simple SQL Agent dependencies...${NC}"
+    pip3 install -r simple_sql_agent/requirements.txt || {
+        echo -e "${RED}❌ Failed to install Simple SQL Agent dependencies${NC}"
         exit 1
     }
 fi
@@ -452,46 +450,41 @@ fi
 
 echo ""
 
-# Start LangGraph Service with Graph Workflow
-echo -e "${YELLOW}🔧 Starting LangGraph Service (Port 5001) - Graph Workflow Engine...${NC}"
-cd "$PROJECT_ROOT/chatbot_ui"
+# Start Simple SQL Agent (Replaces complex multi-agent LangGraph system)
+echo -e "${YELLOW}🔧 Starting Simple SQL Agent (Port 5001) - ReAct Text-to-SQL Engine...${NC}"
+cd "$PROJECT_ROOT"
 
-if [ ! -f "langgraph_service.py" ]; then
-    echo -e "${RED}❌ langgraph_service.py not found${NC}"
+# Verify simple_sql_agent exists
+if [ ! -f "$PROJECT_ROOT/simple_sql_agent/service.py" ]; then
+    echo -e "${RED}❌ Simple SQL Agent not found${NC}"
+    echo -e "${YELLOW}   Expected: simple_sql_agent/service.py${NC}"
     exit 1
 fi
 
-# Verify graph_definition exists (primary orchestration system)
-if [ ! -f "$PROJECT_ROOT/langgraph_integration/graph_definition.py" ]; then
-    echo -e "${RED}❌ Graph Definition not found${NC}"
-    echo -e "${YELLOW}   Expected: langgraph_integration/graph_definition.py${NC}"
-    exit 1
-fi
-
-echo -e "${GREEN}✅ Graph Definition (Orchestration) found${NC}"
+echo -e "${GREEN}✅ Simple SQL Agent found${NC}"
 
 # Clear old logs
-> "$LOG_DIR/langgraph.log"
+> "$LOG_DIR/sql_agent.log"
 
-nohup python3 langgraph_service.py > "$LOG_DIR/langgraph.log" 2>&1 &
-LANGGRAPH_PID=$!
-echo -e "${GREEN}✅ LangGraph Service started (PID: $LANGGRAPH_PID)${NC}"
-echo -e "${YELLOW}📋 LangGraph Startup Logs:${NC}"
+nohup python3 -m simple_sql_agent.service > "$LOG_DIR/sql_agent.log" 2>&1 &
+SQL_AGENT_PID=$!
+echo -e "${GREEN}✅ Simple SQL Agent started (PID: $SQL_AGENT_PID)${NC}"
+echo -e "${YELLOW}📋 SQL Agent Startup Logs:${NC}"
 
 # Stream logs until service is ready or timeout
-timeout 30 tail -f "$LOG_DIR/langgraph.log" 2>/dev/null | while IFS= read -r line; do
+timeout 30 tail -f "$LOG_DIR/sql_agent.log" 2>/dev/null | while IFS= read -r line; do
     echo -e "${BLUE}  $line${NC}"
     # Check if service is ready
-    if [[ $line == *"Uvicorn running on"* ]] || [[ $line == *"Application startup complete"* ]] || [[ $line == *"orchestrator"* ]]; then
-        echo -e "${GREEN}✅ LangGraph Service is ready!${NC}"
+    if [[ $line == *"Uvicorn running on"* ]] || [[ $line == *"Application startup complete"* ]] || [[ $line == *"SQL Agent initialized"* ]]; then
+        echo -e "${GREEN}✅ Simple SQL Agent is ready!${NC}"
         break
     fi
 done &
 
-# Wait for LangGraph to be ready
-wait_for_service "http://localhost:5001/health" "LangGraph Service" || {
-    echo -e "${RED}❌ LangGraph Service failed to start${NC}"
-    echo -e "${YELLOW}Check full logs: tail -f $LOG_DIR/langgraph.log${NC}"
+# Wait for SQL Agent to be ready
+wait_for_service "http://localhost:5001/health" "Simple SQL Agent" || {
+    echo -e "${RED}❌ Simple SQL Agent failed to start${NC}"
+    echo -e "${YELLOW}Check full logs: tail -f $LOG_DIR/sql_agent.log${NC}"
     cleanup
 }
 
@@ -573,16 +566,15 @@ echo -e "${GREEN}✅ All Mac services started successfully!${NC}"
 echo -e "${GREEN}=========================================${NC}"
 echo ""
 echo -e "${BLUE}🎯 System Architecture:${NC}"
-echo -e "  Unified LangGraph Orchestration (PHASE 8 FIX)"
-echo -e "  ├─ Intent Parser (extract keywords, route to search)"
-echo -e "  ├─ Select Tables (Scout Catalog search, views-first)"
-echo -e "  ├─ Generate SQL (MSSQL query generation)"
-echo -e "  ├─ Execute Query (safe execution with row caps)"
-echo -e "  └─ Format Results (answer & explanations)"
+echo -e "  Simple SQL Agent (ReAct Pattern)"
+echo -e "  ├─ Single ReAct Agent (GPT-4o)"
+echo -e "  ├─ 4 Tools: list_tables, get_schema, validate_sql, execute_query"
+echo -e "  ├─ Domain Knowledge from concepts.json"
+echo -e "  └─ MCP Server for MSSQL access"
 echo ""
 echo -e "${BLUE}Service Status:${NC}"
 echo -e "  🌐 Web UI:           http://localhost:3000"
-echo -e "  🤖 LangGraph (Orchestrator): http://localhost:5001"
+echo -e "  🤖 SQL Agent:        http://localhost:5001"
 if [ -n "$STUDIO_URL" ]; then
     echo -e "  📊 LangGraph Studio: ${STUDIO_URL} (Graph Visualization)"
 fi
@@ -593,7 +585,7 @@ echo -e "  🗄️  MCP Server:       ${MCP_SERVER_URL}"
 echo ""
 echo -e "${BLUE}Logs:${NC}"
 echo -e "  Web UI:             tail -f $LOG_DIR/web_ui.log"
-echo -e "  LangGraph Service:  tail -f $LOG_DIR/langgraph.log"
+echo -e "  SQL Agent:          tail -f $LOG_DIR/sql_agent.log"
 if [ -n "$STUDIO_URL" ]; then
     echo -e "  LangGraph Studio:   tail -f $LOG_DIR/langgraph_studio.log"
 fi
@@ -605,10 +597,8 @@ if [ -n "$DEBUG_PID" ]; then
     echo -e "                    (Shows real-time agent reasoning steps)"
 fi
 echo ""
-echo -e "${BLUE}Documentation & Debugging:${NC}"
-echo -e "  📖 Architecture:     docs/MULTI_AGENT_ARCHITECTURE.md"
-echo -e "  🚀 Quick Start:      docs/MULTI_AGENT_QUICK_START.md"
-echo -e "  🎨 Visual Guide:     docs/MULTI_AGENT_VISUAL_GUIDE.md"
+echo -e "${BLUE}Documentation:${NC}"
+echo -e "  📖 Architecture:     adrs/0030-simple-sql-agent-architecture.md"
 if [ -n "$STUDIO_URL" ]; then
     echo ""
     echo -e "${GREEN}🎯 LangGraph Studio Features:${NC}"
