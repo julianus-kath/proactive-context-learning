@@ -1,8 +1,0 @@
-{
-  "run_id": "20251221_135757_postgres_poc_thesis_key_cf_fix",
-  "total_queries": 12,
-  "successful": 6,
-  "failed": 6,
-  "success_rate": "50.0%",
-  "results_dir": "/private/var/folders/0v/gfnycml53110tbl3dj5jlwr80000gn/T/zenflow/worktrees/new-task-20b2/eval/runs/20251221_135757_postgres_poc_thesis_key_cf_fix"
-}

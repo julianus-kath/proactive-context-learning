@@ -1,8 +1,0 @@
-{
-  "run_id": "20251221_125500_postgres_poc_intent_fix2",
-  "total_queries": 12,
-  "successful": 0,
-  "failed": 12,
-  "success_rate": "0.0%",
-  "results_dir": "/private/var/folders/0v/gfnycml53110tbl3dj5jlwr80000gn/T/zenflow/worktrees/new-task-20b2/eval/runs/20251221_125500_postgres_poc_intent_fix2"
-}
