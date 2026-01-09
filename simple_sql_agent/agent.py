@@ -103,8 +103,9 @@ class SQLAgentGraph:
         }
 
         try:
-            # Run the agent
-            result = await self.graph.ainvoke(initial_state)
+            # Run the agent with increased recursion limit for complex queries
+            config = {"recursion_limit": 50}
+            result = await self.graph.ainvoke(initial_state, config=config)
 
             # Extract the final answer from messages
             messages = result.get("messages", [])

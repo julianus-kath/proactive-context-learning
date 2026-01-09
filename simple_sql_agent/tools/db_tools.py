@@ -122,34 +122,52 @@ def search_tables(query: str) -> str:
     try:
         results = _run_async(_search())
 
+        # Handle empty results
         if not results:
             return f"No tables found matching '{query}'. Try different keywords or use list_tables() to see all available tables."
 
-        # Format results
-        lines = [f"Found {len(results)} tables matching '{query}':\n"]
-        for table in results:
-            if isinstance(table, dict):
-                name = table.get("name", table.get("table_name", "unknown"))
-                score = table.get("score", table.get("relevance", ""))
-                desc = table.get("description", "")
-                row_count = table.get("row_count", "")
+        # Handle string result (MCP may return text directly)
+        if isinstance(results, str):
+            return results if results else f"No tables found matching '{query}'."
 
-                line = f"- **{name}**"
-                if score:
-                    line += f" (relevance: {score:.2f})" if isinstance(score, float) else f" (relevance: {score})"
-                if row_count:
-                    line += f" [{row_count} rows]"
-                if desc:
-                    line += f"\n  {desc}"
-                lines.append(line)
-            else:
-                lines.append(f"- {table}")
+        # Handle list of text items from MCP (format: [{"type": "text", "text": "..."}])
+        if isinstance(results, list) and len(results) > 0:
+            first = results[0]
+            if isinstance(first, dict) and "type" in first and first.get("type") == "text":
+                # MCP text response format
+                texts = [item.get("text", "") for item in results if isinstance(item, dict)]
+                return "\n".join(texts) if texts else f"No tables found matching '{query}'."
 
-        return "\n".join(lines)
+        # Handle list of table dicts
+        if isinstance(results, list):
+            lines = [f"Found {len(results)} tables matching '{query}':\n"]
+            for table in results:
+                if isinstance(table, dict):
+                    name = table.get("name", table.get("table_name", str(table)))
+                    score = table.get("score", table.get("relevance", ""))
+                    desc = table.get("description", "")
+                    row_count = table.get("row_count", "")
+
+                    line = f"- **{name}**"
+                    if score:
+                        line += f" (relevance: {score:.2f})" if isinstance(score, float) else f" (relevance: {score})"
+                    if row_count:
+                        line += f" [{row_count} rows]"
+                    if desc:
+                        line += f"\n  {desc}"
+                    lines.append(line)
+                elif isinstance(table, str):
+                    lines.append(f"- {table}")
+                else:
+                    lines.append(f"- {str(table)}")
+            return "\n".join(lines)
+
+        # Fallback
+        return str(results) if results else f"No tables found matching '{query}'."
 
     except Exception as e:
         logger.error(f"search_tables failed: {e}")
-        return f"Error searching tables: {str(e)}"
+        return f"Error searching tables: {str(e)}. Try using list_tables() instead."
 
 
 @tool
