@@ -93,6 +93,66 @@ def get_schema(table_names: List[str]) -> str:
 
 
 @tool
+def search_tables(query: str) -> str:
+    """
+    Search for tables by keyword or concept.
+
+    Use this tool to find relevant tables when you don't know the exact table names.
+    Searches table names, column names, and descriptions.
+
+    Examples:
+        - search_tables("inventory") -> finds tables related to stock/inventory
+        - search_tables("Bestellung") -> finds order-related tables
+        - search_tables("Mitarbeiter") -> finds employee-related tables
+        - search_tables("Zeit") -> finds time tracking tables
+
+    Args:
+        query: Search term (can be German or English, concept or keyword)
+
+    Returns:
+        List of matching tables with relevance scores and descriptions.
+    """
+    async def _search():
+        client = get_mcp_client()
+        try:
+            return await client.search_tables(query, limit=15)
+        finally:
+            await client.close()
+
+    try:
+        results = _run_async(_search())
+
+        if not results:
+            return f"No tables found matching '{query}'. Try different keywords or use list_tables() to see all available tables."
+
+        # Format results
+        lines = [f"Found {len(results)} tables matching '{query}':\n"]
+        for table in results:
+            if isinstance(table, dict):
+                name = table.get("name", table.get("table_name", "unknown"))
+                score = table.get("score", table.get("relevance", ""))
+                desc = table.get("description", "")
+                row_count = table.get("row_count", "")
+
+                line = f"- **{name}**"
+                if score:
+                    line += f" (relevance: {score:.2f})" if isinstance(score, float) else f" (relevance: {score})"
+                if row_count:
+                    line += f" [{row_count} rows]"
+                if desc:
+                    line += f"\n  {desc}"
+                lines.append(line)
+            else:
+                lines.append(f"- {table}")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.error(f"search_tables failed: {e}")
+        return f"Error searching tables: {str(e)}"
+
+
+@tool
 def execute_query(sql: str) -> str:
     """
     Execute a SQL SELECT query and return the results.

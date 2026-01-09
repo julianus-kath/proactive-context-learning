@@ -1,7 +1,7 @@
 """
 Simple SQL Agent using LangGraph.
 
-A single ReAct agent with 4 tools for text-to-SQL conversion.
+A single ReAct agent with 5 tools for text-to-SQL conversion.
 """
 
 import logging
@@ -14,7 +14,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import create_react_agent
 
 from simple_sql_agent.state import SQLAgentState
-from simple_sql_agent.tools import list_tables, get_schema, validate_sql, execute_query
+from simple_sql_agent.tools import list_tables, get_schema, search_tables, validate_sql, execute_query
 from simple_sql_agent.prompts import get_system_prompt, load_concepts
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ class SQLAgentGraph:
     Simple SQL Agent using LangGraph's ReAct pattern.
 
     This replaces the complex 8-agent system with a single ReAct agent
-    that has 4 tools: list_tables, get_schema, validate_sql, execute_query.
+    that has 5 tools: list_tables, get_schema, search_tables, validate_sql, execute_query.
     """
 
     def __init__(
@@ -69,8 +69,8 @@ class SQLAgentGraph:
 
         Uses create_react_agent for a simple Think -> Act -> Observe loop.
         """
-        # Define tools
-        tools = [list_tables, get_schema, validate_sql, execute_query]
+        # Define tools - search_tables is key for exploration
+        tools = [list_tables, search_tables, get_schema, validate_sql, execute_query]
 
         # Get system prompt with domain knowledge
         system_prompt = get_system_prompt(self.concepts)

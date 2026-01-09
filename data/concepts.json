@@ -1,0 +1,76 @@
+{
+  "concepts": [
+    {
+      "name": "revenue",
+      "aliases": ["Umsatz", "Erlös", "sales", "turnover", "Verkauf"],
+      "description": "Gesamtumsatz basierend auf Aufträgen/Bestellungen. Suche nach: Auftrag, Bestellung, Order, Position, Preis, Menge",
+      "search_terms": ["Auftrag", "Bestellung", "Order", "Umsatz", "Verkauf", "Position"]
+    },
+    {
+      "name": "inventory",
+      "aliases": ["Lager", "Bestand", "stock", "Vorrat", "Lagerbestand"],
+      "description": "Lagerbestände und Materialbewegungen. Suche nach: Lager, Bestand, Material, Artikel, Wareneingang, Warenausgang",
+      "search_terms": ["Lager", "Bestand", "Material", "Artikel", "Stock", "Inventory"]
+    },
+    {
+      "name": "production",
+      "aliases": ["Fertigung", "Produktion", "manufacturing", "Herstellung"],
+      "description": "Produktionsdaten, Fertigungsaufträge, BDE-Rückmeldungen. Suche nach: Fertigung, Produktion, BDE, Arbeitsgang, Rückmeldung",
+      "search_terms": ["Fertigung", "Produktion", "BDE", "Arbeitsgang", "Manufacturing"]
+    },
+    {
+      "name": "time_tracking",
+      "aliases": ["Zeiterfassung", "Anwesenheit", "attendance", "Arbeitszeit"],
+      "description": "Arbeitszeiterfassung, Stempelzeiten, Pausen. Suche nach: Zeit, Stempel, Anwesenheit, Pause, Kommen, Gehen",
+      "search_terms": ["Zeit", "Stempel", "Anwesenheit", "Time", "Attendance"]
+    },
+    {
+      "name": "employees",
+      "aliases": ["Mitarbeiter", "Personal", "staff", "Belegschaft"],
+      "description": "Mitarbeiterdaten und Personalinformationen. Suche nach: Mitarbeiter, Personal, Employee, Kostenstelle",
+      "search_terms": ["Mitarbeiter", "Personal", "Employee", "Kostenstelle"]
+    },
+    {
+      "name": "orders",
+      "aliases": ["Aufträge", "Bestellungen", "Kundenaufträge", "sales orders"],
+      "description": "Kundenaufträge und Bestellungen. Suche nach: Auftrag, Bestellung, Order, Kunde, Position",
+      "search_terms": ["Auftrag", "Bestellung", "Order", "Kunde"]
+    },
+    {
+      "name": "delivery",
+      "aliases": ["Lieferung", "Versand", "shipment", "Auslieferung"],
+      "description": "Lieferscheine und Versandinformationen. Suche nach: Lieferung, Lieferschein, Versand, Shipment",
+      "search_terms": ["Lieferung", "Lieferschein", "Versand", "Delivery", "Shipment"]
+    },
+    {
+      "name": "purchasing",
+      "aliases": ["Einkauf", "Beschaffung", "procurement", "Bestellung"],
+      "description": "Einkaufsbestellungen und Lieferanten. Suche nach: Einkauf, Beschaffung, Lieferant, Bestellung",
+      "search_terms": ["Einkauf", "Beschaffung", "Lieferant", "Purchase", "Supplier"]
+    },
+    {
+      "name": "maintenance",
+      "aliases": ["Wartung", "Instandhaltung", "service", "Reparatur"],
+      "description": "Wartungsaufträge und Instandhaltung. Suche nach: Wartung, Instandhaltung, Service, Reparatur, Maschine",
+      "search_terms": ["Wartung", "Instandhaltung", "Service", "Maintenance", "Maschine"]
+    },
+    {
+      "name": "quality",
+      "aliases": ["Qualität", "QS", "quality control", "Prüfung"],
+      "description": "Qualitätsprüfungen und Reklamationen. Suche nach: Qualität, Prüfung, Reklamation, Fehler, Ausschuss",
+      "search_terms": ["Qualität", "Prüfung", "Reklamation", "Quality", "Fehler"]
+    },
+    {
+      "name": "customers",
+      "aliases": ["Kunden", "Abnehmer", "clients", "Geschäftspartner"],
+      "description": "Kundenstammdaten und Geschäftspartner. Suche nach: Kunde, Partner, Customer, Adresse",
+      "search_terms": ["Kunde", "Partner", "Customer", "Adresse", "Debitor"]
+    },
+    {
+      "name": "costs",
+      "aliases": ["Kosten", "Aufwand", "expenses", "Kostenrechnung"],
+      "description": "Kosten und Kostenrechnung. Suche nach: Kosten, Kostenstelle, Kostenart, Budget",
+      "search_terms": ["Kosten", "Kostenstelle", "Budget", "Cost", "Aufwand"]
+    }
+  ]
+}
