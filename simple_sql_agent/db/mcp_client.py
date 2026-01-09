@@ -7,7 +7,7 @@ Calls the MCP server on Windows which handles the actual MSSQL connection.
 import os
 import httpx
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +189,7 @@ class MCPClient:
 
         return {"ok": True, "text": str(result)}
 
-    async def search_tables(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+    async def search_tables(self, query: str, limit: int = 10) -> Any:
         """
         Search for tables matching a query string.
 
@@ -198,18 +198,27 @@ class MCPClient:
             limit: Max results
 
         Returns:
-            List of matching tables with relevance scores
+            Search results (could be text, list of tables, or dict)
         """
         result = await self._call_tool("search_tables", {
             "query": query,
             "limit": limit,
         })
 
-        if result.get("error"):
-            logger.error(f"search_tables failed: {result['error']}")
-            return []
+        # Handle list response format (MCP returns [{"type": "text", "text": "..."}])
+        if isinstance(result, list):
+            texts = [item.get("text", "") for item in result if isinstance(item, dict)]
+            return "\n".join(texts) if texts else f"No tables found matching '{query}'"
 
-        return result.get("tables", result.get("data", []))
+        if isinstance(result, dict):
+            if result.get("error"):
+                logger.error(f"search_tables failed: {result['error']}")
+                return f"Error: {result['error']}"
+            if "text" in result:
+                return result["text"]
+            return result.get("tables", result.get("data", []))
+
+        return str(result) if result else f"No tables found matching '{query}'"
 
 
 def get_mcp_client() -> MCPClient:
