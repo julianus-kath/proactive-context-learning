@@ -175,11 +175,35 @@ class MCPClient:
             "timeout_ms": timeout * 1000,
         })
 
-        # Handle list response format (text content)
-        if isinstance(result, list):
+        # Handle list response format from MCP server
+        # Server can return: [{"type": "json", "json": {...}}] or [{"type": "text", "text": "..."}]
+        if isinstance(result, list) and len(result) > 0:
+            first_item = result[0]
+            if isinstance(first_item, dict):
+                # Handle JSON response type (structured query results)
+                if first_item.get("type") == "json" and "json" in first_item:
+                    json_data = first_item["json"]
+                    # Normalize the response format
+                    return {
+                        "ok": json_data.get("ok", True),
+                        "data": json_data.get("data", []),
+                        "rows": json_data.get("data", []),
+                        "columns": json_data.get("columns", []),
+                        "row_count": json_data.get("row_count", 0),
+                        "execution_time_ms": json_data.get("execution_time_ms"),
+                        "truncated": json_data.get("truncated", False),
+                        "error": json_data.get("error"),
+                    }
+                # Handle text response type
+                elif first_item.get("type") == "text" and "text" in first_item:
+                    text = first_item.get("text", "")
+                    if "error" in text.lower():
+                        return {"ok": False, "error": text}
+                    return {"ok": True, "text": text, "rows": [], "row_count": 0}
+
+            # Fallback for other list formats
             texts = [item.get("text", "") for item in result if isinstance(item, dict)]
             text = "\n".join(texts) if texts else ""
-            # Try to parse if it looks like structured data
             if "error" in text.lower():
                 return {"ok": False, "error": text}
             return {"ok": True, "text": text, "rows": [], "row_count": 0}
@@ -219,6 +243,62 @@ class MCPClient:
             return result.get("tables", result.get("data", []))
 
         return str(result) if result else f"No tables found matching '{query}'"
+
+    async def get_column_index(self, table_names: List[str]) -> Dict[str, Any]:
+        """
+        Get exact column names for specified tables.
+
+        This tool prevents column hallucination by providing the exact column
+        names from the Scout Catalog. Always use this before writing SQL
+        to ensure you use valid column names.
+
+        Args:
+            table_names: List of table names (e.g., ["dbo.Customers", "dbo.Orders"])
+
+        Returns:
+            Dict with column information per table:
+            {
+                "ok": True,
+                "data": {
+                    "dbo.Customers": {
+                        "columns": ["CustomerID", "CompanyName", ...],
+                        "column_details": [{"name": "CustomerID", "type": "nvarchar", ...}, ...]
+                    },
+                    ...
+                }
+            }
+        """
+        result = await self._call_tool("get_column_index", {
+            "table_names": table_names,
+        })
+
+        # Handle list response format (MCP returns [{"type": "text", "text": "..."}])
+        if isinstance(result, list):
+            texts = [item.get("text", "") for item in result if isinstance(item, dict)]
+            text = "\n".join(texts) if texts else ""
+            # Try to parse as JSON
+            if text:
+                try:
+                    import json
+                    return json.loads(text)
+                except json.JSONDecodeError:
+                    return {"ok": True, "text": text}
+            return {"ok": False, "error": "No column information returned"}
+
+        if isinstance(result, dict):
+            if result.get("error"):
+                logger.error(f"get_column_index failed: {result['error']}")
+                return {"ok": False, "error": result["error"]}
+            # Try to parse text field as JSON if present
+            if "text" in result:
+                try:
+                    import json
+                    return json.loads(result["text"])
+                except (json.JSONDecodeError, TypeError):
+                    return {"ok": True, "text": result["text"]}
+            return result
+
+        return {"ok": False, "error": "Unexpected response format"}
 
 
 def get_mcp_client() -> MCPClient:

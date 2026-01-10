@@ -171,6 +171,81 @@ def search_tables(query: str) -> str:
 
 
 @tool
+def get_column_index(table_names: List[str]) -> str:
+    """
+    Get exact column names for specific tables.
+
+    CRITICAL: Always use this tool BEFORE writing SQL queries to ensure you
+    use valid column names. This prevents errors from guessing column names.
+
+    Args:
+        table_names: List of table names (e.g., ["dbo.Customers", "dbo.Orders"])
+
+    Returns:
+        Formatted list of columns for each table with their data types.
+        Use these EXACT column names in your SQL queries.
+    """
+    async def _get_columns(names: List[str]):
+        client = get_mcp_client()
+        try:
+            return await client.get_column_index(names)
+        finally:
+            await client.close()
+
+    try:
+        result = _run_async(_get_columns(table_names))
+
+        # Handle error response
+        if isinstance(result, dict) and not result.get("ok", True):
+            error = result.get("error", "Unknown error")
+            return f"Error getting column index: {error}"
+
+        # Handle text response (fallback)
+        if isinstance(result, dict) and "text" in result:
+            return result["text"]
+
+        # Format structured response
+        if isinstance(result, dict) and "data" in result:
+            data = result["data"]
+            lines = ["Column Index for requested tables:\n"]
+
+            for table_name, table_info in data.items():
+                lines.append(f"\n## {table_name}")
+
+                # Get columns list
+                columns = table_info.get("columns", [])
+                column_details = table_info.get("column_details", [])
+
+                if column_details:
+                    # Detailed format with types
+                    for col in column_details[:30]:  # Limit to 30 columns
+                        col_name = col.get("name", "?")
+                        col_type = col.get("type", "?")
+                        nullable = "NULL" if col.get("nullable", True) else "NOT NULL"
+                        pk = " [PK]" if col.get("is_primary_key") else ""
+                        fk = " [FK]" if col.get("is_foreign_key") else ""
+                        lines.append(f"  - {col_name} ({col_type}) {nullable}{pk}{fk}")
+                    if len(column_details) > 30:
+                        lines.append(f"  ... and {len(column_details) - 30} more columns")
+                elif columns:
+                    # Simple list format
+                    lines.append(f"  Columns: {', '.join(columns[:30])}")
+                    if len(columns) > 30:
+                        lines.append(f"  ... and {len(columns) - 30} more columns")
+                else:
+                    lines.append("  No columns found")
+
+            return "\n".join(lines)
+
+        # Fallback for unexpected format
+        return str(result) if result else "No column information available."
+
+    except Exception as e:
+        logger.error(f"get_column_index failed: {e}")
+        return f"Error getting column index: {str(e)}"
+
+
+@tool
 def execute_query(sql: str) -> str:
     """
     Execute a SQL SELECT query and return the results.

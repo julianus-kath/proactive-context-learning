@@ -12,11 +12,13 @@ from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from simple_sql_agent.agent import create_sql_agent, SQLAgentGraph
 from simple_sql_agent.db.mcp_client import get_mcp_client
+from simple_sql_agent.debug_stream import stream_agent_execution, DebugStreamFormatter
 
 # Load environment variables
 load_dotenv()
@@ -112,6 +114,13 @@ class ConversationResponse(BaseModel):
     status: str = "success"
 
 
+class BenchmarkQueryRequest(BaseModel):
+    """Request model for benchmark /process_query endpoint."""
+    user_input: str
+    api_key: Optional[str] = None
+    query_contract: Optional[Dict[str, Any]] = None
+
+
 class HealthResponse(BaseModel):
     """Response model for health endpoint."""
     status: str
@@ -179,6 +188,88 @@ async def process_query(request: QueryRequest):
         )
 
 
+@app.post("/process_query")
+async def process_query_benchmark(request: BenchmarkQueryRequest):
+    """
+    Process a query (benchmark compatibility endpoint).
+
+    This endpoint is compatible with the eval/run_benchmark.py harness.
+    It returns a response format expected by the benchmark scoring.
+
+    Args:
+        request: BenchmarkQueryRequest with user_input and optional query_contract
+
+    Returns:
+        Dict with final_response, sql_query, exec_result, sources, etc.
+    """
+    if agent is None:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+
+    if not request.user_input or not request.user_input.strip():
+        raise HTTPException(status_code=400, detail="user_input is required")
+
+    logger.info(f"Processing benchmark query: {request.user_input[:100]}...")
+    start_time = time.time()
+
+    try:
+        result = await agent.arun(request.user_input)
+
+        latency_ms = int((time.time() - start_time) * 1000)
+
+        answer = result.get("answer", "No answer generated")
+        sql_query = result.get("sql_query")
+        success = result.get("success", False)
+        agent_exec_result = result.get("exec_result") or {}
+
+        # Build exec_result from agent's parsed result
+        exec_result = {
+            "data": agent_exec_result.get("data", []),
+            "rows": agent_exec_result.get("rows", []),
+            "row_count": agent_exec_result.get("row_count"),
+            "columns": agent_exec_result.get("columns", []),
+            "ok": agent_exec_result.get("ok", True),
+            "tables_used": [],
+        }
+
+        # Extract table names from SQL
+        tables = []
+        if sql_query:
+            import re
+            table_pattern = r'(?:FROM|JOIN)\s+(\[?(?:dbo|public)\]?\.\[?\w+\]?|\[?\w+\]?\.?\[?\w+\]?)'
+            tables = re.findall(table_pattern, sql_query, re.IGNORECASE)
+            # Clean up table names
+            tables = [t.replace('[', '').replace(']', '').replace('"', '') for t in tables]
+            exec_result["tables_used"] = tables
+
+        # Build response compatible with benchmark expectations
+        response = {
+            "final_response": answer,
+            "sql_query": sql_query,
+            "exec_result": exec_result,
+            "sources": tables,
+            "relevant_tables": tables,
+            "latency_ms": latency_ms,
+            "success": success,
+        }
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Benchmark query processing failed: {e}", exc_info=True)
+        latency_ms = int((time.time() - start_time) * 1000)
+
+        return {
+            "final_response": f"An error occurred: {str(e)}",
+            "sql_query": None,
+            "exec_result": None,
+            "sources": [],
+            "relevant_tables": [],
+            "latency_ms": latency_ms,
+            "success": False,
+            "error": str(e),
+        }
+
+
 @app.post("/process_conversation", response_model=ConversationResponse)
 async def process_conversation(request: ConversationRequest):
     """
@@ -240,6 +331,50 @@ async def process_conversation(request: ConversationRequest):
         )
 
 
+@app.post("/stream")
+async def stream_query(request: QueryRequest):
+    """
+    Stream agent execution in real-time.
+
+    Returns a Server-Sent Events (SSE) stream of agent execution events.
+    Each event includes the agent's thought, tool calls, results, and final answer.
+
+    Args:
+        request: QueryRequest with the user's question
+
+    Returns:
+        StreamingResponse with newline-delimited JSON events
+    """
+    if agent is None:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+
+    if not request.question or not request.question.strip():
+        raise HTTPException(status_code=400, detail="Question is required")
+
+    logger.info(f"Starting stream for query: {request.question[:100]}...")
+
+    async def event_generator():
+        """Generate SSE events for agent execution."""
+        try:
+            async for event in stream_agent_execution(agent, request.question):
+                import json
+                yield f"data: {json.dumps(event)}\n\n"
+        except Exception as e:
+            logger.error(f"Streaming error: {e}")
+            import json
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+
 @app.get("/")
 async def root():
     """Root endpoint with service info."""
@@ -249,6 +384,9 @@ async def root():
         "endpoints": {
             "/health": "Health check",
             "/query": "Process natural language query (POST)",
+            "/process_query": "Process query - benchmark compatible (POST)",
+            "/process_conversation": "Process conversation - frontend compatible (POST)",
+            "/stream": "Stream agent execution in real-time (POST)",
         }
     }
 

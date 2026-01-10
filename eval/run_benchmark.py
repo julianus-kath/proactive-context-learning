@@ -24,7 +24,7 @@ project_root = Path(__file__).parent.parent
 load_dotenv(project_root / ".env")
 
 from eval.eval_client import EvalClient
-from langgraph_integration.contracts.semantic_contracts import QueryContract
+from eval.contracts import QueryContract
 
 
 def first_non_empty_str(*candidates: Optional[str]) -> str:
@@ -193,6 +193,92 @@ def get_environment_info() -> Dict[str, str]:
         "machine": os.uname().nodename,
         "platform": sys.platform,
         "cwd": os.getcwd(),
+    }
+
+
+def _build_detailed_results(results: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Build a user-friendly detailed results summary highlighting SQL queries,
+    final outputs, and agent execution steps for each query.
+    """
+    detailed_queries = []
+    success_count = 0
+    failed_count = 0
+
+    for query_id, artifact in results.items():
+        status = artifact.get("status", "unknown")
+        if status == "success":
+            success_count += 1
+        else:
+            failed_count += 1
+
+        sql_query = None
+        if artifact.get("sql_generated"):
+            sql_query = artifact["sql_generated"][0]
+        elif artifact.get("sql_executed"):
+            sql_query = artifact["sql_executed"][0]
+
+        llm_usage = artifact.get("llm_usage") or {}
+        node_counts = artifact.get("node_entry_counts") or {}
+        loop_events = artifact.get("loop_events") or {}
+
+        agent_execution = {
+            "llm_calls": {
+                "total": llm_usage.get("total", artifact.get("total_llm_calls")),
+                "by_stage": {
+                    "intent": llm_usage.get("intent", 0),
+                    "discovery": llm_usage.get("discovery", 0),
+                    "join": llm_usage.get("join", 0),
+                    "repair": llm_usage.get("repair", 0),
+                    "answer": llm_usage.get("answer", 0),
+                },
+            },
+            "node_executions": {
+                "discovery": node_counts.get("discovery", 0),
+                "join": node_counts.get("join_sql", node_counts.get("join", 0)),
+            },
+            "loop_suppressions": {
+                "same_tables_suppressed": loop_events.get("discovery_reentered_same_tables", 0),
+                "same_sql_suppressed": loop_events.get("join_sql_regenerated_same_sql", 0),
+            },
+            "graph_cycles": artifact.get("total_graph_cycles"),
+        }
+
+        query_result = {
+            "query_id": query_id,
+            "question": artifact.get("question"),
+            "status": status,
+            "latency_ms": artifact.get("latency_ms_total"),
+            "sql_query": sql_query,
+            "tables_used": artifact.get("tables_used", []),
+            "final_answer": artifact.get("final_answer_text"),
+            "row_count": artifact.get("row_count"),
+            "result_preview": artifact.get("result_preview", [])[:5],
+            "agent_execution": agent_execution,
+            "semantic_status": artifact.get("semantic_status"),
+            "semantic_failure_reasons": artifact.get("semantic_failure_reasons", []),
+        }
+
+        if status == "failed":
+            failure_reasons = artifact.get("failure_reasons", [])
+            error = artifact.get("error")
+            error_info = artifact.get("error_info")
+            query_result["failure_reasons"] = failure_reasons
+            if error:
+                query_result["error"] = error
+            if error_info:
+                query_result["error_info"] = error_info
+
+        detailed_queries.append(query_result)
+
+    return {
+        "summary": {
+            "total_queries": len(results),
+            "successful": success_count,
+            "failed": failed_count,
+            "success_rate": f"{(success_count/len(results)*100):.1f}%" if results else "0%",
+        },
+        "queries": detailed_queries,
     }
 
 
@@ -452,6 +538,10 @@ async def run_benchmark(
     results_file = run_dir / "results.json"
     results_file.write_text(json.dumps(results, indent=2))
 
+    detailed_results = _build_detailed_results(results)
+    detailed_results_file = run_dir / "results_detailed.json"
+    detailed_results_file.write_text(json.dumps(detailed_results, indent=2))
+
     # Phase 1 instrumentation: emit per-query LLM usage summary for quick inspection
     calls_summary: List[Dict[str, Any]] = []
     for qid, artifact in results.items():
@@ -496,6 +586,10 @@ async def run_benchmark(
     print(f"Successful: {completed} ({(completed/len(queries)*100):.1f}%)")
     print(f"Failed: {failed}")
     print(f"Results saved to: {run_dir}")
+    print(f"  📄 results.json - Full artifact data")
+    print(f"  📊 results_detailed.json - User-friendly summary with SQL & agent steps")
+    print(f"  📈 llm_calls_per_query.json - LLM usage breakdown")
+    print(f"  📋 summary.json - Run summary")
     print(f"{'='*60}")
 
 

@@ -1,23 +1,115 @@
 """
 Simple SQL Agent using LangGraph.
 
-A single ReAct agent with 5 tools for text-to-SQL conversion.
+A single ReAct agent with 6 tools for text-to-SQL conversion.
 """
 
 import logging
 import os
+import re
 from typing import Any, Dict, List, Optional
 
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import create_react_agent
 
 from simple_sql_agent.state import SQLAgentState
-from simple_sql_agent.tools import list_tables, get_schema, search_tables, validate_sql, execute_query
+from simple_sql_agent.tools import list_tables, get_schema, search_tables, get_column_index, validate_sql, execute_query
 from simple_sql_agent.prompts import get_system_prompt, load_concepts
 
 logger = logging.getLogger(__name__)
+
+
+def parse_query_result(content: str) -> Dict[str, Any]:
+    """
+    Parse execute_query tool output into structured result.
+
+    The tool output looks like:
+    ```
+    Query executed successfully in 19ms
+    Returned 5 rows
+
+    | product_name |
+    |---|
+    | Chai |
+    | Chang |
+    ...
+    ```
+
+    Returns:
+        Dict with ok, rows, columns, row_count
+    """
+    result = {
+        "ok": True,
+        "rows": [],
+        "data": [],
+        "columns": [],
+        "row_count": 0,
+    }
+
+    if not content:
+        return result
+
+    lines = content.strip().split('\n')
+
+    # Check for error
+    if "failed" in content.lower() or "error" in content.lower():
+        result["ok"] = False
+        result["error"] = content
+        return result
+
+    # Extract row count from "Returned X rows"
+    for line in lines:
+        if "Returned" in line and "row" in line:
+            match = re.search(r'Returned (\d+) row', line)
+            if match:
+                result["row_count"] = int(match.group(1))
+                break
+
+    # Parse markdown table
+    table_started = False
+    header_parsed = False
+    separator_seen = False
+
+    for line in lines:
+        line = line.strip()
+
+        # Skip empty lines
+        if not line:
+            continue
+
+        # Detect table header row (starts with |)
+        if line.startswith('|') and not header_parsed:
+            # Parse column names
+            parts = [p.strip() for p in line.split('|') if p.strip()]
+            if parts and not all(p.replace('-', '') == '' for p in parts):
+                result["columns"] = parts
+                header_parsed = True
+                table_started = True
+            continue
+
+        # Skip separator row (|---|---|)
+        if line.startswith('|') and all(c in '|-' or c == ' ' for c in line.replace('|', '')):
+            separator_seen = True
+            continue
+
+        # Parse data rows
+        if table_started and separator_seen and line.startswith('|'):
+            parts = [p.strip() for p in line.split('|') if p.strip()]
+            if parts and result["columns"]:
+                # Create dict with column names
+                row = {}
+                for i, col in enumerate(result["columns"]):
+                    row[col] = parts[i] if i < len(parts) else ""
+                result["rows"].append(row)
+                result["data"].append(row)
+
+    # If we couldn't parse row_count from text, use parsed rows
+    if result["row_count"] == 0 and result["rows"]:
+        result["row_count"] = len(result["rows"])
+
+    return result
 
 
 class SQLAgentGraph:
@@ -25,7 +117,8 @@ class SQLAgentGraph:
     Simple SQL Agent using LangGraph's ReAct pattern.
 
     This replaces the complex 8-agent system with a single ReAct agent
-    that has 5 tools: list_tables, get_schema, search_tables, validate_sql, execute_query.
+    that has 6 tools: list_tables, search_tables, get_schema, get_column_index,
+    validate_sql, execute_query.
     """
 
     def __init__(
@@ -69,8 +162,8 @@ class SQLAgentGraph:
 
         Uses create_react_agent for a simple Think -> Act -> Observe loop.
         """
-        # Define tools - search_tables is key for exploration
-        tools = [list_tables, search_tables, get_schema, validate_sql, execute_query]
+        # Define tools - search_tables for discovery, get_column_index for exact column names
+        tools = [list_tables, search_tables, get_schema, get_column_index, validate_sql, execute_query]
 
         # Get system prompt with domain knowledge
         system_prompt = get_system_prompt(self.concepts)
@@ -115,18 +208,30 @@ class SQLAgentGraph:
             if final_message:
                 answer = getattr(final_message, "content", str(final_message))
 
-            # Try to extract SQL from tool calls
+            # Try to extract SQL from tool calls and results from ToolMessages
             sql_query = None
+            exec_result = None
+
             for msg in messages:
+                # Extract SQL from tool calls (AIMessage with tool_calls)
                 if hasattr(msg, "tool_calls"):
                     for call in msg.tool_calls:
                         if call.get("name") == "execute_query":
                             args = call.get("args", {})
                             sql_query = args.get("sql", sql_query)
 
+                # Extract result from ToolMessage (result of execute_query)
+                if isinstance(msg, ToolMessage) and msg.name == "execute_query":
+                    content = msg.content
+                    exec_result = parse_query_result(content)
+                    # Add SQL to exec_result for reference
+                    if sql_query:
+                        exec_result["sql_query"] = sql_query
+
             return {
                 "answer": answer,
                 "sql_query": sql_query,
+                "exec_result": exec_result,
                 "success": True,
                 "message_count": len(messages),
             }
