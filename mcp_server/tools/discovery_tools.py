@@ -1575,6 +1575,10 @@ class DiscoveryTools:
                         
                         matching = [t for t in all_tables if t.get("name", "").lower() == table_name.lower()]
                         if matching:
+                            # Warn if ambiguous (found in multiple schemas)
+                            if len(matching) > 1:
+                                schemas = [t.get('schema', '?') for t in matching]
+                                logger.warning(f"Ambiguous table '{table_name}': found in schemas {schemas}, using first")
                             schema = matching[0].get("schema", "")
                             name = matching[0].get("name", "")
                             if not schema or not name:
@@ -1591,11 +1595,27 @@ class DiscoveryTools:
                     table_info = None
                 
                 if table_info:
-                    # Extract just the column names in order
-                    columns = [col['name'] for col in table_info.get('columns', [])]
+                    # Extract column names with validation
+                    columns_data = table_info.get('columns', [])
+                    if not isinstance(columns_data, list):
+                        logger.warning(f"Table {table_name}: columns is {type(columns_data).__name__}, expected list")
+                        column_index[table_name] = None
+                        continue
+
+                    # Validate each column entry is a dict with 'name' key
+                    validated_cols = []
+                    for col in columns_data:
+                        if isinstance(col, dict) and 'name' in col:
+                            validated_cols.append(col['name'])
+                        else:
+                            logger.warning(f"Table {table_name}: invalid column format {type(col).__name__}, skipping")
+
                     fqtn = table_info.get('full_name', table_name)
-                    column_index[fqtn] = columns
-                    logger.debug(f"✓ {fqtn}: {len(columns)} columns")
+                    column_index[fqtn] = validated_cols
+                    if validated_cols:
+                        logger.debug(f"✓ {fqtn}: {len(validated_cols)} columns")
+                    else:
+                        logger.warning(f"⚠️ {fqtn}: no valid columns found")
                 else:
                     # Table not found - indicate with null
                     column_index[table_name] = None

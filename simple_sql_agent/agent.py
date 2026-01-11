@@ -15,8 +15,9 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import create_react_agent
 
 from simple_sql_agent.state import SQLAgentState
-from simple_sql_agent.tools import list_tables, get_schema, search_tables, get_column_index, validate_sql, execute_query
+from simple_sql_agent.tools import list_tables, get_schema, get_column_index, discover_tables, execute_query
 from simple_sql_agent.prompts import get_system_prompt, load_concepts
+from simple_sql_agent.debug_logger import get_debug_logger
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +127,7 @@ class SQLAgentGraph:
         model_name: str = "gpt-4o",
         temperature: float = 0.0,
         concepts_path: Optional[str] = None,
+        max_iterations: int = 15,
     ):
         """
         Initialize the SQL agent.
@@ -134,9 +136,11 @@ class SQLAgentGraph:
             model_name: OpenAI model to use
             temperature: LLM temperature (0 = deterministic)
             concepts_path: Path to concepts.json for domain knowledge
+            max_iterations: Max LLM calls per query (default: 15)
         """
         self.model_name = model_name
         self.temperature = temperature
+        self.max_iterations = max_iterations
 
         # Load domain concepts
         self.concepts = load_concepts(concepts_path)
@@ -162,8 +166,10 @@ class SQLAgentGraph:
 
         Uses create_react_agent for a simple Think -> Act -> Observe loop.
         """
-        # Define tools - search_tables for discovery, get_column_index for exact column names
-        tools = [list_tables, search_tables, get_schema, get_column_index, validate_sql, execute_query]
+        # Tools: discover_tables is primary for comprehensive discovery
+        # get_column_index for verifying exact column names
+        # list_tables, get_schema for fallback/detailed info
+        tools = [discover_tables, list_tables, get_schema, get_column_index, execute_query]
 
         # Get system prompt with domain knowledge
         system_prompt = get_system_prompt(self.concepts)
@@ -178,17 +184,26 @@ class SQLAgentGraph:
 
         return agent
 
-    async def arun(self, question: str) -> Dict[str, Any]:
+    async def arun(self, question: str, max_iterations: Optional[int] = None) -> Dict[str, Any]:
         """
         Run the agent on a user question.
 
         Args:
             question: Natural language question about the database
+            max_iterations: Override max LLM calls for this query (uses self.max_iterations if None)
 
         Returns:
             Dict with answer, sql_query (if any), and metadata
         """
-        logger.info(f"Processing question: {question[:100]}...")
+        import time
+        start_time = time.time()
+
+        limit = max_iterations or self.max_iterations
+        logger.info(f"Processing question: {question[:100]}... (max_iterations={limit})")
+
+        # Get debug logger for live logging
+        debug_log = get_debug_logger()
+        debug_log.query_start(question)
 
         # Create initial state
         initial_state = {
@@ -196,48 +211,88 @@ class SQLAgentGraph:
         }
 
         try:
-            # Run the agent with increased recursion limit for complex queries
-            config = {"recursion_limit": 50}
-            result = await self.graph.ainvoke(initial_state, config=config)
+            config = {"recursion_limit": limit}
 
-            # Extract the final answer from messages
-            messages = result.get("messages", [])
-            final_message = messages[-1] if messages else None
-
-            answer = ""
-            if final_message:
-                answer = getattr(final_message, "content", str(final_message))
-
-            # Try to extract SQL from tool calls and results from ToolMessages
+            # Track state during streaming
+            final_answer = ""
             sql_query = None
             exec_result = None
+            iterations = 0
+            last_tool_input = {}
 
-            for msg in messages:
-                # Extract SQL from tool calls (AIMessage with tool_calls)
-                if hasattr(msg, "tool_calls"):
-                    for call in msg.tool_calls:
-                        if call.get("name") == "execute_query":
-                            args = call.get("args", {})
-                            sql_query = args.get("sql", sql_query)
+            # Use astream_events for real-time logging
+            async for event in self.graph.astream_events(
+                initial_state,
+                config=config,
+                version="v2"
+            ):
+                event_type = event.get("event", "")
+                event_name = event.get("name", "")
+                event_data = event.get("data", {})
 
-                # Extract result from ToolMessage (result of execute_query)
-                if isinstance(msg, ToolMessage) and msg.name == "execute_query":
-                    content = msg.content
-                    exec_result = parse_query_result(content)
-                    # Add SQL to exec_result for reference
-                    if sql_query:
-                        exec_result["sql_query"] = sql_query
+                # LLM starts thinking
+                if event_type == "on_chat_model_start":
+                    debug_log.llm_start()
+
+                # LLM finished - check for tool calls or final answer
+                elif event_type == "on_chat_model_end":
+                    iterations += 1
+                    output = event_data.get("output")
+                    if output and hasattr(output, "tool_calls") and output.tool_calls:
+                        debug_log.llm_end(has_tool_calls=True)
+                        for tool_call in output.tool_calls:
+                            tool_name = tool_call.get("name")
+                            tool_input = tool_call.get("args", {})
+                            last_tool_input[tool_name] = tool_input
+                            debug_log.tool_call(tool_name, tool_input)
+
+                            if tool_name == "execute_query":
+                                sql_query = tool_input.get("sql")
+                    elif output and hasattr(output, "content") and output.content:
+                        final_answer = output.content
+                        debug_log.llm_end(content=final_answer, has_tool_calls=False)
+
+                # Tool execution completes
+                elif event_type == "on_tool_end":
+                    tool_output = event_data.get("output", "")
+
+                    # Extract content from ToolMessage if needed
+                    if hasattr(tool_output, "content"):
+                        tool_output_str = tool_output.content
+                    else:
+                        tool_output_str = str(tool_output) if tool_output else ""
+
+                    debug_log.tool_result(event_name, tool_output_str)
+
+                    # Parse execute_query results
+                    if event_name == "execute_query" and tool_output_str:
+                        exec_result = parse_query_result(tool_output_str)
+                        if sql_query:
+                            exec_result["sql_query"] = sql_query
+
+            # Calculate latency
+            latency_ms = int((time.time() - start_time) * 1000)
+
+            # Log final result
+            debug_log.final_answer(
+                answer=final_answer,
+                sql_query=sql_query,
+                latency_ms=latency_ms,
+                iterations=iterations
+            )
 
             return {
-                "answer": answer,
+                "answer": final_answer,
                 "sql_query": sql_query,
                 "exec_result": exec_result,
                 "success": True,
-                "message_count": len(messages),
+                "message_count": iterations,
+                "latency_ms": latency_ms,
             }
 
         except Exception as e:
             logger.error(f"Agent execution failed: {e}", exc_info=True)
+            debug_log.error(str(e))
             return {
                 "answer": f"I encountered an error while processing your question: {str(e)}",
                 "sql_query": None,
@@ -276,6 +331,7 @@ def create_sql_agent(
     model_name: str = "gpt-4o",
     temperature: float = 0.0,
     concepts_path: Optional[str] = None,
+    max_iterations: int = 15,
 ) -> SQLAgentGraph:
     """
     Create a new SQL agent instance.
@@ -284,6 +340,7 @@ def create_sql_agent(
         model_name: OpenAI model to use (default: gpt-4o)
         temperature: LLM temperature (default: 0.0 for deterministic)
         concepts_path: Path to concepts.json (optional, uses default)
+        max_iterations: Max LLM calls per query (default: 15)
 
     Returns:
         SQLAgentGraph instance
@@ -292,6 +349,7 @@ def create_sql_agent(
         model_name=model_name,
         temperature=temperature,
         concepts_path=concepts_path,
+        max_iterations=max_iterations,
     )
 
 

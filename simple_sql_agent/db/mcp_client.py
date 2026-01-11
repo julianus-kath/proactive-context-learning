@@ -300,6 +300,51 @@ class MCPClient:
 
         return {"ok": False, "error": "Unexpected response format"}
 
+    async def list_relations(self, table_name: str) -> Dict[str, Any]:
+        """
+        Get neighboring tables connected via foreign keys.
+
+        Args:
+            table_name: Full table name (e.g., "dbo.Orders")
+
+        Returns:
+            Dict with table and list of neighbors:
+            {
+                "table": "dbo.Orders",
+                "neighbor_count": 5,
+                "neighbors": ["dbo.Customers", "dbo.Products", ...]
+            }
+        """
+        result = await self._call_tool("list_relations", {
+            "table_name": table_name,
+        })
+
+        # Handle list response format
+        if isinstance(result, list):
+            texts = [item.get("text", "") for item in result if isinstance(item, dict)]
+            text = "\n".join(texts) if texts else ""
+            if text:
+                try:
+                    import json
+                    return json.loads(text)
+                except json.JSONDecodeError:
+                    return {"table": table_name, "neighbors": [], "text": text}
+            return {"table": table_name, "neighbors": []}
+
+        if isinstance(result, dict):
+            if result.get("error"):
+                logger.error(f"list_relations failed: {result['error']}")
+                return {"table": table_name, "neighbors": [], "error": result["error"]}
+            if "text" in result:
+                try:
+                    import json
+                    return json.loads(result["text"])
+                except (json.JSONDecodeError, TypeError):
+                    return {"table": table_name, "neighbors": [], "text": result["text"]}
+            return result
+
+        return {"table": table_name, "neighbors": []}
+
 
 def get_mcp_client() -> MCPClient:
     """Create a new MCP client for each request to avoid event loop issues."""

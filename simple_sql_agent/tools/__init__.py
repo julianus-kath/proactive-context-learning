@@ -1,19 +1,19 @@
-"""SQL Agent Tools - 6 tools for database interaction."""
+"""SQL Agent Tools - database interaction tools for the ReAct agent."""
 
 from simple_sql_agent.tools.db_tools import (
     list_tables,
     get_schema,
     search_tables,
     get_column_index,
+    discover_tables,
     execute_query,
 )
-from simple_sql_agent.tools.validation import validate_sql
 
 __all__ = [
+    "discover_tables",  # PRIMARY - comprehensive discovery
     "list_tables",
     "get_schema",
-    "search_tables",
     "get_column_index",
-    "validate_sql",
     "execute_query",
+    "search_tables",  # Keep for backward compatibility
 ]

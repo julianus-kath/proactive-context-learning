@@ -52,8 +52,9 @@ async def lifespan(app: FastAPI):
 
     # Initialize agent
     try:
-        agent = create_sql_agent()
-        logger.info("SQL Agent initialized successfully")
+        max_iterations = int(os.getenv("SQL_AGENT_MAX_ITERATIONS", "25"))
+        agent = create_sql_agent(max_iterations=max_iterations)
+        logger.info(f"SQL Agent initialized successfully (max_iterations={max_iterations})")
     except Exception as e:
         logger.error(f"Failed to initialize agent: {e}")
         raise

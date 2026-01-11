@@ -115,7 +115,7 @@ def search_tables(query: str) -> str:
     async def _search():
         client = get_mcp_client()
         try:
-            return await client.search_tables(query, limit=15)
+            return await client.search_tables(query, limit=20)
         finally:
             await client.close()
 
@@ -195,7 +195,32 @@ def get_column_index(table_names: List[str]) -> str:
     try:
         result = _run_async(_get_columns(table_names))
 
-        # Handle error response
+        # Handle list response format from MCP server
+        # MCP returns [{"type": "text", "text": "...JSON..."}]
+        if isinstance(result, list):
+            texts = []
+            for item in result:
+                if isinstance(item, dict) and "text" in item:
+                    texts.append(item.get("text", ""))
+            text = "\n".join(texts)
+            if text:
+                try:
+                    import json
+                    parsed = json.loads(text)
+                    # Only use parsed result if it's a dict (expected format)
+                    if isinstance(parsed, dict):
+                        result = parsed
+                    else:
+                        # If JSON parsed to a list or other type, return as text
+                        return f"Column index data:\n{text}"
+                except json.JSONDecodeError:
+                    # If not JSON, return the text directly
+                    return f"Column index data:\n{text}"
+            else:
+                # Empty text from list - format list items directly
+                return f"Column index data:\n{str(result)}"
+
+        # Handle error response (result is now guaranteed to be dict if we reach here)
         if isinstance(result, dict) and not result.get("ok", True):
             error = result.get("error", "Unknown error")
             return f"Error getting column index: {error}"
@@ -243,6 +268,162 @@ def get_column_index(table_names: List[str]) -> str:
     except Exception as e:
         logger.error(f"get_column_index failed: {e}")
         return f"Error getting column index: {str(e)}"
+
+
+@tool
+def discover_tables(query: str, include_join_paths: bool = True) -> str:
+    """
+    Comprehensive table discovery for query planning.
+
+    This tool combines search, schema, and relationship information
+    in a single call. Use this FIRST when starting a new query.
+
+    Args:
+        query: Search term or concept (e.g., "customer orders", "inventory")
+        include_join_paths: Whether to include FK join paths between results
+
+    Returns:
+        Consolidated discovery results including:
+        - Top 5 matching tables with relevance scores
+        - Column names for each table
+        - Foreign key relationships between tables
+    """
+    async def _discover():
+        client = get_mcp_client()
+        try:
+            import json
+
+            # Step 1: Search for relevant tables
+            search_results = await client.search_tables(query, limit=5)
+
+            if not search_results:
+                return {"ok": False, "error": f"No tables found for '{query}'"}
+
+            # Parse search results - MCP returns text that may contain JSON
+            tables = []
+            if isinstance(search_results, str):
+                # Try to parse JSON from the text
+                try:
+                    parsed = json.loads(search_results)
+                    if isinstance(parsed, dict) and "data" in parsed:
+                        tables = parsed["data"].get("results", [])[:5]
+                    elif isinstance(parsed, list):
+                        tables = parsed[:5]
+                except json.JSONDecodeError:
+                    # Not JSON, search returned text - can't parse
+                    return {"ok": True, "text": search_results, "tables": []}
+
+            if not tables:
+                return {"ok": True, "text": str(search_results), "tables": []}
+
+            table_names = []
+            for t in tables:
+                if isinstance(t, dict):
+                    name = t.get("full_name") or f"{t.get('schema', 'dbo')}.{t.get('name', '')}"
+                    table_names.append(name)
+                elif isinstance(t, str):
+                    table_names.append(t)
+
+            # Step 2: Get column index for all tables at once
+            columns_result = await client.get_column_index(table_names)
+            columns = {}
+            if isinstance(columns_result, dict) and "data" in columns_result:
+                for tname, tdata in columns_result["data"].items():
+                    if isinstance(tdata, dict):
+                        columns[tname] = tdata.get("columns", [])
+                    elif isinstance(tdata, list):
+                        columns[tname] = tdata
+
+            # Step 3: Get relationships for join paths
+            relationships = {}
+            if include_join_paths:
+                for table_name in table_names[:3]:  # Limit to top 3
+                    try:
+                        rels = await client.list_relations(table_name)
+                        if isinstance(rels, dict):
+                            relationships[table_name] = rels.get("neighbors", [])
+                    except Exception:
+                        pass
+
+            # Build consolidated response
+            result = {
+                "ok": True,
+                "query": query,
+                "tables": [],
+                "join_paths": [],
+            }
+
+            for table in tables:
+                if isinstance(table, dict):
+                    table_name = table.get("full_name") or f"{table.get('schema', 'dbo')}.{table.get('name', '')}"
+                    result["tables"].append({
+                        "name": table_name,
+                        "relevance": table.get("relevance_score", 0),
+                        "columns": columns.get(table_name, []),
+                        "row_count": table.get("estimated_rows", 0),
+                    })
+
+            # Extract join paths from relationships
+            for table_name, neighbors in relationships.items():
+                for neighbor in neighbors:
+                    if neighbor in table_names:
+                        result["join_paths"].append({
+                            "from": table_name,
+                            "to": neighbor,
+                            "type": "FK"
+                        })
+
+            return result
+
+        finally:
+            await client.close()
+
+    try:
+        result = _run_async(_discover())
+
+        # Handle text-only response (search returned unstructured text)
+        if isinstance(result, dict) and "text" in result and not result.get("tables"):
+            return f"Search results for '{query}':\n{result['text']}"
+
+        # Handle error response
+        if isinstance(result, dict) and not result.get("ok", True):
+            return result.get("error", "Discovery failed")
+
+        # Format as readable text for the agent
+        if not isinstance(result, dict):
+            return str(result)
+
+        lines = [f"## Discovery Results for '{result.get('query', query)}'\n"]
+
+        for table in result.get("tables", []):
+            relevance = table.get("relevance", 0)
+            row_count = table.get("row_count", 0)
+            name = table.get("name", "unknown")
+
+            if isinstance(relevance, (int, float)):
+                lines.append(f"### {name} (relevance: {relevance:.2f}, ~{row_count} rows)")
+            else:
+                lines.append(f"### {name} (~{row_count} rows)")
+
+            cols = table.get("columns", [])
+            if cols:
+                display_cols = cols[:15]  # Limit columns shown
+                lines.append(f"Columns: {', '.join(str(c) for c in display_cols)}")
+                if len(cols) > 15:
+                    lines.append(f"... and {len(cols) - 15} more columns")
+            lines.append("")
+
+        join_paths = result.get("join_paths", [])
+        if join_paths:
+            lines.append("### Join Paths")
+            for path in join_paths:
+                lines.append(f"- {path.get('from', '?')} -> {path.get('to', '?')} ({path.get('type', 'FK')})")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.error(f"discover_tables failed: {e}")
+        return f"Discovery error: {str(e)}"
 
 
 @tool
