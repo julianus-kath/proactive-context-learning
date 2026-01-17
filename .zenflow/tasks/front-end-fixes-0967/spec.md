@@ -678,3 +678,17 @@ Tokens should be defined so they can map either to CSS custom properties (curren
 - **Offline / Degraded**
   - Status dot and label in SidebarCard header reflect the state.
   - The Send button can be disabled when “offline”, with tooltip text indicating connectivity issues.
+
+## 9. Frontend Architecture Decision
+
+- The ERP Chatbot UI will **remain a FastAPI-served static single-page application** for this phase.
+- The new floating-card chatbot design (AppShell, SidebarCard, ChatCard, InputBar) will be implemented by evolving:
+  - `chatbot_ui/index.html` for structure.
+  - `chatbot_ui/styles.css` for visual tokens, layout, and responsive behavior.
+  - `chatbot_ui/script.js` for behaviors (message flow, clarifications, typing indicator, retry, autoscroll, accessibility).
+- The existing FastAPI endpoints defined in `chatbot_ui/web_app.py` remain the integration surface:
+  - `GET /config` for frontend configuration (including `api_key_set` and `langgraph_url`).
+  - `GET /health` for UI health.
+  - `GET /backend_health` for backend/LangGraph health, used when `API_KEY` is server-managed.
+  - `POST /process_conversation` as the single chat entrypoint, proxying to `LANGGRAPH_URL` and attaching `API_KEY` server-side.
+- No Next.js (App Router) + Tailwind frontend is introduced in this iteration. A potential future migration path to a Next-based UI is documented in `adrs/0031-erp-chatbot-frontend-architecture-decision.md`.

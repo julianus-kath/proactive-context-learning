@@ -75,7 +75,8 @@ Create a precise design specification for the new floating-card chatbot UI descr
 - Define responsive behavior (desktop two-column grid, mobile sidebar behavior, sticky input).
 - Map existing UX features (status, sample queries, history, typing indicator) into the new layout.
 
-### [ ] Step: Frontend Architecture Decision
+### [x] Step: Frontend Architecture Decision
+<!-- chat-id: 6a42ed2f-a56b-40c0-bea5-6cc40fa46667 -->
 
 Decide how to implement the new UI:
 - Compare keeping the current FastAPI-served static frontend vs. introducing a Next.js (App Router) + Tailwind app with an API proxy.
