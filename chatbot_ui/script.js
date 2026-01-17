@@ -42,6 +42,7 @@ class ERPChatbot {
         
         // Buttons
         this.clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        this.newChatBtn = document.getElementById('newChatBtn');
         this.helpBtn = document.getElementById('helpBtn');
         this.settingsBtn = document.getElementById('settingsBtn');
         
@@ -75,6 +76,9 @@ class ERPChatbot {
         // Button events
         if (this.clearHistoryBtn) {
             this.clearHistoryBtn.addEventListener('click', () => this.clearHistory());
+        }
+        if (this.newChatBtn) {
+            this.newChatBtn.addEventListener('click', () => this.startNewChat());
         }
         if (this.helpBtn) {
             this.helpBtn.addEventListener('click', () => this.showModal('help'));
@@ -701,19 +705,9 @@ class ERPChatbot {
         this.scrollToBottom();
     }
 
-    clearHistory() {
-        if (confirm('Are you sure you want to clear all conversation history?')) {
-            this.conversations = [];
-            this.messages = [];
-            this.currentConversationId = null;
-            this.lastWasClarification = false;
-            
-            this.saveConversations();
-            this.renderConversationHistory();
-            
-            // Reset chat messages to welcome state
-            if (this.chatMessages) {
-                this.chatMessages.innerHTML = `
+    renderWelcomeState() {
+        if (!this.chatMessages) return;
+        this.chatMessages.innerHTML = `
                 <div class="welcome-message">
                     <div class="welcome-content">
                         <div class="welcome-icon">🚀</div>
@@ -736,7 +730,33 @@ class ERPChatbot {
                     </div>
                 </div>
             `;
-            }
+    }
+
+    startNewChat() {
+        if (this.isLoading) return;
+        this.messages = [];
+        this.currentConversationId = null;
+        this.lastWasClarification = false;
+        this.isUserNearBottom = true;
+        this.hideJumpToLatest();
+        this.hideTypingIndicator();
+        this.renderWelcomeState();
+        this.renderConversationHistory();
+        this.scrollToBottom();
+    }
+
+    clearHistory() {
+        if (confirm('Are you sure you want to clear all conversation history?')) {
+            this.conversations = [];
+            this.messages = [];
+            this.currentConversationId = null;
+            this.lastWasClarification = false;
+            
+            this.saveConversations();
+            this.renderConversationHistory();
+            
+            // Reset chat messages to welcome state
+            this.renderWelcomeState();
         }
     }
 

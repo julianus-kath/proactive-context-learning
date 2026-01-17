@@ -82,7 +82,8 @@ Decide how to implement the new UI:
 - Compare keeping the current FastAPI-served static frontend vs. introducing a Next.js (App Router) + Tailwind app with an API proxy.
 - Document the decision, trade-offs, and integration plan with the existing `/process_conversation` and `/health` endpoints.
 
-### [ ] Step: New UI Implementation
+### [x] Step: New UI Implementation
+<!-- chat-id: 1e760380-e097-43b0-81ce-70f59bd3b806 -->
 
 Implement the new design according to the chosen architecture:
 - Build components matching the brief (SidebarCard, StatusList, QuickActions, ChatCard, MessageList/MessageBubble, InputBar).
