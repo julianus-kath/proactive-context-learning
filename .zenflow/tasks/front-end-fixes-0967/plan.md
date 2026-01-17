@@ -64,3 +64,25 @@ Implement the task according to the technical specification and general engineer
    - What was implemented
    - How the solution was tested
    - The biggest issues or challenges encountered
+
+---
+
+### [ ] Step: New UI Design Spec
+
+Create a precise design specification for the new floating-card chatbot UI described in the 2026 brief:
+- Capture layout (AppShell, SidebarCard, ChatCard, InputBar) and visual tokens (radii, shadows, colors, typography).
+- Define responsive behavior (desktop two-column grid, mobile sidebar behavior, sticky input).
+- Map existing UX features (status, sample queries, history, typing indicator) into the new layout.
+
+### [ ] Step: Frontend Architecture Decision
+
+Decide how to implement the new UI:
+- Compare keeping the current FastAPI-served static frontend vs. introducing a Next.js (App Router) + Tailwind app with an API proxy.
+- Document the decision, trade-offs, and integration plan with the existing `/process_conversation` and `/health` endpoints.
+
+### [ ] Step: New UI Implementation
+
+Implement the new design according to the chosen architecture:
+- Build components matching the brief (SidebarCard, StatusList, QuickActions, ChatCard, MessageList/MessageBubble, InputBar).
+- Wire up backend integration, local persistence, and accessibility behaviors in the new layout.
+- Verify the design matches the screenshot/brief on desktop and mobile.
