@@ -157,7 +157,7 @@ class ERPChatbot {
 
     async initConfig() {
         try {
-            const response = await fetch('/config');
+            const response = await this.fetchWithTimeout('/config', { method: 'GET' }, 5000);
             if (response.ok) {
                 const config = await response.json();
                 const langgraphUrl = config.langgraph_url || 'http://localhost:5001';
@@ -252,7 +252,21 @@ class ERPChatbot {
             const response = await this.fetchWithTimeout(url, { method: 'GET' }, 5000);
 
             if (response.ok) {
-                this.updateStatus('online', 'Service Online');
+                if (this.apiKeyIsServerManaged && url.endsWith('/backend_health')) {
+                    let data = null;
+                    try {
+                        data = await response.json();
+                    } catch (_) {
+                        data = null;
+                    }
+                    if (data && data.status === 'degraded') {
+                        this.updateStatus('degraded', 'Service Degraded');
+                    } else {
+                        this.updateStatus('online', 'Service Online');
+                    }
+                } else {
+                    this.updateStatus('online', 'Service Online');
+                }
             } else {
                 this.updateStatus('offline', 'Service Error');
             }
@@ -666,6 +680,7 @@ class ERPChatbot {
         
         this.currentConversationId = conversationId;
         this.messages = [...conversation.messages];
+        this.isUserNearBottom = true;
         
         // Clear and rebuild chat messages
         if (this.chatMessages) {
@@ -683,6 +698,7 @@ class ERPChatbot {
         });
         
         this.renderConversationHistory();
+        this.scrollToBottom();
     }
 
     clearHistory() {
@@ -795,7 +811,10 @@ class ERPChatbot {
         if (focusable.length > 0) {
             focusable[0].focus();
         } else {
-            modal.focus();
+            const modalContent = modal.querySelector('.modal-content');
+            if (modalContent && typeof modalContent.focus === 'function') {
+                modalContent.focus();
+            }
         }
     }
 
