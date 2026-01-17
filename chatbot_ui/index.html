@@ -16,13 +16,13 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <h2>🤖 ERP Assistant</h2>
-                <div class="status-indicator" id="statusIndicator">
+                <div class="status-indicator" id="statusIndicator" aria-live="polite">
                     <div class="status-dot"></div>
                     <span class="status-text">Connecting...</span>
                 </div>
             </div>
             
-            <div class="conversation-history" id="conversationHistory">
+            <div class="conversation-history" id="conversationHistory" aria-label="Conversation history">
                 <div class="history-empty">
                     <div class="empty-icon">💬</div>
                     <p>No conversations yet</p>
@@ -31,7 +31,13 @@
             </div>
             
             <div class="sidebar-footer">
-                <button class="clear-history-btn" id="clearHistoryBtn" title="Clear all conversations">
+                <button
+                    class="clear-history-btn"
+                    id="clearHistoryBtn"
+                    type="button"
+                    title="Clear all conversations"
+                    aria-label="Clear all conversations"
+                >
                     <span class="btn-icon">🗑️</span>
                     Clear History
                 </button>
@@ -46,38 +52,82 @@
                     <p>Query your database using natural language</p>
                 </div>
                 <div class="chat-actions">
-                    <button class="action-btn" id="helpBtn" title="Show help">
+                    <button
+                        class="action-btn"
+                        id="helpBtn"
+                        type="button"
+                        title="Show help"
+                        aria-label="Open help"
+                    >
                         <span class="btn-icon">❓</span>
                     </button>
-                    <button class="action-btn" id="settingsBtn" title="Settings">
+                    <button
+                        class="action-btn"
+                        id="settingsBtn"
+                        type="button"
+                        title="Settings"
+                        aria-label="Open settings"
+                    >
                         <span class="btn-icon">⚙️</span>
                     </button>
                 </div>
             </div>
 
-            <div class="chat-messages" id="chatMessages">
+            <div
+                class="chat-messages"
+                id="chatMessages"
+                role="log"
+                aria-live="polite"
+                aria-relevant="additions text"
+                aria-label="Chat messages"
+            >
                 <div class="welcome-message">
                     <div class="welcome-content">
                         <div class="welcome-icon">🚀</div>
                         <h3>Welcome to ERP Assistant!</h3>
                         <p>I can help you query your ERP database using natural language. Try asking questions like:</p>
                         <div class="sample-queries">
-                            <button class="sample-query" data-query="How many customers do we have?">
+                            <button class="sample-query" type="button" data-query="How many customers do we have?">
                                 How many customers do we have?
                             </button>
-                            <button class="sample-query" data-query="Show me our top 5 products by sales">
+                            <button class="sample-query" type="button" data-query="Show me our top 5 products by sales">
                                 Show me our top 5 products by sales
                             </button>
-                            <button class="sample-query" data-query="What were our total sales last month?">
+                            <button class="sample-query" type="button" data-query="What were our total sales last month?">
                                 What were our total sales last month?
                             </button>
-                            <button class="sample-query" data-query="Which products are low in stock?">
+                            <button class="sample-query" type="button" data-query="Which products are low in stock?">
                                 Which products are low in stock?
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <div
+                class="typing-indicator"
+                id="typingIndicator"
+                aria-live="polite"
+                aria-atomic="true"
+                hidden
+            >
+                <div class="typing-dots" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <span class="typing-text">Assistant is thinking…</span>
+            </div>
+
+            <button
+                id="jumpToLatestBtn"
+                class="jump-to-latest"
+                type="button"
+                aria-label="Jump to latest messages"
+                hidden
+            >
+                Jump to latest
+            </button>
 
             <div class="chat-input-container">
                 <div class="chat-input-wrapper">
@@ -88,8 +138,24 @@
                             rows="1"
                             maxlength="1000"
                         ></textarea>
-                        <button id="sendBtn" class="send-btn" title="Send message">
+                        <button
+                            id="sendBtn"
+                            class="send-btn"
+                            type="button"
+                            title="Send message"
+                            aria-label="Send message"
+                        >
                             <span class="send-icon">➤</span>
+                        </button>
+                        <button
+                            id="stopBtn"
+                            class="stop-btn"
+                            type="button"
+                            title="Stop response"
+                            aria-label="Stop response"
+                            hidden
+                        >
+                            <span class="stop-icon">■</span>
                         </button>
                     </div>
                     <div class="input-footer">
@@ -106,11 +172,23 @@
     </div>
 
     <!-- Help Modal -->
-    <div class="modal" id="helpModal">
-        <div class="modal-content">
+    <div class="modal" id="helpModal" aria-hidden="true">
+        <div
+            class="modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="helpModalTitle"
+        >
             <div class="modal-header">
-                <h3>💡 How to Use ERP Assistant</h3>
-                <button class="modal-close" id="helpModalClose">&times;</button>
+                <h3 id="helpModalTitle">💡 How to Use ERP Assistant</h3>
+                <button
+                    class="modal-close"
+                    id="helpModalClose"
+                    type="button"
+                    aria-label="Close help"
+                >
+                    &times;
+                </button>
             </div>
             <div class="modal-body">
                 <div class="help-section">
@@ -156,11 +234,23 @@
     </div>
 
     <!-- Settings Modal -->
-    <div class="modal" id="settingsModal">
-        <div class="modal-content">
+    <div class="modal" id="settingsModal" aria-hidden="true">
+        <div
+            class="modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settingsModalTitle"
+        >
             <div class="modal-header">
-                <h3>⚙️ Settings</h3>
-                <button class="modal-close" id="settingsModalClose">&times;</button>
+                <h3 id="settingsModalTitle">⚙️ Settings</h3>
+                <button
+                    class="modal-close"
+                    id="settingsModalClose"
+                    type="button"
+                    aria-label="Close settings"
+                >
+                    &times;
+                </button>
             </div>
             <div class="modal-body">
                 <div class="setting-group">
@@ -168,16 +258,16 @@
                     <input type="text" id="serviceUrl" value="http://localhost:5001" readonly>
                 </div>
                 <div class="setting-group">
-                    <label for="apiKey">API Key:</label>
-                    <input type="password" id="apiKey" placeholder="Enter your API key">
+                    <label for="apiKey">API Key (dev-only, not stored):</label>
+                    <input type="password" id="apiKey" placeholder="Enter your API key for this session">
                 </div>
                 <div class="setting-group">
                     <label for="sessionId">Session ID:</label>
                     <input type="text" id="sessionId" readonly>
                 </div>
                 <div class="setting-actions">
-                    <button class="btn-secondary" id="resetSettings">Reset to Default</button>
-                    <button class="btn-primary" id="saveSettings">Save Settings</button>
+                    <button class="btn-secondary" id="resetSettings" type="button">Reset to Default</button>
+                    <button class="btn-primary" id="saveSettings" type="button">Save Settings</button>
                 </div>
             </div>
         </div>

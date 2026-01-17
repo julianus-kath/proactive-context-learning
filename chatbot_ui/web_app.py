@@ -6,15 +6,20 @@ Serves the HTML/CSS/JS chatbot UI and provides API endpoints.
 import os
 import sys
 from pathlib import Path
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
-from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
+
+import httpx
 from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+import uvicorn
 
 # Load environment variables
 load_dotenv()
+
+LANGGRAPH_URL = os.getenv("LANGGRAPH_URL", "http://localhost:5001").rstrip("/")
+API_KEY = os.getenv("API_KEY")
 
 # Create FastAPI app
 app = FastAPI(
@@ -81,10 +86,76 @@ async def health_check():
 async def get_config():
     """Get configuration for the frontend."""
     return {
-        "langgraph_url": os.getenv("LANGGRAPH_URL", "http://localhost:5001"),
-        "api_key_set": bool(os.getenv("API_KEY")),
+        "langgraph_url": LANGGRAPH_URL,
+        "api_key_set": bool(API_KEY),
         "version": "2.0.0"
     }
+
+
+@app.get("/backend_health")
+async def backend_health():
+    """Health check endpoint for the backend LangGraph/agent service."""
+    target_url = f"{LANGGRAPH_URL}/health"
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(target_url)
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=503, detail=f"Backend health check failed: {exc}") from exc
+
+    content_type = resp.headers.get("content-type", "")
+    try:
+        payload = resp.json() if "application/json" in content_type else {"raw": resp.text}
+    except ValueError:
+        payload = {"raw": resp.text}
+
+    return {
+        "status": "online" if resp.status_code == 200 else "degraded",
+        "backend_status_code": resp.status_code,
+        "backend_response": payload,
+    }
+
+
+@app.post("/process_conversation")
+async def proxy_process_conversation(request: Request):
+    """
+    Proxy /process_conversation requests to the LangGraph/agent service.
+
+    The API key is attached server-side so it never lives in the browser.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Invalid request payload")
+
+    messages = body.get("messages")
+    if not messages:
+        raise HTTPException(status_code=400, detail="messages cannot be empty")
+
+    forward_body = dict(body)
+    if API_KEY:
+        forward_body["api_key"] = API_KEY
+
+    target_url = f"{LANGGRAPH_URL}/process_conversation"
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(target_url, json=forward_body)
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"Error contacting backend service: {exc}") from exc
+
+    content_type = resp.headers.get("content-type", "")
+    try:
+        data = resp.json() if "application/json" in content_type else {"error": resp.text}
+    except ValueError:
+        data = {"error": resp.text}
+
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=resp.status_code, detail=data)
+
+    return data
 
 if __name__ == "__main__":
     print("🚀 Starting ERP Chatbot Web UI...")

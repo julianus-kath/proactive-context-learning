@@ -1,33 +1,44 @@
 // ERP Chatbot UI - JavaScript Implementation
 class ERPChatbot {
     constructor() {
-        this.serviceUrl = 'http://localhost:5001';
-        this.apiKey = 'supersecretapikey';
+        this.serviceUrl = '';
+        this.apiKey = null;
+        this.apiKeyIsServerManaged = false;
         this.sessionId = this.generateSessionId();
         this.messages = [];
         this.conversations = [];
         this.currentConversationId = null;
         this.isLoading = false;
         this.lastWasClarification = false;
+        this.currentRequestController = null;
+        this.isUserNearBottom = true;
+        this.stopRequested = false;
+        this.lastFocusedElement = null;
+        this.activeModal = null;
         
         this.initializeElements();
         this.bindEvents();
-        this.checkServiceHealth();
         this.loadSettings();
         this.loadConversations();
+        this.initConfig();
     }
 
     initializeElements() {
         // Main elements
         this.statusIndicator = document.getElementById('statusIndicator');
-        this.statusDot = this.statusIndicator.querySelector('.status-dot');
-        this.statusText = this.statusIndicator.querySelector('.status-text');
+        if (this.statusIndicator) {
+            this.statusDot = this.statusIndicator.querySelector('.status-dot');
+            this.statusText = this.statusIndicator.querySelector('.status-text');
+        }
         this.conversationHistory = document.getElementById('conversationHistory');
         this.chatMessages = document.getElementById('chatMessages');
         this.messageInput = document.getElementById('messageInput');
         this.sendBtn = document.getElementById('sendBtn');
+        this.stopBtn = document.getElementById('stopBtn');
         this.charCount = document.getElementById('charCount');
         this.loadingOverlay = document.getElementById('loadingOverlay');
+        this.typingIndicator = document.getElementById('typingIndicator');
+        this.jumpToLatestBtn = document.getElementById('jumpToLatestBtn');
         
         // Buttons
         this.clearHistoryBtn = document.getElementById('clearHistoryBtn');
@@ -50,46 +61,90 @@ class ERPChatbot {
 
     bindEvents() {
         // Message input events
-        this.messageInput.addEventListener('input', () => this.handleInputChange());
-        this.messageInput.addEventListener('keydown', (e) => this.handleKeyDown(e));
-        this.sendBtn.addEventListener('click', () => this.sendMessage());
+        if (this.messageInput) {
+            this.messageInput.addEventListener('input', () => this.handleInputChange());
+            this.messageInput.addEventListener('keydown', (e) => this.handleKeyDown(e));
+        }
+        if (this.sendBtn) {
+            this.sendBtn.addEventListener('click', () => this.sendMessage());
+        }
+        if (this.stopBtn) {
+            this.stopBtn.addEventListener('click', () => this.stopCurrentRequest());
+        }
         
         // Button events
-        this.clearHistoryBtn.addEventListener('click', () => this.clearHistory());
-        this.helpBtn.addEventListener('click', () => this.showModal('help'));
-        this.settingsBtn.addEventListener('click', () => this.showModal('settings'));
+        if (this.clearHistoryBtn) {
+            this.clearHistoryBtn.addEventListener('click', () => this.clearHistory());
+        }
+        if (this.helpBtn) {
+            this.helpBtn.addEventListener('click', () => this.showModal('help'));
+        }
+        if (this.settingsBtn) {
+            this.settingsBtn.addEventListener('click', () => this.showModal('settings'));
+        }
+
+        // Chat scroll events
+        if (this.chatMessages) {
+            this.chatMessages.addEventListener('scroll', () => this.handleChatScroll());
+        }
+        if (this.jumpToLatestBtn) {
+            this.jumpToLatestBtn.addEventListener('click', () => {
+                this.scrollToBottom();
+                this.isUserNearBottom = true;
+                this.hideJumpToLatest();
+            });
+        }
         
         // Modal events
-        this.helpModalClose.addEventListener('click', () => this.hideModal('help'));
-        this.settingsModalClose.addEventListener('click', () => this.hideModal('settings'));
+        if (this.helpModalClose) {
+            this.helpModalClose.addEventListener('click', () => this.hideModal('help'));
+        }
+        if (this.settingsModalClose) {
+            this.settingsModalClose.addEventListener('click', () => this.hideModal('settings'));
+        }
+        
+        // Modal backdrop and focus trap events
+        if (this.helpModal) {
+            this.helpModal.addEventListener('click', (e) => {
+                if (e.target === this.helpModal) this.hideModal('help');
+            });
+            this.helpModal.addEventListener('keydown', (e) => this.handleModalKeyDown(e, this.helpModal));
+        }
+        if (this.settingsModal) {
+            this.settingsModal.addEventListener('click', (e) => {
+                if (e.target === this.settingsModal) this.hideModal('settings');
+            });
+            this.settingsModal.addEventListener('keydown', (e) => this.handleModalKeyDown(e, this.settingsModal));
+        }
         
         // Settings events
-        this.resetSettingsBtn.addEventListener('click', () => this.resetSettings());
-        this.saveSettingsBtn.addEventListener('click', () => this.saveSettings());
+        if (this.resetSettingsBtn) {
+            this.resetSettingsBtn.addEventListener('click', () => this.resetSettings());
+        }
+        if (this.saveSettingsBtn) {
+            this.saveSettingsBtn.addEventListener('click', () => this.saveSettings());
+        }
         
         // Sample query events
         document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('sample-query')) {
+            if (e.target.classList && e.target.classList.contains('sample-query')) {
                 const query = e.target.getAttribute('data-query');
-                this.messageInput.value = query;
-                this.handleInputChange();
-                this.messageInput.focus();
+                if (this.messageInput) {
+                    this.messageInput.value = query || '';
+                    this.handleInputChange();
+                    this.messageInput.focus();
+                }
             }
-        });
-        
-        // Modal backdrop events
-        this.helpModal.addEventListener('click', (e) => {
-            if (e.target === this.helpModal) this.hideModal('help');
-        });
-        this.settingsModal.addEventListener('click', (e) => {
-            if (e.target === this.settingsModal) this.hideModal('settings');
         });
         
         // Escape key to close modals
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                this.hideModal('help');
-                this.hideModal('settings');
+            if (e.key === 'Escape' && this.activeModal) {
+                if (this.activeModal === this.helpModal) {
+                    this.hideModal('help');
+                } else if (this.activeModal === this.settingsModal) {
+                    this.hideModal('settings');
+                }
             }
         });
     }
@@ -100,7 +155,60 @@ class ERPChatbot {
         return `session_${timestamp}_${random}`;
     }
 
+    async initConfig() {
+        try {
+            const response = await fetch('/config');
+            if (response.ok) {
+                const config = await response.json();
+                const langgraphUrl = config.langgraph_url || 'http://localhost:5001';
+                this.apiKeyIsServerManaged = !!config.api_key_set;
+
+                if (this.apiKeyIsServerManaged) {
+                    this.serviceUrl = '';
+                    if (this.apiKeyInput) {
+                        this.apiKeyInput.disabled = true;
+                        this.apiKeyInput.placeholder = 'Configured on server';
+                        this.apiKeyInput.value = '';
+                    }
+                } else {
+                    this.serviceUrl = langgraphUrl;
+                    if (this.apiKeyInput) {
+                        this.apiKeyInput.disabled = false;
+                    }
+                }
+
+                if (this.serviceUrlInput) {
+                    this.serviceUrlInput.value = this.apiKeyIsServerManaged
+                        ? `${window.location.origin}/process_conversation`
+                        : this.serviceUrl;
+                }
+            } else {
+                this.serviceUrl = this.serviceUrl || 'http://localhost:5001';
+            }
+        } catch (error) {
+            console.error('Error loading config:', error);
+            this.serviceUrl = this.serviceUrl || 'http://localhost:5001';
+        } finally {
+            this.checkServiceHealth();
+        }
+    }
+
+    async fetchWithTimeout(url, options = {}, timeoutMs = 60000, controller) {
+        const abortController = controller || new AbortController();
+        const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
+        try {
+            return await fetch(url, {
+                ...options,
+                signal: abortController.signal
+            });
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    }
+
     handleInputChange() {
+        if (!this.messageInput || !this.charCount) return;
+
         const length = this.messageInput.value.length;
         this.charCount.textContent = length;
         
@@ -118,7 +226,9 @@ class ERPChatbot {
         this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 120) + 'px';
         
         // Enable/disable send button
-        this.sendBtn.disabled = length === 0 || this.isLoading;
+        if (this.sendBtn) {
+            this.sendBtn.disabled = length === 0 || this.isLoading;
+        }
     }
 
     handleKeyDown(e) {
@@ -130,98 +240,192 @@ class ERPChatbot {
 
     async checkServiceHealth() {
         try {
-            const response = await fetch(`${this.serviceUrl}/health`, {
-                method: 'GET',
-                timeout: 5000
-            });
-            
+            let url;
+            if (this.apiKeyIsServerManaged) {
+                url = '/backend_health';
+            } else if (this.serviceUrl) {
+                url = `${this.serviceUrl.replace(/\/+$/, '')}/health`;
+            } else {
+                url = '/health';
+            }
+
+            const response = await this.fetchWithTimeout(url, { method: 'GET' }, 5000);
+
             if (response.ok) {
                 this.updateStatus('online', 'Service Online');
             } else {
                 this.updateStatus('offline', 'Service Error');
             }
         } catch (error) {
+            console.error('Error checking service health:', error);
             this.updateStatus('offline', 'Service Offline');
         }
     }
 
     updateStatus(status, text) {
-        this.statusDot.className = `status-dot ${status}`;
-        this.statusText.textContent = text;
-    }
-
-    async sendMessage() {
-        const message = this.messageInput.value.trim();
-        if (!message || this.isLoading) return;
-        
-        // Clear input and show loading
-        this.messageInput.value = '';
-        this.handleInputChange();
-        this.setLoading(true);
-        
-        try {
-            // Add user message to UI
-            this.addMessage('user', message);
-            
-            // Add user message to conversation
-            this.messages.push({ role: 'user', content: message });
-            
-            // Send to service
-            const response = await this.sendToService(message);
-            
-            // Handle response
-            if (response.error) {
-                this.addMessage('bot', `⚠️ ${response.error}`, true);
-                this.messages.push({ role: 'assistant', content: response.error });
-            } else {
-                // Check if it's a clarification
-                const isClarification = response.clarify || response.operation === 'clarify';
-                const responseText = response.final_response || response.response || response.clarification || response.question;
-                
-                this.addMessage('bot', responseText, false, isClarification);
-                this.lastWasClarification = isClarification;
-                
-                // Update messages from server if available
-                if (response.messages && Array.isArray(response.messages)) {
-                    this.messages = response.messages;
-                } else {
-                    this.messages.push({ role: 'assistant', content: responseText });
-                }
-            }
-            
-            // Update conversation history
-            this.updateConversationHistory();
-            
-            // Log interaction
-            this.logInteraction(message, response);
-            
-        } catch (error) {
-            console.error('Error sending message:', error);
-            this.addMessage('bot', `⚠️ Connection error: ${error.message}`, true);
-        } finally {
-            this.setLoading(false);
-            this.messageInput.focus();
+        if (this.statusDot) {
+            this.statusDot.className = `status-dot ${status}`;
+        }
+        if (this.statusText) {
+            this.statusText.textContent = text;
         }
     }
 
-    async sendToService(userInput) {
+    handleChatScroll() {
+        if (!this.chatMessages) return;
+        const { scrollTop, scrollHeight, clientHeight } = this.chatMessages;
+        const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+        this.isUserNearBottom = distanceFromBottom <= 100;
+        if (this.isUserNearBottom) {
+            this.hideJumpToLatest();
+        }
+    }
+
+    scrollToBottom() {
+        if (!this.chatMessages) return;
+        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+        this.hideJumpToLatest();
+    }
+
+    showJumpToLatest() {
+        if (this.jumpToLatestBtn) {
+            this.jumpToLatestBtn.hidden = false;
+            this.jumpToLatestBtn.classList.add('visible');
+        }
+    }
+
+    hideJumpToLatest() {
+        if (this.jumpToLatestBtn) {
+            this.jumpToLatestBtn.classList.remove('visible');
+            this.jumpToLatestBtn.hidden = true;
+        }
+    }
+
+    async sendMessage() {
+        if (!this.messageInput) return;
+        const message = this.messageInput.value.trim();
+        if (!message || this.isLoading) return;
+
+        this.messageInput.value = '';
+        this.handleInputChange();
+        this.setLoading(true);
+
+        const startTime = (typeof performance !== 'undefined' && performance.now)
+            ? performance.now()
+            : Date.now();
+
+        let status = 'ok';
+        let response = null;
+
+        try {
+            this.addMessage('user', message);
+            this.messages.push({ role: 'user', content: message });
+
+            response = await this.sendToService();
+
+            if (response && response.error) {
+                status = 'backend_error';
+                this.addMessage('bot', `⚠️ ${response.error}`, true);
+                this.messages.push({ role: 'assistant', content: response.error });
+            } else if (response) {
+                const isClarification = response.clarify || response.operation === 'clarify';
+                const responseText =
+                    response.final_response ||
+                    response.response ||
+                    response.clarification ||
+                    response.question ||
+                    '';
+
+                const clarificationOptions = Array.isArray(response.clarification_options)
+                    ? response.clarification_options
+                    : null;
+
+                this.addMessage('bot', responseText, false, isClarification, clarificationOptions);
+                this.lastWasClarification = isClarification;
+
+                if (response.messages && Array.isArray(response.messages)) {
+                    this.messages = response.messages;
+                } else if (responseText) {
+                    this.messages.push({ role: 'assistant', content: responseText });
+                }
+            }
+
+            this.updateConversationHistory();
+        } catch (error) {
+            console.error('Error sending message:', error);
+            if (error.name === 'AbortError') {
+                status = this.stopRequested ? 'cancelled' : 'timeout';
+                const label = this.stopRequested
+                    ? 'Request cancelled.'
+                    : 'Request timed out. Please try again.';
+                this.addMessage('bot', `⚠️ ${label}`, true);
+            } else {
+                const errorMessage = error.message || 'Unknown error';
+                if (
+                    String(errorMessage).startsWith('Authentication failed') ||
+                    String(errorMessage).startsWith('Invalid request format') ||
+                    String(errorMessage).startsWith('Service temporarily unavailable') ||
+                    String(errorMessage).startsWith('Service error')
+                ) {
+                    status = 'backend_error';
+                } else {
+                    status = 'network_error';
+                }
+                this.addMessage('bot', `⚠️ ${errorMessage}`, true);
+            }
+        } finally {
+            const endTime = (typeof performance !== 'undefined' && performance.now)
+                ? performance.now()
+                : Date.now();
+            const durationMs = Math.round(endTime - startTime);
+            this.stopRequested = false;
+            this.setLoading(false);
+            if (this.messageInput) {
+                this.messageInput.focus();
+            }
+            this.logInteraction(message, response, { status, durationMs });
+        }
+    }
+
+    async sendToService() {
         const payload = {
-            messages: this.messages.concat([{ role: 'user', content: userInput }]),
-            api_key: this.apiKey
+            messages: this.messages
         };
-        
-        const response = await fetch(`${this.serviceUrl}/process_conversation`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-            timeout: 60000
-        });
-        
+
+        if (!this.apiKeyIsServerManaged && this.apiKey) {
+            payload.api_key = this.apiKey;
+        }
+
+        const baseUrl =
+            this.apiKeyIsServerManaged || !this.serviceUrl
+                ? ''
+                : this.serviceUrl.replace(/\/+$/, '');
+        const url = `${baseUrl}/process_conversation`;
+
+        const controller = new AbortController();
+        this.currentRequestController = controller;
+
+        let response;
+        try {
+            response = await this.fetchWithTimeout(
+                url,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                },
+                60000,
+                controller
+            );
+        } finally {
+            this.currentRequestController = null;
+        }
+
         if (!response.ok) {
             if (response.status === 401) {
-                throw new Error('Authentication failed. Please check your API key.');
+                throw new Error('Authentication failed. Please check your API key or server configuration.');
             } else if (response.status === 400) {
                 throw new Error('Invalid request format.');
             } else if (response.status === 503) {
@@ -230,54 +434,117 @@ class ERPChatbot {
                 throw new Error(`Service error (${response.status})`);
             }
         }
-        
+
         return await response.json();
     }
 
-    addMessage(sender, content, isError = false, isClarification = false) {
-        // Hide welcome message if it exists
+    addMessage(sender, content, isError = false, isClarification = false, clarificationOptions = null) {
+        if (!this.chatMessages) return;
+
         const welcomeMessage = this.chatMessages.querySelector('.welcome-message');
         if (welcomeMessage) {
             welcomeMessage.style.display = 'none';
         }
-        
+
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}`;
-        
+
         if (isClarification) {
             messageDiv.classList.add('clarification');
         }
-        
+        if (sender === 'bot' && isError) {
+            messageDiv.classList.add('error');
+        }
+
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
         avatar.textContent = sender === 'user' ? '👤' : '🤖';
-        
+
+        const messageBody = document.createElement('div');
+
+        if (sender === 'bot' && isClarification) {
+            const label = document.createElement('div');
+            label.className = 'clarification-label';
+            label.textContent = 'Clarification needed';
+            messageBody.appendChild(label);
+        }
+
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        
-        // Format content (basic markdown-like formatting)
-        const formattedContent = this.formatMessageContent(content);
-        contentDiv.innerHTML = formattedContent;
-        
+        contentDiv.innerHTML = this.formatMessageContent(content);
+
         const timeDiv = document.createElement('div');
         timeDiv.className = 'message-time';
         timeDiv.textContent = new Date().toLocaleTimeString();
-        
-        messageDiv.appendChild(avatar);
-        const messageBody = document.createElement('div');
+
         messageBody.appendChild(contentDiv);
+
+        if (
+            sender === 'bot' &&
+            isClarification &&
+            Array.isArray(clarificationOptions) &&
+            clarificationOptions.length > 0
+        ) {
+            const optionsContainer = document.createElement('div');
+            optionsContainer.className = 'clarification-options';
+            clarificationOptions.forEach((optionText) => {
+                const optionBtn = document.createElement('button');
+                optionBtn.type = 'button';
+                optionBtn.className = 'sample-query';
+                optionBtn.textContent = optionText;
+                optionBtn.addEventListener('click', () => {
+                    if (this.messageInput) {
+                        this.messageInput.value = optionText;
+                        this.handleInputChange();
+                        this.sendMessage();
+                    }
+                });
+                optionsContainer.appendChild(optionBtn);
+            });
+            messageBody.appendChild(optionsContainer);
+        }
+
+        if (sender === 'bot' && isError) {
+            const actions = document.createElement('div');
+            actions.className = 'message-actions';
+            const retryBtn = document.createElement('button');
+            retryBtn.type = 'button';
+            retryBtn.className = 'retry-btn';
+            retryBtn.textContent = 'Retry';
+            retryBtn.addEventListener('click', () => this.retryLastUserMessage());
+            actions.appendChild(retryBtn);
+            messageBody.appendChild(actions);
+        }
+
         messageBody.appendChild(timeDiv);
+
+        messageDiv.appendChild(avatar);
         messageDiv.appendChild(messageBody);
-        
+
+        const shouldAutoScroll = this.isUserNearBottom || !this.chatMessages.hasChildNodes();
+
         this.chatMessages.appendChild(messageDiv);
-        
-        // Scroll to bottom
-        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+
+        if (shouldAutoScroll) {
+            this.scrollToBottom();
+        } else {
+            this.showJumpToLatest();
+        }
     }
 
     formatMessageContent(content) {
-        // Basic formatting for better readability
-        return content
+        if (typeof content !== 'string') {
+            content = String(content ?? '');
+        }
+
+        const escaped = content
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        return escaped
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.*?)\*/g, '<em>$1</em>')
             .replace(/`(.*?)`/g, '<code>$1</code>')
@@ -286,12 +553,34 @@ class ERPChatbot {
 
     setLoading(loading) {
         this.isLoading = loading;
-        this.sendBtn.disabled = loading || this.messageInput.value.trim().length === 0;
-        
+        if (this.sendBtn) {
+            const hasText = this.messageInput && this.messageInput.value.trim().length > 0;
+            this.sendBtn.disabled = loading || !hasText;
+            this.sendBtn.hidden = !!loading;
+        }
+        if (this.stopBtn) {
+            this.stopBtn.hidden = !loading;
+            this.stopBtn.disabled = !loading;
+        }
+
         if (loading) {
-            this.loadingOverlay.classList.add('show');
+            this.showTypingIndicator();
         } else {
-            this.loadingOverlay.classList.remove('show');
+            this.hideTypingIndicator();
+        }
+    }
+
+    showTypingIndicator() {
+        if (this.typingIndicator) {
+            this.typingIndicator.hidden = false;
+            this.typingIndicator.classList.add('show');
+        }
+    }
+
+    hideTypingIndicator() {
+        if (this.typingIndicator) {
+            this.typingIndicator.classList.remove('show');
+            this.typingIndicator.hidden = true;
         }
     }
 
@@ -337,6 +626,8 @@ class ERPChatbot {
     }
 
     renderConversationHistory() {
+        if (!this.conversationHistory) return;
+
         if (this.conversations.length === 0) {
             this.conversationHistory.innerHTML = `
                 <div class="history-empty">
@@ -351,11 +642,13 @@ class ERPChatbot {
         this.conversationHistory.innerHTML = '';
         
         this.conversations.forEach(conversation => {
-            const item = document.createElement('div');
+            const item = document.createElement('button');
+            item.type = 'button';
             item.className = 'conversation-item';
             if (conversation.id === this.currentConversationId) {
                 item.classList.add('active');
             }
+            item.setAttribute('aria-label', `Conversation: ${conversation.title}`);
             
             item.innerHTML = `
                 <div class="conversation-preview">${conversation.title}</div>
@@ -375,14 +668,17 @@ class ERPChatbot {
         this.messages = [...conversation.messages];
         
         // Clear and rebuild chat messages
-        this.chatMessages.innerHTML = '';
+        if (this.chatMessages) {
+            this.chatMessages.innerHTML = '';
+        }
         
         conversation.messages.forEach(message => {
             this.addMessage(
                 message.role === 'user' ? 'user' : 'bot',
                 message.content,
                 false,
-                message.content.includes('🤔') // Simple clarification detection
+                message.content.includes('🤔'),
+                null
             );
         });
         
@@ -400,29 +696,31 @@ class ERPChatbot {
             this.renderConversationHistory();
             
             // Reset chat messages to welcome state
-            this.chatMessages.innerHTML = `
+            if (this.chatMessages) {
+                this.chatMessages.innerHTML = `
                 <div class="welcome-message">
                     <div class="welcome-content">
                         <div class="welcome-icon">🚀</div>
                         <h3>Welcome to ERP Assistant!</h3>
                         <p>I can help you query your ERP database using natural language. Try asking questions like:</p>
                         <div class="sample-queries">
-                            <button class="sample-query" data-query="How many customers do we have?">
+                            <button class="sample-query" type="button" data-query="How many customers do we have?">
                                 How many customers do we have?
                             </button>
-                            <button class="sample-query" data-query="Show me our top 5 products by sales">
+                            <button class="sample-query" type="button" data-query="Show me our top 5 products by sales">
                                 Show me our top 5 products by sales
                             </button>
-                            <button class="sample-query" data-query="What were our total sales last month?">
+                            <button class="sample-query" type="button" data-query="What were our total sales last month?">
                                 What were our total sales last month?
                             </button>
-                            <button class="sample-query" data-query="Which products are low in stock?">
+                            <button class="sample-query" type="button" data-query="Which products are low in stock?">
                                 Which products are low in stock?
                             </button>
                         </div>
                     </div>
                 </div>
             `;
+            }
         }
     }
 
@@ -442,52 +740,125 @@ class ERPChatbot {
         return date.toLocaleDateString();
     }
 
+    getFocusableElements(container) {
+        if (!container) return [];
+        const selectors = [
+            'button',
+            '[href]',
+            'input',
+            'select',
+            'textarea',
+            '[tabindex]:not([tabindex="-1"])'
+        ];
+        return Array.from(container.querySelectorAll(selectors.join(','))).filter(
+            (el) => !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true'
+        );
+    }
+
+    handleModalKeyDown(event, modal) {
+        if (event.key !== 'Tab') return;
+        const focusable = this.getFocusableElements(modal);
+        if (focusable.length === 0) return;
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (event.shiftKey) {
+            if (document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            }
+        } else if (document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    }
+
     showModal(type) {
-        if (type === 'help') {
-            this.helpModal.classList.add('show');
-        } else if (type === 'settings') {
-            this.settingsModal.classList.add('show');
+        const modal = type === 'help' ? this.helpModal : this.settingsModal;
+        if (!modal) return;
+
+        this.activeModal = modal;
+        this.lastFocusedElement =
+            document.activeElement && document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null;
+
+        modal.classList.add('show');
+        modal.setAttribute('aria-hidden', 'false');
+
+        if (type === 'settings') {
             this.loadSettingsToModal();
+        }
+
+        const focusable = this.getFocusableElements(modal);
+        if (focusable.length > 0) {
+            focusable[0].focus();
+        } else {
+            modal.focus();
         }
     }
 
     hideModal(type) {
-        if (type === 'help') {
-            this.helpModal.classList.remove('show');
-        } else if (type === 'settings') {
-            this.settingsModal.classList.remove('show');
+        const modal = type === 'help' ? this.helpModal : this.settingsModal;
+        if (!modal) return;
+
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden', 'true');
+
+        if (this.activeModal === modal) {
+            this.activeModal = null;
+        }
+
+        if (this.lastFocusedElement && typeof this.lastFocusedElement.focus === 'function') {
+            this.lastFocusedElement.focus();
+            this.lastFocusedElement = null;
         }
     }
 
     loadSettingsToModal() {
-        this.serviceUrlInput.value = this.serviceUrl;
-        this.apiKeyInput.value = this.apiKey;
-        this.sessionIdInput.value = this.sessionId;
+        if (this.serviceUrlInput) {
+            this.serviceUrlInput.value = this.apiKeyIsServerManaged
+                ? `${window.location.origin}/process_conversation`
+                : this.serviceUrl || this.serviceUrlInput.value;
+        }
+        if (this.apiKeyInput && !this.apiKeyIsServerManaged) {
+            this.apiKeyInput.value = this.apiKey || '';
+        }
+        if (this.sessionIdInput) {
+            this.sessionIdInput.value = this.sessionId;
+        }
     }
 
     resetSettings() {
-        this.serviceUrl = 'http://localhost:5001';
-        this.apiKey = 'supersecretapikey';
         this.sessionId = this.generateSessionId();
+        this.apiKey = null;
+        if (this.apiKeyInput && !this.apiKeyIsServerManaged) {
+            this.apiKeyInput.value = '';
+        }
         this.loadSettingsToModal();
         this.saveSettings();
     }
 
     saveSettings() {
-        this.serviceUrl = this.serviceUrlInput.value.trim();
-        this.apiKey = this.apiKeyInput.value.trim();
-        
-        // Save to localStorage
-        localStorage.setItem('erp_chatbot_settings', JSON.stringify({
-            serviceUrl: this.serviceUrl,
-            apiKey: this.apiKey,
-            sessionId: this.sessionId
-        }));
-        
+        if (!this.apiKeyIsServerManaged && this.apiKeyInput) {
+            const value = this.apiKeyInput.value.trim();
+            this.apiKey = value || null;
+        }
+
+        try {
+            localStorage.setItem(
+                'erp_chatbot_settings',
+                JSON.stringify({
+                    sessionId: this.sessionId
+                })
+            );
+        } catch (error) {
+            console.error('Error saving settings:', error);
+        }
+
         this.hideModal('settings');
         this.checkServiceHealth();
-        
-        // Show success message
         this.showNotification('Settings saved successfully!', 'success');
     }
 
@@ -496,9 +867,9 @@ class ERPChatbot {
             const saved = localStorage.getItem('erp_chatbot_settings');
             if (saved) {
                 const settings = JSON.parse(saved);
-                this.serviceUrl = settings.serviceUrl || this.serviceUrl;
-                this.apiKey = settings.apiKey || this.apiKey;
-                this.sessionId = settings.sessionId || this.sessionId;
+                if (settings.sessionId) {
+                    this.sessionId = settings.sessionId;
+                }
             }
         } catch (error) {
             console.error('Error loading settings:', error);
@@ -525,13 +896,30 @@ class ERPChatbot {
         }
     }
 
-    logInteraction(userInput, response) {
+    stopCurrentRequest() {
+        if (this.currentRequestController) {
+            this.stopRequested = true;
+            this.currentRequestController.abort();
+        }
+    }
+
+    retryLastUserMessage() {
+        if (this.isLoading || !this.messageInput) return;
+        const lastUserMessage = [...this.messages].reverse().find((m) => m.role === 'user');
+        if (!lastUserMessage) return;
+        this.messageInput.value = lastUserMessage.content || '';
+        this.handleInputChange();
+        this.sendMessage();
+    }
+
+    logInteraction(userInput, response, metadata = {}) {
         const logEntry = {
             timestamp: new Date().toISOString(),
             sessionId: this.sessionId,
-            userInput: userInput,
-            response: response,
-            conversationId: this.currentConversationId
+            userInput,
+            response,
+            conversationId: this.currentConversationId,
+            ...metadata
         };
         
         console.log('Chat interaction:', logEntry);
