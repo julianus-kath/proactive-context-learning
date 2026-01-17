@@ -9,7 +9,7 @@ class ERPChatbot {
         this.currentConversationId = null;
         this.isLoading = false;
         this.lastWasClarification = false;
-        
+
         this.initializeElements();
         this.bindEvents();
         this.checkServiceHealth();
@@ -28,18 +28,18 @@ class ERPChatbot {
         this.sendBtn = document.getElementById('sendBtn');
         this.charCount = document.getElementById('charCount');
         this.loadingOverlay = document.getElementById('loadingOverlay');
-        
+
         // Buttons
         this.clearHistoryBtn = document.getElementById('clearHistoryBtn');
         this.helpBtn = document.getElementById('helpBtn');
         this.settingsBtn = document.getElementById('settingsBtn');
-        
+
         // Modals
         this.helpModal = document.getElementById('helpModal');
         this.settingsModal = document.getElementById('settingsModal');
         this.helpModalClose = document.getElementById('helpModalClose');
         this.settingsModalClose = document.getElementById('settingsModalClose');
-        
+
         // Settings
         this.serviceUrlInput = document.getElementById('serviceUrl');
         this.apiKeyInput = document.getElementById('apiKey');
@@ -53,20 +53,20 @@ class ERPChatbot {
         this.messageInput.addEventListener('input', () => this.handleInputChange());
         this.messageInput.addEventListener('keydown', (e) => this.handleKeyDown(e));
         this.sendBtn.addEventListener('click', () => this.sendMessage());
-        
+
         // Button events
         this.clearHistoryBtn.addEventListener('click', () => this.clearHistory());
         this.helpBtn.addEventListener('click', () => this.showModal('help'));
         this.settingsBtn.addEventListener('click', () => this.showModal('settings'));
-        
+
         // Modal events
         this.helpModalClose.addEventListener('click', () => this.hideModal('help'));
         this.settingsModalClose.addEventListener('click', () => this.hideModal('settings'));
-        
+
         // Settings events
         this.resetSettingsBtn.addEventListener('click', () => this.resetSettings());
         this.saveSettingsBtn.addEventListener('click', () => this.saveSettings());
-        
+
         // Sample query events
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('sample-query')) {
@@ -76,7 +76,7 @@ class ERPChatbot {
                 this.messageInput.focus();
             }
         });
-        
+
         // Modal backdrop events
         this.helpModal.addEventListener('click', (e) => {
             if (e.target === this.helpModal) this.hideModal('help');
@@ -84,7 +84,7 @@ class ERPChatbot {
         this.settingsModal.addEventListener('click', (e) => {
             if (e.target === this.settingsModal) this.hideModal('settings');
         });
-        
+
         // Escape key to close modals
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
@@ -103,7 +103,7 @@ class ERPChatbot {
     handleInputChange() {
         const length = this.messageInput.value.length;
         this.charCount.textContent = length;
-        
+
         // Update character counter styling
         this.charCount.className = '';
         if (length > 800) {
@@ -112,11 +112,11 @@ class ERPChatbot {
         if (length > 950) {
             this.charCount.classList.add('error');
         }
-        
+
         // Auto-resize textarea
         this.messageInput.style.height = 'auto';
         this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 120) + 'px';
-        
+
         // Enable/disable send button
         this.sendBtn.disabled = length === 0 || this.isLoading;
     }
@@ -134,7 +134,7 @@ class ERPChatbot {
                 method: 'GET',
                 timeout: 5000
             });
-            
+
             if (response.ok) {
                 this.updateStatus('online', 'Service Online');
             } else {
@@ -153,22 +153,22 @@ class ERPChatbot {
     async sendMessage() {
         const message = this.messageInput.value.trim();
         if (!message || this.isLoading) return;
-        
+
         // Clear input and show loading
         this.messageInput.value = '';
         this.handleInputChange();
         this.setLoading(true);
-        
+
         try {
             // Add user message to UI
             this.addMessage('user', message);
-            
+
             // Add user message to conversation
             this.messages.push({ role: 'user', content: message });
-            
+
             // Send to service
             const response = await this.sendToService(message);
-            
+
             // Handle response
             if (response.error) {
                 this.addMessage('bot', `⚠️ ${response.error}`, true);
@@ -177,10 +177,10 @@ class ERPChatbot {
                 // Check if it's a clarification
                 const isClarification = response.clarify || response.operation === 'clarify';
                 const responseText = response.final_response || response.response || response.clarification || response.question;
-                
+
                 this.addMessage('bot', responseText, false, isClarification);
                 this.lastWasClarification = isClarification;
-                
+
                 // Update messages from server if available
                 if (response.messages && Array.isArray(response.messages)) {
                     this.messages = response.messages;
@@ -188,13 +188,13 @@ class ERPChatbot {
                     this.messages.push({ role: 'assistant', content: responseText });
                 }
             }
-            
+
             // Update conversation history
             this.updateConversationHistory();
-            
+
             // Log interaction
             this.logInteraction(message, response);
-            
+
         } catch (error) {
             console.error('Error sending message:', error);
             this.addMessage('bot', `⚠️ Connection error: ${error.message}`, true);
@@ -209,7 +209,7 @@ class ERPChatbot {
             messages: this.messages.concat([{ role: 'user', content: userInput }]),
             api_key: this.apiKey
         };
-        
+
         const response = await fetch(`${this.serviceUrl}/process_conversation`, {
             method: 'POST',
             headers: {
@@ -218,7 +218,7 @@ class ERPChatbot {
             body: JSON.stringify(payload),
             timeout: 60000
         });
-        
+
         if (!response.ok) {
             if (response.status === 401) {
                 throw new Error('Authentication failed. Please check your API key.');
@@ -230,7 +230,7 @@ class ERPChatbot {
                 throw new Error(`Service error (${response.status})`);
             }
         }
-        
+
         return await response.json();
     }
 
@@ -240,37 +240,37 @@ class ERPChatbot {
         if (welcomeMessage) {
             welcomeMessage.style.display = 'none';
         }
-        
+
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}`;
-        
+
         if (isClarification) {
             messageDiv.classList.add('clarification');
         }
-        
+
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
         avatar.textContent = sender === 'user' ? '👤' : '🤖';
-        
+
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        
+
         // Format content (basic markdown-like formatting)
         const formattedContent = this.formatMessageContent(content);
         contentDiv.innerHTML = formattedContent;
-        
+
         const timeDiv = document.createElement('div');
         timeDiv.className = 'message-time';
         timeDiv.textContent = new Date().toLocaleTimeString();
-        
+
         messageDiv.appendChild(avatar);
         const messageBody = document.createElement('div');
         messageBody.appendChild(contentDiv);
         messageBody.appendChild(timeDiv);
         messageDiv.appendChild(messageBody);
-        
+
         this.chatMessages.appendChild(messageDiv);
-        
+
         // Scroll to bottom
         this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     }
@@ -287,7 +287,7 @@ class ERPChatbot {
     setLoading(loading) {
         this.isLoading = loading;
         this.sendBtn.disabled = loading || this.messageInput.value.trim().length === 0;
-        
+
         if (loading) {
             this.loadingOverlay.classList.add('show');
         } else {
@@ -297,14 +297,14 @@ class ERPChatbot {
 
     updateConversationHistory() {
         if (this.messages.length === 0) return;
-        
+
         // Get the first user message as conversation title
         const firstUserMessage = this.messages.find(m => m.role === 'user');
         if (!firstUserMessage) return;
-        
-        const conversationTitle = firstUserMessage.content.substring(0, 50) + 
+
+        const conversationTitle = firstUserMessage.content.substring(0, 50) +
                                 (firstUserMessage.content.length > 50 ? '...' : '');
-        
+
         // Create or update conversation
         const conversation = {
             id: this.currentConversationId || this.generateConversationId(),
@@ -313,7 +313,7 @@ class ERPChatbot {
             timestamp: new Date().toISOString(),
             lastMessage: this.messages[this.messages.length - 1]?.content || ''
         };
-        
+
         // Update conversations array
         const existingIndex = this.conversations.findIndex(c => c.id === conversation.id);
         if (existingIndex >= 0) {
@@ -322,12 +322,12 @@ class ERPChatbot {
             this.conversations.unshift(conversation);
             this.currentConversationId = conversation.id;
         }
-        
+
         // Limit to 50 conversations
         if (this.conversations.length > 50) {
             this.conversations = this.conversations.slice(0, 50);
         }
-        
+
         this.saveConversations();
         this.renderConversationHistory();
     }
@@ -347,21 +347,21 @@ class ERPChatbot {
             `;
             return;
         }
-        
+
         this.conversationHistory.innerHTML = '';
-        
+
         this.conversations.forEach(conversation => {
             const item = document.createElement('div');
             item.className = 'conversation-item';
             if (conversation.id === this.currentConversationId) {
                 item.classList.add('active');
             }
-            
+
             item.innerHTML = `
                 <div class="conversation-preview">${conversation.title}</div>
                 <div class="conversation-time">${this.formatTime(conversation.timestamp)}</div>
             `;
-            
+
             item.addEventListener('click', () => this.loadConversation(conversation.id));
             this.conversationHistory.appendChild(item);
         });
@@ -370,13 +370,13 @@ class ERPChatbot {
     loadConversation(conversationId) {
         const conversation = this.conversations.find(c => c.id === conversationId);
         if (!conversation) return;
-        
+
         this.currentConversationId = conversationId;
         this.messages = [...conversation.messages];
-        
+
         // Clear and rebuild chat messages
         this.chatMessages.innerHTML = '';
-        
+
         conversation.messages.forEach(message => {
             this.addMessage(
                 message.role === 'user' ? 'user' : 'bot',
@@ -385,7 +385,7 @@ class ERPChatbot {
                 message.content.includes('🤔') // Simple clarification detection
             );
         });
-        
+
         this.renderConversationHistory();
     }
 
@@ -395,10 +395,10 @@ class ERPChatbot {
             this.messages = [];
             this.currentConversationId = null;
             this.lastWasClarification = false;
-            
+
             this.saveConversations();
             this.renderConversationHistory();
-            
+
             // Reset chat messages to welcome state
             this.chatMessages.innerHTML = `
                 <div class="welcome-message">
@@ -433,12 +433,12 @@ class ERPChatbot {
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMs / 3600000);
         const diffDays = Math.floor(diffMs / 86400000);
-        
+
         if (diffMins < 1) return 'Just now';
         if (diffMins < 60) return `${diffMins}m ago`;
         if (diffHours < 24) return `${diffHours}h ago`;
         if (diffDays < 7) return `${diffDays}d ago`;
-        
+
         return date.toLocaleDateString();
     }
 
@@ -476,17 +476,17 @@ class ERPChatbot {
     saveSettings() {
         this.serviceUrl = this.serviceUrlInput.value.trim();
         this.apiKey = this.apiKeyInput.value.trim();
-        
+
         // Save to localStorage
         localStorage.setItem('erp_chatbot_settings', JSON.stringify({
             serviceUrl: this.serviceUrl,
             apiKey: this.apiKey,
             sessionId: this.sessionId
         }));
-        
+
         this.hideModal('settings');
         this.checkServiceHealth();
-        
+
         // Show success message
         this.showNotification('Settings saved successfully!', 'success');
     }
@@ -533,9 +533,9 @@ class ERPChatbot {
             response: response,
             conversationId: this.currentConversationId
         };
-        
+
         console.log('Chat interaction:', logEntry);
-        
+
         // Could send to analytics service here
     }
 
@@ -555,9 +555,9 @@ class ERPChatbot {
             z-index: 3000;
             animation: slideInRight 0.3s ease-out;
         `;
-        
+
         document.body.appendChild(notification);
-        
+
         setTimeout(() => {
             notification.style.animation = 'slideOutRight 0.3s ease-out';
             setTimeout(() => {
@@ -585,7 +585,7 @@ style.textContent = `
             transform: translateX(0);
         }
     }
-    
+
     @keyframes slideOutRight {
         from {
             opacity: 1;

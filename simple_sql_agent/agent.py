@@ -7,10 +7,10 @@ A single ReAct agent with 6 tools for text-to-SQL conversion.
 import logging
 import os
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import create_react_agent
 
@@ -184,12 +184,32 @@ class SQLAgentGraph:
 
         return agent
 
-    async def arun(self, question: str, max_iterations: Optional[int] = None) -> Dict[str, Any]:
+    def _convert_messages(self, messages: List[Dict]) -> List:
         """
-        Run the agent on a user question.
+        Convert frontend message format to LangChain messages.
 
         Args:
-            question: Natural language question about the database
+            messages: List of dicts with 'role' and 'content' keys
+
+        Returns:
+            List of LangChain message objects
+        """
+        result = []
+        for msg in messages:
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            if role == "user":
+                result.append(HumanMessage(content=content))
+            elif role == "assistant":
+                result.append(AIMessage(content=content))
+        return result
+
+    async def arun(self, input: Union[str, List[Dict]], max_iterations: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Run the agent on a user question or conversation.
+
+        Args:
+            input: Either a single question string OR list of message dicts [{role, content}]
             max_iterations: Override max LLM calls for this query (uses self.max_iterations if None)
 
         Returns:
@@ -198,6 +218,19 @@ class SQLAgentGraph:
         import time
         start_time = time.time()
 
+        # Handle both single question and conversation formats
+        if isinstance(input, str):
+            messages = [HumanMessage(content=input)]
+            question = input
+        else:
+            messages = self._convert_messages(input)
+            # Extract last user message for logging
+            question = ""
+            for msg in reversed(input):
+                if msg.get("role") == "user":
+                    question = msg.get("content", "")
+                    break
+
         limit = max_iterations or self.max_iterations
         logger.info(f"Processing question: {question[:100]}... (max_iterations={limit})")
 
@@ -205,9 +238,9 @@ class SQLAgentGraph:
         debug_log = get_debug_logger()
         debug_log.query_start(question)
 
-        # Create initial state
+        # Create initial state with full message history
         initial_state = {
-            "messages": [HumanMessage(content=question)],
+            "messages": messages,
         }
 
         try:

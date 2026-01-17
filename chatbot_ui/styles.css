@@ -737,7 +737,7 @@ kbd {
     .app-container {
         flex-direction: column;
     }
-    
+
     .sidebar {
         width: 100%;
         height: auto;
@@ -745,44 +745,44 @@ kbd {
         border-right: none;
         border-bottom: 1px solid var(--darker-grey-1);
     }
-    
+
     .main-chat {
         flex: 1;
     }
-    
+
     .chat-header {
         padding: 1rem;
     }
-    
+
     .chat-messages {
         padding: 1rem;
     }
-    
+
     .chat-input-container {
         padding: 1rem;
     }
-    
+
     .message-content {
         max-width: 85%;
     }
-    
+
     .welcome-content {
         padding: 1.5rem;
     }
-    
+
     .sample-queries {
         grid-template-columns: 1fr;
     }
-    
+
     .modal-content {
         width: 95%;
         margin: 1rem;
     }
-    
+
     .setting-actions {
         flex-direction: column;
     }
-    
+
     .btn-primary, .btn-secondary {
         width: 100%;
     }
@@ -794,25 +794,25 @@ kbd {
         align-items: flex-start;
         gap: 1rem;
     }
-    
+
     .chat-actions {
         align-self: flex-end;
     }
-    
+
     .input-footer {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
     }
-    
+
     .sidebar-header {
         padding: 1rem;
     }
-    
+
     .conversation-history {
         padding: 0.5rem;
     }
-    
+
     .sidebar-footer {
         padding: 0.5rem;
     }

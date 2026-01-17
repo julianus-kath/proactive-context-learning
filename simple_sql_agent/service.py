@@ -296,20 +296,23 @@ async def process_conversation(request: ConversationRequest):
     if not request.messages or len(request.messages) == 0:
         raise HTTPException(status_code=400, detail="messages cannot be empty")
 
-    # Extract the last user message from conversation
+    # Check that there's at least one user message
+    has_user_message = any(msg.get("role") == "user" for msg in request.messages)
+    if not has_user_message:
+        raise HTTPException(status_code=400, detail="No user message found in conversation")
+
+    # Extract last user message for logging
     last_user_message = ""
     for msg in reversed(request.messages):
         if msg.get("role") == "user":
             last_user_message = msg.get("content", "")
             break
 
-    if not last_user_message:
-        raise HTTPException(status_code=400, detail="No user message found in conversation")
-
     logger.info(f"Processing conversation: {last_user_message[:100]}...")
 
     try:
-        result = await agent.arun(last_user_message)
+        # Pass full conversation history to agent (not just last message)
+        result = await agent.arun(request.messages)
 
         answer = result.get("answer", "No answer generated")
         sql_query = result.get("sql_query")
