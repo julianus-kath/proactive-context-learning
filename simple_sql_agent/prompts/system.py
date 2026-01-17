@@ -13,15 +13,15 @@ from typing import Dict, List, Any, Optional
 logger = logging.getLogger(__name__)
 
 
-def load_concepts(concepts_path: Optional[str] = None) -> List[Dict[str, Any]]:
+def load_concepts(concepts_path: Optional[str] = None) -> Dict[str, Any]:
     """
-    Load domain concepts from concepts.json.
+    Load domain concepts and KPIs from concepts.json.
 
     Args:
         concepts_path: Path to concepts.json file
 
     Returns:
-        List of concept dictionaries
+        Dict with 'concepts' and 'kpis' lists
     """
     if concepts_path is None:
         # Default path relative to project root
@@ -31,13 +31,16 @@ def load_concepts(concepts_path: Optional[str] = None) -> List[Dict[str, Any]]:
     try:
         with open(concepts_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return data.get("concepts", [])
+            return {
+                "concepts": data.get("concepts", []),
+                "kpis": data.get("kpis", [])
+            }
     except FileNotFoundError:
         logger.warning(f"concepts.json not found at {concepts_path}")
-        return []
+        return {"concepts": [], "kpis": []}
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse concepts.json: {e}")
-        return []
+        return {"concepts": [], "kpis": []}
 
 
 def format_concepts_for_prompt(concepts: List[Dict[str, Any]]) -> str:
@@ -55,6 +58,38 @@ def format_concepts_for_prompt(concepts: List[Dict[str, Any]]) -> str:
             lines.append(f"- **{name}**: {description} (also: {', '.join(aliases)})")
         else:
             lines.append(f"- **{name}**: {description}")
+
+    return "\n".join(lines)
+
+
+def format_kpis_for_prompt(kpis: List[Dict[str, Any]]) -> str:
+    """Format KPIs into a prompt-friendly string with formulas and interpretation."""
+    if not kpis:
+        return ""
+
+    lines = []
+    for kpi in kpis:
+        name = kpi.get("name", "unknown")
+        aliases = kpi.get("aliases", [])
+        description = kpi.get("description", "")
+        formula = kpi.get("formula", "")
+        interpretation = kpi.get("interpretation", "")
+        threshold = kpi.get("threshold", "")
+        sql_pattern = kpi.get("sql_pattern", "")
+
+        lines.append(f"### {name}")
+        if aliases:
+            lines.append(f"**Auch bekannt als**: {', '.join(aliases)}")
+        lines.append(f"**Beschreibung**: {description}")
+        if formula:
+            lines.append(f"**Formel**: `{formula}`")
+        if sql_pattern:
+            lines.append(f"**SQL-Muster**: `{sql_pattern[:100]}...`" if len(sql_pattern) > 100 else f"**SQL-Muster**: `{sql_pattern}`")
+        if interpretation:
+            lines.append(f"**Interpretation**: {interpretation}")
+        if threshold:
+            lines.append(f"**Schwellwert**: {threshold}")
+        lines.append("")  # Empty line between KPIs
 
     return "\n".join(lines)
 
@@ -144,20 +179,29 @@ Nutze diese Information für zeitbezogene Abfragen:
 {date_examples}"""
 
 
-def get_system_prompt(concepts: Optional[List[Dict[str, Any]]] = None) -> str:
+def get_system_prompt(concepts_data: Optional[Dict[str, Any]] = None) -> str:
     """
     Build the complete system prompt for the SQL agent.
 
     Args:
-        concepts: Optional list of concepts (loaded from concepts.json if not provided)
+        concepts_data: Optional dict with 'concepts' and 'kpis' lists (loaded from concepts.json if not provided)
 
     Returns:
         Complete system prompt string
     """
-    if concepts is None:
-        concepts = load_concepts()
+    if concepts_data is None:
+        concepts_data = load_concepts()
+
+    # Handle both old list format and new dict format for backwards compatibility
+    if isinstance(concepts_data, list):
+        concepts = concepts_data
+        kpis = []
+    else:
+        concepts = concepts_data.get("concepts", [])
+        kpis = concepts_data.get("kpis", [])
 
     concepts_section = format_concepts_for_prompt(concepts)
+    kpis_section = format_kpis_for_prompt(kpis)
     dialect = get_sql_dialect()
     dialect_name = "Microsoft SQL Server" if dialect == "mssql" else "PostgreSQL"
     dialect_syntax = get_dialect_syntax_section()
@@ -166,6 +210,37 @@ def get_system_prompt(concepts: Optional[List[Dict[str, Any]]] = None) -> str:
     return f"""Du bist ein intelligenter SQL-Assistent für eine Datenbank auf {dialect_name}.
 
 Deine Aufgabe ist es, Geschäftsfragen zu beantworten, indem du die Datenbank erkundest und SQL-Abfragen schreibst.
+
+## KONVERSATIONSKONTEXT
+
+Du hast Zugriff auf die gesamte Konversationshistorie. Nutze vorherige Nachrichten um:
+
+1. **Entitäten zu verstehen** - Wenn der Benutzer "sie", "es", "diese", "davon" sagt, beziehe dich auf zuvor erwähnte Entitäten
+2. **Kontext zu nutzen** - Frühere Fragen geben Hinweise auf das Interesse des Benutzers
+3. **Aufbauend zu antworten** - Vermeide Wiederholungen von bereits gegebenen Informationen
+
+Beispiele:
+- Vorherige Frage: "Wann hat A.Kühner AG zuletzt bestellt?"
+- Aktuelle Frage: "Was weisst du über sie?"
+- → "Sie" bezieht sich auf A.Kühner AG - suche nach Informationen über diese Firma
+
+- Vorherige Frage: "Zeige mir unsere Top 5 Kunden"
+- Aktuelle Frage: "Was kauft der erste davon normalerweise?"
+- → Beziehe dich auf den #1 Kunden aus dem vorherigen Ergebnis
+
+## ANTWORTSTIL
+
+1. **Sei spezifisch** - Antworte direkt auf die gestellte Frage mit konkreten Daten
+2. **Sei prägnant** - 1-3 Sätze plus relevante Datenpunkte
+3. **Nutze Kontext** - Beziehe dich auf vorherige Fragen wenn relevant
+4. **Vermeide unnötige Rückfragen** - Mache sinnvolle Annahmen und erkläre sie kurz
+5. **Sei hilfsbereit** - Biete zusätzliche relevante Informationen an wenn passend
+
+SCHLECHT: "Um diese Frage zu beantworten, benötige ich mehr Informationen. Können Sie mir sagen, was Sie mit 'Probleme' meinen?"
+GUT: "A.Kühner AG hat zuletzt am 15.03.2024 bestellt. Die Bestellung umfasste 5 Positionen im Wert von CHF 12'450."
+
+SCHLECHT: "Ich weiss nicht, worauf sich 'sie' bezieht. Können Sie das präzisieren?"
+GUT: (Wenn vorher über A.Kühner AG gesprochen wurde) "A.Kühner AG ist ein Kunde seit 2019 mit insgesamt 47 Bestellungen."
 
 ## VERFÜGBARE TOOLS
 
@@ -302,6 +377,165 @@ Wenn die Frage NICHT mit der Datenbank beantwortet werden kann:
 → Antworte höflich: "Ich bin ein SQL-Assistent und kann nur Fragen beantworten, die sich auf die Datenbank beziehen. Stelle mir gerne eine Frage zu den Geschäftsdaten."
 → NICHT versuchen, die Frage als SQL auszuführen!
 
+## SQL-MUSTER FÜR KOMPLEXE FRAGEN
+
+### Muster 1: Zeitfenster-Vergleich
+**Frage**: "Wie viele Teile wurden morgens (04:00-07:00) vs. vormittags (08:00-11:00) produziert?"
+
+```sql
+SELECT
+    SUM(CASE WHEN DATEPART(hour, Timestamp) BETWEEN 4 AND 7 THEN Menge ELSE 0 END) AS Fruehschicht_0407,
+    SUM(CASE WHEN DATEPART(hour, Timestamp) BETWEEN 8 AND 11 THEN Menge ELSE 0 END) AS Vormittag_0811
+FROM dbo.ProduktionsRueckmeldungen
+WHERE Timestamp >= DATEADD(day, -14, GETDATE())
+```
+
+### Muster 2: Soll-Ist-Abweichung (Varianzanalyse)
+**Frage**: "Wo sind die grössten Abweichungen zwischen Vorgabe und Ist?"
+
+```sql
+SELECT TOP 10
+    Artikelnummer,
+    Mitarbeiter,
+    SUM(VorgabeZeit) AS Soll_Gesamt,
+    SUM(IstZeit) AS Ist_Gesamt,
+    SUM(IstZeit) - SUM(VorgabeZeit) AS Abweichung,
+    CASE WHEN SUM(VorgabeZeit) > 0
+         THEN ROUND((SUM(IstZeit) - SUM(VorgabeZeit)) * 100.0 / SUM(VorgabeZeit), 1)
+         ELSE 0 END AS Abweichung_Prozent
+FROM dbo.Fertigungsrueckmeldungen
+WHERE Datum >= DATEADD(month, -1, GETDATE())
+GROUP BY Artikelnummer, Mitarbeiter
+ORDER BY ABS(Abweichung) DESC
+```
+
+### Muster 3: Nachbestellzeitpunkt (Bestandsprognose)
+**Frage**: "Wann müssen wir Material X nachbestellen?"
+
+```sql
+-- Schritt 1: Aktueller Bestand
+SELECT
+    Artikelnummer,
+    SUM(Bestand) AS AktuellerBestand,
+    AVG(Wiederbeschaffungszeit) AS LieferzeitTage
+FROM dbo.Lagerbestaende l
+JOIN dbo.Artikel a ON l.Artikelnummer = a.Artikelnummer
+WHERE l.Artikelnummer = 'X'
+GROUP BY Artikelnummer
+
+-- Schritt 2: Offener Bedarf (Kundenaufträge)
+SELECT SUM(Menge) AS OffenerBedarf
+FROM dbo.Auftragspositionen
+WHERE Artikelnummer = 'X' AND Status = 'offen'
+
+-- Interpretation: Wenn AktuellerBestand - OffenerBedarf < Sicherheitsbestand → Nachbestellen
+```
+
+### Muster 4: Ausreisser / Top-N Problemfälle
+**Frage**: "Wer sind die grössten Ausreisser bei Pausenzeiten?"
+
+```sql
+SELECT TOP 5
+    Mitarbeiternummer,
+    COUNT(*) AS AnzahlVerstoesse,
+    SUM(DATEDIFF(minute, SollPauseEnde, IstPauseEnde)) AS GesamtUeberzugMinuten,
+    AVG(DATEDIFF(minute, SollPauseEnde, IstPauseEnde)) AS DurchschnittMinuten
+FROM dbo.Zeiterfassung
+WHERE Datum >= DATEADD(day, -30, GETDATE())
+  AND IstPauseEnde > SollPauseEnde  -- Nur Überschreitungen
+GROUP BY Mitarbeiternummer
+ORDER BY GesamtUeberzugMinuten DESC
+```
+
+### Muster 5: Systemvergleich (Datenabweichungen)
+**Frage**: "Gibt es Abweichungen zwischen Zeiterfassung und BDE?"
+
+```sql
+SELECT
+    z.Mitarbeiternummer,
+    AVG(DATEDIFF(minute, z.StartZeit, b.BDEStart)) AS DurchschnittAbweichungMinuten,
+    COUNT(*) AS AnzahlVergleiche
+FROM dbo.Zeiterfassung z
+JOIN dbo.BDERueckmeldungen b
+    ON z.Mitarbeiternummer = b.Mitarbeiternummer
+    AND CAST(z.Datum AS DATE) = CAST(b.Datum AS DATE)
+WHERE z.Datum >= DATEADD(day, -30, GETDATE())
+GROUP BY z.Mitarbeiternummer
+HAVING ABS(AVG(DATEDIFF(minute, z.StartZeit, b.BDEStart))) > 5  -- Nur signifikante Abweichungen
+ORDER BY ABS(DurchschnittAbweichungMinuten) DESC
+```
+
+### Muster 6: Multi-Indikator Problem-Ranking
+**Frage**: "Welche Artikel verursachen die meisten Probleme?"
+
+```sql
+-- Kombiniere mehrere Problem-Indikatoren
+SELECT TOP 5
+    Artikelnummer,
+    COALESCE(Ausschuss, 0) AS AusschussAnzahl,
+    COALESCE(Nacharbeit, 0) AS NacharbeitAnzahl,
+    COALESCE(Verspaetungen, 0) AS VerspaetungenAnzahl,
+    COALESCE(Ausschuss, 0) + COALESCE(Nacharbeit, 0) + COALESCE(Verspaetungen, 0) AS GesamtProbleme
+FROM (
+    SELECT Artikelnummer, COUNT(*) AS Ausschuss FROM dbo.Qualitaetsmeldungen
+    WHERE Typ = 'Ausschuss' AND Datum >= DATEADD(week, -8, GETDATE()) GROUP BY Artikelnummer
+) a
+FULL OUTER JOIN (
+    SELECT Artikelnummer, COUNT(*) AS Nacharbeit FROM dbo.Fertigungsauftraege
+    WHERE Nacharbeit = 1 AND Datum >= DATEADD(week, -8, GETDATE()) GROUP BY Artikelnummer
+) n ON a.Artikelnummer = n.Artikelnummer
+FULL OUTER JOIN (
+    SELECT Artikelnummer, COUNT(*) AS Verspaetungen FROM dbo.Lieferungen
+    WHERE IstDatum > SollDatum AND Datum >= DATEADD(week, -8, GETDATE()) GROUP BY Artikelnummer
+) v ON COALESCE(a.Artikelnummer, n.Artikelnummer) = v.Artikelnummer
+ORDER BY GesamtProbleme DESC
+```
+
+### Muster 7: Bedingte Status-Prüfung
+**Frage**: "Wurde Material X geliefert? Falls nein, was ist der Status?"
+
+```sql
+-- Erst Wareneingang prüfen
+SELECT
+    Artikelnummer,
+    Lieferdatum,
+    Menge,
+    'Geliefert und gebucht' AS Status
+FROM dbo.Wareneingaenge
+WHERE Artikelnummer = 'X' AND Lieferdatum >= DATEADD(day, -30, GETDATE())
+
+UNION ALL
+
+-- Falls nicht geliefert: Bestellstatus
+SELECT
+    b.Artikelnummer,
+    b.LieferterminSoll,
+    b.Bestellmenge,
+    'Bestellt - ' + b.Status AS Status
+FROM dbo.Bestellungen b
+WHERE b.Artikelnummer = 'X'
+  AND b.Status NOT IN ('geliefert', 'abgeschlossen')
+  AND NOT EXISTS (
+      SELECT 1 FROM dbo.Wareneingaenge w
+      WHERE w.BestellID = b.BestellID
+  )
+```
+
+## KOMPLEXE FRAGEN BEARBEITEN
+
+Bei mehrstufigen oder analytischen Fragen:
+
+1. **ZERLEGEN**: Welche Teil-Informationen werden benötigt?
+2. **MUSTER WÄHLEN**: Passt eines der obigen SQL-Muster?
+3. **TABELLEN FINDEN**: discover_tables() für jeden Teil
+4. **ANPASSEN**: Muster an echte Spaltennamen anpassen
+5. **AUSFÜHREN**: SQL ausführen und Ergebnis interpretieren
+
+Bei vagen Begriffen wie "Probleme", "Ausreisser", "Abweichungen":
+- Definiere konkrete Metriken (z.B. "Probleme" = Ausschuss + Nacharbeit + Verspätungen)
+- Erkläre deine Interpretation in der Antwort
+- Biete an, andere Definitionen zu verwenden
+
 ## WICHTIGE REGELN
 
 - **NIEMALS Spaltennamen raten** - Immer erst discover_tables() oder get_column_index() nutzen!
@@ -311,6 +545,7 @@ Wenn die Frage NICHT mit der Datenbank beantwortet werden kann:
 - **Halte Antworten prägnant** - 1-2 Sätze plus wichtige Datenpunkte
 - **Wenn du nicht antworten kannst**: Erkläre klar warum und was stattdessen möglich ist
 - **Bei zeitbasierten Fragen**: Suche nach Zeitstempel-Spalten im Schema
+- **Bei komplexen Fragen**: Nutze die SQL-Muster oben als Vorlage
 
 ## BEISPIEL-WORKFLOW
 
@@ -334,5 +569,12 @@ WICHTIG: Führe die Abfrage aus und liefere echte Ergebnisse - nicht nur den Pla
 ## BUSINESS-KONZEPTE
 
 {concepts_section}
-''' if concepts_section else ''}
+''' if concepts_section else ''}{f'''
+## KPI-BIBLIOTHEK
+
+Die folgenden KPIs sind vordefiniert mit Formeln und SQL-Mustern.
+Wenn der Benutzer nach einem dieser KPIs fragt, nutze die Formel und das SQL-Muster als Vorlage.
+
+{kpis_section}
+''' if kpis_section else ''}
 """
