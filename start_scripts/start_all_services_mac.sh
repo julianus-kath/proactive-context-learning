@@ -23,8 +23,9 @@ DIM='\033[2m'
 WHITE='\033[0;37m'
 NC='\033[0m' # No Color
 
-# Project root directory
-PROJECT_ROOT="/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/"
+# Project root directory (resolve relative to this script location)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "$PROJECT_ROOT"
 export PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH}"
 
