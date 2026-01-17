@@ -67,7 +67,8 @@ Implement the task according to the technical specification and general engineer
 
 ---
 
-### [ ] Step: New UI Design Spec
+### [x] Step: New UI Design Spec
+<!-- chat-id: 79161076-9994-4755-aad1-15d8d5550c9e -->
 
 Create a precise design specification for the new floating-card chatbot UI described in the 2026 brief:
 - Capture layout (AppShell, SidebarCard, ChatCard, InputBar) and visual tokens (radii, shadows, colors, typography).

@@ -474,3 +474,207 @@
   - New visual styles can be applied mostly via CSS updates.
   - The underlying JS behaviors (timeouts, accessibility, security) remain compatible with redesigned layouts.
 
+## 8. New Floating-Card Chatbot UI – Design Spec
+
+This section defines the target “floating-card” UI that will replace the current split-screen layout. It is deliberately implementation-agnostic so it can be realized either in the existing static HTML app or in a future Next.js/Tailwind implementation.
+
+### 8.1 Layout & Regions
+
+- **AppShell**
+  - Full-viewport container with a subtle, dark gradient background and a centered content column.
+  - Max width `1200–1280px`, horizontal padding `24px` desktop, `16px` mobile.
+  - Uses a vertical flex layout: top spacing → main content grid → small bottom padding.
+  - Provides a consistent background for both cards so they appear as elevated surfaces floating over the shell.
+
+- **Main Grid (Desktop)**
+  - Two-column grid inside the AppShell:
+    - Column 1 (SidebarCard): fixed width `320px`.
+    - Column 2 (ChatCard): flexible width (`minmax(0, 1fr)`), taking remaining space.
+  - Column gap `24px`.
+  - Cards share the same vertical height where possible; ChatCard scrolls internally for messages.
+
+- **SidebarCard**
+  - A vertically-stacked card with three primary zones:
+    - Header:
+      - Product name/title (e.g., “ERP Assistant”).
+      - Small subtitle (“Workspace: <env>” or “ERP SQL Assistant” as copy).
+      - Service status indicator inline with subtitle (dot + text).
+    - Body:
+      - Conversation history list (scrollable).
+      - Optional filters or chips (e.g., “All / Today / Starred”) can be added later.
+    - Footer:
+      - `New chat` primary action.
+      - `Clear history` secondary action.
+  - Scroll behavior:
+    - The card itself does not scroll; only the conversation list scrolls within the body area.
+
+- **ChatCard**
+  - A vertically-stacked card with the following sub-regions:
+    - Header:
+      - Page title (“Ask about your ERP data”).
+      - Short supporting text (“Query your database using natural language”).
+      - Right-aligned icon buttons for Help and Settings.
+    - Conversation body:
+      - MessageList area with messages stacked top-to-bottom.
+      - “Quick actions” / sample prompts section visible when there is no conversation yet and collapsed once messages exist.
+      - Inline typing indicator and error banners appear at the bottom of the MessageList, just above the InputBar.
+    - InputBar:
+      - Sticky, anchored to the bottom of the card.
+      - Contains the multiline text input, Send button, Stop button, character counter, and keyboard shortcut hint.
+  - The MessageList is the primary scroll container for the ChatCard.
+
+- **InputBar**
+  - Lives inside the ChatCard; does not float separately at the window edge.
+  - Layout:
+    - Main row: textarea + Send button + Stop button.
+    - Secondary row: character counter on the left; keyboard shortcut hint on the right.
+  - Behavior:
+    - Textarea auto-resizes up to a max height, then scrolls.
+    - Send is disabled when empty or while loading.
+    - Stop is visible only when a request is in-flight.
+
+### 8.2 Visual Design Tokens
+
+Tokens should be defined so they can map either to CSS custom properties (current app) or Tailwind theme tokens (future Next.js app).
+
+- **Color Tokens**
+  - Neutrals:
+    - `--color-bg-app`: dark desaturated background (reuse `--primary-dark`).
+    - `--color-bg-card`: light surface for cards (reuse `--light-background` / `#F8F8F8`).
+    - `--color-bg-subtle`: slightly darker than card (e.g., `#EEF0F4`) for nested elements.
+    - `--color-border-subtle`: soft border for cards and inputs (reuse `--darker-grey-4`).
+  - Accent / Brand:
+    - `--color-accent`: primary brand blue (reuse `--primary-accent`).
+    - `--color-accent-soft`: tint of accent for chips, badges.
+    - `--color-accent-strong`: darker accent for hover/active states (`--blue-hover` / `--blue-active`).
+  - Semantic:
+    - `--color-success`, `--color-warning`, `--color-error` reusing existing tokens.
+    - Text colors:
+      - `--color-text-primary`: dark text on light surfaces (`#111827`-ish).
+      - `--color-text-secondary`: muted text (`--darker-grey-2`).
+      - `--color-text-inverse`: white on dark/accent backgrounds.
+
+- **Radius Tokens**
+  - `--radius-xs`: `4px` (chips, small buttons).
+  - `--radius-sm`: `8px` (buttons, small surfaces).
+  - `--radius-md`: `12px` (inputs, message bubbles).
+  - `--radius-lg`: `16px` (current welcome card, modals).
+  - `--radius-xl`: `24px` (SidebarCard, ChatCard outer corners to emphasize “floating”).
+
+- **Shadow Tokens**
+  - `--shadow-soft`: `0 4px 14px rgba(15, 23, 42, 0.18)` – default card elevation.
+  - `--shadow-strong`: `0 18px 45px rgba(15, 23, 42, 0.35)` – hover/focus or modal.
+  - Cards should appear subtly elevated from the app background but not overly “glassy”.
+
+- **Typography**
+  - Font family: continue using Inter system stack.
+  - Type scale (desktop):
+    - Heading XL (hero): `28px` / `1.2` line height – ChatCard header title.
+    - Heading M: `20px` – modal titles, SidebarCard title.
+    - Body: `14–16px` – primary text in messages and prompts.
+    - Caption: `12px` – timestamps, helper text, char counter.
+  - Weights:
+    - 600 for headings.
+    - 500 for key labels/actions.
+    - 400 for body text.
+
+- **Spacing**
+  - Base spacing unit: `4px`.
+  - Common paddings:
+    - Card outer padding: `20–24px`.
+    - MessageList padding: `20px` horizontal, `24px` top/bottom.
+    - InputBar padding: `16–20px` top and bottom inside card.
+
+### 8.3 Responsive Behavior
+
+- **Desktop (≥ 1024px)**
+  - AppShell:
+    - Uses a centered two-column grid as described above.
+    - SidebarCard width locked at `320px`, ChatCard grows with viewport up to max width.
+  - Cards share the same vertical rhythm—top padding aligns, and InputBar aligns with bottom of SidebarCard footer.
+  - InputBar:
+    - Sticky within the ChatCard; when message list overflows, only the MessageList scrolls.
+
+- **Tablet (768–1023px)**
+  - AppShell:
+    - Switch to a stacked layout: SidebarCard on top, ChatCard below.
+    - Cards full width of the content column (still centered with outer padding).
+  - Conversation history remains visible, but the height is reduced; conversation list scrolls in a constrained area.
+  - InputBar remains sticky at the bottom of the ChatCard; the viewport scrolls the entire ChatCard while keeping the InputBar in view as much as possible.
+
+- **Mobile (< 768px)**
+  - Default view prioritizes the ChatCard:
+    - ChatCard full-width, edge-to-edge within content padding.
+    - SidebarCard is hidden behind a “History” affordance (e.g., button in the ChatCard header).
+  - Sidebar behavior:
+    - Tapping the History button reveals the SidebarCard as:
+      - Either a full-screen slide-over from the left, or
+      - A bottom sheet that covers ~80% of the height.
+    - Sidebar overlay includes a close button and trap focus while open.
+  - InputBar:
+    - Sticks to the bottom of the viewport (safe-area aware on mobile devices).
+    - MessageList scrolls in the space above InputBar; “Jump to latest” pill appears as needed.
+
+### 8.4 Mapping Existing UX Features Into the New Layout
+
+- **Service Status Indicator**
+  - Moves into the SidebarCard header under the assistant title, using:
+    - Status dot + label (“Connecting…”, “Service online”, “Service offline”, “Degraded”).
+    - Color mapping aligned with semantic tokens (success/warning/error).
+  - On mobile, when Sidebar is hidden, a compact status chip (icon + text) appears in the ChatCard header to keep status visible.
+
+- **Conversation History**
+  - Lives entirely inside the SidebarCard body as the primary scrollable region.
+  - Conversation items retain:
+    - Button semantics (keyboard focusable, `aria-label` with conversation title).
+    - Title + last message preview + timestamp.
+  - “New chat” primary button appears above the list (or in the Sidebar footer) to differentiate “start fresh thread” from “Clear history”.
+
+- **Sample Prompts / Quick Actions**
+  - On empty state:
+    - Display inside ChatCard as a “Quick actions” section at the top of the MessageList area.
+    - Each sample prompt is a pill-like button in a responsive grid (1–2 columns on mobile, 2–3 on desktop).
+  - After the user sends at least one message:
+    - Collapse the quick actions into a small row of chips under the ChatCard header, or hide them to avoid vertical clutter.
+
+- **Typing Indicator**
+  - Rendered inline at the bottom of the MessageList within ChatCard:
+    - Appears above the InputBar when `isLoading` is true.
+    - Uses subtle dots animation and text like “Assistant is thinking…”.
+  - On mobile, ensure it remains visible in the scrollable area and does not push the InputBar off-screen.
+
+- **Errors and Clarifications**
+  - Error messages:
+    - Appear as standard bot bubbles styled with an error variant (border + icon).
+    - Include a Retry button inline, consistent with current implementation.
+  - Clarification messages:
+    - Use the `.clarification` style, but visually aligned with the new card aesthetic (e.g., warm background, label “Clarification needed”, quick-reply chips beneath).
+
+- **Help & Settings**
+  - Triggered from icon buttons in the ChatCard header.
+  - Modal patterns remain the same (focus trap, ESC to close) but align visually with the floating-card theme:
+    - Centered dialogs with `--radius-lg` and `--shadow-strong`.
+
+- **Observability Hooks**
+  - Thumbs up/down controls (if added later) live at the bottom-right of each assistant message bubble in the ChatCard.
+  - Minimal additional chrome so as not to conflict with the card’s clean aesthetic.
+
+### 8.5 States & Visual Feedback
+
+- **Empty State**
+  - ChatCard shows a welcoming hero (icon + title + description) and the Quick actions section.
+  - SidebarCard shows “No conversations yet” copy, consistent with current history empty state.
+
+- **Busy State**
+  - No full-screen overlay; instead:
+    - InputBar shows the Stop button.
+    - Typing indicator appears at the bottom of the MessageList.
+    - Send button disabled while a request is active.
+
+- **Error State**
+  - Affected assistant bubble uses error styling plus Retry.
+  - Optionally, a small non-blocking toast (existing `showNotification`) can appear aligned to the top-right of the AppShell for global issues (e.g., service offline).
+
+- **Offline / Degraded**
+  - Status dot and label in SidebarCard header reflect the state.
+  - The Send button can be disabled when “offline”, with tooltip text indicating connectivity issues.
