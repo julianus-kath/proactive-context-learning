@@ -607,14 +607,30 @@ class ERPChatbot {
 
             case 'tool_call':
                 const toolName = event.tool_name || 'unknown';
+                const toolInput = event.tool_input || {};
                 let toolLabel = toolName;
 
                 if (toolName === 'discover_tables' || toolName.includes('discover')) {
-                    toolLabel = 'Discovering relevant tables...';
+                    const query = toolInput.query || '';
+                    toolLabel = query
+                        ? `Searching for "${query.substring(0, 40)}${query.length > 40 ? '...' : ''}"`
+                        : 'Discovering tables...';
                 } else if (toolName === 'execute_query' || toolName.includes('execute')) {
-                    toolLabel = 'Executing SQL query...';
-                } else if (toolName === 'get_table_schema' || toolName.includes('schema')) {
-                    toolLabel = 'Analyzing table schema...';
+                    const sql = toolInput.sql || '';
+                    const preview = sql.substring(0, 50).replace(/\n/g, ' ');
+                    toolLabel = sql
+                        ? `Executing: ${preview}${sql.length > 50 ? '...' : ''}`
+                        : 'Executing SQL...';
+                } else if (toolName === 'get_schema' || toolName.includes('schema')) {
+                    const tables = toolInput.table_names || [];
+                    toolLabel = tables.length
+                        ? `Analyzing schema: ${tables.slice(0, 2).join(', ')}${tables.length > 2 ? '...' : ''}`
+                        : 'Analyzing table schema...';
+                } else if (toolName === 'get_column_index') {
+                    const tables = toolInput.table_names || [];
+                    toolLabel = tables.length
+                        ? `Checking columns: ${tables.slice(0, 2).join(', ')}${tables.length > 2 ? '...' : ''}`
+                        : 'Checking columns...';
                 } else {
                     toolLabel = `Calling ${toolName}...`;
                 }
