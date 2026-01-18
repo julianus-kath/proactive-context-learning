@@ -23,6 +23,7 @@ KEY FIX: This consolidation ensures ALL tables (including KHKAdressen) are
 import asyncio
 import logging
 import difflib
+import re
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
 from concurrent.futures import ThreadPoolExecutor
@@ -39,51 +40,92 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 class TableNameNormalizer:
-    """Normalize table names for fuzzy matching (handles German prefixes)."""
-    
-    PREFIXES = {
-        'dbo.': '', 'vew': '', 'tbl': '', 'bs': '', 'vk': '',
-        'kd': '', 'mat': '', 'obj': '', 'khk': ''
-    }
-    
+    """Normalize table names for fuzzy matching."""
+
     @staticmethod
     def normalize(name: str) -> str:
-        """Normalize table name by removing prefixes and lowercasing."""
+        """Normalize table name by removing schema prefix and lowercasing."""
         normalized = name.lower()
-        for prefix in TableNameNormalizer.PREFIXES:
-            if normalized.startswith(prefix):
-                normalized = normalized[len(prefix):]
-                break
+        # Only remove standard SQL schema prefix
+        if normalized.startswith('dbo.'):
+            normalized = normalized[4:]
         return normalized
     
+    @staticmethod
+    def extract_components(name: str) -> List[str]:
+        """
+        Extract components from camelCase/PascalCase names using general rules.
+
+        Properly handles:
+        - KHKStatVKKunden -> ["khk", "stat", "vk", "kunden"]
+        - BSEinstellungen -> ["bs", "einstellungen"]
+        - MAArtikel -> ["ma", "artikel"]
+        - XMLParser -> ["xml", "parser"]
+        """
+        # Split on transitions using general CamelCase rules (no hardcoded prefixes)
+        # 1. Insert _ before uppercase that follows lowercase (e.g., Stat_VK)
+        split1 = re.sub(r'([a-z])([A-Z])', r'\1_\2', name)
+        # 2. Insert _ before last uppercase in a run when followed by lowercase
+        #    (e.g., KHKStat -> KHK_Stat, VKKunden -> VK_Kunden)
+        split2 = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1_\2', split1)
+
+        # Split on _ and filter short components
+        components = [c.lower() for c in split2.split('_') if len(c) >= 2]
+        return components
+
+    @staticmethod
+    def safe_fuzzy_match(query: str, target: str) -> float:
+        """
+        Fuzzy match that prevents false suffix matches.
+
+        Problem: "Bestellungen" matches "Einstellungen" (both end in "-stellungen")
+        with similarity 0.833 - but these are completely different words!
+
+        Solution: Require minimum prefix overlap before allowing fuzzy match.
+        """
+        query = query.lower()
+        target = target.lower()
+
+        # Exact substring is always a strong match
+        if query in target:
+            return 0.9
+
+        # For fuzzy matching, require at least first 3 chars (or half the query) to appear
+        # somewhere in the first half of target to prevent false suffix matches
+        min_prefix_len = min(3, len(query) // 2 + 1)
+        query_prefix = query[:min_prefix_len]
+        target_check_region = target[:len(target) // 2 + min_prefix_len]
+
+        if query_prefix not in target_check_region:
+            # Prefix doesn't appear early in target - likely a false suffix match
+            # Still allow very weak match if difflib score is extremely high
+            base_ratio = difflib.SequenceMatcher(None, query, target).ratio()
+            if base_ratio > 0.95:
+                return base_ratio * 0.5  # Heavily penalize
+            return 0.0
+
+        # Prefix matches, safe to use normal fuzzy matching
+        return difflib.SequenceMatcher(None, query, target).ratio()
+
     @staticmethod
     def get_component_match(query: str, name: str) -> float:
         """Check if query matches any component of the table name."""
         query_lower = query.lower()
         name_lower = name.lower()
-        
+
         if query_lower in name_lower:
             return 0.85
-        
-        # Split camelCase/German compound words
-        components = []
-        current = ""
-        for char in name:
-            if char.isupper() or not char.isalpha():
-                if current:
-                    components.append(current.lower())
-                current = ""
-            else:
-                current += char
-        if current:
-            components.append(current.lower())
-        
-        # Find best component match
+
+        # Extract components properly from camelCase name
+        components = TableNameNormalizer.extract_components(name)
+
+        # Find best component match using safe fuzzy matching
         best_match = 0.0
         for component in components:
-            similarity = difflib.SequenceMatcher(None, query_lower, component).ratio()
+            # Use safe fuzzy match to prevent false suffix matches
+            similarity = TableNameNormalizer.safe_fuzzy_match(query_lower, component)
             best_match = max(best_match, similarity)
-        
+
         return best_match
 
 
@@ -384,15 +426,14 @@ class ScoutRunner:
             
             results = []
             query_lower = query.lower()
-            
-            # Extract intent info for ranking boost
-            intent_entities = []
-            intent_operations = []
-            if intent_data:
-                intent_entities = [str(e).lower() for e in (intent_data.get("primary_entities") or [])]
-                intent_entities += [str(e).lower() for e in (intent_data.get("secondary_entities") or [])]
-                intent_operations = [str(op).lower() for op in (intent_data.get("metrics") or [])]
-            
+
+            # Split multi-word queries into tokens for matching
+            # "Umsatz Kunden Bestellungen" -> ["umsatz", "kunden", "bestellungen"]
+            query_tokens = [t.lower().strip() for t in query.split() if len(t.strip()) >= 3]
+            if not query_tokens:
+                # Fallback for short queries
+                query_tokens = [query_lower] if query_lower else []
+
             for table in tables:
                 full_name = table.get("full_name", "")
                 name = table.get("name", "")
@@ -400,96 +441,69 @@ class ScoutRunner:
                 estimated_rows = table.get("estimated_rows", 0)
                 table_type = table.get("type", "TABLE")
                 columns = table.get("columns", [])
-                
+
                 name_lower = name.lower()
+                full_name_lower = full_name.lower()
                 normalized = TableNameNormalizer.normalize(name)
-                
+
+                # Extract table name components for matching
+                table_components = TableNameNormalizer.extract_components(name)
+
                 # Scoring system
                 score = 0.0
                 reasons = []
-                
+                matched_tokens = []
+
                 # 1. Exact match (highest priority)
-                if query_lower == name_lower or query_lower == normalized or query_lower in full_name.lower():
+                if query_lower == name_lower or query_lower == normalized or query_lower in full_name_lower:
                     score = 1.0
                     reasons.append("Exact match")
                 else:
-                    # 2. Fuzzy name match
-                    name_similarity = difflib.SequenceMatcher(None, query_lower, name_lower).ratio()
-                    
-                    # 3. Component match (for German compound words)
-                    component_similarity = TableNameNormalizer.get_component_match(query, name)
-                    
-                    score = max(name_similarity, component_similarity)
-                    
-                    if score >= 0.7:
-                        reasons.append(f"Fuzzy match: {score:.2f}")
+                    # 2. Multi-token matching: count how many query tokens match
+                    for token in query_tokens:
+                        # Check direct substring match
+                        if token in name_lower or token in full_name_lower:
+                            matched_tokens.append(token)
+                            continue
+
+                        # Check component match with safe fuzzy matching
+                        for component in table_components:
+                            if TableNameNormalizer.safe_fuzzy_match(token, component) >= 0.8:
+                                matched_tokens.append(token)
+                                break
+
+                    # Score based on token match ratio
+                    if query_tokens and matched_tokens:
+                        token_match_score = len(matched_tokens) / len(query_tokens)
+                        score = max(score, token_match_score * 0.9)  # Scale to max 0.9
+                        reasons.append(f"Token match: {len(matched_tokens)}/{len(query_tokens)} ({', '.join(matched_tokens)})")
+
+                    # 3. Fallback: single-token fuzzy matching for simple queries
+                    if len(query_tokens) == 1:
+                        # Use safe fuzzy match to prevent false suffix matches
+                        name_similarity = TableNameNormalizer.safe_fuzzy_match(query_lower, name_lower)
+                        component_similarity = TableNameNormalizer.get_component_match(query, name)
+
+                        best_fuzzy = max(name_similarity, component_similarity)
+                        if best_fuzzy > score:
+                            score = best_fuzzy
+                            if score >= 0.7:
+                                reasons.append(f"Fuzzy match: {score:.2f}")
                 
-                # 4. Column name matches
+                # 4. Column name matches (check all query tokens)
                 col_matches = []
                 for col in columns:
                     col_name = col.get("name", "").lower() if isinstance(col, dict) else str(col).lower()
-                    if query_lower in col_name:
-                        col_matches.append(col_name)
-                
+                    for token in query_tokens:
+                        if token in col_name:
+                            col_matches.append(col_name)
+                            break
+
                 if col_matches:
                     score = max(score, 0.65)
                     reasons.append(f"Column match: {', '.join(col_matches[:3])}")
-                
-                # 5. CRITICAL: Apply archive/admin/config penalties
-                # This ensures junk tables are de-ranked
-                penalty_tokens = [
-                    'archiv', 'archive', 'berecht', 'berechtigung', 'permission',
-                    'rechte', 'user', 'users', 'benutzer', 'rolle', 'role',
-                    'config', 'konfiguration', 'belegart', 'belegnummer', 'log', 'audit'
-                ]
-                is_junk = any(tok in name_lower or tok in full_name.lower() for tok in penalty_tokens)
-                if is_junk:
-                    score = max(0.0, score - 0.7)
-                    reasons.append("Archive/admin penalty")
-                
-                # 6. Intent-aware boosting
-                if intent_operations and intent_entities:
-                    # Customer count intent: boost master address/customer tables
-                    if "count" in intent_operations and any(e in ["kunde", "kunden", "customer", "customers"] for e in intent_entities):
-                        if any(tok in name_lower for tok in ["khkadressen", "adressen", "adresse", "kunde", "kunden", "customer"]) and not is_junk:
-                            score = min(1.0, score + 0.6)
-                            reasons.append("Customer master boost")
-                    
-                    # Product count intent: boost product master tables
-                    elif "count" in intent_operations and any(e in ["artikel", "product", "products", "sku", "skus"] for e in intent_entities):
-                        if any(tok in name_lower for tok in ["maartikel", "artikel", "artikel", "product", "products", "sku", "material"]) and not is_junk:
-                            score = min(1.0, score + 0.6)
-                            reasons.append("Product master boost")
-                    
-                    # Product + Sales composite intent: boost when "top" + product + sales detected
-                    elif any(op in ["top", "highest", "best", "most", "ranking"] for op in intent_operations) and \
-                         any(e in ["artikel", "product", "sku"] for e in intent_entities) and \
-                         any(s in intent_entities for s in ["sales", "verkauf", "revenue", "umsatz", "invoice"]):
-                        # Boost both product and sales tables for top-selling queries
-                        if any(tok in name_lower for tok in ["maartikel", "artikel", "product"]) and not is_junk:
-                            score = min(1.0, score + 0.5)
-                            reasons.append("Product (top-selling) boost")
-                        elif any(tok in name_lower for tok in ["vkposition", "rechnungsposition", "position", "rechnung", "rechnungen", "vkbeleg", "vkbelege"]) and not is_junk:
-                            score = min(1.0, score + 0.5)
-                            reasons.append("Sales (top-selling) boost")
-                    
-                    # Revenue/sum intent: STRONG boost for sales transaction tables, penalize non-sales
-                    elif any(op in ["sum", "total", "revenue"] for op in intent_operations):
-                        # STRONG boost for actual sales/invoice tables
-                        if any(tok in name_lower for tok in ["vkposition", "rechnungsposition", "position", "rechnung", "rechnungen", "vkbeleg", "vkbelege", "invoice", "invoices", "order", "orders", "umsatz", "faktura"]) and not is_junk:
-                            # Extra boost if "position" or "rechnung" (core sales tables)
-                            if any(tok in name_lower for tok in ["vkposition", "rechnungsposition", "rechnung", "rechnungen", "invoice"]):
-                                score = min(1.0, score + 0.8)
-                                reasons.append("CORE sales transaction boost")
-                            else:
-                                score = min(1.0, score + 0.5)
-                                reasons.append("Sales transaction boost")
-                        # PENALIZE dispatch/project/warehouse tables for revenue queries
-                        elif any(tok in name_lower for tok in ["dispo", "dispatch", "projekt", "project", "lager", "warehouse", "verursacher"]):
-                            score = max(0.0, score - 0.4)
-                            reasons.append("Non-sales table penalty")
-                
-                # 7. Row count bonus (non-empty tables preferred)
+
+                # 5. Row count bonus (non-empty tables preferred)
                 if estimated_rows and estimated_rows > 0:
                     score = min(1.0, score + 0.05)
                     reasons.append(f"{estimated_rows} rows")
