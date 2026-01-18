@@ -117,4 +117,3 @@ def get_debug_logger() -> DebugLogger:
     if _debug_logger is None:
         _debug_logger = DebugLogger()
     return _debug_logger
-

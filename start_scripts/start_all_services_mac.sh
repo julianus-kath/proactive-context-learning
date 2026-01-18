@@ -2,12 +2,14 @@
 # Mac Machine Startup Script - Web UI + Simple SQL Agent
 # =============================================================================
 # This script starts the Web UI and Simple SQL Agent on Mac.
-# It does NOT start the MCP server; it only communicates with whatever MCP_SERVER_URL points to.
-# The MCP server can run either on Windows (remote) or locally on the Mac.
 #
-# Prerequisites:
-# 1. MCP server (Windows or local) must be running
-# 2. .env file must be configured with MCP_SERVER_URL pointing to the desired MCP server (Windows or local)
+# MCP Server Handling:
+# - If MCP_SERVER_URL points to localhost/127.0.0.1: Auto-starts local MCP server (PostgreSQL)
+# - If MCP_SERVER_URL points to a remote IP: Expects MCP server already running (Windows/MSSQL)
+#
+# To switch databases, just change MCP_SERVER_URL in .env:
+# - PostgreSQL (local): MCP_SERVER_URL=http://localhost:8000
+# - MSSQL (Windows):    MCP_SERVER_URL=http://192.168.1.35:8000
 # =============================================================================
 
 set -e  # Exit on any error
@@ -23,9 +25,8 @@ DIM='\033[2m'
 WHITE='\033[0;37m'
 NC='\033[0m' # No Color
 
-# Project root directory (resolve relative to this script location)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# Project root directory
+PROJECT_ROOT="/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/"
 cd "$PROJECT_ROOT"
 export PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH}"
 
@@ -145,12 +146,18 @@ cleanup() {
     kill_by_name "web_app"
     kill_by_name "debug_langgraph_comprehensive"
     kill_by_name "eval.service"
+    kill_by_name "mcp_server"
 
-    # Kill services on known ports (NOT 8000 - that's on Windows)
+    # Kill services on known ports
     kill_port 3000  # Web UI
     kill_port 2024  # LangGraph Studio (if enabled)
     kill_port 5001  # SQL Agent
     kill_port 7001  # Evaluation & Tracking Service
+
+    # Only kill port 8000 if we started a local MCP server
+    if [ "$MCP_IS_LOCAL" = "1" ]; then
+        kill_port 8000  # Local MCP Server
+    fi
 
     echo -e "${GREEN}✅ All Mac services stopped${NC}"
     exit 0
@@ -241,7 +248,7 @@ else
 fi
 
 # ============================================
-# Check MCP Server Connection
+# Check MCP Server Connection (Auto-start if localhost)
 # ============================================
 echo ""
 echo -e "${BLUE}🔍 Checking MCP Server connection...${NC}"
@@ -251,29 +258,84 @@ MCP_HOST=$(echo $MCP_SERVER_URL | sed -e 's|^[^/]*//||' -e 's|:.*||')
 MCP_PORT=$(echo $MCP_SERVER_URL | sed -e 's|^[^:]*:||' -e 's|/.*||' | grep -o '[0-9]*')
 MCP_PORT=${MCP_PORT:-8000}
 
-echo -e "${YELLOW}   Testing connection to ${MCP_HOST}:${MCP_PORT}...${NC}"
+# Check if MCP server should be started locally (localhost or 127.0.0.1)
+MCP_IS_LOCAL=0
+if [[ "$MCP_HOST" == "localhost" ]] || [[ "$MCP_HOST" == "127.0.0.1" ]]; then
+    MCP_IS_LOCAL=1
+fi
 
-# Test network connectivity
-if command -v nc &> /dev/null; then
-    if nc -z -w 5 $MCP_HOST $MCP_PORT 2>/dev/null; then
-        echo -e "${GREEN}✅ MCP server is reachable${NC}"
+# Auto-start local MCP server if needed
+if [ "$MCP_IS_LOCAL" = "1" ]; then
+    echo -e "${YELLOW}🏠 Local MCP server detected (${MCP_HOST}:${MCP_PORT})${NC}"
+
+    # Check if MCP server is already running
+    if lsof -Pi :$MCP_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo -e "${GREEN}✅ Local MCP server is already running on port ${MCP_PORT}${NC}"
     else
-        echo -e "${RED}❌ Cannot connect to MCP server${NC}"
-        echo -e "${YELLOW}💡 Please check:${NC}"
-        echo -e "   1. MCP server is running"
-        echo -e "   2. Firewall allows port ${MCP_PORT}"
-        echo -e "   3. IP address is correct: ${MCP_HOST}"
-        echo -e "   4. Both machines are on the same network"
-        exit 1
+        echo -e "${YELLOW}🚀 Starting local MCP server (Port ${MCP_PORT})...${NC}"
+
+        # Verify MCP server exists
+        if [ ! -f "$PROJECT_ROOT/mcp_server/server/app.py" ]; then
+            echo -e "${RED}❌ MCP server not found at mcp_server/server/app.py${NC}"
+            exit 1
+        fi
+
+        # Clear old logs
+        > "$LOG_DIR/mcp_server.log"
+
+        # Start MCP server
+        cd "$PROJECT_ROOT"
+        nohup python3 -m mcp_server.server.app > "$LOG_DIR/mcp_server.log" 2>&1 &
+        MCP_SERVER_PID=$!
+        echo -e "${GREEN}✅ Local MCP server started (PID: $MCP_SERVER_PID)${NC}"
+
+        # Wait for MCP server to be ready
+        echo -e "${YELLOW}⏳ Waiting for MCP server to be ready...${NC}"
+        mcp_attempts=0
+        while [ $mcp_attempts -lt 30 ]; do
+            if curl -s "http://${MCP_HOST}:${MCP_PORT}/health" >/dev/null 2>&1; then
+                echo -e "${GREEN}✅ Local MCP server is ready!${NC}"
+                break
+            fi
+            echo -n "."
+            sleep 1
+            mcp_attempts=$((mcp_attempts + 1))
+        done
+
+        if [ $mcp_attempts -ge 30 ]; then
+            echo -e "${RED}❌ MCP server failed to start${NC}"
+            echo -e "${YELLOW}Check logs: tail -f $LOG_DIR/mcp_server.log${NC}"
+            tail -20 "$LOG_DIR/mcp_server.log"
+            exit 1
+        fi
     fi
 else
-    # Fallback to curl if nc not available
-    if curl -s --connect-timeout 5 "${MCP_SERVER_URL}/health" >/dev/null 2>&1; then
-        echo -e "${GREEN}✅ MCP server is reachable${NC}"
+    # Remote MCP server - just check connectivity
+    echo -e "${YELLOW}🌐 Remote MCP server detected (${MCP_HOST}:${MCP_PORT})${NC}"
+    echo -e "${YELLOW}   Testing connection to ${MCP_HOST}:${MCP_PORT}...${NC}"
+
+    # Test network connectivity
+    if command -v nc &> /dev/null; then
+        if nc -z -w 5 $MCP_HOST $MCP_PORT 2>/dev/null; then
+            echo -e "${GREEN}✅ MCP server is reachable${NC}"
+        else
+            echo -e "${RED}❌ Cannot connect to MCP server${NC}"
+            echo -e "${YELLOW}💡 Please check:${NC}"
+            echo -e "   1. MCP server is running on Windows"
+            echo -e "   2. Firewall allows port ${MCP_PORT}"
+            echo -e "   3. IP address is correct: ${MCP_HOST}"
+            echo -e "   4. Both machines are on the same network"
+            exit 1
+        fi
     else
-        echo -e "${RED}❌ Cannot connect to MCP server${NC}"
-        echo -e "${YELLOW}💡 Please ensure your MCP server is running${NC}"
-        exit 1
+        # Fallback to curl if nc not available
+        if curl -s --connect-timeout 5 "${MCP_SERVER_URL}/health" >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ MCP server is reachable${NC}"
+        else
+            echo -e "${RED}❌ Cannot connect to MCP server${NC}"
+            echo -e "${YELLOW}💡 Please ensure your MCP server is running on Windows${NC}"
+            exit 1
+        fi
     fi
 fi
 
@@ -582,11 +644,18 @@ fi
 if [ -n "$EVAL_PID" ]; then
     echo -e "  📊 Eval Service:     http://localhost:7001 (Benchmark & Artifact Tracking)"
 fi
-echo -e "  🗄️  MCP Server:       ${MCP_SERVER_URL}"
+if [ "$MCP_IS_LOCAL" = "1" ]; then
+    echo -e "  🗄️  MCP Server:       ${MCP_SERVER_URL} (Local - PostgreSQL)"
+else
+    echo -e "  🗄️  MCP Server:       ${MCP_SERVER_URL} (Remote - Windows/MSSQL)"
+fi
 echo ""
 echo -e "${BLUE}Logs:${NC}"
 echo -e "  Web UI:             tail -f $LOG_DIR/web_ui.log"
 echo -e "  SQL Agent:          tail -f $LOG_DIR/sql_agent.log"
+if [ "$MCP_IS_LOCAL" = "1" ]; then
+    echo -e "  MCP Server:         tail -f $LOG_DIR/mcp_server.log"
+fi
 if [ -n "$STUDIO_URL" ]; then
     echo -e "  LangGraph Studio:   tail -f $LOG_DIR/langgraph_studio.log"
 fi
