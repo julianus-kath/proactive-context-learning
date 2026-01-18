@@ -16,10 +16,12 @@ import re
 import sys
 import time
 from datetime import datetime
-from typing import Any, AsyncGenerator, Dict, Optional, TYPE_CHECKING
+from typing import Any, AsyncGenerator, Dict, List, Optional, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     from simple_sql_agent.agent import SQLAgentGraph
+
+from simple_sql_agent.debug_logger import get_debug_logger
 
 # Default log file location
 DEFAULT_LOG_FILE = "/tmp/sql_agent_debug.jsonl"
@@ -196,7 +198,7 @@ def tail_log_file(log_file: str, formatter: DebugStreamFormatter):
 
 async def stream_agent_execution(
     agent: "SQLAgentGraph",
-    question: str,
+    input_data: Any,
     max_iterations: Optional[int] = None,
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """
@@ -207,18 +209,40 @@ async def stream_agent_execution(
 
     Args:
         agent: The SQLAgentGraph instance
-        question: User question to process
+        input_data: Either a string (single question) or list of message dicts
         max_iterations: Optional override for max LLM calls
 
     Yields:
         Dict events with type, content, and metadata
     """
-    from langchain_core.messages import HumanMessage
+    from langchain_core.messages import HumanMessage, AIMessage
 
     limit = max_iterations or getattr(agent, 'max_iterations', 15)
 
+    # Handle both string input and messages list
+    if isinstance(input_data, str):
+        # Single question string (backward compatible)
+        messages = [HumanMessage(content=input_data)]
+        display_question = input_data
+    elif isinstance(input_data, list):
+        # Messages array from conversation
+        messages = []
+        display_question = ""
+        for msg in input_data:
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            if role == "user":
+                messages.append(HumanMessage(content=content))
+                display_question = content  # Last user message
+            elif role == "assistant":
+                messages.append(AIMessage(content=content))
+        if not messages:
+            raise ValueError("No valid messages found in input")
+    else:
+        raise ValueError(f"Invalid input type: {type(input_data)}")
+
     initial_state = {
-        "messages": [HumanMessage(content=question)],
+        "messages": messages,
     }
 
     config = {"recursion_limit": limit}
@@ -227,11 +251,15 @@ async def stream_agent_execution(
     iterations = 0
     start_time = time.time()
 
+    # Get debug logger for file logging
+    debug_log = get_debug_logger()
+
     try:
-        # Yield start event
+        # Log and yield start event
+        debug_log.query_start(display_question)
         yield {
             "type": "query_start",
-            "question": question,
+            "question": display_question,
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -246,6 +274,7 @@ async def stream_agent_execution(
 
             # LLM starts thinking
             if event_type == "on_chat_model_start":
+                debug_log.llm_start()
                 yield {
                     "type": "llm_start",
                     "timestamp": datetime.now().isoformat(),
@@ -256,10 +285,12 @@ async def stream_agent_execution(
                 iterations += 1
                 output = event_data.get("output")
                 if output and hasattr(output, "tool_calls") and output.tool_calls:
+                    debug_log.llm_end(content="", has_tool_calls=True)
                     for tool_call in output.tool_calls:
                         tool_name = tool_call.get("name")
                         tool_input = tool_call.get("args", {})
 
+                        debug_log.tool_call(tool_name, tool_input)
                         yield {
                             "type": "tool_call",
                             "tool_name": tool_name,
@@ -271,6 +302,7 @@ async def stream_agent_execution(
                             sql_query = tool_input.get("sql")
 
                 elif output and hasattr(output, "content") and output.content:
+                    debug_log.llm_end(content=output.content, has_tool_calls=False)
                     yield {
                         "type": "llm_response",
                         "content": output.content,
@@ -291,6 +323,7 @@ async def stream_agent_execution(
                 if len(tool_output_str) > 1000:
                     tool_output_str = tool_output_str[:1000] + "..."
 
+                debug_log.tool_result(event_name, tool_output_str)
                 yield {
                     "type": "tool_result",
                     "tool_name": event_name,
@@ -298,8 +331,14 @@ async def stream_agent_execution(
                     "timestamp": datetime.now().isoformat(),
                 }
 
-        # Yield final event
+        # Log and yield final event
         latency_ms = int((time.time() - start_time) * 1000)
+        debug_log.final_answer(
+            answer="[Streaming complete]",
+            sql_query=sql_query,
+            latency_ms=latency_ms,
+            iterations=iterations,
+        )
         yield {
             "type": "complete",
             "sql_query": sql_query,
@@ -309,6 +348,7 @@ async def stream_agent_execution(
         }
 
     except Exception as e:
+        debug_log.error(str(e))
         yield {
             "type": "error",
             "error": str(e),

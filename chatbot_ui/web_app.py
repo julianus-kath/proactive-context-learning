@@ -11,7 +11,7 @@ import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
@@ -171,6 +171,67 @@ async def proxy_process_conversation(request: Request):
         raise HTTPException(status_code=resp.status_code, detail=data)
 
     return data
+
+
+@app.post("/stream_conversation")
+async def stream_conversation(request: Request):
+    """
+    Proxy streaming conversation requests to the LangGraph/agent service.
+
+    Returns a Server-Sent Events (SSE) stream of agent execution events.
+    The API key is attached server-side so it never lives in the browser.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="Invalid request payload")
+
+    messages = body.get("messages")
+    if not messages:
+        raise HTTPException(status_code=400, detail="messages cannot be empty")
+
+    forward_body = {"messages": messages}
+    if API_KEY:
+        forward_body["api_key"] = API_KEY
+
+    target_url = f"{LANGGRAPH_URL}/stream"
+
+    async def event_generator():
+        """Stream events from the backend."""
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                async with client.stream(
+                    "POST",
+                    target_url,
+                    json=forward_body,
+                    headers={"Accept": "text/event-stream"}
+                ) as resp:
+                    if resp.status_code >= 400:
+                        error_text = await resp.aread()
+                        yield f"data: {{\"type\": \"error\", \"error\": \"Backend error: {resp.status_code}\"}}\n\n"
+                        return
+
+                    async for line in resp.aiter_lines():
+                        if line:
+                            yield f"{line}\n"
+                        else:
+                            yield "\n"
+        except httpx.RequestError as exc:
+            yield f"data: {{\"type\": \"error\", \"error\": \"Connection error: {str(exc)}\"}}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
 
 if __name__ == "__main__":
     print("Starting ERP Chatbot Web UI...")

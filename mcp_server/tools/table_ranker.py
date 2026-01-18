@@ -18,6 +18,8 @@ class RankedTable:
     estimated_rows: Optional[int] = None
     column_count: Optional[int] = None
     fk_count: Optional[int] = None
+    columns: Optional[List[str]] = None  # Column names for SQL generation
+    matched_columns: Optional[List[str]] = None  # Columns that matched query entities
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -28,7 +30,9 @@ class RankedTable:
             "reasons": self.reasons,
             "estimated_rows": self.estimated_rows,
             "column_count": self.column_count,
-            "fk_count": self.fk_count
+            "fk_count": self.fk_count,
+            "columns": self.columns,
+            "matched_columns": self.matched_columns
         }
 
 class TableRanker:
@@ -119,10 +123,14 @@ class TableRanker:
                 reasons.append(f"Table name match: {entity_score:.2f}")
 
             # 2. Entity matching on column names (very high weight)
-            column_score = self._score_column_match(table, entities)
+            column_score, matched_cols = self._score_column_match(table, entities)
             if column_score > 0:
                 score += column_score * (self.weights['entity_match'] * 1.2)  # Higher weight for column matches
                 reasons.append(f"Column name match: {column_score:.2f}")
+
+            # Extract all column names for the response (limit to 30 for performance)
+            table_columns = table.get('columns', [])
+            column_names = [col.get('name') for col in table_columns if isinstance(col, dict) and col.get('name')][:30]
 
             # 3. Fuzzy matching for partial matches
             fuzzy_score = self._score_fuzzy_match(name, full_name, entities)
@@ -255,7 +263,9 @@ class TableRanker:
                     reasons=reasons,
                     estimated_rows=estimated_rows,
                     column_count=column_count,
-                    fk_count=fk_count
+                    fk_count=fk_count,
+                    columns=column_names if column_names else None,
+                    matched_columns=matched_cols if matched_cols else None
                 )
                 ranked_tables.append(ranked_table)
 
@@ -321,14 +331,19 @@ class TableRanker:
 
         return min(max_score, 1.0)  # Cap at 1.0
 
-    def _score_column_match(self, table: Dict[str, Any], entities: List[str]) -> float:
-        """Score based on matches against column names from Scout catalog."""
+    def _score_column_match(self, table: Dict[str, Any], entities: List[str]) -> tuple:
+        """
+        Score based on matches against column names from Scout catalog.
+
+        Returns:
+            Tuple of (score: float, matched_columns: List[str])
+        """
         if not entities:
-            return 0.0
+            return 0.0, []
 
         columns = table.get('columns', [])
         if not columns:
-            return 0.0
+            return 0.0, []
 
         max_score = 0.0
         matched_columns = []
@@ -344,21 +359,25 @@ class TableRanker:
                 # Exact match on column name
                 if entity_lower == col_name:
                     max_score = max(max_score, 1.0)
-                    matched_columns.append(col_name)
+                    if col_name not in matched_columns:
+                        matched_columns.append(col_name)
                 # Substring match
                 elif entity_lower in col_name:
                     max_score = max(max_score, 0.8)
-                    matched_columns.append(col_name)
+                    if col_name not in matched_columns:
+                        matched_columns.append(col_name)
                 # Partial match (first 4 chars)
                 elif len(entity_lower) >= 4 and col_name.startswith(entity_lower[:4]):
                     max_score = max(max_score, 0.6)
-                    matched_columns.append(col_name)
+                    if col_name not in matched_columns:
+                        matched_columns.append(col_name)
                 # Reverse: column name in entity
                 elif col_name in entity_lower:
                     max_score = max(max_score, 0.5)
-                    matched_columns.append(col_name)
+                    if col_name not in matched_columns:
+                        matched_columns.append(col_name)
 
-        return min(max_score, 1.0)
+        return min(max_score, 1.0), matched_columns
 
 
     def _score_type_compatibility(self, table: Dict[str, Any], operations: List[str]) -> float:

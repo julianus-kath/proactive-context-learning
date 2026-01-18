@@ -4,11 +4,15 @@ FastAPI service for the Simple SQL Agent.
 Provides a clean REST API for the text-to-SQL agent.
 """
 
+import json
 import logging
 import os
 import time
+import uuid
 from contextlib import asynccontextmanager
-from typing import Any, Dict, Optional
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,17 +34,126 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Global agent instance
+
+class ConversationLogger:
+    """
+    File-based conversation logger.
+
+    Saves each conversation turn to a JSON file for analysis and debugging.
+    Conversations are stored in logs/conversations/ with one file per session.
+    """
+
+    def __init__(self, log_dir: Optional[str] = None):
+        """Initialize the conversation logger."""
+        if log_dir is None:
+            # Default to logs/conversations relative to project root
+            project_root = Path(__file__).parent.parent
+            self.log_dir = project_root / "logs" / "conversations"
+        else:
+            self.log_dir = Path(log_dir)
+
+        # Ensure directory exists
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Conversation logger initialized: {self.log_dir}")
+
+    def _get_session_file(self, conversation_id: str) -> Path:
+        """Get the file path for a conversation session."""
+        # Use date prefix for easier organization
+        date_prefix = datetime.now().strftime("%Y-%m-%d")
+        return self.log_dir / f"{date_prefix}_{conversation_id}.json"
+
+    def _load_session(self, conversation_id: str) -> Dict[str, Any]:
+        """Load existing session data or create new."""
+        file_path = self._get_session_file(conversation_id)
+        if file_path.exists():
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+
+        # Create new session
+        return {
+            "conversation_id": conversation_id,
+            "created_at": datetime.now().isoformat(),
+            "turns": []
+        }
+
+    def _save_session(self, conversation_id: str, session_data: Dict[str, Any]):
+        """Save session data to file."""
+        file_path = self._get_session_file(conversation_id)
+        session_data["updated_at"] = datetime.now().isoformat()
+
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(session_data, f, indent=2, ensure_ascii=False)
+        except IOError as e:
+            logger.error(f"Failed to save conversation log: {e}")
+
+    def log_turn(
+        self,
+        conversation_id: str,
+        messages: List[Dict[str, str]],
+        response: str,
+        sql_query: Optional[str] = None,
+        success: bool = True,
+        latency_ms: Optional[int] = None,
+        error: Optional[str] = None
+    ):
+        """
+        Log a conversation turn.
+
+        Args:
+            conversation_id: Unique ID for the conversation session
+            messages: Full message history sent to the agent
+            response: Agent's response
+            sql_query: SQL query executed (if any)
+            success: Whether the query was successful
+            latency_ms: Response latency in milliseconds
+            error: Error message (if any)
+        """
+        session = self._load_session(conversation_id)
+
+        # Extract the last user message
+        last_user_message = ""
+        for msg in reversed(messages):
+            if msg.get("role") == "user":
+                last_user_message = msg.get("content", "")
+                break
+
+        turn = {
+            "turn_number": len(session["turns"]) + 1,
+            "timestamp": datetime.now().isoformat(),
+            "user_message": last_user_message,
+            "full_context_length": len(messages),
+            "assistant_response": response,
+            "sql_query": sql_query,
+            "success": success,
+            "latency_ms": latency_ms,
+            "error": error
+        }
+
+        session["turns"].append(turn)
+        self._save_session(conversation_id, session)
+
+        logger.info(f"Logged conversation turn {turn['turn_number']} for session {conversation_id[:8]}...")
+
+
+# Global instances
 agent: Optional[SQLAgentGraph] = None
+conversation_logger: Optional[ConversationLogger] = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan manager for startup/shutdown."""
-    global agent
+    global agent, conversation_logger
 
     # Startup
     logger.info("Starting Simple SQL Agent service...")
+
+    # Initialize conversation logger
+    conversation_logger = ConversationLogger()
 
     # Check MCP connectivity
     mcp = get_mcp_client()
@@ -104,6 +217,12 @@ class ConversationRequest(BaseModel):
     """Request model for process_conversation endpoint (frontend compatibility)."""
     messages: list
     conversation_id: Optional[str] = None
+    api_key: Optional[str] = None
+
+
+class StreamConversationRequest(BaseModel):
+    """Request model for streaming conversation endpoint."""
+    messages: list
     api_key: Optional[str] = None
 
 
@@ -310,41 +429,76 @@ async def process_conversation(request: ConversationRequest):
 
     logger.info(f"Processing conversation: {last_user_message[:100]}...")
 
+    # Generate or use existing conversation ID
+    conv_id = request.conversation_id or str(uuid.uuid4())[:8]
+    start_time = time.time()
+
     try:
         # Pass full conversation history to agent (not just last message)
         result = await agent.arun(request.messages)
 
         answer = result.get("answer", "No answer generated")
         sql_query = result.get("sql_query")
+        success = result.get("success", False)
+        latency_ms = int((time.time() - start_time) * 1000)
+
+        # Log the conversation turn
+        if conversation_logger:
+            conversation_logger.log_turn(
+                conversation_id=conv_id,
+                messages=request.messages,
+                response=answer,
+                sql_query=sql_query,
+                success=success,
+                latency_ms=latency_ms
+            )
 
         return ConversationResponse(
             final_response=answer,
             response=answer,
             sql_query=sql_query,
-            status="success" if result.get("success", False) else "error",
+            status="success" if success else "error",
         )
 
     except Exception as e:
         logger.error(f"Conversation processing failed: {e}", exc_info=True)
+        latency_ms = int((time.time() - start_time) * 1000)
+
+        error_response = f"An error occurred: {str(e)}"
+
+        # Log the failed conversation turn
+        if conversation_logger:
+            conversation_logger.log_turn(
+                conversation_id=conv_id,
+                messages=request.messages,
+                response=error_response,
+                sql_query=None,
+                success=False,
+                latency_ms=latency_ms,
+                error=str(e)
+            )
 
         return ConversationResponse(
-            final_response=f"An error occurred: {str(e)}",
-            response=f"An error occurred: {str(e)}",
+            final_response=error_response,
+            response=error_response,
             sql_query=None,
             status="error",
         )
 
 
 @app.post("/stream")
-async def stream_query(request: QueryRequest):
+async def stream_query(request: StreamConversationRequest):
     """
     Stream agent execution in real-time.
 
     Returns a Server-Sent Events (SSE) stream of agent execution events.
     Each event includes the agent's thought, tool calls, results, and final answer.
 
+    Accepts either:
+    - messages: list of conversation messages (for multi-turn conversations)
+
     Args:
-        request: QueryRequest with the user's question
+        request: StreamConversationRequest with messages array
 
     Returns:
         StreamingResponse with newline-delimited JSON events
@@ -352,20 +506,36 @@ async def stream_query(request: QueryRequest):
     if agent is None:
         raise HTTPException(status_code=503, detail="Agent not initialized")
 
-    if not request.question or not request.question.strip():
-        raise HTTPException(status_code=400, detail="Question is required")
+    # Validate API key if provided
+    expected_api_key = os.getenv("API_KEY", "supersecretapikey")
+    if request.api_key and request.api_key != expected_api_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
 
-    logger.info(f"Starting stream for query: {request.question[:100]}...")
+    # Validate messages
+    if not request.messages or len(request.messages) == 0:
+        raise HTTPException(status_code=400, detail="messages cannot be empty")
+
+    # Check that there's at least one user message
+    has_user_message = any(msg.get("role") == "user" for msg in request.messages)
+    if not has_user_message:
+        raise HTTPException(status_code=400, detail="No user message found in conversation")
+
+    # Extract last user message for logging
+    last_user_message = ""
+    for msg in reversed(request.messages):
+        if msg.get("role") == "user":
+            last_user_message = msg.get("content", "")
+            break
+
+    logger.info(f"Starting stream for conversation: {last_user_message[:100]}...")
 
     async def event_generator():
         """Generate SSE events for agent execution."""
         try:
-            async for event in stream_agent_execution(agent, request.question):
-                import json
+            async for event in stream_agent_execution(agent, request.messages):
                 yield f"data: {json.dumps(event)}\n\n"
         except Exception as e:
             logger.error(f"Streaming error: {e}")
-            import json
             yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
 
     return StreamingResponse(

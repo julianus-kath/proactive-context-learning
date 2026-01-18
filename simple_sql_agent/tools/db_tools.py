@@ -296,8 +296,18 @@ def discover_tables(query: str, include_join_paths: bool = True) -> str:
             # Step 1: Search for relevant tables
             search_results = await client.search_tables(query, limit=5)
 
-            if not search_results:
-                return {"ok": False, "error": f"No tables found for '{query}'"}
+            # Fallback: If search returns empty or no results, try list_tables
+            if not search_results or (isinstance(search_results, str) and "no tables found" in search_results.lower()):
+                logger.info(f"search_tables returned no results for '{query}', falling back to list_tables")
+                list_result = await client.list_tables(page=1, page_size=20)
+                if list_result:
+                    return {
+                        "ok": True,
+                        "text": f"Search for '{query}' found no direct matches. Here are all available tables:\n\n{list_result}",
+                        "tables": [],
+                        "fallback_used": True,
+                    }
+                return {"ok": False, "error": f"No tables found for '{query}' and list_tables also returned empty"}
 
             # Parse search results - MCP returns text that may contain JSON
             tables = []
@@ -324,24 +334,33 @@ def discover_tables(query: str, include_join_paths: bool = True) -> str:
                 elif isinstance(t, str):
                     table_names.append(t)
 
-            # Step 2: Get column index for all tables at once
+            # Step 2: Get column index for all tables at once (with detailed FK info)
             columns_result = await client.get_column_index(table_names)
             columns = {}
+            column_details = {}  # Store detailed column info including FK flags
             if isinstance(columns_result, dict) and "data" in columns_result:
                 for tname, tdata in columns_result["data"].items():
                     if isinstance(tdata, dict):
                         columns[tname] = tdata.get("columns", [])
+                        column_details[tname] = tdata.get("column_details", [])
                     elif isinstance(tdata, list):
                         columns[tname] = tdata
+                        column_details[tname] = []
 
-            # Step 3: Get relationships for join paths
+            # Step 3: Get relationships for join paths with FK column details
             relationships = {}
+            relationship_details = {}  # Store detailed FK info
             if include_join_paths:
                 for table_name in table_names[:3]:  # Limit to top 3
                     try:
                         rels = await client.list_relations(table_name)
                         if isinstance(rels, dict):
-                            relationships[table_name] = rels.get("neighbors", [])
+                            neighbors = rels.get("neighbors", [])
+                            relationships[table_name] = neighbors
+                            # Try to get FK column details from the response
+                            fk_details = rels.get("foreign_keys", [])
+                            if fk_details:
+                                relationship_details[table_name] = fk_details
                     except Exception:
                         pass
 
@@ -363,15 +382,63 @@ def discover_tables(query: str, include_join_paths: bool = True) -> str:
                         "row_count": table.get("estimated_rows", 0),
                     })
 
-            # Extract join paths from relationships
+            # Extract join paths from relationships with FK column names
             for table_name, neighbors in relationships.items():
                 for neighbor in neighbors:
                     if neighbor in table_names:
-                        result["join_paths"].append({
+                        # Try to find the actual FK column names
+                        from_column = None
+                        to_column = None
+
+                        # Method 1: Check if we have detailed FK info from list_relations
+                        fk_details = relationship_details.get(table_name, [])
+                        for fk in fk_details:
+                            if isinstance(fk, dict):
+                                ref_table = fk.get("referenced_table") or fk.get("to_table")
+                                if ref_table == neighbor:
+                                    from_column = fk.get("column") or fk.get("from_column")
+                                    to_column = fk.get("referenced_column") or fk.get("to_column")
+                                    break
+
+                        # Method 2: Infer from column details (FK columns often match PK names)
+                        if not from_column:
+                            from_cols = column_details.get(table_name, [])
+                            to_cols = column_details.get(neighbor, [])
+
+                            # Find FK columns in the "from" table
+                            for col in from_cols:
+                                if isinstance(col, dict) and col.get("is_foreign_key"):
+                                    col_name = col.get("name", "")
+                                    # Check if this FK column name exists in the target table (likely PK)
+                                    to_col_names = [c.get("name") for c in to_cols if isinstance(c, dict)]
+                                    if col_name in to_col_names:
+                                        from_column = col_name
+                                        to_column = col_name
+                                        break
+                                    # Also check common patterns like TableNameID -> ID
+                                    neighbor_short = neighbor.split(".")[-1] if "." in neighbor else neighbor
+                                    if col_name.lower().startswith(neighbor_short.lower().rstrip("s")):
+                                        from_column = col_name
+                                        # Find likely PK in target
+                                        for to_col in to_cols:
+                                            if isinstance(to_col, dict) and to_col.get("is_primary_key"):
+                                                to_column = to_col.get("name")
+                                                break
+                                        if not to_column:
+                                            to_column = col_name  # Assume same name
+                                        break
+
+                        join_path = {
                             "from": table_name,
                             "to": neighbor,
                             "type": "FK"
-                        })
+                        }
+                        if from_column:
+                            join_path["from_column"] = from_column
+                        if to_column:
+                            join_path["to_column"] = to_column
+
+                        result["join_paths"].append(join_path)
 
             return result
 
@@ -417,7 +484,17 @@ def discover_tables(query: str, include_join_paths: bool = True) -> str:
         if join_paths:
             lines.append("### Join Paths")
             for path in join_paths:
-                lines.append(f"- {path.get('from', '?')} -> {path.get('to', '?')} ({path.get('type', 'FK')})")
+                from_tbl = path.get('from', '?')
+                to_tbl = path.get('to', '?')
+                from_col = path.get('from_column')
+                to_col = path.get('to_column')
+
+                if from_col and to_col:
+                    lines.append(f"- {from_tbl}.{from_col} -> {to_tbl}.{to_col} (FK)")
+                elif from_col:
+                    lines.append(f"- {from_tbl}.{from_col} -> {to_tbl} (FK)")
+                else:
+                    lines.append(f"- {from_tbl} -> {to_tbl} ({path.get('type', 'FK')})")
 
         return "\n".join(lines)
 

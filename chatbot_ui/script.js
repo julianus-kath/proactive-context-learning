@@ -16,7 +16,11 @@ class ERPChatbot {
         this.lastFocusedElement = null;
         this.activeModal = null;
         this.theme = 'light';
-        
+        this.streamReader = null;
+        this.thinkingContainer = null;
+        this.thinkingStartTime = null;
+        this.useStreaming = true;
+
         this.initializeElements();
         this.bindEvents();
         this.loadSettings();
@@ -36,7 +40,7 @@ class ERPChatbot {
         this.chatMessages = document.getElementById('chatMessages');
         this.messageInput = document.getElementById('messageInput');
         this.sendBtn = document.getElementById('sendBtn');
-        this.stopBtn = document.getElementById('stopBtn');
+        this.inputHelpBtn = document.getElementById('inputHelpBtn');
         this.loadingOverlay = document.getElementById('loadingOverlay');
         this.typingIndicator = document.getElementById('typingIndicator');
         this.jumpToLatestBtn = document.getElementById('jumpToLatestBtn');
@@ -73,8 +77,8 @@ class ERPChatbot {
         if (this.sendBtn) {
             this.sendBtn.addEventListener('click', () => this.sendMessage());
         }
-        if (this.stopBtn) {
-            this.stopBtn.addEventListener('click', () => this.stopCurrentRequest());
+        if (this.inputHelpBtn) {
+            this.inputHelpBtn.addEventListener('click', () => this.showModal('help'));
         }
         
         // Button events
@@ -385,7 +389,13 @@ class ERPChatbot {
             this.addMessage('user', message);
             this.messages.push({ role: 'user', content: message });
 
-            response = await this.sendToService();
+            if (this.useStreaming) {
+                // Use streaming mode
+                response = await this.sendMessageStreaming();
+            } else {
+                // Use non-streaming mode
+                response = await this.sendToService();
+            }
 
             if (response && response.error) {
                 status = 'backend_error';
@@ -444,6 +454,7 @@ class ERPChatbot {
             const durationMs = Math.round(endTime - startTime);
             this.stopRequested = false;
             this.setLoading(false);
+            this.hideThinkingContainer();
             if (this.messageInput) {
                 this.messageInput.focus();
             }
@@ -500,6 +511,221 @@ class ERPChatbot {
         }
 
         return await response.json();
+    }
+
+    async sendMessageStreaming() {
+        const payload = {
+            messages: this.messages
+        };
+
+        const baseUrl = this.apiKeyIsServerManaged || !this.serviceUrl ? '' : this.serviceUrl.replace(/\/+$/, '');
+        const url = `${baseUrl}/stream_conversation`;
+
+        const controller = new AbortController();
+        this.currentRequestController = controller;
+        this.thinkingStartTime = Date.now();
+
+        let finalResponse = null;
+        let llmContent = '';
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+            });
+
+            if (!response.ok) {
+                throw new Error(`Service error (${response.status})`);
+            }
+
+            if (!response.body) {
+                throw new Error('ReadableStream not supported');
+            }
+
+            const reader = response.body.getReader();
+            this.streamReader = reader;
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            this.showThinkingContainer();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const eventData = JSON.parse(line.slice(6));
+                            const result = this.handleStreamEvent(eventData);
+                            if (result && result.type === 'llm_response') {
+                                llmContent = result.content || '';
+                            }
+                            if (result && result.type === 'complete') {
+                                finalResponse = {
+                                    final_response: llmContent,
+                                    sql_query: result.sql_query,
+                                    status: 'success'
+                                };
+                            }
+                            if (result && result.type === 'error') {
+                                finalResponse = { error: result.error };
+                            }
+                        } catch (parseError) {
+                            console.warn('Failed to parse SSE event:', line, parseError);
+                        }
+                    }
+                }
+            }
+
+            this.streamReader = null;
+            return finalResponse || { final_response: llmContent || 'No response received', status: 'success' };
+        } finally {
+            this.currentRequestController = null;
+            this.streamReader = null;
+        }
+    }
+
+    handleStreamEvent(event) {
+        const type = event.type;
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        switch (type) {
+            case 'query_start':
+                this.addThinkingStep('Starting analysis...', timestamp);
+                break;
+
+            case 'llm_start':
+                this.addThinkingStep('Reasoning about your question...', timestamp);
+                break;
+
+            case 'tool_call':
+                const toolName = event.tool_name || 'unknown';
+                let toolLabel = toolName;
+
+                if (toolName === 'discover_tables' || toolName.includes('discover')) {
+                    toolLabel = 'Discovering relevant tables...';
+                } else if (toolName === 'execute_query' || toolName.includes('execute')) {
+                    toolLabel = 'Executing SQL query...';
+                } else if (toolName === 'get_table_schema' || toolName.includes('schema')) {
+                    toolLabel = 'Analyzing table schema...';
+                } else {
+                    toolLabel = `Calling ${toolName}...`;
+                }
+
+                this.addThinkingStep(toolLabel, timestamp);
+                break;
+
+            case 'tool_result':
+                this.updateLastThinkingStep('complete');
+                break;
+
+            case 'llm_response':
+                return { type: 'llm_response', content: event.content };
+
+            case 'complete':
+                const latency = event.latency_ms || (Date.now() - this.thinkingStartTime);
+                this.addThinkingStep(`Completed in ${latency}ms`, timestamp);
+                return { type: 'complete', sql_query: event.sql_query };
+
+            case 'error':
+                this.addThinkingStep(`Error: ${event.error}`, timestamp);
+                return { type: 'error', error: event.error };
+        }
+
+        return null;
+    }
+
+    showThinkingContainer() {
+        if (!this.chatMessages) return;
+
+        // Remove existing thinking container if any
+        this.hideThinkingContainer();
+
+        const container = document.createElement('div');
+        container.className = 'thinking-container';
+        container.innerHTML = `
+            <button type="button" class="thinking-header" aria-label="Toggle thinking details">
+                <div class="thinking-spinner"></div>
+                <span class="thinking-title">Agent is working...</span>
+                <span class="toggle-arrow"></span>
+            </button>
+            <div class="thinking-steps"></div>
+        `;
+
+        // Bind toggle event to the whole header
+        const header = container.querySelector('.thinking-header');
+        if (header) {
+            header.addEventListener('click', () => {
+                container.classList.toggle('collapsed');
+            });
+        }
+
+        this.chatMessages.appendChild(container);
+        this.thinkingContainer = container;
+        this.scrollToBottom();
+    }
+
+    hideThinkingContainer() {
+        if (this.thinkingContainer) {
+            this.thinkingContainer.classList.add('completed');
+            const header = this.thinkingContainer.querySelector('.thinking-header');
+            if (header) {
+                const spinner = header.querySelector('.thinking-spinner');
+                if (spinner) spinner.remove();
+                const title = header.querySelector('.thinking-title');
+                if (title) title.textContent = 'Agent completed';
+            }
+            // Auto-collapse after completion
+            this.thinkingContainer.classList.add('collapsed');
+        }
+    }
+
+    addThinkingStep(text, time) {
+        if (!this.thinkingContainer) return;
+
+        const stepsDiv = this.thinkingContainer.querySelector('.thinking-steps');
+        if (!stepsDiv) return;
+
+        const step = document.createElement('div');
+        step.className = 'thinking-step';
+        step.innerHTML = `
+            <span class="step-text">${this.escapeHtml(text)}</span>
+            <span class="step-time">${time}</span>
+        `;
+
+        stepsDiv.appendChild(step);
+
+        // Animate in
+        requestAnimationFrame(() => {
+            step.classList.add('visible');
+        });
+
+        this.scrollToBottom();
+    }
+
+    updateLastThinkingStep(status) {
+        if (!this.thinkingContainer) return;
+
+        const stepsDiv = this.thinkingContainer.querySelector('.thinking-steps');
+        if (!stepsDiv) return;
+
+        const lastStep = stepsDiv.lastElementChild;
+        if (lastStep) {
+            lastStep.classList.add('completed');
+        }
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     addMessage(sender, content, isError = false, isClarification = false, clarificationOptions = null) {
@@ -626,17 +852,6 @@ class ERPChatbot {
         if (this.sendBtn) {
             const hasText = this.messageInput && this.messageInput.value.trim().length > 0;
             this.sendBtn.disabled = loading || !hasText;
-            this.sendBtn.hidden = !!loading;
-        }
-        if (this.stopBtn) {
-            this.stopBtn.hidden = !loading;
-            this.stopBtn.disabled = !loading;
-        }
-
-        if (loading) {
-            this.showTypingIndicator();
-        } else {
-            this.hideTypingIndicator();
         }
     }
 
@@ -989,10 +1204,19 @@ class ERPChatbot {
     }
 
     stopCurrentRequest() {
+        this.stopRequested = true;
         if (this.currentRequestController) {
-            this.stopRequested = true;
             this.currentRequestController.abort();
         }
+        if (this.streamReader) {
+            try {
+                this.streamReader.cancel();
+            } catch (e) {
+                console.warn('Error canceling stream:', e);
+            }
+            this.streamReader = null;
+        }
+        this.hideThinkingContainer();
     }
 
     retryLastUserMessage() {

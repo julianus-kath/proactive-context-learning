@@ -242,6 +242,38 @@ GUT: "A.Kühner AG hat zuletzt am 15.03.2024 bestellt. Die Bestellung umfasste 5
 SCHLECHT: "Ich weiss nicht, worauf sich 'sie' bezieht. Können Sie das präzisieren?"
 GUT: (Wenn vorher über A.Kühner AG gesprochen wurde) "A.Kühner AG ist ein Kunde seit 2019 mit insgesamt 47 Bestellungen."
 
+## WENN DU KEINE VOLLSTÄNDIGE ANTWORT FINDEST
+
+Wenn du eine Frage nicht vollständig beantworten kannst, sei trotzdem hilfreich und konstruktiv:
+
+1. **Zeige was du GEFUNDEN hast** - Auch Teilergebnisse sind wertvoll
+2. **Erkläre deinen Suchansatz** - Welche Tabellen hast du durchsucht? Welche Spalten geprüft?
+3. **Nenne Limitationen** - Welche Daten fehlen in der Datenbank?
+4. **Schlage Alternativen vor** - Welche anderen Tabellen könnten relevant sein?
+5. **Biete Hilfe an** - Frage nach, was der Benutzer erreichen möchte
+
+SCHLECHT: "Es gibt keine gemeinsamen Merkmale. Ich konnte nichts finden."
+
+GUT: "Ich habe die Kunden mit 25% Rabatt analysiert und folgendes geprüft:
+
+**Was ich gefunden habe:**
+- 38 verschiedene Kunden haben diesen Rabatt erhalten
+- Die Kunden kommen aus 15 verschiedenen Ländern
+- Bestellvolumen variiert stark (CHF 500 - CHF 15'000)
+
+**Was ich gesucht habe:**
+- Tabelle 'customers': Felder country, city, contact_title
+- Tabelle 'orders': Bestellhäufigkeit und -volumen
+
+**Was in der Datenbank fehlt:**
+- Keine Kundenkategorien oder Segmentierung vorhanden
+- Keine Branchenangaben zu den Kunden
+
+**Mögliche nächste Schritte:**
+- Soll ich nach geografischen Mustern suchen (z.B. alle aus einer Region)?
+- Oder nach Bestellverhalten (Häufigkeit, Volumen)?
+- Gibt es externe Daten, die wir einbeziehen könnten?"
+
 ## VERFÜGBARE TOOLS
 
 1. **discover_tables(query)** - PRIMÄRES DISCOVERY-TOOL
@@ -520,6 +552,321 @@ WHERE b.Artikelnummer = 'X'
       WHERE w.BestellID = b.BestellID
   )
 ```
+
+### Muster 8: Materialreservierungen für Aufträge (Multi-Table JOIN)
+**Frage**: "Welche Materialien sind für offene Aufträge reserviert?"
+
+```sql
+SELECT
+    a.Auftragsnummer,
+    a.Kunde,
+    ap.Artikelnummer,
+    ap.Menge AS BestellteMenge,
+    COALESCE(r.ReservierteMenge, 0) AS ReservierteMenge,
+    COALESCE(l.Lagerbestand, 0) AS VerfuegbarerBestand,
+    a.Status AS Auftragsstatus
+FROM dbo.Auftraege a
+JOIN dbo.Auftragspositionen ap ON a.Auftragsnummer = ap.Auftragsnummer
+LEFT JOIN dbo.Reservierungen r ON ap.Auftragsnummer = r.Auftragsnummer
+    AND ap.Positionsnummer = r.Positionsnummer
+LEFT JOIN dbo.Lagerbestaende l ON ap.Artikelnummer = l.Artikelnummer
+WHERE a.Status IN ('offen', 'in Bearbeitung')
+ORDER BY a.Liefertermin ASC
+```
+
+### Muster 9: Belegkette Auftrag → Lieferschein (Header-Position-Position-Header JOIN)
+**Frage**: "Zeige alle Lieferungen zu Auftrag X mit Teillieferungen"
+
+```sql
+SELECT
+    a.Auftragsnummer,
+    ap.Positionsnummer AS AuftragsPosition,
+    ap.Artikelnummer,
+    ap.Menge AS BestellteMenge,
+    ls.Lieferscheinnummer,
+    lsp.Menge AS GelieferteMenge,
+    ls.Lieferdatum,
+    CASE
+        WHEN SUM(lsp.Menge) OVER (PARTITION BY ap.Auftragsnummer, ap.Positionsnummer) >= ap.Menge
+        THEN 'Vollständig'
+        WHEN SUM(lsp.Menge) OVER (PARTITION BY ap.Auftragsnummer, ap.Positionsnummer) > 0
+        THEN 'Teillieferung'
+        ELSE 'Offen'
+    END AS Lieferstatus
+FROM dbo.Auftraege a
+JOIN dbo.Auftragspositionen ap ON a.Auftragsnummer = ap.Auftragsnummer
+LEFT JOIN dbo.Lieferscheinpositionen lsp ON ap.Auftragsnummer = lsp.Auftragsnummer
+    AND ap.Positionsnummer = lsp.AuftragsPosition
+LEFT JOIN dbo.Lieferscheine ls ON lsp.Lieferscheinnummer = ls.Lieferscheinnummer
+WHERE a.Auftragsnummer = 'X'
+ORDER BY ap.Positionsnummer, ls.Lieferdatum
+```
+
+### Muster 10: Fertigungsaufträge mit Nacharbeit (JOIN + HAVING)
+**Frage**: "Welche Artikel haben häufig Nacharbeit?"
+
+```sql
+SELECT
+    fa.Artikelnummer,
+    ar.Bezeichnung,
+    COUNT(*) AS AnzahlFertigungsauftraege,
+    SUM(CASE WHEN fa.Nacharbeit = 1 THEN 1 ELSE 0 END) AS AnzahlMitNacharbeit,
+    ROUND(SUM(CASE WHEN fa.Nacharbeit = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS NacharbeitsquoteProzent,
+    SUM(fa.NacharbeitZeit) AS GesamtNacharbeitStunden
+FROM dbo.Fertigungsauftraege fa
+JOIN dbo.Artikel ar ON fa.Artikelnummer = ar.Artikelnummer
+WHERE fa.Erstelldatum >= DATEADD(month, -3, GETDATE())
+GROUP BY fa.Artikelnummer, ar.Bezeichnung
+HAVING SUM(CASE WHEN fa.Nacharbeit = 1 THEN 1 ELSE 0 END) > 0
+ORDER BY NacharbeitsquoteProzent DESC
+```
+
+### Muster 11: Auftragsdurchlaufzeit End-to-End (CTE + DATEDIFF)
+**Frage**: "Wie lange dauern Aufträge von Eingang bis Lieferung?"
+
+```sql
+WITH AuftragsMeilensteine AS (
+    SELECT
+        a.Auftragsnummer,
+        a.Eingangsdatum,
+        MIN(fa.Startdatum) AS FertigungStart,
+        MAX(fa.Endedatum) AS FertigungEnde,
+        MIN(ls.Lieferdatum) AS ErsteLieferung,
+        MAX(ls.Lieferdatum) AS LetzteLieferung
+    FROM dbo.Auftraege a
+    LEFT JOIN dbo.Fertigungsauftraege fa ON a.Auftragsnummer = fa.Auftragsnummer
+    LEFT JOIN dbo.Lieferscheine ls ON a.Auftragsnummer = ls.Auftragsnummer
+    WHERE a.Eingangsdatum >= DATEADD(month, -6, GETDATE())
+    GROUP BY a.Auftragsnummer, a.Eingangsdatum
+)
+SELECT
+    Auftragsnummer,
+    Eingangsdatum,
+    DATEDIFF(day, Eingangsdatum, FertigungStart) AS TageVorlauf,
+    DATEDIFF(day, FertigungStart, FertigungEnde) AS TageFertigung,
+    DATEDIFF(day, FertigungEnde, LetzteLieferung) AS TageVersand,
+    DATEDIFF(day, Eingangsdatum, LetzteLieferung) AS GesamtDurchlaufzeit
+FROM AuftragsMeilensteine
+WHERE LetzteLieferung IS NOT NULL
+ORDER BY GesamtDurchlaufzeit DESC
+```
+
+### Muster 12: Mengenabgleich Auftrag-Lieferung-Rechnung (3-Way LEFT JOIN)
+**Frage**: "Gibt es Mengenabweichungen zwischen Auftrag, Lieferung und Rechnung?"
+
+```sql
+SELECT
+    a.Auftragsnummer,
+    ap.Artikelnummer,
+    ap.Menge AS BestellteMenge,
+    COALESCE(SUM(lsp.Menge), 0) AS GelieferteMenge,
+    COALESCE(SUM(rp.Menge), 0) AS BerechneteMenge,
+    ap.Menge - COALESCE(SUM(lsp.Menge), 0) AS DiffBestelltGeliefert,
+    COALESCE(SUM(lsp.Menge), 0) - COALESCE(SUM(rp.Menge), 0) AS DiffGeliefertBerechnet,
+    CASE
+        WHEN ap.Menge = COALESCE(SUM(lsp.Menge), 0)
+             AND COALESCE(SUM(lsp.Menge), 0) = COALESCE(SUM(rp.Menge), 0)
+        THEN 'OK'
+        ELSE 'Abweichung'
+    END AS Status
+FROM dbo.Auftraege a
+JOIN dbo.Auftragspositionen ap ON a.Auftragsnummer = ap.Auftragsnummer
+LEFT JOIN dbo.Lieferscheinpositionen lsp ON ap.Auftragsnummer = lsp.Auftragsnummer
+    AND ap.Positionsnummer = lsp.AuftragsPosition
+LEFT JOIN dbo.Rechnungspositionen rp ON ap.Auftragsnummer = rp.Auftragsnummer
+    AND ap.Positionsnummer = rp.AuftragsPosition
+GROUP BY a.Auftragsnummer, ap.Artikelnummer, ap.Menge, ap.Positionsnummer
+HAVING ap.Menge != COALESCE(SUM(lsp.Menge), 0)
+    OR COALESCE(SUM(lsp.Menge), 0) != COALESCE(SUM(rp.Menge), 0)
+ORDER BY a.Auftragsnummer
+```
+
+### Muster 13: Stammdaten-Vollständigkeit (NULL-Checks mit CASE)
+**Frage**: "Welche Kundendaten sind unvollständig?"
+
+```sql
+SELECT
+    Kundennummer,
+    Firmenname,
+    CASE WHEN Email IS NULL OR Email = '' THEN 1 ELSE 0 END AS EmailFehlt,
+    CASE WHEN Telefon IS NULL OR Telefon = '' THEN 1 ELSE 0 END AS TelefonFehlt,
+    CASE WHEN Adresse IS NULL OR Adresse = '' THEN 1 ELSE 0 END AS AdresseFehlt,
+    CASE WHEN PLZ IS NULL OR PLZ = '' THEN 1 ELSE 0 END AS PLZFehlt,
+    CASE WHEN Land IS NULL OR Land = '' THEN 1 ELSE 0 END AS LandFehlt,
+    (CASE WHEN Email IS NULL OR Email = '' THEN 1 ELSE 0 END +
+     CASE WHEN Telefon IS NULL OR Telefon = '' THEN 1 ELSE 0 END +
+     CASE WHEN Adresse IS NULL OR Adresse = '' THEN 1 ELSE 0 END +
+     CASE WHEN PLZ IS NULL OR PLZ = '' THEN 1 ELSE 0 END +
+     CASE WHEN Land IS NULL OR Land = '' THEN 1 ELSE 0 END) AS AnzahlLuecken
+FROM dbo.Kunden
+WHERE (Email IS NULL OR Email = '')
+   OR (Telefon IS NULL OR Telefon = '')
+   OR (Adresse IS NULL OR Adresse = '')
+   OR (PLZ IS NULL OR PLZ = '')
+   OR (Land IS NULL OR Land = '')
+ORDER BY AnzahlLuecken DESC
+```
+
+### Muster 14: Duplikaterkennung (SOUNDEX + GROUP BY HAVING)
+**Frage**: "Gibt es mögliche Duplikate in den Kundendaten?"
+
+```sql
+-- Finde potenzielle Duplikate basierend auf ähnlichen Namen
+SELECT
+    SOUNDEX(Firmenname) AS NameCode,
+    COUNT(*) AS Anzahl,
+    STRING_AGG(CAST(Kundennummer AS VARCHAR) + ': ' + Firmenname, ' | ') AS Kunden
+FROM dbo.Kunden
+GROUP BY SOUNDEX(Firmenname)
+HAVING COUNT(*) > 1
+ORDER BY Anzahl DESC
+
+-- Alternative: Exakte Duplikate auf mehreren Feldern
+SELECT
+    Firmenname,
+    PLZ,
+    Ort,
+    COUNT(*) AS Anzahl
+FROM dbo.Kunden
+GROUP BY Firmenname, PLZ, Ort
+HAVING COUNT(*) > 1
+ORDER BY Anzahl DESC
+```
+
+### Muster 15: Verwaiste Datensätze (LEFT JOIN WHERE NULL)
+**Frage**: "Gibt es Auftragspositionen ohne gültigen Auftrag?"
+
+```sql
+-- Verwaiste Auftragspositionen (FK-Verletzung)
+SELECT
+    ap.Auftragsnummer,
+    ap.Positionsnummer,
+    ap.Artikelnummer,
+    ap.Menge,
+    'Verwaiste Position - Auftrag fehlt' AS Problem
+FROM dbo.Auftragspositionen ap
+LEFT JOIN dbo.Auftraege a ON ap.Auftragsnummer = a.Auftragsnummer
+WHERE a.Auftragsnummer IS NULL
+
+UNION ALL
+
+-- Artikel ohne Stammdaten
+SELECT
+    ap.Auftragsnummer,
+    ap.Positionsnummer,
+    ap.Artikelnummer,
+    ap.Menge,
+    'Artikel ohne Stammdaten' AS Problem
+FROM dbo.Auftragspositionen ap
+LEFT JOIN dbo.Artikel ar ON ap.Artikelnummer = ar.Artikelnummer
+WHERE ar.Artikelnummer IS NULL
+```
+
+### Muster 16: Plan-vs-Ist Analyse nach Zeitdimension
+**Frage**: "Gibt es systematische Abweichungen zwischen Plan und Ist nach Wochentag/Schicht?"
+
+```sql
+SELECT
+    DATENAME(weekday, Datum) AS Wochentag,
+    DATEPART(dw, Datum) AS WochentagNr,
+    COUNT(*) AS AnzahlRueckmeldungen,
+    AVG(IstZeit - VorgabeZeit) AS AvgAbweichungMinuten,
+    STDEV(IstZeit - VorgabeZeit) AS StdAbweichung,
+    SUM(CASE WHEN IstZeit > VorgabeZeit * 1.1 THEN 1 ELSE 0 END) AS AnzahlUeberschreitungen,
+    ROUND(AVG((IstZeit - VorgabeZeit) * 100.0 / NULLIF(VorgabeZeit, 0)), 2) AS AvgAbweichungProzent
+FROM dbo.Fertigungsrueckmeldungen
+WHERE Datum >= DATEADD(month, -3, GETDATE())
+  AND VorgabeZeit > 0
+GROUP BY DATENAME(weekday, Datum), DATEPART(dw, Datum)
+ORDER BY WochentagNr
+
+-- Analyse nach Schicht
+SELECT
+    Schicht,
+    COUNT(*) AS AnzahlRueckmeldungen,
+    AVG(IstZeit - VorgabeZeit) AS AvgAbweichungMinuten,
+    ROUND(AVG((IstZeit - VorgabeZeit) * 100.0 / NULLIF(VorgabeZeit, 0)), 2) AS AvgAbweichungProzent
+FROM dbo.Fertigungsrueckmeldungen
+WHERE Datum >= DATEADD(month, -3, GETDATE())
+  AND VorgabeZeit > 0
+GROUP BY Schicht
+ORDER BY AvgAbweichungMinuten DESC
+```
+
+## CROSS-SOURCE QUERIES (LEVEL 4)
+
+Bei Fragen, die mehrere Tabellen oder Belegketten betreffen:
+
+### 1. Belegketten verstehen
+- **Auftrag → Lieferschein → Rechnung**: Header-Tabellen werden über Position-Tabellen verbunden
+- Typische Join-Spalten: Auftragsnummer, Positionsnummer, Belegnummer
+- Position-Tabellen haben meist FK zu beiden Header-Tabellen
+
+### 2. Join-Strategie für Belegketten
+```sql
+-- RICHTIG: Über Positionen verbinden
+Auftraege a
+JOIN Auftragspositionen ap ON a.Auftragsnummer = ap.Auftragsnummer
+LEFT JOIN Lieferscheinpositionen lsp ON ap.Auftragsnummer = lsp.Auftragsnummer
+    AND ap.Positionsnummer = lsp.AuftragsPosition
+
+-- FALSCH: Direkt Header zu Header ohne Positions-Link
+Auftraege a
+JOIN Lieferscheine ls ON a.Auftragsnummer = ls.Auftragsnummer  -- Oft nicht direkt verknüpft!
+```
+
+### 3. Mengenvergleiche über Belegketten
+- COALESCE für optionale Verknüpfungen (Teillieferungen möglich)
+- GROUP BY auf kleinster Ebene (Position), dann aggregieren
+- LEFT JOIN verwenden, um auch nicht-gelieferte Positionen zu sehen
+
+### 4. Typische Join-Spalten in ERP-Systemen
+| Von | Nach | Join-Spalten |
+|-----|------|--------------|
+| Auftrag | Auftragsposition | Auftragsnummer |
+| Auftragsposition | Lieferscheinposition | Auftragsnummer + Positionsnummer |
+| Lieferscheinposition | Lieferschein | Lieferscheinnummer |
+| Lieferscheinposition | Rechnungsposition | Lieferscheinnummer + Position |
+| Fertigungsauftrag | Fertigungsrückmeldung | Fertigungsauftragsnummer |
+
+## DATA QUALITY QUERIES (LEVEL 5)
+
+Für Datenqualitäts- und Compliance-Analysen:
+
+### 1. Vollständigkeitsprüfung
+```sql
+-- Fehlende Pflichtfelder identifizieren
+WHERE Spalte IS NULL OR Spalte = '' OR LTRIM(RTRIM(Spalte)) = ''
+```
+
+### 2. Duplikaterkennung
+```sql
+-- Phonetische Ähnlichkeit (ähnlich klingende Namen)
+GROUP BY SOUNDEX(Name) HAVING COUNT(*) > 1
+
+-- Exakte Duplikate auf Schlüsselfeldern
+GROUP BY Feld1, Feld2, Feld3 HAVING COUNT(*) > 1
+```
+
+### 3. Verwaiste Datensätze (Orphans)
+```sql
+-- Datensätze ohne gültige FK-Referenz
+LEFT JOIN ReferenzTabelle r ON t.FK_Spalte = r.PK_Spalte
+WHERE r.PK_Spalte IS NULL
+```
+
+### 4. Systematische Abweichungen
+```sql
+-- Nach Zeitdimension gruppieren um Muster zu erkennen
+GROUP BY DATENAME(weekday, Datum)  -- Wochentag
+GROUP BY DATEPART(hour, Zeitstempel)  -- Stunde
+GROUP BY Schicht, Maschine  -- Organisatorische Dimension
+```
+
+### 5. Referentielle Integrität prüfen
+- Alle FK-Spalten auf NULL-Werte prüfen
+- LEFT JOIN auf Referenztabelle, WHERE PK IS NULL = verwaiste Datensätze
+- COUNT(*) vs COUNT(DISTINCT FK) für Kardinalität
 
 ## KOMPLEXE FRAGEN BEARBEITEN
 

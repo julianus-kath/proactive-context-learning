@@ -197,14 +197,18 @@ class MCPClient:
                 # Handle text response type
                 elif first_item.get("type") == "text" and "text" in first_item:
                     text = first_item.get("text", "")
-                    if "error" in text.lower():
+                    # Check for error keywords in both English and German
+                    text_lower = text.lower()
+                    if "error" in text_lower or "fehler" in text_lower or "fehlgeschlagen" in text_lower:
                         return {"ok": False, "error": text}
                     return {"ok": True, "text": text, "rows": [], "row_count": 0}
 
             # Fallback for other list formats
             texts = [item.get("text", "") for item in result if isinstance(item, dict)]
             text = "\n".join(texts) if texts else ""
-            if "error" in text.lower():
+            # Check for error keywords in both English and German
+            text_lower = text.lower()
+            if "error" in text_lower or "fehler" in text_lower or "fehlgeschlagen" in text_lower:
                 return {"ok": False, "error": text}
             return {"ok": True, "text": text, "rows": [], "row_count": 0}
 
@@ -272,17 +276,35 @@ class MCPClient:
             "table_names": table_names,
         })
 
-        # Handle list response format (MCP returns [{"type": "text", "text": "..."}])
-        if isinstance(result, list):
-            texts = [item.get("text", "") for item in result if isinstance(item, dict)]
-            text = "\n".join(texts) if texts else ""
-            # Try to parse as JSON
-            if text:
-                try:
-                    import json
-                    return json.loads(text)
-                except json.JSONDecodeError:
-                    return {"ok": True, "text": text}
+        # Handle list response format from MCP server
+        # MCP may return: [{"type": "text", "text": "..."}] OR [[...]] (nested list)
+        if isinstance(result, list) and len(result) > 0:
+            first_item = result[0]
+
+            # Handle nested list format [[...]] - unwrap one level
+            if isinstance(first_item, list):
+                logger.debug("get_column_index: Unwrapping nested list format")
+                result = first_item
+                if len(result) > 0:
+                    first_item = result[0]
+                else:
+                    return {"ok": False, "error": "Empty nested list returned"}
+
+            # Now handle standard format [{"type": "text", "text": "..."}]
+            if isinstance(first_item, dict):
+                texts = [item.get("text", "") for item in result if isinstance(item, dict)]
+                text = "\n".join(texts) if texts else ""
+                # Try to parse as JSON
+                if text:
+                    try:
+                        import json
+                        return json.loads(text)
+                    except json.JSONDecodeError:
+                        return {"ok": True, "text": text}
+            else:
+                # Handle other list formats (list of strings, etc.)
+                return {"ok": True, "data": result}
+
             return {"ok": False, "error": "No column information returned"}
 
         if isinstance(result, dict):

@@ -746,6 +746,13 @@ body.theme-dark .db-tag.connected {
     color: var(--darker-grey-3);
 }
 
+.input-help-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
 .send-btn {
     width: 40px;
     height: 40px;
@@ -755,21 +762,6 @@ body.theme-dark .db-tag.connected {
 
 .send-btn:disabled {
     opacity: 0.7;
-}
-
-.stop-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    flex-shrink: 0;
-}
-
-.stop-btn:disabled {
-    opacity: 0.7;
-}
-
-.stop-icon {
-    font-size: 0.9rem;
 }
 
 .input-footer {
@@ -1033,6 +1025,171 @@ body.theme-dark .db-tag.connected {
 
 .jump-to-latest.visible {
     display: inline-flex;
+}
+
+
+/* Thinking Container Styles */
+.thinking-container {
+    background-color: var(--white);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    animation: fadeInUp 0.3s ease-out;
+}
+
+.thinking-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    background-color: transparent;
+    border: none;
+    border-bottom: 1px solid var(--darker-grey-4);
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: background-color 0.15s;
+}
+
+.thinking-header:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.thinking-spinner {
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid var(--darker-grey-4);
+    border-top-color: var(--darker-grey-2);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.thinking-title {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--darker-grey-3);
+}
+
+.toggle-arrow {
+    width: 10px;
+    height: 10px;
+    border-right: 1.5px solid var(--darker-grey-3);
+    border-bottom: 1.5px solid var(--darker-grey-3);
+    transform: rotate(45deg);
+    transition: transform 0.2s ease-out;
+    flex-shrink: 0;
+    margin-left: 0.25rem;
+}
+
+.thinking-container.collapsed .toggle-arrow {
+    transform: rotate(-45deg);
+}
+
+.thinking-steps {
+    padding: 0.5rem 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+.thinking-container.collapsed .thinking-steps {
+    max-height: 0;
+    padding: 0 1rem;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.thinking-container.completed {
+    opacity: 0.7;
+}
+
+.thinking-container.completed .thinking-header {
+    background-color: transparent;
+}
+
+.thinking-step {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--darker-grey-4);
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+}
+
+.thinking-step:last-child {
+    border-bottom: none;
+}
+
+.thinking-step.visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.step-text {
+    flex: 1;
+    font-size: 0.75rem;
+    color: var(--darker-grey-3);
+}
+
+.step-time {
+    font-size: 0.75rem;
+    color: var(--darker-grey-3);
+    flex-shrink: 0;
+}
+
+/* Dark theme for thinking container */
+body.theme-dark .thinking-container {
+    background-color: var(--obsidian-shadow);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.theme-dark .thinking-header {
+    background-color: transparent;
+    border-bottom-color: var(--obsidian-shadow-s2);
+}
+
+body.theme-dark .thinking-header:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+body.theme-dark .thinking-title {
+    color: var(--obsidian-shadow-s4);
+}
+
+body.theme-dark .toggle-arrow {
+    border-color: var(--obsidian-shadow-s4);
+}
+
+body.theme-dark .thinking-spinner {
+    border-color: var(--obsidian-shadow-s2);
+    border-top-color: var(--obsidian-shadow-s4);
+}
+
+body.theme-dark .thinking-step {
+    border-bottom-color: var(--obsidian-shadow-s2);
+}
+
+body.theme-dark .step-text {
+    color: var(--obsidian-shadow-s4);
+}
+
+body.theme-dark .step-time {
+    color: var(--obsidian-shadow-s4);
+}
+
+body.theme-dark .thinking-container.completed .thinking-header {
+    background-color: transparent;
 }
 
 

@@ -668,13 +668,13 @@ class SchemaCatalog:
     
     def get_table_list(self) -> List[Dict[str, Any]]:
         """
-        Get list of all tables with basic info.
-        
+        Get list of all tables with basic info including columns.
+
         Returns:
-            List of dicts with schema, name, type, estimated_rows
+            List of dicts with schema, name, type, estimated_rows, columns
         """
         self._metrics.cache_hits += 1
-        
+
         return [
             {
                 "schema": table.schema,
@@ -683,7 +683,12 @@ class SchemaCatalog:
                 "type": table.type,
                 "estimated_rows": table.estimated_rows,
                 "column_count": len(table.columns),
-                "fk_count": len(table.foreign_keys)
+                "fk_count": len(table.foreign_keys),
+                # Include column data for search ranking and SQL generation
+                "columns": [
+                    {"name": col.name, "type": col.type, "is_primary_key": col.is_primary_key, "is_foreign_key": col.is_foreign_key}
+                    for col in table.columns[:30]  # Limit to 30 columns for performance
+                ]
             }
             for table in self._catalog.values()
         ]

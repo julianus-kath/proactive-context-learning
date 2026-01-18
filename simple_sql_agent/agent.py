@@ -54,8 +54,10 @@ def parse_query_result(content: str) -> Dict[str, Any]:
 
     lines = content.strip().split('\n')
 
-    # Check for error
-    if "failed" in content.lower() or "error" in content.lower():
+    # Check for error (English and German keywords)
+    content_lower = content.lower()
+    error_keywords = ["failed", "error", "fehler", "fehlgeschlagen", "ungültig", "nicht gefunden"]
+    if any(kw in content_lower for kw in error_keywords):
         result["ok"] = False
         result["error"] = content
         return result

@@ -194,6 +194,56 @@
       "required_fields": ["Soll-Werte (Pausenzeit, Arbeitszeit)", "Ist-Werte (tatsächliche Zeiten)"],
       "interpretation": "100% = volle Einhaltung. Niedrigere Werte = häufige Verstöße.",
       "threshold": "Ziel: >= 95%"
+    },
+    {
+      "name": "data_completeness",
+      "aliases": ["Datenvollständigkeit", "Datenqualität", "completeness", "Stammdatenqualität", "Pflichtfeldprüfung"],
+      "description": "Prozentsatz der ausgefüllten Pflichtfelder in Stammdaten",
+      "formula": "Vollständigkeit_Prozent = (Anzahl_gefüllte_Felder / Anzahl_Pflichtfelder) * 100",
+      "sql_pattern": "SELECT COUNT(*) as Gesamt, SUM(CASE WHEN Feld1 IS NOT NULL AND Feld1 != '' THEN 1 ELSE 0 END) as Feld1Gefuellt, ROUND(SUM(CASE WHEN Feld1 IS NOT NULL AND Feld1 != '' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as Vollstaendigkeit_Prozent",
+      "required_fields": ["Stammdaten-Tabelle", "Pflichtfelder (Email, Telefon, Adresse, etc.)"],
+      "interpretation": "100% = alle Pflichtfelder gefüllt. Niedrigere Werte zeigen Lücken in Stammdaten.",
+      "threshold": "Ziel: >= 95% für kritische Felder"
+    },
+    {
+      "name": "duplicate_rate",
+      "aliases": ["Duplikatrate", "Duplikate", "duplicates", "doppelte Einträge", "Mehrfacherfassung"],
+      "description": "Anteil potenzieller Duplikate in Stammdaten basierend auf Ähnlichkeit oder exakter Übereinstimmung",
+      "formula": "Duplikatrate_Prozent = (Anzahl_Duplikate / Anzahl_Gesamt) * 100",
+      "sql_pattern": "WITH Duplikate AS (SELECT SOUNDEX(Name) as NameCode, COUNT(*) as Anzahl FROM Tabelle GROUP BY SOUNDEX(Name) HAVING COUNT(*) > 1) SELECT SUM(Anzahl) as AnzahlInDuplikatgruppen, (SELECT COUNT(*) FROM Tabelle) as Gesamt",
+      "required_fields": ["Stammdaten-Tabelle", "Namensfelder oder Schlüsselfelder für Vergleich"],
+      "interpretation": "0% = keine Duplikate. Höhere Werte deuten auf Datenqualitätsprobleme oder fehlende Dublettenprüfung.",
+      "threshold": "Kritisch wenn > 5%"
+    },
+    {
+      "name": "orphan_records",
+      "aliases": ["verwaiste Datensätze", "Orphans", "FK-Verletzungen", "referentielle Integrität", "fehlende Referenzen"],
+      "description": "Datensätze ohne gültige Fremdschlüsselreferenz zur Elterntabelle",
+      "formula": "Orphan_Anzahl = COUNT(Datensätze ohne gültige FK-Referenz)",
+      "sql_pattern": "SELECT COUNT(*) as VerwaisteDatensaetze FROM ChildTabelle c LEFT JOIN ParentTabelle p ON c.FK_Spalte = p.PK_Spalte WHERE p.PK_Spalte IS NULL",
+      "required_fields": ["Child-Tabelle mit FK", "Parent-Tabelle mit PK"],
+      "interpretation": "0 = keine verwaisten Datensätze. Jeder Wert > 0 deutet auf Datenintegritätsprobleme.",
+      "threshold": "Kritisch wenn > 0"
+    },
+    {
+      "name": "delivery_fulfillment",
+      "aliases": ["Liefererfüllung", "Erfüllungsgrad", "fulfillment rate", "Lieferquote", "Auftragserfüllung"],
+      "description": "Verhältnis von gelieferter Menge zur bestellten Menge",
+      "formula": "Erfüllungsgrad_Prozent = (Gelieferte_Menge / Bestellte_Menge) * 100",
+      "sql_pattern": "SELECT a.Auftragsnummer, SUM(ap.Menge) as BestellteMenge, COALESCE(SUM(lsp.Menge), 0) as GelieferteMenge, ROUND(COALESCE(SUM(lsp.Menge), 0) * 100.0 / NULLIF(SUM(ap.Menge), 0), 2) as Erfuellungsgrad_Prozent FROM Auftraege a JOIN Auftragspositionen ap ON a.Auftragsnummer = ap.Auftragsnummer LEFT JOIN Lieferscheinpositionen lsp ON ap.Auftragsnummer = lsp.Auftragsnummer AND ap.Positionsnummer = lsp.AuftragsPosition GROUP BY a.Auftragsnummer",
+      "required_fields": ["Auftragspositionen mit Menge", "Lieferscheinpositionen mit Menge"],
+      "interpretation": "100% = vollständig geliefert. <100% = Teillieferung oder offene Menge. >100% = Überlieferung.",
+      "threshold": "Ziel: 100% bei abgeschlossenen Aufträgen"
+    },
+    {
+      "name": "document_reconciliation",
+      "aliases": ["Belegabgleich", "Mengenabgleich", "reconciliation", "Auftrag-Lieferung-Rechnung", "3-Way-Match"],
+      "description": "Vergleich der Mengen zwischen Auftrag, Lieferschein und Rechnung zur Identifikation von Abweichungen",
+      "formula": "Abweichung = Bestellmenge - Liefermenge oder Liefermenge - Rechnungsmenge",
+      "sql_pattern": "SELECT ap.Auftragsnummer, ap.Artikelnummer, ap.Menge as Bestellt, COALESCE(SUM(lsp.Menge), 0) as Geliefert, COALESCE(SUM(rp.Menge), 0) as Berechnet, ap.Menge - COALESCE(SUM(lsp.Menge), 0) as DiffBestelltGeliefert, COALESCE(SUM(lsp.Menge), 0) - COALESCE(SUM(rp.Menge), 0) as DiffGeliefertBerechnet FROM Auftragspositionen ap LEFT JOIN Lieferscheinpositionen lsp ON ap.Auftragsnummer = lsp.Auftragsnummer AND ap.Positionsnummer = lsp.AuftragsPosition LEFT JOIN Rechnungspositionen rp ON ap.Auftragsnummer = rp.Auftragsnummer AND ap.Positionsnummer = rp.AuftragsPosition GROUP BY ap.Auftragsnummer, ap.Artikelnummer, ap.Menge, ap.Positionsnummer HAVING ap.Menge != COALESCE(SUM(lsp.Menge), 0) OR COALESCE(SUM(lsp.Menge), 0) != COALESCE(SUM(rp.Menge), 0)",
+      "required_fields": ["Auftragspositionen", "Lieferscheinpositionen", "Rechnungspositionen"],
+      "interpretation": "Alle Differenzen sollten 0 sein bei abgeschlossenen Vorgängen. Abweichungen zeigen Prozess- oder Erfassungsfehler.",
+      "threshold": "Kritisch wenn Differenz != 0 bei Status 'abgeschlossen'"
     }
   ]
 }

@@ -536,7 +536,7 @@ class DiscoveryTools:
                     if ranked_table.score <= 0.0:
                         # Skip tables with zero relevance - they add noise
                         continue
-                    
+
                     summary = {
                         "schema": ranked_table.schema,
                         "name": ranked_table.name,
@@ -549,7 +549,8 @@ class DiscoveryTools:
                         "has_primary_keys": False,  # Would need to fetch from catalog if needed
                         "relevance_score": ranked_table.score,  # 0.0-1.0 confidence
                         "reasons": ranked_table.reasons,  # Why this table was ranked high
-                        "matched_columns": []  # Phase 3+ feature
+                        "columns": ranked_table.columns or [],  # All column names for SQL generation
+                        "matched_columns": ranked_table.matched_columns or []  # Columns matching query
                     }
                     results.append(summary)
                 
