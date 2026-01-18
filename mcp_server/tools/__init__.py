@@ -1239,8 +1239,14 @@ class MCPTools:
                         )
                         formatted_text += (
                             f"   Score: {result['relevance_score']:.3f}, "
-                            f"Reasons: {', '.join(result['reasons'])}\n\n"
+                            f"Reasons: {', '.join(result['reasons'])}\n"
                         )
+                        # Include column names for SQL generation
+                        columns = result.get('columns', [])
+                        if columns:
+                            col_names = [c.get('name') if isinstance(c, dict) else str(c) for c in columns[:15]]
+                            formatted_text += f"   Columns: {', '.join(col_names)}\n"
+                        formatted_text += "\n"
 
                     # Return both human-readable and JSON
                     formatted_text += "\n📊 Full response (JSON):\n"
@@ -1307,9 +1313,15 @@ class MCPTools:
                         f"- Score: {result['relevance_score']}\n"
                     )
                     result_text += (
-                        f"  Columns: {result['column_count']}, "
-                        f"Rows: ~{result['estimated_rows']:,}\n"
+                        f"  Rows: ~{result['estimated_rows']:,}\n"
                     )
+                    # Include column names for SQL generation
+                    columns = result.get("columns", [])
+                    if columns:
+                        col_names = [c if isinstance(c, str) else c.get('name', str(c)) for c in columns[:15]]
+                        result_text += f"  Columns: {', '.join(col_names)}\n"
+                    else:
+                        result_text += f"  Columns: {result['column_count']} (names not available)\n"
                     if result.get("matched_columns"):
                         result_text += (
                             "  Matched columns: "
