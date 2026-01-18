@@ -2,8 +2,7 @@
 .venv/
 venv/
 env/
-.env
-.env.example
+.env*
 # Specific project directories
 .zencoder/
 logs/
