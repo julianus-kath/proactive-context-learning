@@ -2,7 +2,10 @@
 .venv/
 venv/
 env/
-.env*
+.env
+.env.local
+.env.*.local
+!.env.example
 # Specific project directories
 .zencoder/
 logs/
