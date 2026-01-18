@@ -6,7 +6,24 @@ env/
 .env.example
 # Specific project directories
 .zencoder/
-
+logs/
+tmp/
+data/
+output/
+results/
+reports/
+docs/build/*
+# Python bytecode
+*.pyc
+*.pyo
+*~
+# PyCharm specific files
+.idea/*
+!idea/workspace.xml
+!.idea/codeStyles/*
+!.idea/misc.xml
+!.idea/modules.xml
+!.idea/vcs.xml
 # Python
 __pycache__/
 *.py[cod]
@@ -34,6 +51,10 @@ wheels/
 *.sqlite
 *.sqlite3
 
+# Phase 3: Catalog cache files
+mcp_server/cache/
+cache/
+
 # IDE specific files
 .idea/
 .vscode/
@@ -43,3 +64,14 @@ wheels/
 # OS specific files
 .DS_Store
 Thumbs.db
+
+# Node / frontend artifacts
+node_modules/
+dist/
+build/
+.cache/
+*.log
+
+# Python test artifacts
+.pytest_cache/
+.coverage

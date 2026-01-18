@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Chatbot</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="/static/icons/app-icon.png">
+</head>
+<body>
+    <!-- SVG Icon Sprite (icons use currentColor for easy theming) -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+        <symbol id="icon-send" viewBox="0 0 100 100">
+            <path d="M 81 15 L 12 42 L 15 49 L 29 55 L 55 45 L 44 66 L 53 87 L 60 84 L 84 23 Z" fill="currentColor" fill-rule="evenodd" />
+        </symbol>
+        <symbol id="icon-stop" viewBox="0 0 64 64">
+            <path d="M 15 13 L 12 18 L 13 48 L 18 51 L 48 50 L 51 45 L 50 15 L 45 12 Z" fill="currentColor" fill-rule="evenodd" />
+        </symbol>
+        <symbol id="icon-help" viewBox="0 0 100 100">
+            <path d="M 80 46 L 79 47 L 79 50 L 84 54 L 87 54 L 88 53 L 88 50 L 85 47 L 83 46 Z M 20 47 L 19 46 L 16 46 L 14 47 L 11 50 L 11 53 L 12 54 L 15 54 L 20 50 Z M 80 35 L 80 37 L 82 39 L 89 39 L 91 37 L 91 35 L 89 33 L 82 33 Z M 8 35 L 8 37 L 10 39 L 17 39 L 19 37 L 19 35 L 17 33 L 10 33 Z M 88 19 L 87 18 L 84 18 L 79 22 L 79 25 L 80 26 L 83 26 L 85 25 L 88 22 Z M 12 18 L 11 19 L 11 22 L 14 25 L 16 26 L 19 26 L 20 25 L 20 22 L 15 18 Z M 43 13 L 27 24 L 23 42 L 40 80 L 53 84 L 59 80 L 75 47 L 76 35 L 72 24 L 65 17 L 56 13 Z" fill="currentColor" fill-rule="evenodd" />
+        </symbol>
+        <symbol id="icon-settings" viewBox="0 0 96 96">
+            <path d="M 44 2 L 33 15 L 17 13 L 13 17 L 16 30 L 2 44 L 2 51 L 15 62 L 13 78 L 17 82 L 30 79 L 44 93 L 51 93 L 62 80 L 78 82 L 82 78 L 79 64 L 93 51 L 93 44 L 80 33 L 82 17 L 78 13 L 65 16 L 51 2 Z M 39 29 L 56 29 L 66 39 L 66 56 L 56 66 L 39 66 L 29 56 L 29 39 Z" fill="currentColor" fill-rule="evenodd" />
+        </symbol>
+        <symbol id="icon-new-chat" viewBox="0 0 64 64">
+            <path d="M 30 11 L 28 13 L 28 26 L 26 28 L 13 28 L 11 33 L 13 35 L 26 35 L 28 37 L 28 50 L 33 52 L 35 50 L 35 37 L 37 35 L 50 35 L 52 30 L 50 28 L 37 28 L 35 26 L 35 13 Z" fill="currentColor" fill-rule="evenodd" />
+        </symbol>
+        <symbol id="icon-clear-history" viewBox="0 0 96 96">
+            <path d="M 61 43 L 58 43 L 56 46 L 56 59 L 55 60 L 55 75 L 56 76 L 59 76 L 61 73 L 61 59 L 62 58 L 62 44 Z M 34 43 L 33 44 L 34 73 L 36 76 L 39 76 L 40 75 L 39 46 L 37 43 Z M 34 5 L 29 15 L 15 18 L 23 85 L 29 90 L 66 90 L 73 82 L 80 18 L 66 15 L 60 5 Z M 27 34 L 68 34 L 70 36 L 68 73 L 64 84 L 33 85 L 28 81 L 25 46 Z M 20 22 L 22 20 L 73 20 L 75 22 L 75 27 L 73 29 L 22 29 L 20 27 Z M 38 11 L 39 10 L 56 10 L 57 11 L 57 14 L 56 15 L 39 15 L 38 14 Z" fill="currentColor" fill-rule="evenodd" />
+        </symbol>
+        <symbol id="icon-theme" viewBox="0 0 24 24">
+            <path d="M12 3a1 1 0 01.97.76A6.5 6.5 0 0012 20.5 7.5 7.5 0 1118.24 7.03 1 1 0 0116.9 6.1 5.5 5.5 0 0013 4a1 1 0 01-1-1V3z" fill="currentColor" fill-rule="evenodd" />
+        </symbol>
+    </svg>
+    <div class="app-container">
+        <!-- Left Column: Conversation History -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2 class="app-title-text">ERP Assistant</h2>
+                <div class="status-indicator" id="statusIndicator" aria-live="polite">
+                    <div class="status-dot"></div>
+                    <span class="status-text">Connecting...</span>
+                </div>
+                <div class="db-config" id="dbConfig">
+                    <div class="db-tag" id="dbDialectTag">Dialect: -</div>
+                    <div class="db-tag" id="dbNameTag">DB: -</div>
+                </div>
+            </div>
+            
+            <div class="conversation-history" id="conversationHistory" aria-label="Conversation history">
+                <div class="history-empty">
+                    <div class="empty-icon">
+                        <img src="/static/icons/no_conversations.png" alt="" class="history-empty-icon-img">
+                    </div>
+                    <p>No conversations yet</p>
+                    <small>Start chatting to see your conversation history</small>
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <button
+                    class="new-chat-btn icon-button"
+                    id="newChatBtn"
+                    type="button"
+                    title="Start a new chat"
+                    aria-label="Start a new chat"
+                >
+                    <svg class="icon" aria-hidden="true">
+                        <use href="#icon-new-chat"></use>
+                    </svg>
+                </button>
+                <button
+                    class="clear-history-btn icon-button"
+                    id="clearHistoryBtn"
+                    type="button"
+                    title="Clear all conversations"
+                    aria-label="Clear all conversations"
+                >
+                    <svg class="icon" aria-hidden="true">
+                        <use href="#icon-clear-history"></use>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Column: Active Chat -->
+        <div class="main-chat">
+            <div class="chat-header">
+                <div class="chat-title">
+                    <h1>Ask about your ERP data</h1>
+                    <p>Query your database using natural language</p>
+                </div>
+                <div class="chat-actions">
+                    <button
+                        class="action-btn icon-button"
+                        id="themeToggleBtn"
+                        type="button"
+                        title="Toggle theme"
+                        aria-label="Toggle theme"
+                    >
+                        <svg class="icon" aria-hidden="true">
+                            <use href="#icon-theme"></use>
+                        </svg>
+                    </button>
+                    <button
+                        class="action-btn icon-button"
+                        id="helpBtn"
+                        type="button"
+                        title="Show help"
+                        aria-label="Open help"
+                    >
+                        <svg class="icon" aria-hidden="true">
+                            <use href="#icon-help"></use>
+                        </svg>
+                    </button>
+                    <button
+                        class="action-btn icon-button"
+                        id="settingsBtn"
+                        type="button"
+                        title="Settings"
+                        aria-label="Open settings"
+                    >
+                        <svg class="icon" aria-hidden="true">
+                            <use href="#icon-settings"></use>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div
+                class="chat-messages"
+                id="chatMessages"
+                role="log"
+                aria-live="polite"
+                aria-relevant="additions text"
+                aria-label="Chat messages"
+            >
+                <div class="welcome-message">
+                    <div class="welcome-content">
+                        <h3>Welcome to ERP Assistant!</h3>
+                        <p>I can help you query your ERP database using natural language. Try asking questions like:</p>
+                        <div class="sample-queries">
+                            <button class="sample-query" type="button" data-query="How many customers do we have?">
+                                How many customers do we have?
+                            </button>
+                            <button class="sample-query" type="button" data-query="Show me our top 5 products by sales">
+                                Show me our top 5 products by sales
+                            </button>
+                            <button class="sample-query" type="button" data-query="What were our total sales last month?">
+                                What were our total sales last month?
+                            </button>
+                            <button class="sample-query" type="button" data-query="Which products are low in stock?">
+                                Which products are low in stock?
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="typing-indicator"
+                id="typingIndicator"
+                aria-live="polite"
+                aria-atomic="true"
+                hidden
+            >
+                <div class="typing-dots" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <span class="typing-text">Assistant is thinking…</span>
+            </div>
+
+            <button
+                id="jumpToLatestBtn"
+                class="jump-to-latest"
+                type="button"
+                aria-label="Jump to latest messages"
+                hidden
+            >
+                Jump to latest
+            </button>
+
+        </div>
+
+        <div class="chat-input-container">
+            <div class="chat-input-wrapper">
+                <div class="input-group">
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="Ask a question about your ERP data..."
+                        rows="1"
+                    ></textarea>
+                <button
+                    id="inputHelpBtn"
+                    class="input-help-btn icon-button"
+                    type="button"
+                    title="Show help"
+                    aria-label="Open help"
+                >
+                    <svg class="icon" aria-hidden="true">
+                        <use href="#icon-help"></use>
+                    </svg>
+                </button>
+                <button
+                    id="sendBtn"
+                    class="send-btn icon-button"
+                    type="button"
+                    title="Send message"
+                    aria-label="Send message"
+                >
+                    <svg class="icon" aria-hidden="true">
+                        <use href="#icon-send"></use>
+                    </svg>
+                </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal" id="helpModal" aria-hidden="true">
+        <div
+            class="modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="helpModalTitle"
+            tabindex="-1"
+        >
+            <div class="modal-header">
+                <h3 id="helpModalTitle">How to Use ERP Assistant</h3>
+                <button
+                    class="modal-close"
+                    id="helpModalClose"
+                    type="button"
+                    aria-label="Close help"
+                >
+                    &times;
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="help-section">
+                    <h4>Database Structure</h4>
+                    <ul>
+                        <li>"What tables are available in the database?"</li>
+                        <li>"Show me the structure of the customers table"</li>
+                    </ul>
+                </div>
+                <div class="help-section">
+                    <h4>Customer Queries</h4>
+                    <ul>
+                        <li>"How many customers do we have?"</li>
+                        <li>"Show me all customers from New York"</li>
+                        <li>"Who are our top 5 customers by total sales?"</li>
+                    </ul>
+                </div>
+                <div class="help-section">
+                    <h4>Product Queries</h4>
+                    <ul>
+                        <li>"How many products do we have?"</li>
+                        <li>"What's our top-selling product?"</li>
+                        <li>"Show me products in the Electronics category"</li>
+                    </ul>
+                </div>
+                <div class="help-section">
+                    <h4>Sales Analysis</h4>
+                    <ul>
+                        <li>"What were our total sales last month?"</li>
+                        <li>"Show me sales trends by month"</li>
+                        <li>"Which products have the highest profit margins?"</li>
+                    </ul>
+                </div>
+                <div class="help-section">
+                    <h4>Inventory</h4>
+                    <ul>
+                        <li>"What products are low in stock?"</li>
+                        <li>"Show me warehouse inventory levels"</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal" aria-hidden="true">
+        <div
+            class="modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settingsModalTitle"
+            tabindex="-1"
+        >
+            <div class="modal-header">
+                <h3 id="settingsModalTitle">Settings</h3>
+                <button
+                    class="modal-close"
+                    id="settingsModalClose"
+                    type="button"
+                    aria-label="Close settings"
+                >
+                    &times;
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label for="serviceUrl">Service URL:</label>
+                    <input type="text" id="serviceUrl" value="http://localhost:5001" readonly>
+                </div>
+                <div class="setting-group">
+                    <label for="apiKey">API Key (dev-only, not stored):</label>
+                    <input type="password" id="apiKey" placeholder="Enter your API key for this session">
+                </div>
+                <div class="setting-group">
+                    <label for="sessionId">Session ID:</label>
+                    <input type="text" id="sessionId" readonly>
+                </div>
+                <div class="setting-actions">
+                    <button class="btn-secondary" id="resetSettings" type="button">Reset Session</button>
+                    <button class="btn-primary" id="saveSettings" type="button">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

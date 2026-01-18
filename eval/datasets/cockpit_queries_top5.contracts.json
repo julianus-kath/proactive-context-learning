@@ -1,0 +1,78 @@
+[
+  {
+    "query_id": "Q1",
+    "entity": "product",
+    "entity_table": "products",
+    "metric_key": "inventory_velocity",
+    "metric_expression_sql": "SUM(order_details.unit_price * order_details.quantity)",
+    "required_tables": ["products", "orders", "order_details"],
+    "allowed_join_paths": [
+      ["products", "order_details", "orders"]
+    ],
+    "analytic_template": "AGG_OVER_PERIOD",
+    "metric_phrase": "sales velocity and stock usage"
+  },
+  {
+    "query_id": "Q2",
+    "entity": "customer",
+    "entity_table": "customers",
+    "metric_key": "total_revenue",
+    "metric_expression_sql": "SUM(order_details.unit_price * order_details.quantity * (1 - order_details.discount))",
+    "required_tables": ["customers", "orders", "order_details"],
+    "allowed_join_paths": [
+      ["customers", "orders", "order_details"]
+    ],
+    "analytic_template": "TOP_K_BY_METRIC",
+    "metric_phrase": "total revenue",
+    "top_k": 3,
+    "time_window": {
+      "type": "calendar_year",
+      "year": 2024,
+      "column": "orders.OrderDate"
+    }
+  },
+  {
+    "query_id": "Q3",
+    "entity": "supplier",
+    "entity_table": "suppliers",
+    "metric_key": "delayed_shipments",
+    "metric_expression_sql": "COUNT(DISTINCT orders.order_id)",
+    "required_tables": ["suppliers", "products", "orders", "shippers"],
+    "allowed_join_paths": [
+      ["suppliers", "products", "orders", "shippers"]
+    ],
+    "analytic_template": "AGG_OVER_PERIOD",
+    "metric_phrase": "delayed shipments and compliance risk"
+  },
+  {
+    "query_id": "Q4",
+    "entity": "region",
+    "entity_table": "customers",
+    "metric_key": "avg_fulfillment_days",
+    "metric_expression_sql": "AVG(DATEDIFF(day, orders.OrderDate, orders.ShippedDate))",
+    "required_tables": ["orders", "customers", "shippers"],
+    "allowed_join_paths": [
+      ["customers", "orders", "shippers"]
+    ],
+    "analytic_template": "AGG_OVER_PERIOD",
+    "metric_phrase": "average order fulfillment time by region"
+  },
+  {
+    "query_id": "Q5",
+    "entity": "category",
+    "entity_table": "categories",
+    "metric_key": "month_over_month_sales_change",
+    "metric_expression_sql": "SUM(order_details.unit_price * order_details.quantity)",
+    "required_tables": ["categories", "products", "orders", "order_details"],
+    "allowed_join_paths": [
+      ["categories", "products", "order_details", "orders"]
+    ],
+    "analytic_template": "AGG_OVER_PERIOD",
+    "metric_phrase": "month-over-month sales by category",
+    "time_window": {
+      "type": "month_over_month",
+      "column": "orders.OrderDate"
+    }
+  }
+]
+

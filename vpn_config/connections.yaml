@@ -1,0 +1,11 @@
+connections:
+  corp_sql_erp:
+    type: mssql
+    driver: "ODBC Driver 17 for SQL Server"
+    host: "192.168.200.16"  # Your SQL Server IP
+    port: 1433
+    database: "OLLuisiDiener"  # or your target database
+    user: "SimonM"  # Your SQL Server username
+    password: "%Si!Mon!Ma1"  # Replace with your actual password
+    encrypt: true
+    trust_server_certificate: true

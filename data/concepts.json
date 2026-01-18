@@ -1,0 +1,249 @@
+{
+  "concepts": [
+    {
+      "name": "revenue",
+      "aliases": ["Umsatz", "Erlös", "sales", "turnover", "Verkauf"],
+      "description": "Gesamtumsatz basierend auf Aufträgen/Bestellungen. Suche nach: Auftrag, Bestellung, Order, Position, Preis, Menge",
+      "search_terms": ["Auftrag", "Bestellung", "Order", "Umsatz", "Verkauf", "Position"]
+    },
+    {
+      "name": "inventory",
+      "aliases": ["Lager", "Bestand", "stock", "Vorrat", "Lagerbestand"],
+      "description": "Lagerbestände und Materialbewegungen. Suche nach: Lager, Bestand, Material, Artikel, Wareneingang, Warenausgang",
+      "search_terms": ["Lager", "Bestand", "Material", "Artikel", "Stock", "Inventory"]
+    },
+    {
+      "name": "production",
+      "aliases": ["Fertigung", "Produktion", "manufacturing", "Herstellung"],
+      "description": "Produktionsdaten, Fertigungsaufträge, BDE-Rückmeldungen. Suche nach: Fertigung, Produktion, BDE, Arbeitsgang, Rückmeldung",
+      "search_terms": ["Fertigung", "Produktion", "BDE", "Arbeitsgang", "Manufacturing"]
+    },
+    {
+      "name": "time_tracking",
+      "aliases": ["Zeiterfassung", "Anwesenheit", "attendance", "Arbeitszeit"],
+      "description": "Arbeitszeiterfassung, Stempelzeiten, Pausen. Suche nach: Zeit, Stempel, Anwesenheit, Pause, Kommen, Gehen",
+      "search_terms": ["Zeit", "Stempel", "Anwesenheit", "Time", "Attendance"]
+    },
+    {
+      "name": "employees",
+      "aliases": ["Mitarbeiter", "Personal", "staff", "Belegschaft"],
+      "description": "Mitarbeiterdaten und Personalinformationen. Suche nach: Mitarbeiter, Personal, Employee, Kostenstelle",
+      "search_terms": ["Mitarbeiter", "Personal", "Employee", "Kostenstelle"]
+    },
+    {
+      "name": "orders",
+      "aliases": ["Aufträge", "Bestellungen", "Kundenaufträge", "sales orders"],
+      "description": "Kundenaufträge und Bestellungen. Suche nach: Auftrag, Bestellung, Order, Kunde, Position",
+      "search_terms": ["Auftrag", "Bestellung", "Order", "Kunde"]
+    },
+    {
+      "name": "delivery",
+      "aliases": ["Lieferung", "Versand", "shipment", "Auslieferung"],
+      "description": "Lieferscheine und Versandinformationen. Suche nach: Lieferung, Lieferschein, Versand, Shipment",
+      "search_terms": ["Lieferung", "Lieferschein", "Versand", "Delivery", "Shipment"]
+    },
+    {
+      "name": "purchasing",
+      "aliases": ["Einkauf", "Beschaffung", "procurement", "Bestellung"],
+      "description": "Einkaufsbestellungen und Lieferanten. Suche nach: Einkauf, Beschaffung, Lieferant, Bestellung",
+      "search_terms": ["Einkauf", "Beschaffung", "Lieferant", "Purchase", "Supplier"]
+    },
+    {
+      "name": "maintenance",
+      "aliases": ["Wartung", "Instandhaltung", "service", "Reparatur"],
+      "description": "Wartungsaufträge und Instandhaltung. Suche nach: Wartung, Instandhaltung, Service, Reparatur, Maschine",
+      "search_terms": ["Wartung", "Instandhaltung", "Service", "Maintenance", "Maschine"]
+    },
+    {
+      "name": "quality",
+      "aliases": ["Qualität", "QS", "quality control", "Prüfung"],
+      "description": "Qualitätsprüfungen und Reklamationen. Suche nach: Qualität, Prüfung, Reklamation, Fehler, Ausschuss",
+      "search_terms": ["Qualität", "Prüfung", "Reklamation", "Quality", "Fehler"]
+    },
+    {
+      "name": "customers",
+      "aliases": ["Kunden", "Abnehmer", "clients", "Geschäftspartner"],
+      "description": "Kundenstammdaten und Geschäftspartner. Suche nach: Kunde, Partner, Customer, Adresse",
+      "search_terms": ["Kunde", "Partner", "Customer", "Adresse", "Debitor"]
+    },
+    {
+      "name": "costs",
+      "aliases": ["Kosten", "Aufwand", "expenses", "Kostenrechnung"],
+      "description": "Kosten und Kostenrechnung. Suche nach: Kosten, Kostenstelle, Kostenart, Budget",
+      "search_terms": ["Kosten", "Kostenstelle", "Budget", "Cost", "Aufwand"]
+    }
+  ],
+
+  "kpis": [
+    {
+      "name": "reorder_point",
+      "aliases": ["Nachbestellpunkt", "Meldebestand", "Bestellpunkt", "reorder level", "wann nachbestellen"],
+      "description": "Zeitpunkt, wann Material nachbestellt werden muss basierend auf Bestand, Bedarf und Wiederbeschaffungszeit",
+      "formula": "Reichweite_Tage = (Aktueller_Bestand - Offener_Bedarf) / Durchschnittlicher_Tagesverbrauch",
+      "sql_pattern": "SELECT Artikelnummer, SUM(Bestand) as Bestand, SUM(OffenerBedarf) as Bedarf, AVG(Wiederbeschaffungszeit) as Lieferzeit, CASE WHEN Durchschnittsverbrauch > 0 THEN (SUM(Bestand) - SUM(OffenerBedarf)) / Durchschnittsverbrauch ELSE NULL END as Reichweite_Tage",
+      "required_fields": ["Bestand", "Menge/Bestellt (offene Aufträge)", "Wiederbeschaffungszeit"],
+      "interpretation": "Wenn Reichweite_Tage < Wiederbeschaffungszeit → sofort nachbestellen. Negative Werte = bereits Unterdeckung.",
+      "threshold": "Kritisch wenn Reichweite < Wiederbeschaffungszeit"
+    },
+    {
+      "name": "variance",
+      "aliases": ["Abweichung", "Soll-Ist-Vergleich", "Vorgabe-Ist", "deviation", "Differenz"],
+      "description": "Abweichung zwischen geplanten (Soll/Vorgabe) und tatsächlichen (Ist) Werten",
+      "formula": "Abweichung = Ist - Soll; Abweichung_Prozent = ((Ist - Soll) / Soll) * 100",
+      "sql_pattern": "SELECT Artikel, Mitarbeiter, SUM(VorgabeZeit) as Soll, SUM(IstZeit) as Ist, SUM(IstZeit) - SUM(VorgabeZeit) as Abweichung, ROUND((SUM(IstZeit) - SUM(VorgabeZeit)) * 100.0 / NULLIF(SUM(VorgabeZeit), 0), 1) as Abweichung_Prozent",
+      "required_fields": ["VorgabeZeit/SollZeit/Planzeit", "IstZeit/Fertigungszeit/tatsächliche Zeit"],
+      "interpretation": "Positive Abweichung = länger als geplant (Mehraufwand). Negative = schneller als geplant.",
+      "threshold": "Kritisch wenn |Abweichung_Prozent| > 20%"
+    },
+    {
+      "name": "efficiency",
+      "aliases": ["Effizienz", "Leistungsgrad", "performance", "Produktivität", "OEE"],
+      "description": "Verhältnis von Soll zu Ist - wie effizient wird gearbeitet",
+      "formula": "Effizienz_Prozent = (Soll / Ist) * 100",
+      "sql_pattern": "SELECT Mitarbeiter, Maschine, SUM(VorgabeZeit) as Soll, SUM(IstZeit) as Ist, ROUND(SUM(VorgabeZeit) * 100.0 / NULLIF(SUM(IstZeit), 0), 1) as Effizienz_Prozent",
+      "required_fields": ["VorgabeZeit/Sollzeit", "IstZeit/Fertigungszeit"],
+      "interpretation": "100% = genau nach Plan. >100% = besser als geplant. <100% = schlechter als geplant.",
+      "threshold": "Ziel: >= 95%"
+    },
+    {
+      "name": "on_time_delivery",
+      "aliases": ["Liefertreue", "Termintreue", "OTD", "on-time", "pünktliche Lieferung"],
+      "description": "Anteil der Lieferungen, die pünktlich oder vor dem Termin erfolgt sind",
+      "formula": "Liefertreue_Prozent = (Anzahl_pünktlich / Anzahl_gesamt) * 100",
+      "sql_pattern": "SELECT COUNT(*) as Gesamt, SUM(CASE WHEN IstLieferdatum <= SollLieferdatum THEN 1 ELSE 0 END) as Puenktlich, ROUND(SUM(CASE WHEN IstLieferdatum <= SollLieferdatum THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as Liefertreue_Prozent",
+      "required_fields": ["SollLieferdatum/Liefertermin/WunschDatum", "IstLieferdatum/tatsächliches Lieferdatum"],
+      "interpretation": "100% = alle Lieferungen pünktlich. Jeder Prozentpunkt darunter = Anteil verspäteter Lieferungen.",
+      "threshold": "Ziel: >= 95%"
+    },
+    {
+      "name": "scrap_rate",
+      "aliases": ["Ausschussquote", "Ausschuss", "scrap", "Fehlerquote", "defect rate"],
+      "description": "Anteil der produzierten Teile, die als Ausschuss verworfen wurden",
+      "formula": "Ausschussquote_Prozent = (Ausschuss_Menge / Gesamt_Menge) * 100",
+      "sql_pattern": "SELECT Artikelnummer, SUM(GutMenge) as Gut, SUM(AusschussMenge) as Ausschuss, ROUND(SUM(AusschussMenge) * 100.0 / NULLIF(SUM(GutMenge) + SUM(AusschussMenge), 0), 2) as Ausschussquote_Prozent",
+      "required_fields": ["GutMenge/Menge", "AusschussMenge/Ausschuss"],
+      "interpretation": "0% = kein Ausschuss (ideal). Höhere Werte = mehr Verschwendung und Kosten.",
+      "threshold": "Kritisch wenn > 5%"
+    },
+    {
+      "name": "lead_time",
+      "aliases": ["Durchlaufzeit", "DLZ", "cycle time", "Fertigungszeit", "Bearbeitungszeit"],
+      "description": "Zeit von Auftragsstart bis Fertigstellung",
+      "formula": "Durchlaufzeit = Ende_Datum - Start_Datum",
+      "sql_pattern": "SELECT Auftrag, DATEDIFF(day, StartDatum, EndeDatum) as Durchlaufzeit_Tage, DATEDIFF(hour, StartZeit, EndeZeit) as Durchlaufzeit_Stunden",
+      "required_fields": ["StartDatum/Startzeit/Beginn", "EndeDatum/Endezeit/Fertigstellung"],
+      "interpretation": "Kürzere Durchlaufzeiten = bessere Effizienz. Vergleiche mit Soll-Durchlaufzeit.",
+      "threshold": "Kritisch wenn > 150% der Soll-DLZ"
+    },
+    {
+      "name": "utilization",
+      "aliases": ["Auslastung", "Kapazitätsauslastung", "utilization rate", "Maschinenauslastung"],
+      "description": "Verhältnis von genutzter zu verfügbarer Kapazität",
+      "formula": "Auslastung_Prozent = (Genutzte_Zeit / Verfügbare_Zeit) * 100",
+      "sql_pattern": "SELECT Maschine, Ressource, SUM(Laufzeit) as Genutzt, SUM(VerfuegbareZeit) as Verfuegbar, ROUND(SUM(Laufzeit) * 100.0 / NULLIF(SUM(VerfuegbareZeit), 0), 1) as Auslastung_Prozent",
+      "required_fields": ["Laufzeit/Betriebszeit", "VerfügbareZeit/Kapazität"],
+      "interpretation": "80-90% ist oft optimal. 100% = keine Reserven. <70% = Unterauslastung.",
+      "threshold": "Optimal: 80-90%"
+    },
+    {
+      "name": "rework_rate",
+      "aliases": ["Nacharbeitsquote", "Nacharbeit", "rework", "Korrekturaufwand"],
+      "description": "Anteil der Aufträge/Teile, die nachbearbeitet werden mussten",
+      "formula": "Nacharbeitsquote_Prozent = (Nacharbeit_Anzahl / Gesamt_Anzahl) * 100",
+      "sql_pattern": "SELECT Artikelnummer, COUNT(*) as Gesamt, SUM(CASE WHEN Nacharbeit = 1 OR NacharbeitMenge > 0 THEN 1 ELSE 0 END) as MitNacharbeit, ROUND(SUM(CASE WHEN Nacharbeit = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as Nacharbeitsquote_Prozent",
+      "required_fields": ["Nacharbeit (Flag/Boolean)", "NacharbeitMenge"],
+      "interpretation": "0% = keine Nacharbeit nötig (ideal). Hohe Werte deuten auf Qualitätsprobleme.",
+      "threshold": "Kritisch wenn > 10%"
+    },
+    {
+      "name": "stock_coverage",
+      "aliases": ["Lagerreichweite", "Bestandsreichweite", "days of supply", "Reichweite"],
+      "description": "Wie viele Tage der aktuelle Bestand bei durchschnittlichem Verbrauch reicht",
+      "formula": "Reichweite_Tage = Aktueller_Bestand / Durchschnittlicher_Tagesverbrauch",
+      "sql_pattern": "SELECT Artikelnummer, SUM(Bestand) as Bestand, AVG(Tagesverbrauch) as AvgVerbrauch, CASE WHEN AVG(Tagesverbrauch) > 0 THEN ROUND(SUM(Bestand) / AVG(Tagesverbrauch), 1) ELSE NULL END as Reichweite_Tage",
+      "required_fields": ["Bestand/Menge", "Verbrauch/Abgang pro Tag"],
+      "interpretation": "Niedrige Reichweite = bald Nachschub nötig. Sehr hohe Reichweite = evtl. Überbestand.",
+      "threshold": "Kritisch wenn < Wiederbeschaffungszeit"
+    },
+    {
+      "name": "problem_score",
+      "aliases": ["Problemindikator", "Probleme", "operative Probleme", "issues", "Störungen"],
+      "description": "Kombinierter Score aus mehreren Problemindikatoren für einen Artikel",
+      "formula": "Problem_Score = Ausschuss_Anzahl + Nacharbeit_Anzahl + Verspaetungen_Anzahl",
+      "sql_pattern": "SELECT Artikelnummer, COALESCE(Ausschuss, 0) + COALESCE(Nacharbeit, 0) + COALESCE(Verspaetungen, 0) as Problem_Score, COALESCE(Ausschuss, 0) as Ausschuss, COALESCE(Nacharbeit, 0) as Nacharbeit, COALESCE(Verspaetungen, 0) as Verspaetungen",
+      "required_fields": ["Qualitätsmeldungen/Ausschuss", "Nacharbeit-Flags", "Liefertermine (Soll vs Ist)"],
+      "interpretation": "Höherer Score = mehr Probleme. Sortiere absteigend um problematischste Artikel zu finden.",
+      "threshold": "Top 5 mit höchstem Score priorisieren"
+    },
+    {
+      "name": "time_deviation",
+      "aliases": ["Zeitabweichung", "Stempelabweichung", "clock deviation", "Systemabweichung"],
+      "description": "Abweichung zwischen zwei Zeitsystemen (z.B. Zeiterfassung vs BDE)",
+      "formula": "Abweichung_Minuten = DATEDIFF(minute, System1_Zeit, System2_Zeit)",
+      "sql_pattern": "SELECT Mitarbeiter, AVG(DATEDIFF(minute, ZeiterfassungStart, BDEStart)) as Avg_Abweichung_Min, COUNT(*) as Anzahl_Vergleiche",
+      "required_fields": ["Startzeit System 1 (z.B. Zeiterfassung)", "Startzeit System 2 (z.B. BDE)"],
+      "interpretation": "Positive Werte = System 2 später als System 1. Systematische Abweichungen deuten auf Prozessprobleme.",
+      "threshold": "Kritisch wenn |Abweichung| > 15 Minuten systematisch"
+    },
+    {
+      "name": "compliance_rate",
+      "aliases": ["Compliance", "Einhaltungsquote", "Regelkonformität", "Pausenkonformität"],
+      "description": "Anteil der Einhaltung von Regeln (z.B. Pausenzeiten, Arbeitszeiten)",
+      "formula": "Compliance_Prozent = (Anzahl_konform / Anzahl_gesamt) * 100",
+      "sql_pattern": "SELECT Mitarbeiter, COUNT(*) as Gesamt, SUM(CASE WHEN IstPause BETWEEN SollPauseMin AND SollPauseMax THEN 1 ELSE 0 END) as Konform, ROUND(SUM(CASE WHEN IstPause BETWEEN SollPauseMin AND SollPauseMax THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as Compliance_Prozent",
+      "required_fields": ["Soll-Werte (Pausenzeit, Arbeitszeit)", "Ist-Werte (tatsächliche Zeiten)"],
+      "interpretation": "100% = volle Einhaltung. Niedrigere Werte = häufige Verstöße.",
+      "threshold": "Ziel: >= 95%"
+    },
+    {
+      "name": "data_completeness",
+      "aliases": ["Datenvollständigkeit", "Datenqualität", "completeness", "Stammdatenqualität", "Pflichtfeldprüfung"],
+      "description": "Prozentsatz der ausgefüllten Pflichtfelder in Stammdaten",
+      "formula": "Vollständigkeit_Prozent = (Anzahl_gefüllte_Felder / Anzahl_Pflichtfelder) * 100",
+      "sql_pattern": "SELECT COUNT(*) as Gesamt, SUM(CASE WHEN Feld1 IS NOT NULL AND Feld1 != '' THEN 1 ELSE 0 END) as Feld1Gefuellt, ROUND(SUM(CASE WHEN Feld1 IS NOT NULL AND Feld1 != '' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as Vollstaendigkeit_Prozent",
+      "required_fields": ["Stammdaten-Tabelle", "Pflichtfelder (Email, Telefon, Adresse, etc.)"],
+      "interpretation": "100% = alle Pflichtfelder gefüllt. Niedrigere Werte zeigen Lücken in Stammdaten.",
+      "threshold": "Ziel: >= 95% für kritische Felder"
+    },
+    {
+      "name": "duplicate_rate",
+      "aliases": ["Duplikatrate", "Duplikate", "duplicates", "doppelte Einträge", "Mehrfacherfassung"],
+      "description": "Anteil potenzieller Duplikate in Stammdaten basierend auf Ähnlichkeit oder exakter Übereinstimmung",
+      "formula": "Duplikatrate_Prozent = (Anzahl_Duplikate / Anzahl_Gesamt) * 100",
+      "sql_pattern": "WITH Duplikate AS (SELECT SOUNDEX(Name) as NameCode, COUNT(*) as Anzahl FROM Tabelle GROUP BY SOUNDEX(Name) HAVING COUNT(*) > 1) SELECT SUM(Anzahl) as AnzahlInDuplikatgruppen, (SELECT COUNT(*) FROM Tabelle) as Gesamt",
+      "required_fields": ["Stammdaten-Tabelle", "Namensfelder oder Schlüsselfelder für Vergleich"],
+      "interpretation": "0% = keine Duplikate. Höhere Werte deuten auf Datenqualitätsprobleme oder fehlende Dublettenprüfung.",
+      "threshold": "Kritisch wenn > 5%"
+    },
+    {
+      "name": "orphan_records",
+      "aliases": ["verwaiste Datensätze", "Orphans", "FK-Verletzungen", "referentielle Integrität", "fehlende Referenzen"],
+      "description": "Datensätze ohne gültige Fremdschlüsselreferenz zur Elterntabelle",
+      "formula": "Orphan_Anzahl = COUNT(Datensätze ohne gültige FK-Referenz)",
+      "sql_pattern": "SELECT COUNT(*) as VerwaisteDatensaetze FROM ChildTabelle c LEFT JOIN ParentTabelle p ON c.FK_Spalte = p.PK_Spalte WHERE p.PK_Spalte IS NULL",
+      "required_fields": ["Child-Tabelle mit FK", "Parent-Tabelle mit PK"],
+      "interpretation": "0 = keine verwaisten Datensätze. Jeder Wert > 0 deutet auf Datenintegritätsprobleme.",
+      "threshold": "Kritisch wenn > 0"
+    },
+    {
+      "name": "delivery_fulfillment",
+      "aliases": ["Liefererfüllung", "Erfüllungsgrad", "fulfillment rate", "Lieferquote", "Auftragserfüllung"],
+      "description": "Verhältnis von gelieferter Menge zur bestellten Menge",
+      "formula": "Erfüllungsgrad_Prozent = (Gelieferte_Menge / Bestellte_Menge) * 100",
+      "sql_pattern": "SELECT a.Auftragsnummer, SUM(ap.Menge) as BestellteMenge, COALESCE(SUM(lsp.Menge), 0) as GelieferteMenge, ROUND(COALESCE(SUM(lsp.Menge), 0) * 100.0 / NULLIF(SUM(ap.Menge), 0), 2) as Erfuellungsgrad_Prozent FROM Auftraege a JOIN Auftragspositionen ap ON a.Auftragsnummer = ap.Auftragsnummer LEFT JOIN Lieferscheinpositionen lsp ON ap.Auftragsnummer = lsp.Auftragsnummer AND ap.Positionsnummer = lsp.AuftragsPosition GROUP BY a.Auftragsnummer",
+      "required_fields": ["Auftragspositionen mit Menge", "Lieferscheinpositionen mit Menge"],
+      "interpretation": "100% = vollständig geliefert. <100% = Teillieferung oder offene Menge. >100% = Überlieferung.",
+      "threshold": "Ziel: 100% bei abgeschlossenen Aufträgen"
+    },
+    {
+      "name": "document_reconciliation",
+      "aliases": ["Belegabgleich", "Mengenabgleich", "reconciliation", "Auftrag-Lieferung-Rechnung", "3-Way-Match"],
+      "description": "Vergleich der Mengen zwischen Auftrag, Lieferschein und Rechnung zur Identifikation von Abweichungen",
+      "formula": "Abweichung = Bestellmenge - Liefermenge oder Liefermenge - Rechnungsmenge",
+      "sql_pattern": "SELECT ap.Auftragsnummer, ap.Artikelnummer, ap.Menge as Bestellt, COALESCE(SUM(lsp.Menge), 0) as Geliefert, COALESCE(SUM(rp.Menge), 0) as Berechnet, ap.Menge - COALESCE(SUM(lsp.Menge), 0) as DiffBestelltGeliefert, COALESCE(SUM(lsp.Menge), 0) - COALESCE(SUM(rp.Menge), 0) as DiffGeliefertBerechnet FROM Auftragspositionen ap LEFT JOIN Lieferscheinpositionen lsp ON ap.Auftragsnummer = lsp.Auftragsnummer AND ap.Positionsnummer = lsp.AuftragsPosition LEFT JOIN Rechnungspositionen rp ON ap.Auftragsnummer = rp.Auftragsnummer AND ap.Positionsnummer = rp.AuftragsPosition GROUP BY ap.Auftragsnummer, ap.Artikelnummer, ap.Menge, ap.Positionsnummer HAVING ap.Menge != COALESCE(SUM(lsp.Menge), 0) OR COALESCE(SUM(lsp.Menge), 0) != COALESCE(SUM(rp.Menge), 0)",
+      "required_fields": ["Auftragspositionen", "Lieferscheinpositionen", "Rechnungspositionen"],
+      "interpretation": "Alle Differenzen sollten 0 sein bei abgeschlossenen Vorgängen. Abweichungen zeigen Prozess- oder Erfassungsfehler.",
+      "threshold": "Kritisch wenn Differenz != 0 bei Status 'abgeschlossen'"
+    }
+  ]
+}
