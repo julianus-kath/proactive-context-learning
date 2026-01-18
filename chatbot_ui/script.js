@@ -15,12 +15,14 @@ class ERPChatbot {
         this.stopRequested = false;
         this.lastFocusedElement = null;
         this.activeModal = null;
+        this.theme = 'light';
         
         this.initializeElements();
         this.bindEvents();
         this.loadSettings();
         this.loadConversations();
         this.initConfig();
+        this.initTheme();
     }
 
     initializeElements() {
@@ -35,7 +37,6 @@ class ERPChatbot {
         this.messageInput = document.getElementById('messageInput');
         this.sendBtn = document.getElementById('sendBtn');
         this.stopBtn = document.getElementById('stopBtn');
-        this.charCount = document.getElementById('charCount');
         this.loadingOverlay = document.getElementById('loadingOverlay');
         this.typingIndicator = document.getElementById('typingIndicator');
         this.jumpToLatestBtn = document.getElementById('jumpToLatestBtn');
@@ -45,6 +46,9 @@ class ERPChatbot {
         this.newChatBtn = document.getElementById('newChatBtn');
         this.helpBtn = document.getElementById('helpBtn');
         this.settingsBtn = document.getElementById('settingsBtn');
+        this.themeToggleBtn = document.getElementById('themeToggleBtn');
+        this.dbDialectTag = document.getElementById('dbDialectTag');
+        this.dbNameTag = document.getElementById('dbNameTag');
         
         // Modals
         this.helpModal = document.getElementById('helpModal');
@@ -85,6 +89,9 @@ class ERPChatbot {
         }
         if (this.settingsBtn) {
             this.settingsBtn.addEventListener('click', () => this.showModal('settings'));
+        }
+        if (this.themeToggleBtn) {
+            this.themeToggleBtn.addEventListener('click', () => this.toggleTheme());
         }
 
         // Chat scroll events
@@ -159,6 +166,35 @@ class ERPChatbot {
         return `session_${timestamp}_${random}`;
     }
 
+    initTheme() {
+        let theme = 'light';
+        try {
+            const saved = localStorage.getItem('erp_chatbot_theme');
+            if (saved === 'dark' || saved === 'light') {
+                theme = saved;
+            }
+        } catch (error) {
+            console.error('Error loading theme:', error);
+        }
+        this.applyTheme(theme);
+    }
+
+    applyTheme(theme) {
+        this.theme = theme === 'dark' ? 'dark' : 'light';
+        const isDark = this.theme === 'dark';
+        document.body.classList.toggle('theme-dark', isDark);
+    }
+
+    toggleTheme() {
+        const next = this.theme === 'dark' ? 'light' : 'dark';
+        this.applyTheme(next);
+        try {
+            localStorage.setItem('erp_chatbot_theme', next);
+        } catch (error) {
+            console.error('Error saving theme:', error);
+        }
+    }
+
     async initConfig() {
         try {
             const response = await this.fetchWithTimeout('/config', { method: 'GET' }, 5000);
@@ -166,6 +202,19 @@ class ERPChatbot {
                 const config = await response.json();
                 const langgraphUrl = config.langgraph_url || 'http://localhost:5001';
                 this.apiKeyIsServerManaged = !!config.api_key_set;
+                this.dbDialect = config.db_dialect || null;
+                this.dbDatabase = config.db_database || null;
+
+                if (this.dbDialectTag) {
+                    this.dbDialectTag.textContent = this.dbDialect
+                        ? `Dialect: ${this.dbDialect.toUpperCase()}`
+                        : 'Dialect: -';
+                }
+                if (this.dbNameTag) {
+                    this.dbNameTag.textContent = this.dbDatabase
+                        ? `DB: ${this.dbDatabase}`
+                        : 'DB: -';
+                }
 
                 if (this.apiKeyIsServerManaged) {
                     this.serviceUrl = '';
@@ -211,26 +260,15 @@ class ERPChatbot {
     }
 
     handleInputChange() {
-        if (!this.messageInput || !this.charCount) return;
+        if (!this.messageInput) return;
 
-        const length = this.messageInput.value.length;
-        this.charCount.textContent = length;
-        
-        // Update character counter styling
-        this.charCount.className = '';
-        if (length > 800) {
-            this.charCount.classList.add('warning');
-        }
-        if (length > 950) {
-            this.charCount.classList.add('error');
-        }
-        
         // Auto-resize textarea
         this.messageInput.style.height = 'auto';
         this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 120) + 'px';
         
         // Enable/disable send button
         if (this.sendBtn) {
+            const length = this.messageInput.value.length;
             this.sendBtn.disabled = length === 0 || this.isLoading;
         }
     }
@@ -286,6 +324,14 @@ class ERPChatbot {
         }
         if (this.statusText) {
             this.statusText.textContent = text;
+        }
+
+        const isConnected = status === 'online';
+        if (this.dbDialectTag) {
+            this.dbDialectTag.classList.toggle('connected', isConnected);
+        }
+        if (this.dbNameTag) {
+            this.dbNameTag.classList.toggle('connected', isConnected);
         }
     }
 
@@ -343,7 +389,7 @@ class ERPChatbot {
 
             if (response && response.error) {
                 status = 'backend_error';
-                this.addMessage('bot', `⚠️ ${response.error}`, true);
+                this.addMessage('bot', `Error: ${response.error}`, true);
                 this.messages.push({ role: 'assistant', content: response.error });
             } else if (response) {
                 const isClarification = response.clarify || response.operation === 'clarify';
@@ -376,7 +422,7 @@ class ERPChatbot {
                 const label = this.stopRequested
                     ? 'Request cancelled.'
                     : 'Request timed out. Please try again.';
-                this.addMessage('bot', `⚠️ ${label}`, true);
+                this.addMessage('bot', label, true);
             } else {
                 const errorMessage = error.message || 'Unknown error';
                 if (
@@ -389,7 +435,7 @@ class ERPChatbot {
                 } else {
                     status = 'network_error';
                 }
-                this.addMessage('bot', `⚠️ ${errorMessage}`, true);
+                this.addMessage('bot', `Error: ${errorMessage}`, true);
             }
         } finally {
             const endTime = (typeof performance !== 'undefined' && performance.now)
@@ -476,7 +522,13 @@ class ERPChatbot {
 
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
-        avatar.textContent = sender === 'user' ? '👤' : '🤖';
+        const avatarImg = document.createElement('img');
+        avatarImg.alt = sender === 'user' ? 'User' : 'Assistant';
+        avatarImg.className = 'message-avatar-img';
+        avatarImg.src = sender === 'user'
+            ? '/static/icons/user-avatar.png'
+            : '/static/icons/assistant-avatar.png';
+        avatar.appendChild(avatarImg);
 
         const messageBody = document.createElement('div');
 
@@ -649,7 +701,9 @@ class ERPChatbot {
         if (this.conversations.length === 0) {
             this.conversationHistory.innerHTML = `
                 <div class="history-empty">
-                    <div class="empty-icon">💬</div>
+                    <div class="empty-icon">
+                        <img src="/static/icons/no_conversations.png" alt="" class="history-empty-icon-img" />
+                    </div>
                     <p>No conversations yet</p>
                     <small>Start chatting to see your conversation history</small>
                 </div>
@@ -710,7 +764,6 @@ class ERPChatbot {
         this.chatMessages.innerHTML = `
                 <div class="welcome-message">
                     <div class="welcome-content">
-                        <div class="welcome-icon">🚀</div>
                         <h3>Welcome to ERP Assistant!</h3>
                         <p>I can help you query your ERP database using natural language. Try asking questions like:</p>
                         <div class="sample-queries">

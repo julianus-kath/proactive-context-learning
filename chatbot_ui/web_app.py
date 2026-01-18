@@ -15,11 +15,27 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
-# Load environment variables
-load_dotenv()
+# Resolve current directory and load environment variables from local .env
+current_dir = Path(__file__).parent
+load_dotenv(current_dir / ".env", override=True)
 
 LANGGRAPH_URL = os.getenv("LANGGRAPH_URL", "http://localhost:5001").rstrip("/")
 API_KEY = os.getenv("API_KEY")
+
+# Database configuration (for UI status only – read directly from .env)
+raw_dialect = (os.getenv("DB_DIALECT") or "").strip()
+DB_DIALECT = raw_dialect.lower()
+POSTGRES_DATABASE = os.getenv("POSTGRES_DATABASE")
+MSSQL_DATABASE = os.getenv("MSSQL_DATABASE")
+
+DB_DATABASE = None
+if DB_DIALECT.startswith("mssql"):
+    DB_DATABASE = MSSQL_DATABASE
+elif DB_DIALECT.startswith("postgres"):
+    DB_DATABASE = POSTGRES_DATABASE
+else:
+    # Fallback: try either explicit database vars or legacy DB_NAME
+    DB_DATABASE = POSTGRES_DATABASE or MSSQL_DATABASE or os.getenv("DB_NAME")
 
 # Create FastAPI app
 app = FastAPI(
@@ -36,9 +52,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Get the directory where this script is located
-current_dir = Path(__file__).parent
 
 # Serve static files (CSS, JS, images)
 app.mount("/static", StaticFiles(directory=current_dir), name="static")
@@ -88,7 +101,9 @@ async def get_config():
     return {
         "langgraph_url": LANGGRAPH_URL,
         "api_key_set": bool(API_KEY),
-        "version": "2.0.0"
+        "version": "2.0.0",
+        "db_dialect": DB_DIALECT,
+        "db_database": DB_DATABASE,
     }
 
 
@@ -158,13 +173,13 @@ async def proxy_process_conversation(request: Request):
     return data
 
 if __name__ == "__main__":
-    print("🚀 Starting ERP Chatbot Web UI...")
-    print("📋 Make sure the following are running:")
+    print("Starting ERP Chatbot Web UI...")
+    print("Make sure the following are running:")
     print("   - LangGraph Service (http://localhost:5001)")
     print("   - MCP Server (http://localhost:8000)")
     print("   - PostgreSQL database")
     print()
-    print("🌐 Web UI will be available at: http://localhost:3000")
+    print("Web UI will be available at: http://localhost:3000")
     print()
     
     uvicorn.run(
