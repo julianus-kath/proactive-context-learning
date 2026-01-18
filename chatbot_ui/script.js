@@ -1,57 +1,45 @@
 // ERP Chatbot UI - JavaScript Implementation
 class ERPChatbot {
     constructor() {
-        this.serviceUrl = '';
-        this.apiKey = null;
-        this.apiKeyIsServerManaged = false;
+        this.serviceUrl = 'http://localhost:5001';
+        this.apiKey = 'supersecretapikey';
         this.sessionId = this.generateSessionId();
         this.messages = [];
         this.conversations = [];
         this.currentConversationId = null;
         this.isLoading = false;
         this.lastWasClarification = false;
-        this.currentRequestController = null;
-        this.isUserNearBottom = true;
-        this.stopRequested = false;
-        this.lastFocusedElement = null;
-        this.activeModal = null;
-        
+
         this.initializeElements();
         this.bindEvents();
+        this.checkServiceHealth();
         this.loadSettings();
         this.loadConversations();
-        this.initConfig();
     }
 
     initializeElements() {
         // Main elements
         this.statusIndicator = document.getElementById('statusIndicator');
-        if (this.statusIndicator) {
-            this.statusDot = this.statusIndicator.querySelector('.status-dot');
-            this.statusText = this.statusIndicator.querySelector('.status-text');
-        }
+        this.statusDot = this.statusIndicator.querySelector('.status-dot');
+        this.statusText = this.statusIndicator.querySelector('.status-text');
         this.conversationHistory = document.getElementById('conversationHistory');
         this.chatMessages = document.getElementById('chatMessages');
         this.messageInput = document.getElementById('messageInput');
         this.sendBtn = document.getElementById('sendBtn');
-        this.stopBtn = document.getElementById('stopBtn');
         this.charCount = document.getElementById('charCount');
         this.loadingOverlay = document.getElementById('loadingOverlay');
-        this.typingIndicator = document.getElementById('typingIndicator');
-        this.jumpToLatestBtn = document.getElementById('jumpToLatestBtn');
-        
+
         // Buttons
         this.clearHistoryBtn = document.getElementById('clearHistoryBtn');
-        this.newChatBtn = document.getElementById('newChatBtn');
         this.helpBtn = document.getElementById('helpBtn');
         this.settingsBtn = document.getElementById('settingsBtn');
-        
+
         // Modals
         this.helpModal = document.getElementById('helpModal');
         this.settingsModal = document.getElementById('settingsModal');
         this.helpModalClose = document.getElementById('helpModalClose');
         this.settingsModalClose = document.getElementById('settingsModalClose');
-        
+
         // Settings
         this.serviceUrlInput = document.getElementById('serviceUrl');
         this.apiKeyInput = document.getElementById('apiKey');
@@ -62,93 +50,46 @@ class ERPChatbot {
 
     bindEvents() {
         // Message input events
-        if (this.messageInput) {
-            this.messageInput.addEventListener('input', () => this.handleInputChange());
-            this.messageInput.addEventListener('keydown', (e) => this.handleKeyDown(e));
-        }
-        if (this.sendBtn) {
-            this.sendBtn.addEventListener('click', () => this.sendMessage());
-        }
-        if (this.stopBtn) {
-            this.stopBtn.addEventListener('click', () => this.stopCurrentRequest());
-        }
-        
-        // Button events
-        if (this.clearHistoryBtn) {
-            this.clearHistoryBtn.addEventListener('click', () => this.clearHistory());
-        }
-        if (this.newChatBtn) {
-            this.newChatBtn.addEventListener('click', () => this.startNewChat());
-        }
-        if (this.helpBtn) {
-            this.helpBtn.addEventListener('click', () => this.showModal('help'));
-        }
-        if (this.settingsBtn) {
-            this.settingsBtn.addEventListener('click', () => this.showModal('settings'));
-        }
+        this.messageInput.addEventListener('input', () => this.handleInputChange());
+        this.messageInput.addEventListener('keydown', (e) => this.handleKeyDown(e));
+        this.sendBtn.addEventListener('click', () => this.sendMessage());
 
-        // Chat scroll events
-        if (this.chatMessages) {
-            this.chatMessages.addEventListener('scroll', () => this.handleChatScroll());
-        }
-        if (this.jumpToLatestBtn) {
-            this.jumpToLatestBtn.addEventListener('click', () => {
-                this.scrollToBottom();
-                this.isUserNearBottom = true;
-                this.hideJumpToLatest();
-            });
-        }
-        
+        // Button events
+        this.clearHistoryBtn.addEventListener('click', () => this.clearHistory());
+        this.helpBtn.addEventListener('click', () => this.showModal('help'));
+        this.settingsBtn.addEventListener('click', () => this.showModal('settings'));
+
         // Modal events
-        if (this.helpModalClose) {
-            this.helpModalClose.addEventListener('click', () => this.hideModal('help'));
-        }
-        if (this.settingsModalClose) {
-            this.settingsModalClose.addEventListener('click', () => this.hideModal('settings'));
-        }
-        
-        // Modal backdrop and focus trap events
-        if (this.helpModal) {
-            this.helpModal.addEventListener('click', (e) => {
-                if (e.target === this.helpModal) this.hideModal('help');
-            });
-            this.helpModal.addEventListener('keydown', (e) => this.handleModalKeyDown(e, this.helpModal));
-        }
-        if (this.settingsModal) {
-            this.settingsModal.addEventListener('click', (e) => {
-                if (e.target === this.settingsModal) this.hideModal('settings');
-            });
-            this.settingsModal.addEventListener('keydown', (e) => this.handleModalKeyDown(e, this.settingsModal));
-        }
-        
+        this.helpModalClose.addEventListener('click', () => this.hideModal('help'));
+        this.settingsModalClose.addEventListener('click', () => this.hideModal('settings'));
+
         // Settings events
-        if (this.resetSettingsBtn) {
-            this.resetSettingsBtn.addEventListener('click', () => this.resetSettings());
-        }
-        if (this.saveSettingsBtn) {
-            this.saveSettingsBtn.addEventListener('click', () => this.saveSettings());
-        }
-        
+        this.resetSettingsBtn.addEventListener('click', () => this.resetSettings());
+        this.saveSettingsBtn.addEventListener('click', () => this.saveSettings());
+
         // Sample query events
         document.addEventListener('click', (e) => {
-            if (e.target.classList && e.target.classList.contains('sample-query')) {
+            if (e.target.classList.contains('sample-query')) {
                 const query = e.target.getAttribute('data-query');
-                if (this.messageInput) {
-                    this.messageInput.value = query || '';
-                    this.handleInputChange();
-                    this.messageInput.focus();
-                }
+                this.messageInput.value = query;
+                this.handleInputChange();
+                this.messageInput.focus();
             }
         });
-        
+
+        // Modal backdrop events
+        this.helpModal.addEventListener('click', (e) => {
+            if (e.target === this.helpModal) this.hideModal('help');
+        });
+        this.settingsModal.addEventListener('click', (e) => {
+            if (e.target === this.settingsModal) this.hideModal('settings');
+        });
+
         // Escape key to close modals
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.activeModal) {
-                if (this.activeModal === this.helpModal) {
-                    this.hideModal('help');
-                } else if (this.activeModal === this.settingsModal) {
-                    this.hideModal('settings');
-                }
+            if (e.key === 'Escape') {
+                this.hideModal('help');
+                this.hideModal('settings');
             }
         });
     }
@@ -159,63 +100,10 @@ class ERPChatbot {
         return `session_${timestamp}_${random}`;
     }
 
-    async initConfig() {
-        try {
-            const response = await this.fetchWithTimeout('/config', { method: 'GET' }, 5000);
-            if (response.ok) {
-                const config = await response.json();
-                const langgraphUrl = config.langgraph_url || 'http://localhost:5001';
-                this.apiKeyIsServerManaged = !!config.api_key_set;
-
-                if (this.apiKeyIsServerManaged) {
-                    this.serviceUrl = '';
-                    if (this.apiKeyInput) {
-                        this.apiKeyInput.disabled = true;
-                        this.apiKeyInput.placeholder = 'Configured on server';
-                        this.apiKeyInput.value = '';
-                    }
-                } else {
-                    this.serviceUrl = langgraphUrl;
-                    if (this.apiKeyInput) {
-                        this.apiKeyInput.disabled = false;
-                    }
-                }
-
-                if (this.serviceUrlInput) {
-                    this.serviceUrlInput.value = this.apiKeyIsServerManaged
-                        ? `${window.location.origin}/process_conversation`
-                        : this.serviceUrl;
-                }
-            } else {
-                this.serviceUrl = this.serviceUrl || 'http://localhost:5001';
-            }
-        } catch (error) {
-            console.error('Error loading config:', error);
-            this.serviceUrl = this.serviceUrl || 'http://localhost:5001';
-        } finally {
-            this.checkServiceHealth();
-        }
-    }
-
-    async fetchWithTimeout(url, options = {}, timeoutMs = 60000, controller) {
-        const abortController = controller || new AbortController();
-        const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
-        try {
-            return await fetch(url, {
-                ...options,
-                signal: abortController.signal
-            });
-        } finally {
-            clearTimeout(timeoutId);
-        }
-    }
-
     handleInputChange() {
-        if (!this.messageInput || !this.charCount) return;
-
         const length = this.messageInput.value.length;
         this.charCount.textContent = length;
-        
+
         // Update character counter styling
         this.charCount.className = '';
         if (length > 800) {
@@ -224,15 +112,13 @@ class ERPChatbot {
         if (length > 950) {
             this.charCount.classList.add('error');
         }
-        
+
         // Auto-resize textarea
         this.messageInput.style.height = 'auto';
         this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 120) + 'px';
-        
+
         // Enable/disable send button
-        if (this.sendBtn) {
-            this.sendBtn.disabled = length === 0 || this.isLoading;
-        }
+        this.sendBtn.disabled = length === 0 || this.isLoading;
     }
 
     handleKeyDown(e) {
@@ -244,206 +130,98 @@ class ERPChatbot {
 
     async checkServiceHealth() {
         try {
-            let url;
-            if (this.apiKeyIsServerManaged) {
-                url = '/backend_health';
-            } else if (this.serviceUrl) {
-                url = `${this.serviceUrl.replace(/\/+$/, '')}/health`;
-            } else {
-                url = '/health';
-            }
-
-            const response = await this.fetchWithTimeout(url, { method: 'GET' }, 5000);
+            const response = await fetch(`${this.serviceUrl}/health`, {
+                method: 'GET',
+                timeout: 5000
+            });
 
             if (response.ok) {
-                if (this.apiKeyIsServerManaged && url.endsWith('/backend_health')) {
-                    let data = null;
-                    try {
-                        data = await response.json();
-                    } catch (_) {
-                        data = null;
-                    }
-                    if (data && data.status === 'degraded') {
-                        this.updateStatus('degraded', 'Service Degraded');
-                    } else {
-                        this.updateStatus('online', 'Service Online');
-                    }
-                } else {
-                    this.updateStatus('online', 'Service Online');
-                }
+                this.updateStatus('online', 'Service Online');
             } else {
                 this.updateStatus('offline', 'Service Error');
             }
         } catch (error) {
-            console.error('Error checking service health:', error);
             this.updateStatus('offline', 'Service Offline');
         }
     }
 
     updateStatus(status, text) {
-        if (this.statusDot) {
-            this.statusDot.className = `status-dot ${status}`;
-        }
-        if (this.statusText) {
-            this.statusText.textContent = text;
-        }
-    }
-
-    handleChatScroll() {
-        if (!this.chatMessages) return;
-        const { scrollTop, scrollHeight, clientHeight } = this.chatMessages;
-        const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
-        this.isUserNearBottom = distanceFromBottom <= 100;
-        if (this.isUserNearBottom) {
-            this.hideJumpToLatest();
-        }
-    }
-
-    scrollToBottom() {
-        if (!this.chatMessages) return;
-        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
-        this.hideJumpToLatest();
-    }
-
-    showJumpToLatest() {
-        if (this.jumpToLatestBtn) {
-            this.jumpToLatestBtn.hidden = false;
-            this.jumpToLatestBtn.classList.add('visible');
-        }
-    }
-
-    hideJumpToLatest() {
-        if (this.jumpToLatestBtn) {
-            this.jumpToLatestBtn.classList.remove('visible');
-            this.jumpToLatestBtn.hidden = true;
-        }
+        this.statusDot.className = `status-dot ${status}`;
+        this.statusText.textContent = text;
     }
 
     async sendMessage() {
-        if (!this.messageInput) return;
         const message = this.messageInput.value.trim();
         if (!message || this.isLoading) return;
 
+        // Clear input and show loading
         this.messageInput.value = '';
         this.handleInputChange();
         this.setLoading(true);
 
-        const startTime = (typeof performance !== 'undefined' && performance.now)
-            ? performance.now()
-            : Date.now();
-
-        let status = 'ok';
-        let response = null;
-
         try {
+            // Add user message to UI
             this.addMessage('user', message);
+
+            // Add user message to conversation
             this.messages.push({ role: 'user', content: message });
 
-            response = await this.sendToService();
+            // Send to service
+            const response = await this.sendToService(message);
 
-            if (response && response.error) {
-                status = 'backend_error';
+            // Handle response
+            if (response.error) {
                 this.addMessage('bot', `⚠️ ${response.error}`, true);
                 this.messages.push({ role: 'assistant', content: response.error });
-            } else if (response) {
+            } else {
+                // Check if it's a clarification
                 const isClarification = response.clarify || response.operation === 'clarify';
-                const responseText =
-                    response.final_response ||
-                    response.response ||
-                    response.clarification ||
-                    response.question ||
-                    '';
+                const responseText = response.final_response || response.response || response.clarification || response.question;
 
-                const clarificationOptions = Array.isArray(response.clarification_options)
-                    ? response.clarification_options
-                    : null;
-
-                this.addMessage('bot', responseText, false, isClarification, clarificationOptions);
+                this.addMessage('bot', responseText, false, isClarification);
                 this.lastWasClarification = isClarification;
 
+                // Update messages from server if available
                 if (response.messages && Array.isArray(response.messages)) {
                     this.messages = response.messages;
-                } else if (responseText) {
+                } else {
                     this.messages.push({ role: 'assistant', content: responseText });
                 }
             }
 
+            // Update conversation history
             this.updateConversationHistory();
+
+            // Log interaction
+            this.logInteraction(message, response);
+
         } catch (error) {
             console.error('Error sending message:', error);
-            if (error.name === 'AbortError') {
-                status = this.stopRequested ? 'cancelled' : 'timeout';
-                const label = this.stopRequested
-                    ? 'Request cancelled.'
-                    : 'Request timed out. Please try again.';
-                this.addMessage('bot', `⚠️ ${label}`, true);
-            } else {
-                const errorMessage = error.message || 'Unknown error';
-                if (
-                    String(errorMessage).startsWith('Authentication failed') ||
-                    String(errorMessage).startsWith('Invalid request format') ||
-                    String(errorMessage).startsWith('Service temporarily unavailable') ||
-                    String(errorMessage).startsWith('Service error')
-                ) {
-                    status = 'backend_error';
-                } else {
-                    status = 'network_error';
-                }
-                this.addMessage('bot', `⚠️ ${errorMessage}`, true);
-            }
+            this.addMessage('bot', `⚠️ Connection error: ${error.message}`, true);
         } finally {
-            const endTime = (typeof performance !== 'undefined' && performance.now)
-                ? performance.now()
-                : Date.now();
-            const durationMs = Math.round(endTime - startTime);
-            this.stopRequested = false;
             this.setLoading(false);
-            if (this.messageInput) {
-                this.messageInput.focus();
-            }
-            this.logInteraction(message, response, { status, durationMs });
+            this.messageInput.focus();
         }
     }
 
-    async sendToService() {
+    async sendToService(userInput) {
         const payload = {
-            messages: this.messages
+            messages: this.messages.concat([{ role: 'user', content: userInput }]),
+            api_key: this.apiKey
         };
 
-        if (!this.apiKeyIsServerManaged && this.apiKey) {
-            payload.api_key = this.apiKey;
-        }
-
-        const baseUrl =
-            this.apiKeyIsServerManaged || !this.serviceUrl
-                ? ''
-                : this.serviceUrl.replace(/\/+$/, '');
-        const url = `${baseUrl}/process_conversation`;
-
-        const controller = new AbortController();
-        this.currentRequestController = controller;
-
-        let response;
-        try {
-            response = await this.fetchWithTimeout(
-                url,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                },
-                60000,
-                controller
-            );
-        } finally {
-            this.currentRequestController = null;
-        }
+        const response = await fetch(`${this.serviceUrl}/process_conversation`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+            timeout: 60000
+        });
 
         if (!response.ok) {
             if (response.status === 401) {
-                throw new Error('Authentication failed. Please check your API key or server configuration.');
+                throw new Error('Authentication failed. Please check your API key.');
             } else if (response.status === 400) {
                 throw new Error('Invalid request format.');
             } else if (response.status === 503) {
@@ -456,9 +234,8 @@ class ERPChatbot {
         return await response.json();
     }
 
-    addMessage(sender, content, isError = false, isClarification = false, clarificationOptions = null) {
-        if (!this.chatMessages) return;
-
+    addMessage(sender, content, isError = false, isClarification = false) {
+        // Hide welcome message if it exists
         const welcomeMessage = this.chatMessages.querySelector('.welcome-message');
         if (welcomeMessage) {
             welcomeMessage.style.display = 'none';
@@ -470,99 +247,37 @@ class ERPChatbot {
         if (isClarification) {
             messageDiv.classList.add('clarification');
         }
-        if (sender === 'bot' && isError) {
-            messageDiv.classList.add('error');
-        }
 
         const avatar = document.createElement('div');
         avatar.className = 'message-avatar';
         avatar.textContent = sender === 'user' ? '👤' : '🤖';
 
-        const messageBody = document.createElement('div');
-
-        if (sender === 'bot' && isClarification) {
-            const label = document.createElement('div');
-            label.className = 'clarification-label';
-            label.textContent = 'Clarification needed';
-            messageBody.appendChild(label);
-        }
-
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        contentDiv.innerHTML = this.formatMessageContent(content);
+
+        // Format content (basic markdown-like formatting)
+        const formattedContent = this.formatMessageContent(content);
+        contentDiv.innerHTML = formattedContent;
 
         const timeDiv = document.createElement('div');
         timeDiv.className = 'message-time';
         timeDiv.textContent = new Date().toLocaleTimeString();
 
-        messageBody.appendChild(contentDiv);
-
-        if (
-            sender === 'bot' &&
-            isClarification &&
-            Array.isArray(clarificationOptions) &&
-            clarificationOptions.length > 0
-        ) {
-            const optionsContainer = document.createElement('div');
-            optionsContainer.className = 'clarification-options';
-            clarificationOptions.forEach((optionText) => {
-                const optionBtn = document.createElement('button');
-                optionBtn.type = 'button';
-                optionBtn.className = 'sample-query';
-                optionBtn.textContent = optionText;
-                optionBtn.addEventListener('click', () => {
-                    if (this.messageInput) {
-                        this.messageInput.value = optionText;
-                        this.handleInputChange();
-                        this.sendMessage();
-                    }
-                });
-                optionsContainer.appendChild(optionBtn);
-            });
-            messageBody.appendChild(optionsContainer);
-        }
-
-        if (sender === 'bot' && isError) {
-            const actions = document.createElement('div');
-            actions.className = 'message-actions';
-            const retryBtn = document.createElement('button');
-            retryBtn.type = 'button';
-            retryBtn.className = 'retry-btn';
-            retryBtn.textContent = 'Retry';
-            retryBtn.addEventListener('click', () => this.retryLastUserMessage());
-            actions.appendChild(retryBtn);
-            messageBody.appendChild(actions);
-        }
-
-        messageBody.appendChild(timeDiv);
-
         messageDiv.appendChild(avatar);
+        const messageBody = document.createElement('div');
+        messageBody.appendChild(contentDiv);
+        messageBody.appendChild(timeDiv);
         messageDiv.appendChild(messageBody);
-
-        const shouldAutoScroll = this.isUserNearBottom || !this.chatMessages.hasChildNodes();
 
         this.chatMessages.appendChild(messageDiv);
 
-        if (shouldAutoScroll) {
-            this.scrollToBottom();
-        } else {
-            this.showJumpToLatest();
-        }
+        // Scroll to bottom
+        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     }
 
     formatMessageContent(content) {
-        if (typeof content !== 'string') {
-            content = String(content ?? '');
-        }
-
-        const escaped = content
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-
-        return escaped
+        // Basic formatting for better readability
+        return content
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.*?)\*/g, '<em>$1</em>')
             .replace(/`(.*?)`/g, '<code>$1</code>')
@@ -571,47 +286,25 @@ class ERPChatbot {
 
     setLoading(loading) {
         this.isLoading = loading;
-        if (this.sendBtn) {
-            const hasText = this.messageInput && this.messageInput.value.trim().length > 0;
-            this.sendBtn.disabled = loading || !hasText;
-            this.sendBtn.hidden = !!loading;
-        }
-        if (this.stopBtn) {
-            this.stopBtn.hidden = !loading;
-            this.stopBtn.disabled = !loading;
-        }
+        this.sendBtn.disabled = loading || this.messageInput.value.trim().length === 0;
 
         if (loading) {
-            this.showTypingIndicator();
+            this.loadingOverlay.classList.add('show');
         } else {
-            this.hideTypingIndicator();
-        }
-    }
-
-    showTypingIndicator() {
-        if (this.typingIndicator) {
-            this.typingIndicator.hidden = false;
-            this.typingIndicator.classList.add('show');
-        }
-    }
-
-    hideTypingIndicator() {
-        if (this.typingIndicator) {
-            this.typingIndicator.classList.remove('show');
-            this.typingIndicator.hidden = true;
+            this.loadingOverlay.classList.remove('show');
         }
     }
 
     updateConversationHistory() {
         if (this.messages.length === 0) return;
-        
+
         // Get the first user message as conversation title
         const firstUserMessage = this.messages.find(m => m.role === 'user');
         if (!firstUserMessage) return;
-        
-        const conversationTitle = firstUserMessage.content.substring(0, 50) + 
+
+        const conversationTitle = firstUserMessage.content.substring(0, 50) +
                                 (firstUserMessage.content.length > 50 ? '...' : '');
-        
+
         // Create or update conversation
         const conversation = {
             id: this.currentConversationId || this.generateConversationId(),
@@ -620,7 +313,7 @@ class ERPChatbot {
             timestamp: new Date().toISOString(),
             lastMessage: this.messages[this.messages.length - 1]?.content || ''
         };
-        
+
         // Update conversations array
         const existingIndex = this.conversations.findIndex(c => c.id === conversation.id);
         if (existingIndex >= 0) {
@@ -629,12 +322,12 @@ class ERPChatbot {
             this.conversations.unshift(conversation);
             this.currentConversationId = conversation.id;
         }
-        
+
         // Limit to 50 conversations
         if (this.conversations.length > 50) {
             this.conversations = this.conversations.slice(0, 50);
         }
-        
+
         this.saveConversations();
         this.renderConversationHistory();
     }
@@ -644,8 +337,6 @@ class ERPChatbot {
     }
 
     renderConversationHistory() {
-        if (!this.conversationHistory) return;
-
         if (this.conversations.length === 0) {
             this.conversationHistory.innerHTML = `
                 <div class="history-empty">
@@ -656,23 +347,21 @@ class ERPChatbot {
             `;
             return;
         }
-        
+
         this.conversationHistory.innerHTML = '';
-        
+
         this.conversations.forEach(conversation => {
-            const item = document.createElement('button');
-            item.type = 'button';
+            const item = document.createElement('div');
             item.className = 'conversation-item';
             if (conversation.id === this.currentConversationId) {
                 item.classList.add('active');
             }
-            item.setAttribute('aria-label', `Conversation: ${conversation.title}`);
-            
+
             item.innerHTML = `
                 <div class="conversation-preview">${conversation.title}</div>
                 <div class="conversation-time">${this.formatTime(conversation.timestamp)}</div>
             `;
-            
+
             item.addEventListener('click', () => this.loadConversation(conversation.id));
             this.conversationHistory.appendChild(item);
         });
@@ -681,68 +370,23 @@ class ERPChatbot {
     loadConversation(conversationId) {
         const conversation = this.conversations.find(c => c.id === conversationId);
         if (!conversation) return;
-        
+
         this.currentConversationId = conversationId;
         this.messages = [...conversation.messages];
-        this.isUserNearBottom = true;
-        
+
         // Clear and rebuild chat messages
-        if (this.chatMessages) {
-            this.chatMessages.innerHTML = '';
-        }
-        
+        this.chatMessages.innerHTML = '';
+
         conversation.messages.forEach(message => {
             this.addMessage(
                 message.role === 'user' ? 'user' : 'bot',
                 message.content,
                 false,
-                message.content.includes('🤔'),
-                null
+                message.content.includes('🤔') // Simple clarification detection
             );
         });
-        
-        this.renderConversationHistory();
-        this.scrollToBottom();
-    }
 
-    renderWelcomeState() {
-        if (!this.chatMessages) return;
-        this.chatMessages.innerHTML = `
-                <div class="welcome-message">
-                    <div class="welcome-content">
-                        <div class="welcome-icon">🚀</div>
-                        <h3>Welcome to ERP Assistant!</h3>
-                        <p>I can help you query your ERP database using natural language. Try asking questions like:</p>
-                        <div class="sample-queries">
-                            <button class="sample-query" type="button" data-query="How many customers do we have?">
-                                How many customers do we have?
-                            </button>
-                            <button class="sample-query" type="button" data-query="Show me our top 5 products by sales">
-                                Show me our top 5 products by sales
-                            </button>
-                            <button class="sample-query" type="button" data-query="What were our total sales last month?">
-                                What were our total sales last month?
-                            </button>
-                            <button class="sample-query" type="button" data-query="Which products are low in stock?">
-                                Which products are low in stock?
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-    }
-
-    startNewChat() {
-        if (this.isLoading) return;
-        this.messages = [];
-        this.currentConversationId = null;
-        this.lastWasClarification = false;
-        this.isUserNearBottom = true;
-        this.hideJumpToLatest();
-        this.hideTypingIndicator();
-        this.renderWelcomeState();
         this.renderConversationHistory();
-        this.scrollToBottom();
     }
 
     clearHistory() {
@@ -751,12 +395,34 @@ class ERPChatbot {
             this.messages = [];
             this.currentConversationId = null;
             this.lastWasClarification = false;
-            
+
             this.saveConversations();
             this.renderConversationHistory();
-            
+
             // Reset chat messages to welcome state
-            this.renderWelcomeState();
+            this.chatMessages.innerHTML = `
+                <div class="welcome-message">
+                    <div class="welcome-content">
+                        <div class="welcome-icon">🚀</div>
+                        <h3>Welcome to ERP Assistant!</h3>
+                        <p>I can help you query your ERP database using natural language. Try asking questions like:</p>
+                        <div class="sample-queries">
+                            <button class="sample-query" data-query="How many customers do we have?">
+                                How many customers do we have?
+                            </button>
+                            <button class="sample-query" data-query="Show me our top 5 products by sales">
+                                Show me our top 5 products by sales
+                            </button>
+                            <button class="sample-query" data-query="What were our total sales last month?">
+                                What were our total sales last month?
+                            </button>
+                            <button class="sample-query" data-query="Which products are low in stock?">
+                                Which products are low in stock?
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
     }
 
@@ -767,137 +433,61 @@ class ERPChatbot {
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMs / 3600000);
         const diffDays = Math.floor(diffMs / 86400000);
-        
+
         if (diffMins < 1) return 'Just now';
         if (diffMins < 60) return `${diffMins}m ago`;
         if (diffHours < 24) return `${diffHours}h ago`;
         if (diffDays < 7) return `${diffDays}d ago`;
-        
+
         return date.toLocaleDateString();
     }
 
-    getFocusableElements(container) {
-        if (!container) return [];
-        const selectors = [
-            'button',
-            '[href]',
-            'input',
-            'select',
-            'textarea',
-            '[tabindex]:not([tabindex="-1"])'
-        ];
-        return Array.from(container.querySelectorAll(selectors.join(','))).filter(
-            (el) => !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true'
-        );
-    }
-
-    handleModalKeyDown(event, modal) {
-        if (event.key !== 'Tab') return;
-        const focusable = this.getFocusableElements(modal);
-        if (focusable.length === 0) return;
-
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-
-        if (event.shiftKey) {
-            if (document.activeElement === first) {
-                event.preventDefault();
-                last.focus();
-            }
-        } else if (document.activeElement === last) {
-            event.preventDefault();
-            first.focus();
-        }
-    }
-
     showModal(type) {
-        const modal = type === 'help' ? this.helpModal : this.settingsModal;
-        if (!modal) return;
-
-        this.activeModal = modal;
-        this.lastFocusedElement =
-            document.activeElement && document.activeElement instanceof HTMLElement
-                ? document.activeElement
-                : null;
-
-        modal.classList.add('show');
-        modal.setAttribute('aria-hidden', 'false');
-
-        if (type === 'settings') {
+        if (type === 'help') {
+            this.helpModal.classList.add('show');
+        } else if (type === 'settings') {
+            this.settingsModal.classList.add('show');
             this.loadSettingsToModal();
-        }
-
-        const focusable = this.getFocusableElements(modal);
-        if (focusable.length > 0) {
-            focusable[0].focus();
-        } else {
-            const modalContent = modal.querySelector('.modal-content');
-            if (modalContent && typeof modalContent.focus === 'function') {
-                modalContent.focus();
-            }
         }
     }
 
     hideModal(type) {
-        const modal = type === 'help' ? this.helpModal : this.settingsModal;
-        if (!modal) return;
-
-        modal.classList.remove('show');
-        modal.setAttribute('aria-hidden', 'true');
-
-        if (this.activeModal === modal) {
-            this.activeModal = null;
-        }
-
-        if (this.lastFocusedElement && typeof this.lastFocusedElement.focus === 'function') {
-            this.lastFocusedElement.focus();
-            this.lastFocusedElement = null;
+        if (type === 'help') {
+            this.helpModal.classList.remove('show');
+        } else if (type === 'settings') {
+            this.settingsModal.classList.remove('show');
         }
     }
 
     loadSettingsToModal() {
-        if (this.serviceUrlInput) {
-            this.serviceUrlInput.value = this.apiKeyIsServerManaged
-                ? `${window.location.origin}/process_conversation`
-                : this.serviceUrl || this.serviceUrlInput.value;
-        }
-        if (this.apiKeyInput && !this.apiKeyIsServerManaged) {
-            this.apiKeyInput.value = this.apiKey || '';
-        }
-        if (this.sessionIdInput) {
-            this.sessionIdInput.value = this.sessionId;
-        }
+        this.serviceUrlInput.value = this.serviceUrl;
+        this.apiKeyInput.value = this.apiKey;
+        this.sessionIdInput.value = this.sessionId;
     }
 
     resetSettings() {
+        this.serviceUrl = 'http://localhost:5001';
+        this.apiKey = 'supersecretapikey';
         this.sessionId = this.generateSessionId();
-        this.apiKey = null;
-        if (this.apiKeyInput && !this.apiKeyIsServerManaged) {
-            this.apiKeyInput.value = '';
-        }
         this.loadSettingsToModal();
         this.saveSettings();
     }
 
     saveSettings() {
-        if (!this.apiKeyIsServerManaged && this.apiKeyInput) {
-            const value = this.apiKeyInput.value.trim();
-            this.apiKey = value || null;
-        }
+        this.serviceUrl = this.serviceUrlInput.value.trim();
+        this.apiKey = this.apiKeyInput.value.trim();
 
-        try {
-            localStorage.setItem(
-                'erp_chatbot_settings',
-                JSON.stringify({
-                    sessionId: this.sessionId
-                })
-            );
-        } catch (error) {
-            console.error('Error saving settings:', error);
-        }
+        // Save to localStorage
+        localStorage.setItem('erp_chatbot_settings', JSON.stringify({
+            serviceUrl: this.serviceUrl,
+            apiKey: this.apiKey,
+            sessionId: this.sessionId
+        }));
 
         this.hideModal('settings');
         this.checkServiceHealth();
+
+        // Show success message
         this.showNotification('Settings saved successfully!', 'success');
     }
 
@@ -906,9 +496,9 @@ class ERPChatbot {
             const saved = localStorage.getItem('erp_chatbot_settings');
             if (saved) {
                 const settings = JSON.parse(saved);
-                if (settings.sessionId) {
-                    this.sessionId = settings.sessionId;
-                }
+                this.serviceUrl = settings.serviceUrl || this.serviceUrl;
+                this.apiKey = settings.apiKey || this.apiKey;
+                this.sessionId = settings.sessionId || this.sessionId;
             }
         } catch (error) {
             console.error('Error loading settings:', error);
@@ -935,34 +525,17 @@ class ERPChatbot {
         }
     }
 
-    stopCurrentRequest() {
-        if (this.currentRequestController) {
-            this.stopRequested = true;
-            this.currentRequestController.abort();
-        }
-    }
-
-    retryLastUserMessage() {
-        if (this.isLoading || !this.messageInput) return;
-        const lastUserMessage = [...this.messages].reverse().find((m) => m.role === 'user');
-        if (!lastUserMessage) return;
-        this.messageInput.value = lastUserMessage.content || '';
-        this.handleInputChange();
-        this.sendMessage();
-    }
-
-    logInteraction(userInput, response, metadata = {}) {
+    logInteraction(userInput, response) {
         const logEntry = {
             timestamp: new Date().toISOString(),
             sessionId: this.sessionId,
-            userInput,
-            response,
-            conversationId: this.currentConversationId,
-            ...metadata
+            userInput: userInput,
+            response: response,
+            conversationId: this.currentConversationId
         };
-        
+
         console.log('Chat interaction:', logEntry);
-        
+
         // Could send to analytics service here
     }
 
@@ -982,9 +555,9 @@ class ERPChatbot {
             z-index: 3000;
             animation: slideInRight 0.3s ease-out;
         `;
-        
+
         document.body.appendChild(notification);
-        
+
         setTimeout(() => {
             notification.style.animation = 'slideOutRight 0.3s ease-out';
             setTimeout(() => {
@@ -1012,7 +585,7 @@ style.textContent = `
             transform: translateX(0);
         }
     }
-    
+
     @keyframes slideOutRight {
         from {
             opacity: 1;
