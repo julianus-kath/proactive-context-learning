@@ -196,6 +196,9 @@ async def stream_conversation(request: Request):
     forward_body = {"messages": messages}
     if API_KEY:
         forward_body["api_key"] = API_KEY
+    # Forward conversation_id for session logging
+    if body.get("conversation_id"):
+        forward_body["conversation_id"] = body["conversation_id"]
 
     target_url = f"{LANGGRAPH_URL}/stream"
 

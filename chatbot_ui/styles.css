@@ -500,7 +500,7 @@ body.theme-dark .db-tag.connected {
     font-size: 1.5rem;
     font-weight: 600;
     color: var(--primary-dark);
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.75rem;
 }
 
 .chat-title p {
@@ -1297,16 +1297,24 @@ body.theme-dark .thinking-container.completed .thinking-header {
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--darker-grey-4);
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--darker-grey-2);
+    background: var(--obsidian-shadow-s4);
     border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--darker-grey-1);
+    background: var(--obsidian-shadow-s3);
+}
+
+body.theme-dark ::-webkit-scrollbar-thumb {
+    background: var(--obsidian-shadow-s1);
+}
+
+body.theme-dark ::-webkit-scrollbar-thumb:hover {
+    background: var(--obsidian-shadow-s2);
 }
 
 /* Focus Styles for Accessibility */

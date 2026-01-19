@@ -224,6 +224,7 @@ class StreamConversationRequest(BaseModel):
     """Request model for streaming conversation endpoint."""
     messages: list
     api_key: Optional[str] = None
+    conversation_id: Optional[str] = None
 
 
 class ConversationResponse(BaseModel):
@@ -527,16 +528,54 @@ async def stream_query(request: StreamConversationRequest):
             last_user_message = msg.get("content", "")
             break
 
-    logger.info(f"Starting stream for conversation: {last_user_message[:100]}...")
+    # Generate or use existing conversation ID
+    conv_id = request.conversation_id or str(uuid.uuid4())[:8]
+    start_time = time.time()
+
+    logger.info(f"Starting stream for conversation {conv_id}: {last_user_message[:100]}...")
 
     async def event_generator():
         """Generate SSE events for agent execution."""
+        final_response = ""
+        sql_query = None
+        success = True
+        error_msg = None
+
         try:
             async for event in stream_agent_execution(agent, request.messages):
+                # Track final response and SQL from events
+                if event.get("type") == "llm_response":
+                    final_response = event.get("content", "")
+                elif event.get("type") == "complete":
+                    sql_query = event.get("sql_query")
+                elif event.get("type") == "error":
+                    success = False
+                    error_msg = event.get("error")
+
                 yield f"data: {json.dumps(event)}\n\n"
+
         except Exception as e:
             logger.error(f"Streaming error: {e}")
+            success = False
+            error_msg = str(e)
             yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+        finally:
+            # Log the conversation turn after streaming completes
+            latency_ms = int((time.time() - start_time) * 1000)
+            if conversation_logger:
+                try:
+                    conversation_logger.log_turn(
+                        conversation_id=conv_id,
+                        messages=request.messages,
+                        response=final_response or "[No response captured]",
+                        sql_query=sql_query,
+                        success=success,
+                        latency_ms=latency_ms,
+                        error=error_msg
+                    )
+                except Exception as log_err:
+                    logger.error(f"Failed to log conversation: {log_err}")
 
     return StreamingResponse(
         event_generator(),

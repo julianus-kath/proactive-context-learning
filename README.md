@@ -1,184 +1,194 @@
-<!-- Logo placeholder -->
+# ERP Natural Language Assistant
+
 <p align="center">
-  <!-- TODO: Add your logo here -->
-  <!-- <img src="docs/images/logo.png" alt="ERP Assistant Logo" width="200"/> -->
-  <h1 align="center">ERP Natural Language Query Assistant</h1>
+  <strong>Natural language to SQL interface for MSSQL databases.</strong>
 </p>
 
 <p align="center">
-  <strong>Transform natural language into SQL queries for your ERP database</strong>
-</p>
-
-<!-- Badges -->
-<p align="center">
-  <img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"/>
-  <img src="https://img.shields.io/badge/LangGraph-0.2+-green.svg" alt="LangGraph"/>
-  <img src="https://img.shields.io/badge/FastAPI-0.100+-teal.svg" alt="FastAPI"/>
-  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"/>
-  <img src="https://img.shields.io/badge/MSSQL-2019+-red.svg" alt="MSSQL"/>
-  <!-- TODO: Add more badges as needed -->
-  <!-- <img src="https://img.shields.io/github/stars/youruser/yourrepo?style=social" alt="GitHub Stars"/> -->
-</p>
-
-<p align="center">
-  <a href="#features">Features</a> •
-  <a href="#architecture">Architecture</a> •
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#api-reference">API</a> •
-  <a href="#documentation">Docs</a>
+  <img src="docs/interface-screenshot.png" alt="ERP Assistant Interface" width="700"/>
 </p>
 
 ---
 
-<!-- Interface Screenshot -->
-<p align="center">
-  <img src="docs/interface-screenshot.png" alt="ERP Assistant Interface" width="800"/>
-</p>
+## Problem Statement
+
+Enterprise databases contain valuable business insights, but accessing them requires:
+- Technical SQL knowledge
+- Understanding of complex database schemas
+- IT department involvement for ad-hoc queries
+
+**Result:** Business users face delays for simple data retrieval tasks.
 
 ---
 
-## Features
+## Solution
 
-- **Natural Language Queries** - Ask questions in plain English or German
-- **Intelligent Table Discovery** - Automatically finds relevant tables using semantic search
-- **SQL Generation & Validation** - Generates and validates MSSQL syntax
-- **Interactive Clarifications** - Asks follow-up questions when queries are ambiguous
-- **Real-time Streaming** - See results as they're generated
-- **Secure Architecture** - API keys managed server-side, no client exposure
+An AI-powered assistant that translates natural language questions into SQL queries and retrieves data from MSSQL databases.
+
+```mermaid
+%%{init: {'theme': 'neutral', 'themeVariables': { 'background': 'transparent'}}}%%
+flowchart LR
+    A["💬 Natural Language Input"] --> B["🤖 Intent Recognition"]
+    B --> C["🔍 Table Discovery"]
+    C --> D["📊 Query Execution"]
+
+    style A fill:#e3f2fd,stroke:#1976d2,color:#1565c0
+    style B fill:#fff3e0,stroke:#f57c00,color:#e65100
+    style C fill:#f3e5f5,stroke:#7b1fa2,color:#6a1b9a
+    style D fill:#e8f5e9,stroke:#388e3c,color:#2e7d32
+```
+
+---
+
+## How It Works
+
+### 1. Natural Language Input
+
+The system accepts queries in plain language (German and English):
+
+> *"Show me the top 10 customers by revenue this year"*
+>
+> *"Which products had the highest sales growth last quarter?"*
+>
+> *"What's the average order value by region?"*
+
+### 2. Intelligent Table Discovery
+
+The system automatically:
+- Identifies relevant tables from the database schema
+- Resolves relationships between entities
+- Generates appropriate SQL queries
+
+```mermaid
+%%{init: {'theme': 'neutral', 'themeVariables': { 'background': 'transparent'}}}%%
+flowchart TB
+    Q["User Query"] --> AI["LLM Agent"]
+
+    subgraph Understanding["Intent Parsing"]
+        AI --> T1["Entity: Customers"]
+        AI --> T2["Metric: Revenue"]
+        AI --> T3["Filter: Time Period"]
+    end
+
+    subgraph Finding["Schema Search"]
+        T1 --> DB[("MSSQL Database<br/>940+ Tables")]
+        T2 --> DB
+        T3 --> DB
+    end
+
+    DB --> R["Query Results"]
+
+    style Q fill:#e3f2fd,stroke:#1976d2,color:#1565c0
+    style AI fill:#fff3e0,stroke:#f57c00,color:#e65100
+    style Understanding fill:#fafafa,stroke:#bdbdbd
+    style Finding fill:#fafafa,stroke:#bdbdbd
+    style DB fill:#f3e5f5,stroke:#7b1fa2,color:#6a1b9a
+    style R fill:#e8f5e9,stroke:#388e3c,color:#2e7d32
+```
+
+### 3. Result Presentation
+
+Responses include:
+- Formatted answers to the query
+- Data tables where applicable
+- Support for follow-up questions in conversational context
 
 ---
 
 ## Architecture
 
-### System Overview
-
 ```mermaid
+%%{init: {'theme': 'neutral', 'themeVariables': { 'background': 'transparent'}}}%%
 flowchart TB
-    subgraph Client["🖥️ Client Layer"]
-        UI[Web UI<br/>Port 3000]
+    subgraph Client["Client Layer"]
+        UI["Web Interface<br/>Port 3000"]
     end
 
-    subgraph Agent["🤖 Agent Layer"]
-        SA[SQL Agent<br/>Port 5001]
-        LG[LangGraph<br/>ReAct Agent]
+    subgraph Agent["Agent Layer"]
+        SA["SQL Agent<br/>Port 5001"]
+        LLM["LLM<br/>(GPT-4)"]
     end
 
-    subgraph MCP["🔌 MCP Layer"]
-        MS[MCP Server<br/>Port 8000]
-        SC[Scout Cache<br/>Table Metadata]
+    subgraph MCP["Data Access Layer"]
+        MS["MCP Server<br/>Port 8000"]
+        SC["Scout Index"]
     end
 
-    subgraph Data["💾 Data Layer"]
-        DB[(MSSQL<br/>ERP Database)]
+    subgraph Data["Storage Layer"]
+        DB[("MSSQL / PostgreSQL")]
     end
 
-    UI -->|HTTP/JSON| SA
-    SA --> LG
-    LG -->|Tool Calls| MS
-    MS --> SC
-    MS -->|SQL Queries| DB
+    UI <--> SA
+    SA <--> LLM
+    SA <--> MS
+    MS <--> SC
+    MS <--> DB
 
-    style Client fill:#e1f5fe
-    style Agent fill:#fff3e0
-    style MCP fill:#f3e5f5
-    style Data fill:#e8f5e9
+    style Client fill:#e3f2fd,stroke:#1976d2
+    style Agent fill:#fff3e0,stroke:#f57c00
+    style MCP fill:#f3e5f5,stroke:#7b1fa2
+    style Data fill:#e8f5e9,stroke:#388e3c
 ```
 
-### Query Processing Flow
+### Components
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant UI as Web UI
-    participant A as SQL Agent
-    participant M as MCP Server
-    participant DB as Database
-
-    U->>UI: "Show top 10 customers by revenue"
-    UI->>A: POST /process_conversation
-
-    A->>A: Parse Intent
-    A->>M: list_tables(query)
-    M->>M: Semantic Search
-    M-->>A: Relevant Tables
-
-    A->>M: get_schema(tables)
-    M-->>A: Column Details
-
-    A->>A: Generate SQL
-    A->>M: validate_sql(query)
-    M-->>A: Valid ✓
-
-    A->>M: execute_query(sql)
-    M->>DB: SELECT TOP 10...
-    DB-->>M: Results
-    M-->>A: Data
-
-    A->>A: Format Answer
-    A-->>UI: Response + SQL
-    UI-->>U: Display Results
-```
-
-### Component Architecture
-
-```mermaid
-flowchart LR
-    subgraph Tools["🔧 Agent Tools"]
-        T1[list_tables]
-        T2[get_schema]
-        T3[validate_sql]
-        T4[execute_query]
-    end
-
-    subgraph Scout["🔍 Scout Mode"]
-        S1[Semantic Search]
-        S2[CamelCase Parser]
-        S3[Fuzzy Matching]
-        S4[Token Decomposition]
-    end
-
-    subgraph Cache["📦 Catalog Cache"]
-        C1[Table Metadata]
-        C2[Column Types]
-        C3[Row Counts]
-    end
-
-    T1 --> S1
-    S1 --> S2
-    S1 --> S3
-    S1 --> S4
-    S1 --> C1
-    T2 --> C2
-    T2 --> C3
-
-    style Tools fill:#fff3e0
-    style Scout fill:#e8f5e9
-    style Cache fill:#f3e5f5
-```
+| Component | Purpose |
+|-----------|---------|
+| **Web Interface** | Chat-based UI for query input and result display |
+| **SQL Agent** | LangGraph-based ReAct agent for query decomposition |
+| **MCP Server** | Database abstraction layer with tool endpoints |
+| **Scout Index** | Pre-computed table metadata for semantic search |
 
 ---
 
-## Quick Start
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **Natural Language Processing** | Supports German and English queries |
+| **Semantic Table Discovery** | Finds relevant tables among 900+ candidates |
+| **Real-time Streaming** | Server-Sent Events for progressive response display |
+| **Conversational Context** | Maintains session state for follow-up queries |
+| **Read-only Access** | No data modification capabilities |
+
+---
+
+## Use Cases
+
+**Sales Analytics**
+- Revenue by customer, product, or region
+- Sales trends and growth analysis
+- Performance comparisons
+
+**Inventory Management**
+- Stock levels and availability
+- Product performance metrics
+
+**Operations**
+- Order fulfillment statistics
+- Supplier analysis
+- Cost breakdowns
+
+---
+
+## Getting Started
 
 ### Prerequisites
 
-| Requirement | Version | Notes |
-|-------------|---------|-------|
-| Python | 3.10+ | Agent runtime |
-| Node.js | 18+ | Optional, for development |
-| MSSQL | 2019+ | ERP database |
-| OpenAI API | - | GPT-4o access |
+- Python 3.10+
+- MSSQL or PostgreSQL database (read-only access)
+- OpenAI API key ([platform.openai.com](https://platform.openai.com/api-keys))
 
 ### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/erp-assistant.git
+# Clone repository
+git clone https://github.com/julianus-kath/erp-assistant.git
 cd erp-assistant
 
 # Create virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -186,183 +196,59 @@ pip install -r requirements.txt
 
 ### Configuration
 
-Create a `.env` file in the project root:
-
 ```bash
-# Required
-OPENAI_API_KEY=sk-your-key-here
-MCP_SERVER_URL=http://YOUR_WINDOWS_IP:8000
-MCP_API_KEY=your-mcp-api-key
-
-# Optional
-API_KEY=your-api-key  # For API authentication
+cp .env.example .env
 ```
 
-### Running the System
-
-```bash
-# Start all services (Web UI + SQL Agent)
-./start_scripts/start_all_services_mac.sh
+Required environment variables:
+```
+OPENAI_API_KEY=sk-...
+MCP_SERVER_URL=http://database-server:8000
 ```
 
-This will:
-1. Install dependencies
-2. Check MCP server connectivity
-3. Start SQL Agent on port 5001
-4. Start Web UI on port 3000
+### Running
 
-### Access Points
+```bash
+./start_scripts/start_all_services.sh
+```
+
+### Endpoints
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| Web UI | http://localhost:3000 | Chat interface |
-| SQL Agent API | http://localhost:5001 | Agent endpoints |
+| Web Interface | http://localhost:3000 | Chat UI |
+| Agent API | http://localhost:5001 | Query endpoints |
 | Health Check | http://localhost:5001/health | Service status |
-
----
-
-## API Reference
-
-### Query Endpoint
-
-```http
-POST /query
-Content-Type: application/json
-
-{
-  "question": "Who are our top 5 customers by revenue?"
-}
-```
-
-**Response:**
-```json
-{
-  "answer": "Based on the sales data, your top 5 customers are...",
-  "sql_query": "SELECT TOP 5 c.Name, SUM(s.Amount) as Revenue...",
-  "success": true,
-  "latency_ms": 2500
-}
-```
-
-### Conversation Endpoint
-
-```http
-POST /process_conversation
-Content-Type: application/json
-
-{
-  "messages": [
-    {"role": "user", "content": "Show me sales by region"}
-  ]
-}
-```
-
-### Health Endpoint
-
-```http
-GET /health
-```
-
-**Response:**
-```json
-{
-  "status": "healthy",
-  "mcp_connected": true,
-  "catalog_tables": 943,
-  "version": "1.0.0"
-}
-```
 
 ---
 
 ## Project Structure
 
 ```
-.
-├── simple_sql_agent/          # Main SQL agent package
-│   ├── agent.py               # ReAct agent using LangGraph
-│   ├── service.py             # FastAPI service (port 5001)
-│   ├── tools/                 # Database tools
-│   └── prompts/               # System prompts
-├── chatbot_ui/                # Web interface
-│   ├── web_app.py             # FastAPI server (port 3000)
-│   ├── index.html             # Chat interface
-│   ├── styles.css             # Styling
-│   └── script.js              # Frontend logic
-├── mcp_server/                # MCP database server
-│   ├── scout/                 # Semantic search
-│   │   └── runner.py          # Table ranking algorithm
-│   └── catalog/               # Metadata caching
-├── data/
-│   └── concepts.json          # Domain knowledge
-├── adrs/                      # Architecture Decision Records
-├── start_scripts/             # Startup scripts
-└── eval/                      # Evaluation framework
+├── simple_sql_agent/       # LangGraph agent implementation
+│   ├── agent.py            # ReAct agent logic
+│   ├── service.py          # FastAPI service
+│   └── prompts/            # System prompts
+├── chatbot_ui/             # Web interface
+├── mcp_server/             # Database access layer
+│   ├── scout/              # Semantic search
+│   └── catalog/            # Schema caching
+├── eval/                   # Evaluation framework
+└── adrs/                   # Architecture Decision Records
 ```
 
 ---
 
-## Documentation
+## About
 
-### Architecture Decision Records
+Master's thesis project exploring LLM-based natural language to SQL translation.
 
-| ADR | Title | Status |
-|-----|-------|--------|
-| [0030](adrs/0030-simple-sql-agent-architecture.md) | Simple SQL Agent Architecture | Accepted |
-| [0031](adrs/0031-erp-chatbot-frontend-architecture-decision.md) | Frontend Architecture Decision | Accepted |
-| [0032](adrs/0032-generic-table-search-ranking-fixes.md) | Generic Table Search Ranking | Accepted |
+**Author:** Julianus Kath
 
-### Key Concepts
-
-- **Scout Mode** - Pre-computed table metadata for fast semantic search
-- **ReAct Agent** - Reasoning + Acting pattern for query decomposition
-- **MCP Protocol** - Model Context Protocol for database access
-
----
-
-## Running Benchmarks
-
-```bash
-cd simple_sql_agent
-python run_benchmark.py --max 12
-```
-
----
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## Authors
-
-<!-- TODO: Fill in author information -->
-<table>
-  <tr>
-    <td align="center">
-      <!-- <img src="https://github.com/yourusername.png" width="100px;" alt=""/> -->
-      <br />
-      <sub><b>Your Name</b></sub>
-      <br />
-      <!-- <a href="https://github.com/yourusername">GitHub</a> • -->
-      <!-- <a href="https://linkedin.com/in/yourprofile">LinkedIn</a> -->
-    </td>
-  </tr>
-</table>
-
----
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+**Stack:** Python, LangGraph, FastAPI, GPT-4, MSSQL
 
 ---
 
 <p align="center">
-  Made with <a href="https://www.langchain.com/langgraph">LangGraph</a> and <a href="https://openai.com">OpenAI</a>
+  <em>Natural language to SQL for MSSQL databases.</em>
 </p>

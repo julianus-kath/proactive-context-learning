@@ -515,7 +515,8 @@ class ERPChatbot {
 
     async sendMessageStreaming() {
         const payload = {
-            messages: this.messages
+            messages: this.messages,
+            conversation_id: this.currentConversationId || this.sessionId
         };
 
         const baseUrl = this.apiKeyIsServerManaged || !this.serviceUrl ? '' : this.serviceUrl.replace(/\/+$/, '');
@@ -995,20 +996,20 @@ class ERPChatbot {
         this.chatMessages.innerHTML = `
                 <div class="welcome-message">
                     <div class="welcome-content">
-                        <h3>Welcome to ERP Assistant!</h3>
-                        <p>I can help you query your ERP database using natural language. Try asking questions like:</p>
+                        <h3>Willkommen beim ERP-Assistenten!</h3>
+                        <p>Ich kann Ihnen helfen, Ihre ERP-Datenbank mit natürlicher Sprache abzufragen. Probieren Sie Fragen wie:</p>
                         <div class="sample-queries">
-                            <button class="sample-query" type="button" data-query="How many customers do we have?">
-                                How many customers do we have?
+                            <button class="sample-query" type="button" data-query="Wie viele Kunden haben wir?">
+                                Wie viele Kunden haben wir?
                             </button>
-                            <button class="sample-query" type="button" data-query="Show me our top 5 products by sales">
-                                Show me our top 5 products by sales
+                            <button class="sample-query" type="button" data-query="Zeige mir unsere Top 5 Artikel nach Umsatz">
+                                Zeige mir unsere Top 5 Artikel nach Umsatz
                             </button>
-                            <button class="sample-query" type="button" data-query="What were our total sales last month?">
-                                What were our total sales last month?
+                            <button class="sample-query" type="button" data-query="Wie hoch war unser Gesamtumsatz letzten Monat?">
+                                Wie hoch war unser Gesamtumsatz letzten Monat?
                             </button>
-                            <button class="sample-query" type="button" data-query="Which products are low in stock?">
-                                Which products are low in stock?
+                            <button class="sample-query" type="button" data-query="Welche Artikel haben niedrigen Lagerbestand?">
+                                Welche Artikel haben niedrigen Lagerbestand?
                             </button>
                         </div>
                     </div>
