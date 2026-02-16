@@ -1,8 +1,8 @@
-# ADR 0003: Extended Data Models - Document Store and Graph Database
+# ADR-0003: Extended Data Models - Document Store and Graph Database
 
-## Status
-
-Accepted
+**Status**: Accepted
+**Date**: 2025-04-16
+**Author**: Julianus Kath
 
 ## Context
 

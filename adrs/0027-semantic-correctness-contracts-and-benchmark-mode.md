@@ -1,9 +1,8 @@
-# ADR 0027: Semantic Correctness Contracts & Benchmark Mode
+# ADR-0027: Semantic Correctness Contracts & Benchmark Mode
 
-**Date:** December 25, 2025  
-**Status:** Accepted
-
----
+**Status**: Accepted
+**Date**: 2025-12-25
+**Author**: Julianus Kath
 
 ## Problem
 

@@ -1,10 +1,8 @@
-# ADR 0030: Simple SQL Agent Architecture
+# ADR-0030: Simple SQL Agent Architecture
 
-## Status
-Accepted
-
-## Date
-2026-01-07
+**Status**: Accepted
+**Date**: 2026-01-07
+**Author**: Julianus Kath
 
 ## Context
 

@@ -1,8 +1,8 @@
-Perfect 👍 Let’s document this as an **Architecture Decision Record (ADR)**. You can drop this into your repo (e.g., `docs/adr/0001-sql-proxy.md`) and commit `proxy.py` alongside it.
+# ADR-0011: Accessing SQL Server from Mac via Windows Proxy
 
----
-
-# ADR 0011 – Accessing SQL Server from Mac via Windows Proxy
+**Status**: Accepted
+**Date**: 2025-09-29
+**Author**: Julianus Kath
 
 ## Context
 
@@ -50,7 +50,7 @@ This makes SQL Server reachable for development without direct VPN or complex tu
    $env:SQLSERVER_PORT = "1433"
    $env:SQLSERVER_DB   = "master"
    $env:SQLSERVER_USER = "SimonM"
-   $env:SQLSERVER_PASSWORD = '%Si!Mon!Ma1'
+   $env:SQLSERVER_PASSWORD = '<REDACTED>'
    $env:ODBC_DRIVER = "ODBC Driver 17 for SQL Server"
    $env:SQL_ENCRYPT = "yes"
    $env:SQL_TRUST_CERT = "yes"
@@ -108,4 +108,3 @@ This pattern was used as a temporary development solution until:
 ---
 
 **Last Updated**: January 2025 (Phase 7 Migration)
-

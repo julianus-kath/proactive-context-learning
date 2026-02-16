@@ -1,12 +1,10 @@
 # ADR-0016: Phase 7+ Complete Architecture with Scout Mode and Semantic Ranking
 
-**Status**: Accepted  
-**Date**: 2025-01-15  
-**Authors**: System Architecture Team  
-**Context**: Phase 7 & 7.1 - Answer-First with Scout Mode and Semantic Table Ranking  
+**Status**: Accepted
+**Date**: 2025-10-20
+**Author**: Julianus Kath
+**Context**: Phase 7 & 7.1 - Answer-First with Scout Mode and Semantic Table Ranking
 **Supersedes**: ADR-0010 (Partial), ADR-0012 (Complementary)
-
----
 
 ## Context
 

@@ -1,8 +1,9 @@
-# ADR 0014: Scout Mode - Semantic Caching for Table Discovery
+# ADR-0014: Scout Mode - Semantic Caching for Table Discovery
 
-**Date:** 2024  
-**Status:** ACCEPTED  
-**Context:** Phase 7.1 Enhancement  
+**Status**: Accepted
+**Date**: 2025-10-20
+**Author**: Julianus Kath
+**Context**: Phase 7.1 Enhancement
 
 ## Problem
 

@@ -1,7 +1,8 @@
-# ADR 0025: LangGraph Error Envelope & Clarification Hardening
+# ADR-0025: LangGraph Error Envelope & Clarification Hardening
 
-## Status
-Accepted – November 10, 2025
+**Status**: Accepted
+**Date**: 2025-11-15
+**Author**: Julianus Kath
 
 ## Context
 The ERP assistant’s LangGraph orchestrator relied on loosely structured dictionaries across agents for execution results and error propagation. Result envelopes often deviated from the expected `{ok, data, error_info}` shape, causing downstream handling bugs, double-wrapping of errors, and unhelpful UI responses.  

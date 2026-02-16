@@ -4,9 +4,11 @@ Simple SQL Agent using LangGraph.
 A single ReAct agent with 6 tools for text-to-SQL conversion.
 """
 
+import json
 import logging
 import os
 import re
+from collections import defaultdict
 from typing import Any, Dict, List, Optional, Union
 
 from langchain_openai import ChatOpenAI
@@ -115,6 +117,114 @@ def parse_query_result(content: str) -> Dict[str, Any]:
     return result
 
 
+def _normalize_table_name(name: str) -> str:
+    """Normalize table names for stable comparisons across schema-qualified formats."""
+    if not isinstance(name, str):
+        return ""
+    cleaned = name.strip().lower().replace("[", "").replace("]", "").replace('"', "")
+    if not cleaned:
+        return ""
+    # Keep only the last two parts to normalize db.schema.table -> schema.table
+    parts = [p for p in cleaned.split(".") if p]
+    if len(parts) >= 2:
+        return f"{parts[-2]}.{parts[-1]}"
+    return parts[-1] if parts else ""
+
+
+def _extract_tables_from_sql(sql: Optional[str]) -> List[str]:
+    """Extract table names from FROM/JOIN clauses."""
+    if not isinstance(sql, str) or not sql.strip():
+        return []
+    pattern = r"(?:FROM|JOIN)\s+([a-zA-Z0-9_\.\"`\[\]]+)"
+    matches = re.findall(pattern, sql, flags=re.IGNORECASE)
+    unique: List[str] = []
+    seen = set()
+    for raw in matches:
+        normalized = _normalize_table_name(raw)
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            unique.append(normalized)
+    return unique
+
+
+def _extract_json_from_tool_text(text: str) -> Optional[Dict[str, Any]]:
+    """Extract JSON payloads embedded in MCP text responses."""
+    if not isinstance(text, str) or not text.strip():
+        return None
+    candidates = [text.strip()]
+    marker = "Full response (JSON):"
+    if marker in text:
+        candidates.append(text.split(marker, 1)[-1].strip())
+    # Last-resort brace slicing
+    first_brace = text.find("{")
+    last_brace = text.rfind("}")
+    if first_brace >= 0 and last_brace > first_brace:
+        candidates.append(text[first_brace:last_brace + 1].strip())
+
+    for candidate in candidates:
+        try:
+            payload = json.loads(candidate)
+            if isinstance(payload, dict):
+                return payload
+        except Exception:
+            continue
+    return None
+
+
+def _extract_discovery_tables(tool_output: str) -> List[Dict[str, Any]]:
+    """
+    Parse discovery/search tool outputs into ranked table candidates.
+
+    Returns list of {"name": str, "relevance": float|None}.
+    """
+    if not isinstance(tool_output, str):
+        return []
+
+    extracted: List[Dict[str, Any]] = []
+    seen = set()
+
+    payload = _extract_json_from_tool_text(tool_output)
+    if payload and isinstance(payload.get("data"), dict):
+        for item in payload["data"].get("results", []):
+            if not isinstance(item, dict):
+                continue
+            name = item.get("full_name") or item.get("name")
+            normalized = _normalize_table_name(name or "")
+            if not normalized or normalized in seen:
+                continue
+            score = item.get("relevance_score")
+            try:
+                score = float(score) if score is not None else None
+            except Exception:
+                score = None
+            extracted.append({"name": normalized, "relevance": score})
+            seen.add(normalized)
+
+    # Fallback parsing from human-readable discovery output.
+    if not extracted:
+        for line in tool_output.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            # discover_tables tool format: "### public.orders (relevance: 0.92, ~830 rows)"
+            match = re.match(r"^###\s+([^\s(]+)\s+\(relevance:\s*([0-9]*\.?[0-9]+)", stripped, re.IGNORECASE)
+            if match:
+                normalized = _normalize_table_name(match.group(1))
+                if normalized and normalized not in seen:
+                    extracted.append({"name": normalized, "relevance": float(match.group(2))})
+                    seen.add(normalized)
+                continue
+            # search_tables Scout format: "1. public.orders" or "• public.orders (...)"
+            bullet_match = re.match(r"^(?:\d+\.\s+|•\s+)([a-zA-Z0-9_\.\"`\[\]]+)", stripped)
+            if bullet_match:
+                normalized = _normalize_table_name(bullet_match.group(1))
+                if normalized and normalized not in seen:
+                    extracted.append({"name": normalized, "relevance": None})
+                    seen.add(normalized)
+
+    return extracted
+
+
 class SQLAgentGraph:
     """
     Simple SQL Agent using LangGraph's ReAct pattern.
@@ -206,7 +316,12 @@ class SQLAgentGraph:
                 result.append(AIMessage(content=content))
         return result
 
-    async def arun(self, input: Union[str, List[Dict]], max_iterations: Optional[int] = None) -> Dict[str, Any]:
+    async def arun(
+        self,
+        input: Union[str, List[Dict]],
+        max_iterations: Optional[int] = None,
+        query_contract: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
         Run the agent on a user question or conversation.
 
@@ -254,6 +369,21 @@ class SQLAgentGraph:
             exec_result = None
             iterations = 0
             last_tool_input = {}
+            sql_history: List[str] = []
+            retrieval_log: List[Dict[str, Any]] = []
+            retrieved_candidates: List[Dict[str, Any]] = []
+            tool_call_counts: Dict[str, int] = defaultdict(int)
+            execute_query_calls = 0
+            llm_discovery_turns = 0
+            llm_join_turns = 0
+            llm_answer_turns = 0
+            discovery_tools = {
+                "discover_tables",
+                "search_tables",
+                "list_tables",
+                "get_schema",
+                "get_column_index",
+            }
 
             # Use astream_events for real-time logging
             async for event in self.graph.astream_events(
@@ -274,17 +404,30 @@ class SQLAgentGraph:
                     iterations += 1
                     output = event_data.get("output")
                     if output and hasattr(output, "tool_calls") and output.tool_calls:
+                        has_discovery_turn = False
+                        has_join_turn = False
                         debug_log.llm_end(has_tool_calls=True)
                         for tool_call in output.tool_calls:
                             tool_name = tool_call.get("name")
                             tool_input = tool_call.get("args", {})
                             last_tool_input[tool_name] = tool_input
+                            tool_call_counts[tool_name] += 1
                             debug_log.tool_call(tool_name, tool_input)
 
+                            if tool_name in discovery_tools:
+                                has_discovery_turn = True
                             if tool_name == "execute_query":
+                                has_join_turn = True
                                 sql_query = tool_input.get("sql")
+                                if isinstance(sql_query, str) and sql_query.strip():
+                                    sql_history.append(sql_query)
+                        if has_discovery_turn:
+                            llm_discovery_turns += 1
+                        if has_join_turn:
+                            llm_join_turns += 1
                     elif output and hasattr(output, "content") and output.content:
                         final_answer = output.content
+                        llm_answer_turns += 1
                         debug_log.llm_end(content=final_answer, has_tool_calls=False)
 
                 # Tool execution completes
@@ -299,14 +442,89 @@ class SQLAgentGraph:
 
                     debug_log.tool_result(event_name, tool_output_str)
 
+                    if event_name in discovery_tools:
+                        tool_input = last_tool_input.get(event_name, {})
+                        discovery_query = ""
+                        if isinstance(tool_input, dict):
+                            discovery_query = str(tool_input.get("query") or "")
+                        extracted = _extract_discovery_tables(tool_output_str)
+                        if extracted:
+                            retrieved_candidates.extend(extracted)
+                        retrieval_log.append(
+                            {
+                                "tool_name": event_name,
+                                "query": discovery_query,
+                                "top_tables": [row["name"] for row in extracted[:5]],
+                                "table_scores": extracted[:5],
+                            }
+                        )
+
                     # Parse execute_query results
                     if event_name == "execute_query" and tool_output_str:
+                        execute_query_calls += 1
                         exec_result = parse_query_result(tool_output_str)
                         if sql_query:
                             exec_result["sql_query"] = sql_query
 
             # Calculate latency
             latency_ms = int((time.time() - start_time) * 1000)
+
+            # Consolidate retrieved top-k tables by best relevance score
+            best_scores: Dict[str, float] = {}
+            for candidate in retrieved_candidates:
+                table_name = _normalize_table_name(candidate.get("name", ""))
+                if not table_name:
+                    continue
+                score = candidate.get("relevance")
+                try:
+                    score_value = float(score) if score is not None else 0.0
+                except Exception:
+                    score_value = 0.0
+                if table_name not in best_scores or score_value > best_scores[table_name]:
+                    best_scores[table_name] = score_value
+
+            retrieved_tables_topk = [
+                name
+                for name, _ in sorted(best_scores.items(), key=lambda kv: kv[1], reverse=True)[:5]
+            ]
+            if not retrieved_tables_topk and sql_query:
+                retrieved_tables_topk = _extract_tables_from_sql(sql_query)[:5]
+
+            same_tables_suppressed = 0
+            previous_tables: List[str] = []
+            for entry in retrieval_log:
+                tables = entry.get("top_tables") or []
+                if tables and previous_tables and tables == previous_tables:
+                    same_tables_suppressed += 1
+                if tables:
+                    previous_tables = tables
+
+            seen_sql = set()
+            same_sql_suppressed = 0
+            for statement in sql_history:
+                normalized_sql = " ".join(statement.lower().split())
+                if normalized_sql in seen_sql:
+                    same_sql_suppressed += 1
+                else:
+                    seen_sql.add(normalized_sql)
+
+            discovery_entries = sum(tool_call_counts.get(name, 0) for name in discovery_tools)
+            llm_usage = {
+                "total": iterations,
+                "intent": 0,
+                "discovery": llm_discovery_turns,
+                "join": llm_join_turns,
+                "repair": max(0, execute_query_calls - 1),
+                "answer": llm_answer_turns,
+            }
+            node_entry_counts = {
+                "discovery": discovery_entries,
+                "join_sql": execute_query_calls,
+            }
+            loop_events = {
+                "discovery_reentered_same_tables": same_tables_suppressed,
+                "join_sql_regenerated_same_sql": same_sql_suppressed,
+            }
 
             # Log final result
             debug_log.final_answer(
@@ -323,6 +541,16 @@ class SQLAgentGraph:
                 "success": True,
                 "message_count": iterations,
                 "latency_ms": latency_ms,
+                "llm_usage": llm_usage,
+                "node_entry_counts": node_entry_counts,
+                "loop_events": loop_events,
+                "total_llm_calls": iterations,
+                "total_graph_cycles": iterations,
+                "retrieval_log": retrieval_log,
+                "retrieved_tables_topk": retrieved_tables_topk,
+                "tool_call_counts": dict(tool_call_counts),
+                "query_contract": query_contract,
+                "model_name": self.model_name,
             }
 
         except Exception as e:
@@ -333,6 +561,17 @@ class SQLAgentGraph:
                 "sql_query": None,
                 "success": False,
                 "error": str(e),
+                "llm_usage": {"total": 0, "intent": 0, "discovery": 0, "join": 0, "repair": 0, "answer": 0},
+                "node_entry_counts": {"discovery": 0, "join_sql": 0},
+                "loop_events": {
+                    "discovery_reentered_same_tables": 0,
+                    "join_sql_regenerated_same_sql": 0,
+                },
+                "total_llm_calls": 0,
+                "total_graph_cycles": 0,
+                "retrieval_log": [],
+                "retrieved_tables_topk": [],
+                "model_name": self.model_name,
             }
 
     def run(self, question: str) -> Dict[str, Any]:

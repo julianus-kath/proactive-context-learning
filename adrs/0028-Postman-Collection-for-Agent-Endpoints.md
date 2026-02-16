@@ -1,9 +1,10 @@
-# Postman collection for Agent Endpoints
+# ADR-0028: Postman collection for Agent Endpoints
 
-**Date:** 27.12.2025
-**Author:** Julianus Kath
+**Status**: Accepted
+**Date**: 2025-12-27
+**Author**: Julianus Kath
 
-The HTTP Endpoints on the Agents in the Langgraph system are designed to work together seamlessly. They take a series of inputs, perform various tasks, and return outputs that can be passed along to subsequent endpoints. To make it easier for developers to understand and interact with these endpoints, we've created a comprehensive guide below.
+The HTTP endpoints in the LangGraph system are designed to work together across the pipeline. This ADR documents the endpoint contract and usage notes for reliable local testing with Postman.
 
 ## Requirements/ Prerequisites:
 - Ensure MCP-Server & Langgraph Agent Endpoints are running locally. Use the following commands to run them: `bash start_all_services_mac.sh` (Langgraph and Frontend) and `python mcp_server/start_server.py.sh` (MCP Server). Ensure the SQL Database has been set up correctly and connected in the .env file.
@@ -538,4 +539,3 @@ If you’d like, I can:
 
 - Convert these into actual saved examples for each request in your [LangGraph Agent Endpoints](collection/49454877-3d1f6fa8-f7b5-48e1-825a-7f2ecbc29d3e) collection (so you can one-click send them and tweak only a few fields), or
 - Generate TypeScript/JSON schemas for the shared `state` object across agents.
-

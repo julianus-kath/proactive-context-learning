@@ -1,8 +1,8 @@
-# ADR 0002: Synthetic Data Results and Database Access
+# ADR-0002: Synthetic Data Results and Database Access
 
-## Status
-
-Accepted
+**Status**: Accepted
+**Date**: 2025-04-16
+**Author**: Julianus Kath
 
 ## Context
 

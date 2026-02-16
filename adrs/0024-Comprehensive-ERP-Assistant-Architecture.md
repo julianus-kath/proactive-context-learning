@@ -1,7 +1,8 @@
 # ADR-0024: Comprehensive ERP Assistant Architecture
 
-## Status
-Accepted
+**Status**: Accepted
+**Date**: 2025-11-06
+**Author**: Julianus Kath
 
 ## Context
 

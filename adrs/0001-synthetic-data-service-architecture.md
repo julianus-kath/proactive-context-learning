@@ -1,8 +1,8 @@
-# ADR 0001: Synthetic Data Service Architecture
+# ADR-0001: Synthetic Data Service Architecture
 
-## Status
-
-Accepted
+**Status**: Accepted
+**Date**: 2025-04-16
+**Author**: Julianus Kath
 
 ## Context
 

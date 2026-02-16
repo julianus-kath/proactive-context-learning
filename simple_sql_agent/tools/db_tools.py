@@ -309,10 +309,10 @@ def discover_tables(query: str, include_join_paths: bool = True) -> str:
                     }
                 return {"ok": False, "error": f"No tables found for '{query}' and list_tables also returned empty"}
 
-            # Parse search results - MCP returns text that may contain JSON
+            # Parse search results - MCP returns text and often appends a JSON payload
             tables = []
             if isinstance(search_results, str):
-                # Try to parse JSON from the text
+                # Try direct JSON parse first
                 try:
                     parsed = json.loads(search_results)
                     if isinstance(parsed, dict) and "data" in parsed:
@@ -320,8 +320,31 @@ def discover_tables(query: str, include_join_paths: bool = True) -> str:
                     elif isinstance(parsed, list):
                         tables = parsed[:5]
                 except json.JSONDecodeError:
-                    # Not JSON, search returned text - can't parse
-                    return {"ok": True, "text": search_results, "tables": []}
+                    # Fallback: extract embedded JSON block from the response text.
+                    marker = "Full response (JSON):"
+                    json_candidates = []
+                    if marker in search_results:
+                        json_candidates.append(search_results.split(marker, 1)[-1].strip())
+                    first_brace = search_results.find("{")
+                    last_brace = search_results.rfind("}")
+                    if first_brace >= 0 and last_brace > first_brace:
+                        json_candidates.append(search_results[first_brace:last_brace + 1].strip())
+
+                    for candidate in json_candidates:
+                        try:
+                            parsed = json.loads(candidate)
+                            if isinstance(parsed, dict) and "data" in parsed:
+                                tables = parsed["data"].get("results", [])[:5]
+                                break
+                            if isinstance(parsed, list):
+                                tables = parsed[:5]
+                                break
+                        except json.JSONDecodeError:
+                            continue
+
+                    if not tables:
+                        # Not parseable JSON - return text for LLM fallback behavior.
+                        return {"ok": True, "text": search_results, "tables": []}
 
             if not tables:
                 return {"ok": True, "text": str(search_results), "tables": []}

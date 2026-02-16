@@ -44,7 +44,15 @@ def score_run(run_dir: Path) -> Dict[str, Any]:
     semantic_pass_count = sum(
         1
         for r in results.values()
-        if r.get("status") == "success" and r.get("semantic_status") == "OK"
+        if r.get("status") == "success"
+        and r.get("semantic_status") in {"OK", "CORRECT"}
+    )
+
+    semantic_acceptable_count = sum(
+        1
+        for r in results.values()
+        if r.get("status") == "success"
+        and r.get("semantic_status") in {"OK", "CORRECT", "PARTIAL"}
     )
 
     entity_metric_join_correct_rate = (
@@ -74,6 +82,12 @@ def score_run(run_dir: Path) -> Dict[str, Any]:
             "non_empty_results_rate": f"{(non_empty_results_count/total_queries*100):.1f}%" if total_queries > 0 else "0%",
             "entity_metric_join_correct_count": semantic_pass_count,
             "entity_metric_join_correct_rate": entity_metric_join_correct_rate,
+            "semantic_acceptable_count": semantic_acceptable_count,
+            "semantic_acceptable_rate": (
+                f"{(semantic_acceptable_count / total_queries * 100):.1f}%"
+                if total_queries > 0
+                else "0%"
+            ),
             "avg_latency_ms": round(avg_latency_ms, 2),
         },
         "failure_analysis": failure_categories,
@@ -169,6 +183,11 @@ def main():
             "Semantic Correctness (entity+metric+join): "
             f"{metrics['entity_metric_join_correct_count']} "
             f"({metrics['entity_metric_join_correct_rate']})"
+        )
+        print(
+            "Semantic Acceptable (correct+partial): "
+            f"{metrics['semantic_acceptable_count']} "
+            f"({metrics['semantic_acceptable_rate']})"
         )
         print("=" * 60)
 

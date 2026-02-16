@@ -1,12 +1,10 @@
 # ADR-0013: Production Database Optimization for VPN Connectivity
 
-**Status**: Accepted  
-**Date**: 2025-01-XX  
-**Authors**: System Architecture Team  
-**Reviewers**: Technical Lead  
+**Status**: Accepted
+**Date**: 2025-10-19
+**Author**: Julianus Kath
+**Reviewers**: Technical Lead
 **Related**: ADR-0012 (MCP-Only Architecture), ADR-0011 (VPN Proxy)
-
----
 
 ## Context
 

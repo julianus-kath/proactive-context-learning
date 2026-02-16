@@ -1,10 +1,8 @@
 # ADR-0007: MCP Database Server Implementation
 
-## Status
-**ACCEPTED** - Implemented and tested successfully
-
-## Date
-4.8.2025
+**Status**: Accepted
+**Date**: 2025-09-01
+**Author**: Julianus Kath
 
 ## Context
 The multi-agent system requires a standardized way to access the PostgreSQL database containing synthetic ERP data. The Model Context Protocol (MCP) provides a standardized interface for AI agents to interact with external resources through JSON-RPC 2.0 over HTTP.

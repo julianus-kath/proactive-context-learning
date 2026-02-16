@@ -1,8 +1,8 @@
-# ADR 0004: Crawling Agent Architecture
+# ADR-0004: Crawling Agent Architecture
 
-## Status
-
-Accepted
+**Status**: Accepted
+**Date**: 2025-04-29
+**Author**: Julianus Kath
 
 ## Context
 

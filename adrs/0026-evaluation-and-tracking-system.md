@@ -1,8 +1,8 @@
-# ADR 0026: Evaluation & Tracking System for Thesis Validation
+# ADR-0026: Evaluation & Tracking System for Thesis Validation
 
-**Date:** December 13, 2025
-
----
+**Status**: Accepted
+**Date**: 2025-12-13
+**Author**: Julianus Kath
 
 ## Problem
 

@@ -1,7 +1,8 @@
 # ADR-0023: Agent Orchestration Architecture for Proactive Context Learning
 
-## Status
-Accepted
+**Status**: Accepted
+**Date**: 2025-11-03
+**Author**: Julianus Kath
 
 ## Context
 

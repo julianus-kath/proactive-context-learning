@@ -1,9 +1,9 @@
 # ADR-0010: Dynamic ERP Assistant Complete System Architecture
 
-**Status**: Accepted  
-**Date**: 2024-12-19  
-**Authors**: System Architecture Team  
-**Reviewers**: Technical Lead  
+**Status**: Accepted
+**Date**: 2025-09-02
+**Author**: Julianus Kath
+**Reviewers**: Technical Lead
 
 ## Context
 

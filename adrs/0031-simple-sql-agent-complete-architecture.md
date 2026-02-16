@@ -1,10 +1,8 @@
-# ADR 0031: Simple SQL Agent - Complete Architecture
+# ADR-0031: Simple SQL Agent - Complete Architecture
 
-## Status
-Accepted
-
-## Date
-2026-01-11
+**Status**: Accepted
+**Date**: 2026-01-18
+**Author**: Julianus Kath
 
 ## Context
 

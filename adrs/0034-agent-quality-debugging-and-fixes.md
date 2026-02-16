@@ -1,10 +1,8 @@
-# ADR 0034: SQL Agent Quality Debugging and Fixes
+# ADR-0034: SQL Agent Quality Debugging and Fixes
 
-## Status
-Accepted
-
-## Date
-2026-01-18
+**Status**: Accepted
+**Date**: 2026-01-18
+**Author**: Julianus Kath
 
 ## Context
 

@@ -1,7 +1,8 @@
 # ADR-0029: ReAct Supervisor Orchestration Mode
 
-## Status
-Accepted
+**Status**: Accepted
+**Date**: 2025-12-27
+**Author**: Julianus Kath
 
 ## Context
 

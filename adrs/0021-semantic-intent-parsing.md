@@ -1,13 +1,11 @@
 # ADR-0021: Semantic Intent Parsing — Eliminating Double-Extraction in Query Pipeline (Phase 9)
 
-**Date:** October 2025  
-**Status:** ACCEPTED  
-**Authors:** Query Architecture & Agent Design Team  
-**Context:** Phase 9 Critical Bug Fix & Architecture Stabilization  
-**Supersedes:** ADR-0019 (Extends multi-agent orchestration)  
-**Related:** ADR-0012 (MCP-only), ADR-0016 (Phase 7+ architecture), ADR-0019 (Multi-agent orchestration), ADR-0020 (Discovery enrichment)
-
----
+**Status**: Accepted
+**Date**: 2025-11-03
+**Author**: Julianus Kath
+**Context**: Phase 9 critical bug fix and architecture stabilization
+**Supersedes**: ADR-0019 (extends multi-agent orchestration)
+**Related**: ADR-0012 (MCP-only), ADR-0016 (Phase 7+), ADR-0019, ADR-0020
 
 ## Problem
 

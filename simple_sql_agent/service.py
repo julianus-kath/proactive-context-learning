@@ -166,8 +166,13 @@ async def lifespan(app: FastAPI):
     # Initialize agent
     try:
         max_iterations = int(os.getenv("SQL_AGENT_MAX_ITERATIONS", "25"))
-        agent = create_sql_agent(max_iterations=max_iterations)
-        logger.info(f"SQL Agent initialized successfully (max_iterations={max_iterations})")
+        model_name = os.getenv("OPENAI_MODEL", "gpt-4o")
+        agent = create_sql_agent(model_name=model_name, max_iterations=max_iterations)
+        logger.info(
+            "SQL Agent initialized successfully (model=%s, max_iterations=%s)",
+            model_name,
+            max_iterations,
+        )
     except Exception as e:
         logger.error(f"Failed to initialize agent: {e}")
         raise
@@ -333,7 +338,10 @@ async def process_query_benchmark(request: BenchmarkQueryRequest):
     start_time = time.time()
 
     try:
-        result = await agent.arun(request.user_input)
+        result = await agent.arun(
+            request.user_input,
+            query_contract=request.query_contract,
+        )
 
         latency_ms = int((time.time() - start_time) * 1000)
 
@@ -371,6 +379,14 @@ async def process_query_benchmark(request: BenchmarkQueryRequest):
             "relevant_tables": tables,
             "latency_ms": latency_ms,
             "success": success,
+            "llm_usage": result.get("llm_usage"),
+            "node_entry_counts": result.get("node_entry_counts"),
+            "loop_events": result.get("loop_events"),
+            "total_llm_calls": result.get("total_llm_calls"),
+            "total_graph_cycles": result.get("total_graph_cycles"),
+            "retrieval_log": result.get("retrieval_log", []),
+            "retrieved_tables_topk": result.get("retrieved_tables_topk", []),
+            "model_name": result.get("model_name", os.getenv("OPENAI_MODEL", "gpt-4o")),
         }
 
         return response

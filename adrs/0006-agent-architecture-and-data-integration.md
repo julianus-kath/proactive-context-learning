@@ -1,8 +1,8 @@
-# ADR 0006: Agent Architecture and Data Integration
+# ADR-0006: Agent Architecture and Data Integration
 
-## Status
-
-Accepted
+**Status**: Accepted
+**Date**: 2025-05-27
+**Author**: Julianus Kath
 
 ## Context
 
