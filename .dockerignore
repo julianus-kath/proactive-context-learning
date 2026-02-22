@@ -1,0 +1,33 @@
+.git
+.gitignore
+.DS_Store
+
+# Never ship local secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Local tooling and caches
+.venv/
+.idea/
+.zencoder/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Runtime/output directories
+logs/
+eval/
+
+# Development-only docs and scripts
+adrs/
+docs/
+vpn_config/
+start_scripts/
+
+# Misc
+mcp_server/cache/
