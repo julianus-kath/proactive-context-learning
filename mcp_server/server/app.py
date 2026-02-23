@@ -85,7 +85,6 @@ async def startup_event():
     global db_manager
     try:
         db_manager = DatabaseAdapter()
-        
         # Try to initialize, but with a timeout to prevent infinite loops
         logger.info("🔄 Testing database connection (timeout: 10s)...")
         try:
@@ -110,33 +109,42 @@ async def startup_event():
             logger.error("❌ Database initialization timed out - check VPN/network connectivity")
             raise RuntimeError("Database connection timeout - VPN may not be active")
         
-        # Phase 1: Initialize Scout Runner (MSSQL only - hardcoded to MSSQL)
+        # Phase 1: Initialize Scout Runner (dialect-agnostic)
         global scout_runner
         scout_runner = None  # Initialize as None
-        
-        if db_manager.dialect == "mssql":
+        set_scout_runner(None)
+        scout_disabled = os.getenv("SCOUT_DISABLE", "false").lower() == "true"
+        setattr(db_manager, "scout_disabled", scout_disabled)
+        if scout_disabled:
+            setattr(db_manager, "scout_runner", None)
+            logger.info("⏭️ SCOUT_DISABLE=true: using SchemaCatalog-only discovery mode")
+        else:
             try:
-                logger.info("🏗️ Initializing Scout Runner (MSSQL mode)...")
+                dialect_label = (db_manager.dialect or "unknown").upper()
+                logger.info(f"🏗️ Initializing Scout Runner ({dialect_label} mode)...")
                 scout_runner = ScoutRunner(
                     db_adapter=db_manager,
-                    catalog_dir="data/catalog",
-                    ttl_hours=24*7,  # 7 days
-                    refresh_interval_hours=24
+                    catalog_dir=os.getenv("SCOUT_CATALOG_DIR", "data/catalog"),
+                    ttl_hours=int(os.getenv("SCOUT_TTL_HOURS", str(24 * 7))),  # 7 days
+                    refresh_interval_hours=int(os.getenv("SCOUT_REFRESH_INTERVAL_HOURS", "24"))
                 )
 
-                # Set reference for health monitoring
+                # Share the runner with health + tool path so all components use the same instance
+                setattr(db_manager, "scout_runner", scout_runner)
                 set_scout_runner(scout_runner)
 
                 # Start Scout Runner (non-blocking)
                 await scout_runner.start()
                 logger.info("✅ Scout Runner initialized and started")
-
             except Exception as scout_error:
                 logger.warning(f"⚠️ Scout Runner initialization failed (non-blocking): {scout_error}")
+                setattr(db_manager, "scout_runner", None)
                 # Don't raise - Scout Mode is optional and shouldn't block startup
 
-            # Legacy Phase 7: Run old Scout Mode as fallback (if new Scout fails)
-            if not scout_runner or not scout_runner.is_ready():
+            # Legacy Phase 7: Run old Scout Mode as bootstrap fallback
+            # Keep enabled to preserve historical behavior in both dialects.
+            legacy_bootstrap_enabled = os.getenv("SCOUT_LEGACY_BOOTSTRAP", "true").lower() == "true"
+            if legacy_bootstrap_enabled and (not scout_runner or not scout_runner.is_ready()):
                 try:
                     cache_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache')
                     scout_report = await asyncio.wait_for(
@@ -145,11 +153,31 @@ async def startup_event():
                     )
                     logger.info(f"🔍 Legacy Scout Mode Report: {scout_report}")
                 except asyncio.TimeoutError:
-                    logger.warning(f"⚠️ Legacy Scout Mode startup job timed out (non-blocking)")
+                    logger.warning("⚠️ Legacy Scout Mode startup job timed out (non-blocking)")
                 except Exception as scout_error:
                     logger.warning(f"⚠️ Legacy Scout Mode startup job failed (non-blocking): {scout_error}")
+
+            scout_require_ready = os.getenv("SCOUT_REQUIRE_READY", "false").lower() == "true"
+            if scout_require_ready:
+                wait_timeout = int(os.getenv("SCOUT_REQUIRE_READY_TIMEOUT_SECONDS", "60"))
+                if scout_runner:
+                    start_wait = asyncio.get_event_loop().time()
+                    while not scout_runner.is_ready():
+                        elapsed = asyncio.get_event_loop().time() - start_wait
+                        if elapsed >= wait_timeout:
+                            break
+                        await asyncio.sleep(0.5)
+
+                if not scout_runner or not scout_runner.is_ready():
+                    raise RuntimeError(
+                        "SCOUT_REQUIRE_READY=true but Scout catalog is not ready "
+                        f"after {wait_timeout}s"
+                    )
+
+        if scout_runner and scout_runner.is_ready():
+            logger.info("✅ Scout catalog is ready at startup")
         else:
-            logger.info(f"⏭️ Skipping Scout Runner for {db_manager.dialect.upper()} mode (uses SchemaCatalog instead)")
+            logger.info("ℹ️ Scout catalog not ready at startup; discovery will temporarily fall back to SchemaCatalog")
         
     except Exception as e:
         logger.error(f"❌ Failed to initialize MCP Database Server: {e}")
@@ -160,6 +188,14 @@ async def startup_event():
 async def shutdown_event():
     """Close the database connection on shutdown."""
     global db_manager
+    global scout_runner
+    if scout_runner:
+        try:
+            await scout_runner.stop()
+        except Exception as e:
+            logger.warning(f"⚠️ Error stopping Scout Runner: {e}")
+        finally:
+            scout_runner = None
     if db_manager:
         await db_manager.close()
         logger.info("✅ MCP Database Server shutdown complete")

@@ -238,7 +238,6 @@ class BenchmarkQueryRequest(BaseModel):
     """Request model for benchmark /process_query endpoint."""
     user_input: str
     api_key: Optional[str] = None
-    query_contract: Optional[Dict[str, Any]] = None
 
 
 class HealthResponse(BaseModel):
@@ -317,7 +316,7 @@ async def process_query_benchmark(request: BenchmarkQueryRequest):
     It returns a response format expected by the benchmark scoring.
 
     Args:
-        request: BenchmarkQueryRequest with user_input and optional query_contract
+        request: BenchmarkQueryRequest with user_input
 
     Returns:
         Dict with final_response, sql_query, exec_result, sources, etc.

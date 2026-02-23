@@ -219,6 +219,18 @@ This will:
 | SQL Agent API | http://localhost:5001 | Agent endpoints |
 | Health Check | http://localhost:5001/health | Service status |
 
+### Deployment (Railway, Northwind Demo)
+
+For production-style deployment with Northwind/Postgres on Railway, use the runbook:
+
+- [deploy/railway/README.md](deploy/railway/README.md)
+
+Railway Dockerfiles:
+
+- `deploy/railway/Dockerfile.web-ui`
+- `deploy/railway/Dockerfile.sql-agent`
+- `deploy/railway/Dockerfile.mcp-server`
+
 ---
 
 ## API Reference
