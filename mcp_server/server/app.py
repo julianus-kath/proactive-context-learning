@@ -17,8 +17,7 @@ from dotenv import load_dotenv
 # MCP Server internal imports (using absolute imports for Uvicorn compatibility)
 from mcp_server.database.database_adapter import DatabaseAdapter
 from mcp_server.scout.mode import run_scout_mode
-from mcp_server.tools import MCPTools
-from mcp_server.scout.runner import ScoutRunner
+from mcp_server.tools import MCPTools, _get_scout_runner
 from mcp_server.server.health import set_scout_runner, get_health_status, get_health_summary
 
 # Load environment variables
@@ -110,33 +109,29 @@ async def startup_event():
             logger.error("❌ Database initialization timed out - check VPN/network connectivity")
             raise RuntimeError("Database connection timeout - VPN may not be active")
         
-        # Phase 1: Initialize Scout Runner (MSSQL only - hardcoded to MSSQL)
+        # Phase 1: Initialize Scout Runner when enabled.
         global scout_runner
         scout_runner = None  # Initialize as None
-        
-        if db_manager.dialect == "mssql":
+
+        scout_disabled = os.getenv("SCOUT_DISABLE", "false").lower() in ("1", "true", "yes", "on")
+        if scout_disabled:
+            logger.info("⏭️ Scout Runner disabled via SCOUT_DISABLE=true")
+        else:
             try:
-                logger.info("🏗️ Initializing Scout Runner (MSSQL mode)...")
-                scout_runner = ScoutRunner(
-                    db_adapter=db_manager,
-                    catalog_dir="data/catalog",
-                    ttl_hours=24*7,  # 7 days
-                    refresh_interval_hours=24
-                )
-
-                # Set reference for health monitoring
-                set_scout_runner(scout_runner)
-
-                # Start Scout Runner (non-blocking)
-                await scout_runner.start()
-                logger.info("✅ Scout Runner initialized and started")
-
+                logger.info(f"🏗️ Initializing Scout Runner ({db_manager.dialect.upper()} mode)...")
+                scout_runner = _get_scout_runner(db_manager)
+                if scout_runner:
+                    set_scout_runner(scout_runner)
+                    await scout_runner.start()
+                    logger.info("✅ Scout Runner initialized and started")
+                else:
+                    logger.warning("⚠️ Scout Runner returned None during startup")
             except Exception as scout_error:
                 logger.warning(f"⚠️ Scout Runner initialization failed (non-blocking): {scout_error}")
                 # Don't raise - Scout Mode is optional and shouldn't block startup
 
-            # Legacy Phase 7: Run old Scout Mode as fallback (if new Scout fails)
-            if not scout_runner or not scout_runner.is_ready():
+            # Legacy fallback only for MSSQL if the consolidated runner is unavailable.
+            if db_manager.dialect == "mssql" and (not scout_runner or not scout_runner.is_ready()):
                 try:
                     cache_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache')
                     scout_report = await asyncio.wait_for(
@@ -145,11 +140,9 @@ async def startup_event():
                     )
                     logger.info(f"🔍 Legacy Scout Mode Report: {scout_report}")
                 except asyncio.TimeoutError:
-                    logger.warning(f"⚠️ Legacy Scout Mode startup job timed out (non-blocking)")
+                    logger.warning("⚠️ Legacy Scout Mode startup job timed out (non-blocking)")
                 except Exception as scout_error:
                     logger.warning(f"⚠️ Legacy Scout Mode startup job failed (non-blocking): {scout_error}")
-        else:
-            logger.info(f"⏭️ Skipping Scout Runner for {db_manager.dialect.upper()} mode (uses SchemaCatalog instead)")
         
     except Exception as e:
         logger.error(f"❌ Failed to initialize MCP Database Server: {e}")
