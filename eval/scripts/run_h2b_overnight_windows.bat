@@ -73,6 +73,18 @@ if /I "%H2B_SKIP_PIP_INSTALL%"=="1" (
     popd
     exit /b 1
   )
+  "%PYTHON_CMD%" -m pip install --upgrade httpx
+  if errorlevel 1 (
+    echo [ERROR] Explicit httpx install failed.
+    popd
+    exit /b 1
+  )
+  "%PYTHON_CMD%" -c "import httpx; print('httpx_ok', httpx.__version__)"
+  if errorlevel 1 (
+    echo [ERROR] httpx import test failed for interpreter: %PYTHON_CMD%
+    popd
+    exit /b 1
+  )
 )
 
 echo [run] Starting orchestrator...
