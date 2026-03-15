@@ -146,7 +146,17 @@ def _kill_existing_services(env: Dict[str, str]) -> None:
         "uvicorn mcp_server.server.app:app",
     ]
     for pattern in patterns:
-        subprocess.run(["pkill", "-f", pattern], cwd=str(PROJECT_ROOT), env=env, check=False)
+        try:
+            subprocess.run(
+                ["pkill", "-f", pattern],
+                cwd=str(PROJECT_ROOT),
+                env=env,
+                check=False,
+            )
+        except FileNotFoundError:
+            # Windows environments typically do not provide pkill.
+            # In that case we rely on tracked subprocess handles for cleanup.
+            break
 
 
 def _start_local_services(
