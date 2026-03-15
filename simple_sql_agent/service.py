@@ -340,6 +340,9 @@ async def process_query_benchmark(request: BenchmarkQueryRequest):
         sql_query = result.get("sql_query")
         success = result.get("success", False)
         agent_exec_result = result.get("exec_result") or {}
+        discovery_tables = result.get("discovery_tables") or []
+        ranked_tables = result.get("ranked_tables") or []
+        discovery_log = result.get("discovery_log") or []
 
         # Build exec_result from agent's parsed result
         exec_result = {
@@ -362,12 +365,16 @@ async def process_query_benchmark(request: BenchmarkQueryRequest):
             exec_result["tables_used"] = tables
 
         # Build response compatible with benchmark expectations
+        surfaced_ranked = ranked_tables if ranked_tables else tables
         response = {
             "final_response": answer,
             "sql_query": sql_query,
             "exec_result": exec_result,
-            "sources": tables,
-            "relevant_tables": tables,
+            "sources": surfaced_ranked,
+            "relevant_tables": surfaced_ranked,
+            "ranked_tables": surfaced_ranked,
+            "discovery_tables": discovery_tables,
+            "discovery_log": discovery_log,
             "latency_ms": latency_ms,
             "success": success,
         }
@@ -384,6 +391,9 @@ async def process_query_benchmark(request: BenchmarkQueryRequest):
             "exec_result": None,
             "sources": [],
             "relevant_tables": [],
+            "ranked_tables": [],
+            "discovery_tables": [],
+            "discovery_log": [],
             "latency_ms": latency_ms,
             "success": False,
             "error": str(e),

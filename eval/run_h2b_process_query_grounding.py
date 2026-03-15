@@ -430,6 +430,7 @@ def main() -> None:
     env_base["API_KEY"] = args.api_key
     env_base["MCP_API_KEY"] = args.mcp_api_key
     env_base["MCP_SERVER_URL"] = args.mcp_url
+    pre_probe_handles: List[Tuple[subprocess.Popen, Any]] = []
 
     command_plan: List[List[str]] = []
     command_plan.append(
@@ -593,6 +594,44 @@ def main() -> None:
             print(f"[plan {idx}] {' '.join(cmd)}")
         return
 
+    # If we manage local services per mode, boot once before probe so Step A can run
+    # even when no external services are pre-started.
+    if do_start_services_per_mode and not args.mode_prepare_cmd:
+        probe_env = env_base.copy()
+        probe_env["SCOUT_DISABLE"] = str(MODE_SPECS["scout_on"]["SCOUT_DISABLE"])
+        probe_env.pop("SCOUT_OFF_CONTROL_MODE", None)
+        probe_log_dir = root_dir / "probe_service_boot"
+        probe_log_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            _kill_existing_services(probe_env)
+            pre_probe_handles = _start_local_services(
+                env=probe_env,
+                mode_log_dir=probe_log_dir,
+                python_bin=args.python_bin,
+                mcp_port=args.mcp_port,
+                agent_port=args.agent_port,
+            )
+            health_snapshot = _wait_for_health(
+                mcp_url=args.mcp_url,
+                agent_url=args.target,
+                mcp_api_key=args.mcp_api_key,
+                timeout_s=args.health_timeout,
+            )
+            health_path = root_dir / "health_probe_boot.json"
+            health_path.write_text(json.dumps(health_snapshot, indent=2), encoding="utf-8")
+            manifest["steps"].append(
+                {
+                    "name": "probe_service_boot",
+                    "status": "completed",
+                    "health_path": str(health_path),
+                    "mode": "scout_on",
+                    "mode_log_dir": str(probe_log_dir),
+                }
+            )
+        except Exception:
+            _stop_local_services(pre_probe_handles)
+            raise
+
     # Step A: feasibility probe
     probe_log = root_dir / "step_probe.log"
     _, probe_stdout, _ = _run_cmd(command_plan[0], PROJECT_ROOT, env_base, dry_run=False, log_path=probe_log)
@@ -610,6 +649,9 @@ def main() -> None:
         }
     )
     if probe_payload.get("verdict") != "ready_for_h2b_process_query_grounding":
+        if pre_probe_handles:
+            _stop_local_services(pre_probe_handles)
+            pre_probe_handles = []
         (root_dir / "setup_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
         raise RuntimeError(
             "Feasibility probe did not pass strict requirements. "
@@ -618,7 +660,13 @@ def main() -> None:
 
     # Step B: label normalization
     norm_log = root_dir / "step_normalize.log"
-    _, norm_stdout, _ = _run_cmd(normalize_cmd, PROJECT_ROOT, env_base, dry_run=False, log_path=norm_log)
+    try:
+        _, norm_stdout, _ = _run_cmd(normalize_cmd, PROJECT_ROOT, env_base, dry_run=False, log_path=norm_log)
+    except Exception:
+        if pre_probe_handles:
+            _stop_local_services(pre_probe_handles)
+            pre_probe_handles = []
+        raise
     norm_out_match = re.search(r"Output:\s*(.*)", norm_stdout)
     if not norm_out_match:
         raise RuntimeError("Could not parse normalization output directory from command output.")
@@ -634,6 +682,9 @@ def main() -> None:
             "normalized_labels_path": str(normalized_labels_path),
         }
     )
+    if pre_probe_handles:
+        _stop_local_services(pre_probe_handles)
+        pre_probe_handles = []
 
     # Step C + D: run and evaluate each mode
     mode_runs: Dict[str, List[ModeRun]] = {mode: [] for mode in args.modes}
