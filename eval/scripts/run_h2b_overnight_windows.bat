@@ -57,12 +57,17 @@ echo Replicates:   %H2B_REPLICATES%
 echo Run tag:      %H2B_RUN_TAG%
 echo.
 
-rem Ensure required dependency exists
-"%PYTHON_CMD%" -c "import httpx" >nul 2>nul
-if errorlevel 1 (
-  echo [setup] Missing dependencies. Installing...
+if /I "%H2B_SKIP_PIP_INSTALL%"=="1" (
+  echo [setup] Skipping pip install because H2B_SKIP_PIP_INSTALL=1
+) else (
+  echo [setup] Installing/updating Python dependencies...
   "%PYTHON_CMD%" -m pip install --upgrade pip
-  "%PYTHON_CMD%" -m pip install -r simple_sql_agent\requirements.txt -r mcp_server\requirements.txt
+  if errorlevel 1 (
+    echo [ERROR] pip upgrade failed.
+    popd
+    exit /b 1
+  )
+  "%PYTHON_CMD%" -m pip install -r requirements.txt -r simple_sql_agent\requirements.txt -r mcp_server\requirements.txt
   if errorlevel 1 (
     echo [ERROR] Dependency installation failed.
     popd
