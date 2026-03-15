@@ -9,6 +9,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -353,7 +354,7 @@ def main() -> None:
     parser.add_argument("--abort-on-missing-stage-trace", action="store_true", default=True)
     parser.add_argument("--no-abort-on-missing-stage-trace", action="store_true", default=False)
     parser.add_argument("--env-file", default=str(PROJECT_ROOT / ".env"))
-    parser.add_argument("--python-bin", default="python")
+    parser.add_argument("--python-bin", default=sys.executable)
     parser.add_argument("--catalog-snapshot", default=None)
     parser.add_argument("--start-services-per-mode", action="store_true", default=False)
     parser.add_argument("--no-start-services-per-mode", action="store_true", default=False)

@@ -90,6 +90,7 @@ if /I "%H2B_SKIP_PIP_INSTALL%"=="1" (
 echo [run] Starting orchestrator...
 echo.
 "%PYTHON_CMD%" -m eval.run_h2b_process_query_grounding ^
+  --python-bin "%PYTHON_CMD%" ^
   --dataset "%H2B_DATASET%" ^
   --table-labels "%H2B_TABLE_LABELS%" ^
   --target "%H2B_TARGET%" ^
