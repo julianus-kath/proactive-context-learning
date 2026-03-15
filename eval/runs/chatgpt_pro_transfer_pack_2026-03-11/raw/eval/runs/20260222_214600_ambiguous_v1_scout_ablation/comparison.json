@@ -1,0 +1,339 @@
+{
+  "on_run": "20260222_214527_ambiguous_v1_retrieval_scout_on_pg_v2",
+  "off_run": "20260222_214536_ambiguous_v1_retrieval_scout_off_pg_v2",
+  "on_aggregate": {
+    "total_queries": 10,
+    "mean_recall_at_1": 0.375,
+    "all_required_hit_rate_at_1": 0.1,
+    "any_required_hit_rate_at_1": 0.8,
+    "mean_recall_at_3": 0.675,
+    "all_required_hit_rate_at_3": 0.4,
+    "any_required_hit_rate_at_3": 0.8,
+    "mean_recall_at_5": 0.7083,
+    "all_required_hit_rate_at_5": 0.5,
+    "any_required_hit_rate_at_5": 0.8,
+    "mean_recall_at_10": 0.7083,
+    "all_required_hit_rate_at_10": 0.5,
+    "any_required_hit_rate_at_10": 0.8,
+    "mrr": 0.8
+  },
+  "off_aggregate": {
+    "total_queries": 10,
+    "mean_recall_at_1": 0.425,
+    "all_required_hit_rate_at_1": 0.1,
+    "any_required_hit_rate_at_1": 0.9,
+    "mean_recall_at_3": 0.8417,
+    "all_required_hit_rate_at_3": 0.7,
+    "any_required_hit_rate_at_3": 0.9,
+    "mean_recall_at_5": 0.895,
+    "all_required_hit_rate_at_5": 0.8,
+    "any_required_hit_rate_at_5": 1.0,
+    "mean_recall_at_10": 0.935,
+    "all_required_hit_rate_at_10": 0.8,
+    "any_required_hit_rate_at_10": 1.0,
+    "mrr": 0.92
+  },
+  "delta": {
+    "mean_recall_at_1": 0.04999999999999999,
+    "mean_recall_at_3": 0.16669999999999996,
+    "mean_recall_at_5": 0.18669999999999998,
+    "mean_recall_at_10": 0.2267,
+    "mrr": 0.12
+  },
+  "per_query": [
+    {
+      "query_id": "NW1",
+      "question": "What products are most urgently at risk of stock-outs right now?",
+      "required_tables": [
+        "products"
+      ],
+      "on": {
+        "recall_at_5": 1.0,
+        "first_required_rank": 1,
+        "top5": [
+          "products",
+          "order_details",
+          "customer_customer_demo",
+          "customer_demographics",
+          "customers"
+        ]
+      },
+      "off": {
+        "recall_at_5": 1.0,
+        "first_required_rank": 1,
+        "top5": [
+          "products",
+          "order_details",
+          "customer_customer_demo",
+          "customer_demographics",
+          "customers"
+        ]
+      },
+      "delta_recall_at_5": 0
+    },
+    {
+      "query_id": "NW2",
+      "question": "Which product categories actually generate the most revenue once discounts are considered?",
+      "required_tables": [
+        "categories",
+        "products",
+        "order_details"
+      ],
+      "on": {
+        "recall_at_5": 0.6666666666666666,
+        "first_required_rank": 1,
+        "top5": [
+          "order_details",
+          "products"
+        ]
+      },
+      "off": {
+        "recall_at_5": 1.0,
+        "first_required_rank": 1,
+        "top5": [
+          "order_details",
+          "categories",
+          "products",
+          "orders"
+        ]
+      },
+      "delta_recall_at_5": 0.33333333333333337
+    },
+    {
+      "query_id": "NW3",
+      "question": "Which customers order unusually often, and roughly how much business do they represent for us?",
+      "required_tables": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "on": {
+        "recall_at_5": 0.6666666666666666,
+        "first_required_rank": 1,
+        "top5": [
+          "order_details",
+          "orders",
+          "products"
+        ]
+      },
+      "off": {
+        "recall_at_5": 1.0,
+        "first_required_rank": 1,
+        "top5": [
+          "order_details",
+          "orders",
+          "customers",
+          "products",
+          "customer_customer_demo"
+        ]
+      },
+      "delta_recall_at_5": 0.33333333333333337
+    },
+    {
+      "query_id": "NW4",
+      "question": "Which shipping providers are causing delay issues, and what is their shipment volume?",
+      "required_tables": [
+        "orders",
+        "shippers"
+      ],
+      "on": {
+        "recall_at_5": 1.0,
+        "first_required_rank": 1,
+        "top5": [
+          "shippers",
+          "orders",
+          "us_states",
+          "products"
+        ]
+      },
+      "off": {
+        "recall_at_5": 1.0,
+        "first_required_rank": 1,
+        "top5": [
+          "shippers",
+          "orders",
+          "us_states",
+          "products"
+        ]
+      },
+      "delta_recall_at_5": 0
+    },
+    {
+      "query_id": "NW5",
+      "question": "Which employees drive the most sales revenue after discounts?",
+      "required_tables": [
+        "employees",
+        "orders",
+        "order_details"
+      ],
+      "on": {
+        "recall_at_5": 1.0,
+        "first_required_rank": 1,
+        "top5": [
+          "order_details",
+          "orders",
+          "employee_territories",
+          "employees",
+          "products"
+        ]
+      },
+      "off": {
+        "recall_at_5": 1.0,
+        "first_required_rank": 1,
+        "top5": [
+          "order_details",
+          "orders",
+          "employee_territories",
+          "employees",
+          "products"
+        ]
+      },
+      "delta_recall_at_5": 0
+    },
+    {
+      "query_id": "NW6",
+      "question": "What are our top-selling products by quantity?",
+      "required_tables": [
+        "products",
+        "order_details"
+      ],
+      "on": {
+        "recall_at_5": 0.0,
+        "first_required_rank": null,
+        "top5": [
+          "employees"
+        ]
+      },
+      "off": {
+        "recall_at_5": 1.0,
+        "first_required_rank": 1,
+        "top5": [
+          "order_details",
+          "products",
+          "employees"
+        ]
+      },
+      "delta_recall_at_5": 1
+    },
+    {
+      "query_id": "NW7",
+      "question": "Which suppliers tend to appear together in the same customer orders most often?",
+      "required_tables": [
+        "order_details",
+        "products",
+        "order_suppliers",
+        "supplier_pairs",
+        "suppliers"
+      ],
+      "on": {
+        "recall_at_5": 0.0,
+        "first_required_rank": null,
+        "top5": [
+          "orders",
+          "customers",
+          "customer_customer_demo",
+          "customer_demographics"
+        ]
+      },
+      "off": {
+        "recall_at_5": 0.2,
+        "first_required_rank": 5,
+        "top5": [
+          "customer_customer_demo",
+          "customer_demographics",
+          "customers",
+          "orders",
+          "suppliers"
+        ]
+      },
+      "delta_recall_at_5": 0.2
+    },
+    {
+      "query_id": "NW8",
+      "question": "How does average order value differ across customer countries?",
+      "required_tables": [
+        "orders",
+        "customers",
+        "order_details",
+        "order_totals"
+      ],
+      "on": {
+        "recall_at_5": 0.75,
+        "first_required_rank": 1,
+        "top5": [
+          "order_details",
+          "orders",
+          "customers",
+          "products",
+          "customer_customer_demo"
+        ]
+      },
+      "off": {
+        "recall_at_5": 0.75,
+        "first_required_rank": 1,
+        "top5": [
+          "order_details",
+          "orders",
+          "customers",
+          "products",
+          "customer_customer_demo"
+        ]
+      },
+      "delta_recall_at_5": 0
+    },
+    {
+      "query_id": "NW9",
+      "question": "How many orders are still unshipped, and what are they worth after discounts?",
+      "required_tables": [
+        "orders",
+        "order_details"
+      ],
+      "on": {
+        "recall_at_5": 1.0,
+        "first_required_rank": 1,
+        "top5": [
+          "orders",
+          "order_details",
+          "products"
+        ]
+      },
+      "off": {
+        "recall_at_5": 1.0,
+        "first_required_rank": 1,
+        "top5": [
+          "orders",
+          "order_details",
+          "products"
+        ]
+      },
+      "delta_recall_at_5": 0
+    },
+    {
+      "query_id": "NW10",
+      "question": "How has revenue trended month by month after discounts?",
+      "required_tables": [
+        "orders",
+        "order_details"
+      ],
+      "on": {
+        "recall_at_5": 1.0,
+        "first_required_rank": 1,
+        "top5": [
+          "order_details",
+          "products",
+          "orders"
+        ]
+      },
+      "off": {
+        "recall_at_5": 1.0,
+        "first_required_rank": 1,
+        "top5": [
+          "order_details",
+          "products",
+          "orders"
+        ]
+      },
+      "delta_recall_at_5": 0
+    }
+  ]
+}

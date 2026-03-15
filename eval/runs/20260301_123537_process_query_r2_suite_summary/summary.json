@@ -1,0 +1,527 @@
+{
+  "generated_at_utc": "2026-03-01T12:35:37.236535Z",
+  "runs": [
+    {
+      "label": "on_ambiguous",
+      "run_id": "20260301_122640_ambiguous_v1_process_query_scout_on_r2",
+      "success_rate": 100.0,
+      "avg_latency_ms": 4674.1,
+      "p95_latency_ms": 9357.0,
+      "strict_equal_count": 0,
+      "same_cols_set_equal_count": 0,
+      "positional_set_equal_count": 0,
+      "common_cols_set_equal_count": 3,
+      "required_tables_ok_count": 10,
+      "sql_exec_errors_count": 0,
+      "quota_hits": 0
+    },
+    {
+      "label": "off_aligned_ambiguous",
+      "run_id": "20260301_122935_ambiguous_v1_process_query_scout_off_aligned_r2",
+      "success_rate": 100.0,
+      "avg_latency_ms": 3358.1,
+      "p95_latency_ms": 4609.0,
+      "strict_equal_count": 0,
+      "same_cols_set_equal_count": 0,
+      "positional_set_equal_count": 0,
+      "common_cols_set_equal_count": 3,
+      "required_tables_ok_count": 10,
+      "sql_exec_errors_count": 0,
+      "quota_hits": 0
+    },
+    {
+      "label": "off_legacy_ambiguous",
+      "run_id": "20260301_123213_ambiguous_v1_process_query_scout_off_legacy_r2",
+      "success_rate": 100.0,
+      "avg_latency_ms": 4570.5,
+      "p95_latency_ms": 8589.0,
+      "strict_equal_count": 0,
+      "same_cols_set_equal_count": 0,
+      "positional_set_equal_count": 1,
+      "common_cols_set_equal_count": 2,
+      "required_tables_ok_count": 8,
+      "sql_exec_errors_count": 0,
+      "quota_hits": 0
+    },
+    {
+      "label": "on_nonlexical",
+      "run_id": "20260301_122737_nonlexical_v1_process_query_scout_on_r2",
+      "success_rate": 100.0,
+      "avg_latency_ms": 4344.2,
+      "p95_latency_ms": 6341.0,
+      "strict_equal_count": 1,
+      "same_cols_set_equal_count": 1,
+      "positional_set_equal_count": 1,
+      "common_cols_set_equal_count": 1,
+      "required_tables_ok_count": 9,
+      "sql_exec_errors_count": 4,
+      "quota_hits": 0
+    },
+    {
+      "label": "off_aligned_nonlexical",
+      "run_id": "20260301_123020_nonlexical_v1_process_query_scout_off_aligned_r2",
+      "success_rate": 100.0,
+      "avg_latency_ms": 4372.8,
+      "p95_latency_ms": 6513.0,
+      "strict_equal_count": 1,
+      "same_cols_set_equal_count": 1,
+      "positional_set_equal_count": 1,
+      "common_cols_set_equal_count": 4,
+      "required_tables_ok_count": 9,
+      "sql_exec_errors_count": 4,
+      "quota_hits": 0
+    },
+    {
+      "label": "off_legacy_nonlexical",
+      "run_id": "20260301_123314_nonlexical_v1_process_query_scout_off_legacy_r2",
+      "success_rate": 100.0,
+      "avg_latency_ms": 4930.4,
+      "p95_latency_ms": 7675.0,
+      "strict_equal_count": 2,
+      "same_cols_set_equal_count": 2,
+      "positional_set_equal_count": 2,
+      "common_cols_set_equal_count": 2,
+      "required_tables_ok_count": 13,
+      "sql_exec_errors_count": 0,
+      "quota_hits": 0
+    }
+  ],
+  "examples": {
+    "ambiguous_on_vs_off_aligned": {
+      "on_better": [],
+      "off_better": [],
+      "on_better_count": 0,
+      "off_better_count": 0
+    },
+    "nonlexical_on_vs_off_aligned": {
+      "on_better": [
+        {
+          "query_id": "NL17",
+          "question": "Which audience segments produce the most discounted turnover?",
+          "winner": "on",
+          "winner_cmp": {
+            "ref_cols": [],
+            "cand_cols": [
+              "customer_id",
+              "discounted_turnover"
+            ],
+            "ref_row_count": 0,
+            "cand_row_count": 5,
+            "strict_equal": false,
+            "same_cols_set_equal": false,
+            "positional_set_equal": false,
+            "common_cols": [],
+            "common_cols_set_equal": null
+          },
+          "winner_required_ok": false,
+          "loser_cmp": null,
+          "loser_required_ok": false
+        },
+        {
+          "query_id": "NL4",
+          "question": "Which item families are most affected by markdowns?",
+          "winner": "on",
+          "winner_cmp": {
+            "ref_cols": [
+              "product_id",
+              "product_name",
+              "quantity_sold"
+            ],
+            "cand_cols": [
+              "category_name",
+              "total_discount_value"
+            ],
+            "ref_row_count": 5,
+            "cand_row_count": 5,
+            "strict_equal": false,
+            "same_cols_set_equal": false,
+            "positional_set_equal": false,
+            "common_cols": [],
+            "common_cols_set_equal": null
+          },
+          "winner_required_ok": true,
+          "loser_cmp": null,
+          "loser_required_ok": false
+        }
+      ],
+      "off_better": [
+        {
+          "query_id": "NL16",
+          "question": "Which vendors have offerings that never got sold?",
+          "winner": "off",
+          "winner_cmp": {
+            "ref_cols": [],
+            "cand_cols": [],
+            "ref_row_count": 0,
+            "cand_row_count": 0,
+            "strict_equal": true,
+            "same_cols_set_equal": true,
+            "positional_set_equal": true,
+            "common_cols": [],
+            "common_cols_set_equal": null
+          },
+          "winner_required_ok": true,
+          "loser_cmp": {
+            "ref_cols": [],
+            "cand_cols": [],
+            "ref_row_count": 0,
+            "cand_row_count": 0,
+            "strict_equal": true,
+            "same_cols_set_equal": true,
+            "positional_set_equal": true,
+            "common_cols": [],
+            "common_cols_set_equal": null
+          },
+          "loser_required_ok": false
+        },
+        {
+          "query_id": "NL18",
+          "question": "Which team members most often sell into destination countries different from their own?",
+          "winner": "off",
+          "winner_cmp": {
+            "ref_cols": [
+              "employee_id",
+              "first_name",
+              "last_name",
+              "cross_country_orders",
+              "cross_country_revenue"
+            ],
+            "cand_cols": [
+              "employee_id",
+              "first_name",
+              "last_name",
+              "different_country_sales"
+            ],
+            "ref_row_count": 9,
+            "cand_row_count": 9,
+            "strict_equal": false,
+            "same_cols_set_equal": false,
+            "positional_set_equal": false,
+            "common_cols": [
+              "employee_id",
+              "first_name",
+              "last_name"
+            ],
+            "common_cols_set_equal": true
+          },
+          "winner_required_ok": false,
+          "loser_cmp": {
+            "ref_cols": [
+              "employee_id",
+              "first_name",
+              "last_name",
+              "cross_country_orders",
+              "cross_country_revenue"
+            ],
+            "cand_cols": [
+              "employee_name",
+              "different_country_sales"
+            ],
+            "ref_row_count": 9,
+            "cand_row_count": 5,
+            "strict_equal": false,
+            "same_cols_set_equal": false,
+            "positional_set_equal": false,
+            "common_cols": [],
+            "common_cols_set_equal": null
+          },
+          "loser_required_ok": false
+        }
+      ],
+      "on_better_count": 3,
+      "off_better_count": 5
+    },
+    "ambiguous_on_vs_off_legacy": {
+      "on_better": [
+        {
+          "query_id": "NW3",
+          "question": "Which customers order unusually often, and roughly how much business do they represent for us?",
+          "winner": "on",
+          "winner_cmp": {
+            "ref_cols": [
+              "customer_id",
+              "company_name",
+              "order_count",
+              "total_order_value"
+            ],
+            "cand_cols": [
+              "customer_id",
+              "company_name",
+              "order_count",
+              "total_business"
+            ],
+            "ref_row_count": 28,
+            "cand_row_count": 74,
+            "strict_equal": false,
+            "same_cols_set_equal": false,
+            "positional_set_equal": false,
+            "common_cols": [
+              "customer_id",
+              "company_name",
+              "order_count"
+            ],
+            "common_cols_set_equal": false
+          },
+          "winner_required_ok": true,
+          "loser_cmp": {
+            "ref_cols": [
+              "customer_id",
+              "company_name",
+              "order_count",
+              "total_order_value"
+            ],
+            "cand_cols": [
+              "company_name",
+              "order_count",
+              "total_business"
+            ],
+            "ref_row_count": 28,
+            "cand_row_count": 5,
+            "strict_equal": false,
+            "same_cols_set_equal": false,
+            "positional_set_equal": false,
+            "common_cols": [
+              "company_name",
+              "order_count"
+            ],
+            "common_cols_set_equal": false
+          },
+          "loser_required_ok": false
+        },
+        {
+          "query_id": "NW4",
+          "question": "Which shipping providers are causing delay issues, and what is their shipment volume?",
+          "winner": "on",
+          "winner_cmp": {
+            "ref_cols": [
+              "shipper_id",
+              "company_name",
+              "late_shipments",
+              "total_shipments"
+            ],
+            "cand_cols": [
+              "company_name",
+              "shipment_volume",
+              "delay_count"
+            ],
+            "ref_row_count": 3,
+            "cand_row_count": 3,
+            "strict_equal": false,
+            "same_cols_set_equal": false,
+            "positional_set_equal": false,
+            "common_cols": [
+              "company_name"
+            ],
+            "common_cols_set_equal": true
+          },
+          "winner_required_ok": true,
+          "loser_cmp": {
+            "ref_cols": [
+              "shipper_id",
+              "company_name",
+              "late_shipments",
+              "total_shipments"
+            ],
+            "cand_cols": [
+              "ship_via",
+              "shipment_volume",
+              "delay_count"
+            ],
+            "ref_row_count": 3,
+            "cand_row_count": 3,
+            "strict_equal": false,
+            "same_cols_set_equal": false,
+            "positional_set_equal": false,
+            "common_cols": [],
+            "common_cols_set_equal": null
+          },
+          "loser_required_ok": false
+        }
+      ],
+      "off_better": [
+        {
+          "query_id": "NW9",
+          "question": "How many orders are still unshipped, and what are they worth after discounts?",
+          "winner": "off",
+          "winner_cmp": {
+            "ref_cols": [
+              "pending_orders",
+              "total_value"
+            ],
+            "cand_cols": [
+              "unshipped_orders_count",
+              "total_value_after_discounts"
+            ],
+            "ref_row_count": 1,
+            "cand_row_count": 1,
+            "strict_equal": false,
+            "same_cols_set_equal": false,
+            "positional_set_equal": true,
+            "common_cols": [],
+            "common_cols_set_equal": null
+          },
+          "winner_required_ok": true,
+          "loser_cmp": {
+            "ref_cols": [
+              "pending_orders",
+              "total_value"
+            ],
+            "cand_cols": [
+              "unshipped_orders_count",
+              "total_value_after_discounts"
+            ],
+            "ref_row_count": 1,
+            "cand_row_count": 1,
+            "strict_equal": false,
+            "same_cols_set_equal": false,
+            "positional_set_equal": false,
+            "common_cols": [],
+            "common_cols_set_equal": null
+          },
+          "loser_required_ok": true
+        }
+      ],
+      "on_better_count": 2,
+      "off_better_count": 1
+    },
+    "nonlexical_on_vs_off_legacy": {
+      "on_better": [
+        {
+          "query_id": "NL14",
+          "question": "Who buys often but with relatively small ticket sizes?",
+          "winner": "on",
+          "winner_cmp": {
+            "ref_cols": [
+              "customer_id",
+              "company_name",
+              "order_count",
+              "avg_order_value",
+              "total_value"
+            ],
+            "cand_cols": [
+              "company_name",
+              "order_count",
+              "avg_ticket_size"
+            ],
+            "ref_row_count": 22,
+            "cand_row_count": 5,
+            "strict_equal": false,
+            "same_cols_set_equal": false,
+            "positional_set_equal": false,
+            "common_cols": [
+              "company_name",
+              "order_count"
+            ],
+            "common_cols_set_equal": false
+          },
+          "winner_required_ok": true,
+          "loser_cmp": {
+            "ref_cols": [
+              "customer_id",
+              "company_name",
+              "order_count",
+              "avg_order_value",
+              "total_value"
+            ],
+            "cand_cols": [
+              "company_name",
+              "order_count",
+              "avg_ticket_size"
+            ],
+            "ref_row_count": 22,
+            "cand_row_count": 5,
+            "strict_equal": false,
+            "same_cols_set_equal": false,
+            "positional_set_equal": false,
+            "common_cols": [
+              "company_name",
+              "order_count"
+            ],
+            "common_cols_set_equal": false
+          },
+          "loser_required_ok": false
+        }
+      ],
+      "off_better": [
+        {
+          "query_id": "NL1",
+          "question": "Which items are bringing in the most money overall after markdowns are applied?",
+          "winner": "off",
+          "winner_cmp": {
+            "ref_cols": [
+              "product_id",
+              "product_name",
+              "units_in_stock",
+              "reorder_level"
+            ],
+            "cand_cols": [
+              "product_name",
+              "total_revenue"
+            ],
+            "ref_row_count": 5,
+            "cand_row_count": 5,
+            "strict_equal": false,
+            "same_cols_set_equal": false,
+            "positional_set_equal": false,
+            "common_cols": [
+              "product_name"
+            ],
+            "common_cols_set_equal": false
+          },
+          "winner_required_ok": true,
+          "loser_cmp": {
+            "ref_cols": [
+              "product_id",
+              "product_name",
+              "units_in_stock",
+              "reorder_level"
+            ],
+            "cand_cols": [
+              "product_id",
+              "total_revenue"
+            ],
+            "ref_row_count": 5,
+            "cand_row_count": 5,
+            "strict_equal": false,
+            "same_cols_set_equal": false,
+            "positional_set_equal": false,
+            "common_cols": [
+              "product_id"
+            ],
+            "common_cols_set_equal": false
+          },
+          "loser_required_ok": false
+        },
+        {
+          "query_id": "NL13",
+          "question": "Which geographic areas are associated with the highest income through staff territory assignment?",
+          "winner": "off",
+          "winner_cmp": {
+            "ref_cols": [
+              "region_id",
+              "region_description",
+              "total_revenue",
+              "order_count"
+            ],
+            "cand_cols": [
+              "territory_description",
+              "total_income"
+            ],
+            "ref_row_count": 4,
+            "cand_row_count": 5,
+            "strict_equal": false,
+            "same_cols_set_equal": false,
+            "positional_set_equal": false,
+            "common_cols": [],
+            "common_cols_set_equal": null
+          },
+          "winner_required_ok": false,
+          "loser_cmp": null,
+          "loser_required_ok": false
+        }
+      ],
+      "on_better_count": 1,
+      "off_better_count": 10
+    }
+  }
+}

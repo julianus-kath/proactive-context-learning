@@ -1,0 +1,12 @@
+{"id": "LB_CL2_LX1", "question": "Zeige den rabattbereinigten Umsatz pro Kundenland.", "intent": "CL2", "level": "LX1", "abstraction": "direct"}
+{"id": "LB_CL2_LX2", "question": "Welche Absatzländer liefern den größten Nettoerlös nach Preisnachlässen?", "intent": "CL2", "level": "LX2", "abstraction": "paraphrase"}
+{"id": "LB_CL2_LX3", "question": "Aus welchen Zielregionen stammt nach Abzügen der höchste Wertbeitrag?", "intent": "CL2", "level": "LX3", "abstraction": "implicit"}
+{"id": "LB_CL3_LX1", "question": "Welcher Versanddienstleister hat im Schnitt die meisten verspäteten Sendungen?", "intent": "CL3", "level": "LX1", "abstraction": "direct"}
+{"id": "LB_CL3_LX2", "question": "Bei welchem Carrier ist die durchschnittliche Lieferverzögerung am höchsten?", "intent": "CL3", "level": "LX2", "abstraction": "paraphrase"}
+{"id": "LB_CL3_LX3", "question": "Über welchen Zustellkanal entsteht der größte Zeitverzug gegenüber dem Solltermin?", "intent": "CL3", "level": "LX3", "abstraction": "implicit"}
+{"id": "LB_CL6_LX1", "question": "Zeige pro Monat die Anzahl Aufträge und verspäteten Auslieferungen.", "intent": "CL6", "level": "LX1", "abstraction": "direct"}
+{"id": "LB_CL6_LX2", "question": "Wie entwickeln sich monatlich Auftragseingang und Lieferverzug?", "intent": "CL6", "level": "LX2", "abstraction": "paraphrase"}
+{"id": "LB_CL6_LX3", "question": "Wie verändert sich im Zeitverlauf die Kombination aus Nachfragefluss und Terminüberschreitungen?", "intent": "CL6", "level": "LX3", "abstraction": "implicit"}
+{"id": "LB_CL10_LX1", "question": "Zeige den rabattbereinigten Umsatz je Kundensegment.", "intent": "CL10", "level": "LX1", "abstraction": "direct"}
+{"id": "LB_CL10_LX2", "question": "Welche Abnehmergruppen erzielen den höchsten Erlös nach Nachlässen?", "intent": "CL10", "level": "LX2", "abstraction": "paraphrase"}
+{"id": "LB_CL10_LX3", "question": "Welche Profile im Kundenstamm tragen nach Preiszugeständnissen den größten Nettoertrag?", "intent": "CL10", "level": "LX3", "abstraction": "implicit"}

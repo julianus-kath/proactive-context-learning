@@ -1,0 +1,446 @@
+{
+  "summary": {
+    "total_queries": 10,
+    "successful": 2,
+    "failed": 8,
+    "success_rate": "20.0%"
+  },
+  "queries": [
+    {
+      "query_id": "NW1",
+      "question": "Show the five products that should be reordered, meaning stock on hand is below the reorder level, sorted by the largest shortage first.",
+      "status": "failed",
+      "latency_ms": 2939,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": "It seems there is an issue with accessing the database tools at the moment. I recommend trying again later. If you have any other questions or need assistance with something else, feel free to ask!",
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "failure_reasons": [
+        "missing_sql",
+        "missing_tables",
+        "missing_results"
+      ]
+    },
+    {
+      "query_id": "NW2",
+      "question": "For each product category, calculate total revenue after discounts, using price times quantity times one minus discount, and identify the category with the highest revenue.",
+      "status": "success",
+      "latency_ms": 6995,
+      "sql_query": "SELECT c.category_name, \n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue\nFROM public.order_details od\nJOIN public.products p ON od.product_id = p.product_id\nJOIN public.categories c ON p.category_id = c.category_id\nGROUP BY c.category_name\nORDER BY total_revenue DESC",
+      "tables_used": [
+        "public.order_details",
+        "public.products",
+        "public.categories"
+      ],
+      "final_answer": "The product category with the highest total revenue after discounts is \"Beverages,\" with a total revenue of approximately 267,868.18. Here is a summary of the total revenue for each category:\n\n- **Beverages**: 267,868.18\n- **Dairy Products**: 234,507.28\n- **Confections**: 167,357.23\n- **Meat/Poultry**: 163,022.36\n- **Seafood**: 131,261.74\n- **Condiments**: 106,047.08\n- **Produce**: 99,984.58\n- **Grains/Cereals**: 95,744.59",
+      "row_count": 8,
+      "result_preview": [
+        {
+          "category_name": "Beverages",
+          "total_revenue": "267868.17978624784"
+        },
+        {
+          "category_name": "Dairy Products",
+          "total_revenue": "234507.2845305777"
+        },
+        {
+          "category_name": "Confections",
+          "total_revenue": "167357.22547338586"
+        },
+        {
+          "category_name": "Meat/Poultry",
+          "total_revenue": "163022.3602687388"
+        },
+        {
+          "category_name": "Seafood",
+          "total_revenue": "131261.7365558489"
+        }
+      ],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": []
+    },
+    {
+      "query_id": "NW3",
+      "question": "Which customers have placed more than ten distinct orders, and what is the total value of those orders?",
+      "status": "failed",
+      "latency_ms": 4892,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": "It seems there is an issue with accessing the database configuration. I am unable to retrieve the necessary table information at the moment. Please try again later or contact your database administrator for assistance.",
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "failure_reasons": [
+        "missing_sql",
+        "missing_tables",
+        "missing_results"
+      ]
+    },
+    {
+      "query_id": "NW4",
+      "question": "For each shipping company, count orders that were shipped later than the required delivery date, and also report total shipped orders.",
+      "status": "failed",
+      "latency_ms": 5045,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": "I'm currently experiencing technical difficulties accessing the database schema. However, I can guide you on how to approach this query:\n\n1. **Identify Tables**: You would typically need tables related to orders, shipping companies, and delivery dates. Common table names might include `Orders`, `Shipments`, `ShippingCompanies`, or similar.\n\n2. **Key Columns**:\n   - Orders table: `OrderID`, `ShippingCompanyID`, `ShippedDate`, `RequiredDate`\n   - Shipping Companies table: `ShippingCompanyID`, `CompanyName`\n\n3. **SQL Query Structure**:\n   - Join the orders table with the shipping companies table on `ShippingCompanyID`.\n   - Use a `CASE` statement to count late shipments where `ShippedDate > RequiredDate`.\n   - Group by `ShippingCompanyID` and `CompanyName`.\n\nHere is a sample SQL query structure:\n\n```sql\nSELECT \n    sc.CompanyName,\n    COUNT(o.OrderID) AS TotalShippedOrders,\n    SUM(CASE WHEN o.ShippedDate > o.RequiredDate THEN 1 ELSE 0 END) AS LateShippedOrders\nFROM \n    dbo.Orders o\nJOIN \n    dbo.ShippingCompanies sc ON o.ShippingCompanyID = sc.ShippingCompanyID\nGROUP BY \n    sc.CompanyName\n```\n\nThis query will give you the total number of orders shipped by each company and how many of those were shipped late. If you have access to the database, you can adjust the table and column names as needed. If you need further assistance once the technical issue is resolved, feel free to ask!",
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "failure_reasons": [
+        "missing_sql",
+        "missing_tables",
+        "missing_results"
+      ]
+    },
+    {
+      "query_id": "NW5",
+      "question": "Which employees generated the highest total revenue from their orders after discounts?",
+      "status": "failed",
+      "latency_ms": 2888,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": "I'm currently experiencing technical difficulties accessing the database schema. Please try again later, or if you have specific table names or details, I can attempt to assist you with that information.",
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "failure_reasons": [
+        "missing_sql",
+        "missing_tables",
+        "missing_results"
+      ]
+    },
+    {
+      "query_id": "NW6",
+      "question": "Which five products sold the highest total quantity?",
+      "status": "failed",
+      "latency_ms": 3185,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": "I'm currently experiencing technical difficulties accessing the database to find the relevant tables for your query. Please try again later, or if you have any other questions, feel free to ask!",
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "failure_reasons": [
+        "missing_sql",
+        "missing_tables",
+        "missing_results"
+      ]
+    },
+    {
+      "query_id": "NW7",
+      "question": "Which pairs of suppliers most frequently appear together within the same order? Return both supplier names and the co-order frequency.",
+      "status": "failed",
+      "latency_ms": 3270,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": "I'm currently experiencing technical difficulties accessing the database schema. Without this information, I can't proceed with writing the SQL query to find the pairs of suppliers that frequently appear together in the same order.\n\nPlease try again later, or if you have any other questions, feel free to ask!",
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "failure_reasons": [
+        "missing_sql",
+        "missing_tables",
+        "missing_results"
+      ]
+    },
+    {
+      "query_id": "NW8",
+      "question": "By customer country, compute the average order value where each order is totaled first and then averaged at the country level.",
+      "status": "failed",
+      "latency_ms": 3357,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": "I am currently unable to access the database schema due to an internal error. Without the schema, I can't write the exact SQL query needed to compute the average order value by customer country. \n\nIf you have any specific table or column names, you could provide them, and I can attempt to construct the query based on that information. Alternatively, you might try again later when the system is functioning correctly.",
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "failure_reasons": [
+        "invalid_final_answer",
+        "missing_sql",
+        "missing_tables",
+        "missing_results"
+      ]
+    },
+    {
+      "query_id": "NW9",
+      "question": "How many distinct orders have not been shipped yet, and what is their total value after discounts?",
+      "status": "failed",
+      "latency_ms": 2644,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": "I'm currently experiencing technical difficulties accessing the database schema. Please try again later, or if you have specific details about the database structure, I can attempt to assist you with that information.",
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "failure_reasons": [
+        "missing_sql",
+        "missing_tables",
+        "missing_results"
+      ]
+    },
+    {
+      "query_id": "NW10",
+      "question": "Show the month-by-month revenue trend after discounts based on order date.",
+      "status": "success",
+      "latency_ms": 12005,
+      "sql_query": "SELECT EXTRACT(YEAR FROM o.order_date) AS Year, EXTRACT(MONTH FROM o.order_date) AS Month, \n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS Revenue\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY Year, Month\nORDER BY Year, Month;",
+      "tables_used": [
+        "o.order_date",
+        "public.orders",
+        "public.order_details"
+      ],
+      "final_answer": "Here is the month-by-month revenue trend after discounts based on the order date:\n\n- **July 1996**: Revenue of approximately $27,861.90\n- **August 1996**: Revenue of approximately $25,485.28\n- **September 1996**: Revenue of approximately $26,381.40\n- **October 1996**: Revenue of approximately $37,515.72\n- **November 1996**: Revenue of approximately $45,600.05\n- **December 1996**: Revenue of approximately $45,239.63\n\nThe trend continues with increasing revenues in the following years, peaking in January 1998 with approximately $94,222.11. If you need more details or specific months, let me know!",
+      "row_count": 23,
+      "result_preview": [
+        {
+          "year": "1996.0",
+          "month": "7.0",
+          "revenue": "27861.89512966156"
+        },
+        {
+          "year": "1996.0",
+          "month": "8.0",
+          "revenue": "25485.275070743264"
+        },
+        {
+          "year": "1996.0",
+          "month": "9.0",
+          "revenue": "26381.400132587554"
+        },
+        {
+          "year": "1996.0",
+          "month": "10.0",
+          "revenue": "37515.72494547888"
+        },
+        {
+          "year": "1996.0",
+          "month": "11.0",
+          "revenue": "45600.04521113701"
+        }
+      ],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": []
+    }
+  ]
+}

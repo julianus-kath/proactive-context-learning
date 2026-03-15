@@ -1,0 +1,373 @@
+{
+  "generated_at_utc": "2026-03-02T19:01:54.104699Z",
+  "dataset": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/datasets/northwind_queries_scout_limit_probe_v2.jsonl",
+  "pairs": [
+    {
+      "label": "r1",
+      "on": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/20260302_184710_scout_limit_probe_v2_process_query_scout_on_r1",
+      "off": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/20260302_184403_scout_limit_probe_v2_process_query_scout_off_aligned_r1_recover"
+    },
+    {
+      "label": "r2",
+      "on": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/20260302_185226_scout_limit_probe_v2_process_query_scout_on_r2",
+      "off": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/20260302_184950_scout_limit_probe_v2_process_query_scout_off_aligned_r2"
+    },
+    {
+      "label": "r3",
+      "on": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/20260302_185811_scout_limit_probe_v2_process_query_scout_on_r3",
+      "off": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/20260302_185506_scout_limit_probe_v2_process_query_scout_off_aligned_r3"
+    }
+  ],
+  "overall": {
+    "n_cases": 54,
+    "strict": {
+      "on_true": 6,
+      "off_true": 9,
+      "delta": -3,
+      "on_coverage": 27,
+      "off_coverage": 30
+    },
+    "positional": {
+      "on_true": 18,
+      "off_true": 18,
+      "delta": 0,
+      "on_coverage": 27,
+      "off_coverage": 30
+    },
+    "required_tables_ok": {
+      "on_true": 11,
+      "off_true": 17,
+      "delta": -6
+    },
+    "sql_present": {
+      "on_true": 28,
+      "off_true": 32,
+      "delta": -4
+    }
+  },
+  "by_level": {
+    "L1": {
+      "n_cases": 9,
+      "strict_on": 0,
+      "strict_off": 2,
+      "strict_delta": -2,
+      "positional_on": 3,
+      "positional_off": 4,
+      "positional_delta": -1,
+      "required_on": 2,
+      "required_off": 5,
+      "required_delta": -3,
+      "sql_on": 5,
+      "sql_off": 7,
+      "sql_delta": -2
+    },
+    "L2": {
+      "n_cases": 9,
+      "strict_on": 1,
+      "strict_off": 1,
+      "strict_delta": 0,
+      "positional_on": 4,
+      "positional_off": 4,
+      "positional_delta": 0,
+      "required_on": 2,
+      "required_off": 3,
+      "required_delta": -1,
+      "sql_on": 5,
+      "sql_off": 6,
+      "sql_delta": -1
+    },
+    "L3": {
+      "n_cases": 9,
+      "strict_on": 2,
+      "strict_off": 3,
+      "strict_delta": -1,
+      "positional_on": 4,
+      "positional_off": 5,
+      "positional_delta": -1,
+      "required_on": 2,
+      "required_off": 3,
+      "required_delta": -1,
+      "sql_on": 4,
+      "sql_off": 5,
+      "sql_delta": -1
+    },
+    "L4": {
+      "n_cases": 9,
+      "strict_on": 0,
+      "strict_off": 0,
+      "strict_delta": 0,
+      "positional_on": 3,
+      "positional_off": 2,
+      "positional_delta": 1,
+      "required_on": 0,
+      "required_off": 0,
+      "required_delta": 0,
+      "sql_on": 5,
+      "sql_off": 4,
+      "sql_delta": 1
+    },
+    "L5": {
+      "n_cases": 9,
+      "strict_on": 3,
+      "strict_off": 3,
+      "strict_delta": 0,
+      "positional_on": 3,
+      "positional_off": 3,
+      "positional_delta": 0,
+      "required_on": 4,
+      "required_off": 3,
+      "required_delta": 1,
+      "sql_on": 5,
+      "sql_off": 5,
+      "sql_delta": 0
+    },
+    "L6": {
+      "n_cases": 9,
+      "strict_on": 0,
+      "strict_off": 0,
+      "strict_delta": 0,
+      "positional_on": 1,
+      "positional_off": 0,
+      "positional_delta": 1,
+      "required_on": 1,
+      "required_off": 3,
+      "required_delta": -2,
+      "sql_on": 4,
+      "sql_off": 5,
+      "sql_delta": -1
+    }
+  },
+  "by_cluster": {
+    "CL10": {
+      "n_cases": 18,
+      "strict_on": 6,
+      "strict_off": 8,
+      "strict_delta": -2,
+      "positional_on": 6,
+      "positional_off": 8,
+      "positional_delta": -2,
+      "required_on": 6,
+      "required_off": 8,
+      "required_delta": -2,
+      "sql_on": 11,
+      "sql_off": 12,
+      "sql_delta": -1
+    },
+    "CL2": {
+      "n_cases": 18,
+      "strict_on": 0,
+      "strict_off": 1,
+      "strict_delta": -1,
+      "positional_on": 12,
+      "positional_off": 10,
+      "positional_delta": 2,
+      "required_on": 3,
+      "required_off": 3,
+      "required_delta": 0,
+      "sql_on": 15,
+      "sql_off": 14,
+      "sql_delta": 1
+    },
+    "CL6": {
+      "n_cases": 18,
+      "strict_on": 0,
+      "strict_off": 0,
+      "strict_delta": 0,
+      "positional_on": 0,
+      "positional_off": 0,
+      "positional_delta": 0,
+      "required_on": 2,
+      "required_off": 6,
+      "required_delta": -4,
+      "sql_on": 2,
+      "sql_off": 6,
+      "sql_delta": -4
+    }
+  },
+  "examples": {
+    "on_semantic_wins": [
+      {
+        "query_id": "P_CL10_L2",
+        "cluster": "CL10",
+        "level": "L2",
+        "question": "Welche Kundensegmente erzeugen den hoechsten Erloes nach Rabatt?",
+        "pair": "r3",
+        "on_strict": true,
+        "off_strict": false,
+        "on_sql_present": true,
+        "off_sql_present": true
+      }
+    ],
+    "off_semantic_wins": [
+      {
+        "query_id": "P_CL10_L1",
+        "cluster": "CL10",
+        "level": "L1",
+        "question": "Zeige den Umsatz nach Rabatt je Kundensegment.",
+        "pair": "r1",
+        "on_strict": null,
+        "off_strict": true,
+        "on_sql_present": false,
+        "off_sql_present": true
+      },
+      {
+        "query_id": "P_CL2_L1",
+        "cluster": "CL2",
+        "level": "L1",
+        "question": "Zeige den Umsatz nach Rabatt pro Kundenland.",
+        "pair": "r1",
+        "on_strict": false,
+        "off_strict": true,
+        "on_sql_present": true,
+        "off_sql_present": true
+      },
+      {
+        "query_id": "P_CL10_L2",
+        "cluster": "CL10",
+        "level": "L2",
+        "question": "Welche Kundensegmente erzeugen den hoechsten Erloes nach Rabatt?",
+        "pair": "r2",
+        "on_strict": null,
+        "off_strict": true,
+        "on_sql_present": false,
+        "off_sql_present": true
+      },
+      {
+        "query_id": "P_CL10_L3",
+        "cluster": "CL10",
+        "level": "L3",
+        "question": "Welche Abnehmergruppen sind die wichtigsten Ertragsbringer nach Nachlaessen?",
+        "pair": "r3",
+        "on_strict": null,
+        "off_strict": true,
+        "on_sql_present": false,
+        "off_sql_present": true
+      }
+    ],
+    "on_sql_wins": [
+      {
+        "query_id": "P_CL10_L4",
+        "cluster": "CL10",
+        "level": "L4",
+        "question": "Welche Profilgruppen im Kundenstamm monetarisieren am staerksten nach Preiszugestaendnissen?",
+        "pair": "r1",
+        "on_strict": null,
+        "off_strict": null,
+        "on_sql_present": true,
+        "off_sql_present": false
+      },
+      {
+        "query_id": "P_CL2_L3",
+        "cluster": "CL2",
+        "level": "L3",
+        "question": "Aus welchen Absatzmaerkten stammt der hoechste Nettoerloes nach Nachlaessen?",
+        "pair": "r1",
+        "on_strict": false,
+        "off_strict": null,
+        "on_sql_present": true,
+        "off_sql_present": false
+      },
+      {
+        "query_id": "P_CL10_L6",
+        "cluster": "CL10",
+        "level": "L6",
+        "question": "Welche Kundencluster tragen am meisten zum Nettoertrag nach Zugestaendnissen bei?",
+        "pair": "r2",
+        "on_strict": false,
+        "off_strict": null,
+        "on_sql_present": true,
+        "off_sql_present": false
+      },
+      {
+        "query_id": "P_CL2_L5",
+        "cluster": "CL2",
+        "level": "L5",
+        "question": "In welchen Vertriebsraeumen entsteht der groesste Beitrag zum Nettoverkauf nach Preiszugestaendnissen?",
+        "pair": "r2",
+        "on_strict": false,
+        "off_strict": null,
+        "on_sql_present": true,
+        "off_sql_present": false
+      },
+      {
+        "query_id": "P_CL2_L6",
+        "cluster": "CL2",
+        "level": "L6",
+        "question": "Welche Absatzraeume finanzieren den hoechsten Anteil am nachlass-bereinigten Erloes?",
+        "pair": "r2",
+        "on_strict": false,
+        "off_strict": null,
+        "on_sql_present": true,
+        "off_sql_present": false
+      }
+    ],
+    "off_sql_wins": [
+      {
+        "query_id": "P_CL10_L1",
+        "cluster": "CL10",
+        "level": "L1",
+        "question": "Zeige den Umsatz nach Rabatt je Kundensegment.",
+        "pair": "r1",
+        "on_strict": null,
+        "off_strict": true,
+        "on_sql_present": false,
+        "off_sql_present": true
+      },
+      {
+        "query_id": "P_CL2_L5",
+        "cluster": "CL2",
+        "level": "L5",
+        "question": "In welchen Vertriebsraeumen entsteht der groesste Beitrag zum Nettoverkauf nach Preiszugestaendnissen?",
+        "pair": "r1",
+        "on_strict": null,
+        "off_strict": false,
+        "on_sql_present": false,
+        "off_sql_present": true
+      },
+      {
+        "query_id": "P_CL2_L6",
+        "cluster": "CL2",
+        "level": "L6",
+        "question": "Welche Absatzraeume finanzieren den hoechsten Anteil am nachlass-bereinigten Erloes?",
+        "pair": "r1",
+        "on_strict": null,
+        "off_strict": false,
+        "on_sql_present": false,
+        "off_sql_present": true
+      },
+      {
+        "query_id": "P_CL6_L6",
+        "cluster": "CL6",
+        "level": "L6",
+        "question": "In welcher zeitlichen Entwicklung koppeln sich Bestellaufkommen und Verzug in der Auslieferung?",
+        "pair": "r1",
+        "on_strict": null,
+        "off_strict": false,
+        "on_sql_present": false,
+        "off_sql_present": true
+      },
+      {
+        "query_id": "P_CL10_L2",
+        "cluster": "CL10",
+        "level": "L2",
+        "question": "Welche Kundensegmente erzeugen den hoechsten Erloes nach Rabatt?",
+        "pair": "r2",
+        "on_strict": null,
+        "off_strict": true,
+        "on_sql_present": false,
+        "off_sql_present": true
+      },
+      {
+        "query_id": "P_CL6_L1",
+        "cluster": "CL6",
+        "level": "L1",
+        "question": "Zeige pro Monat die Anzahl der Auftraege und der verspaeteten Auslieferungen.",
+        "pair": "r2",
+        "on_strict": null,
+        "off_strict": false,
+        "on_sql_present": false,
+        "off_sql_present": true
+      }
+    ]
+  }
+}

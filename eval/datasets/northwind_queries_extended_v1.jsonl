@@ -1,0 +1,40 @@
+{"id":"NW1","question":"Show the five products that should be reordered, meaning stock on hand is below the reorder level, sorted by the largest shortage first."}
+{"id":"NW2","question":"For each product category, calculate total revenue after discounts, using price times quantity times one minus discount, and identify the category with the highest revenue."}
+{"id":"NW3","question":"Which customers have placed more than ten distinct orders, and what is the total value of those orders?"}
+{"id":"NW4","question":"For each shipping company, count orders that were shipped later than the required delivery date, and also report total shipped orders."}
+{"id":"NW5","question":"Which employees generated the highest total revenue from their orders after discounts?"}
+{"id":"NW6","question":"Which five products sold the highest total quantity?"}
+{"id":"NW7","question":"Which pairs of suppliers most frequently appear together within the same order? Return both supplier names and the co-order frequency."}
+{"id":"NW8","question":"By customer country, compute the average order value where each order is totaled first and then averaged at the country level."}
+{"id":"NW9","question":"How many distinct orders have not been shipped yet, and what is their total value after discounts?"}
+{"id":"NW10","question":"Show the month-by-month revenue trend after discounts based on order date."}
+{"id":"NW11","question":"Which suppliers generate the most total revenue after discounts across all their products?"}
+{"id":"NW12","question":"Which customer countries generate the highest total revenue after discounts?"}
+{"id":"NW13","question":"For each shipping company, what is the average shipping delay in days and how many orders were shipped late?"}
+{"id":"NW14","question":"Which products look overstocked right now, where units_in_stock plus units_on_order is much higher than reorder_level?"}
+{"id":"NW15","question":"Among discontinued products, which categories have the highest number of products?"}
+{"id":"NW16","question":"Which employees serve the largest number of distinct customers?"}
+{"id":"NW17","question":"Which customers have never placed an order?"}
+{"id":"NW18","question":"Month by month, how many orders were created and how many were shipped after the required date?"}
+{"id":"NW19","question":"Which supplier-country and customer-country combinations appear most often in sold line items?"}
+{"id":"NW20","question":"Which products have the highest average discount across their order lines?"}
+{"id":"NW21","question":"Which shippers handle the highest total freight value?"}
+{"id":"NW22","question":"Which territories have the highest number of assigned employees?"}
+{"id":"NW23","question":"Which regions are linked to the highest total revenue through employee territories?"}
+{"id":"NW24","question":"Which customers place frequent but low-value orders?"}
+{"id":"NW25","question":"Within each supplier, which product categories contribute most of that supplier's revenue?"}
+{"id":"NW26","question":"Which customer cities generate the most orders and revenue?"}
+{"id":"NW27","question":"Which products are most often ordered together with products from different categories?"}
+{"id":"NW28","question":"By customer country, what are the average and maximum order values?"}
+{"id":"NW29","question":"For each employee and month, how many orders were handled and what revenue did they produce?"}
+{"id":"NW30","question":"Which suppliers have products that were never sold?"}
+{"id":"NW31","question":"Which products produce high revenue despite low stock levels?"}
+{"id":"NW32","question":"Which customer demographic types generate the highest revenue?"}
+{"id":"NW33","question":"Which employees sell the most into ship countries different from their own country?"}
+{"id":"NW34","question":"Which ship countries have the highest late-shipment rate?"}
+{"id":"NW35","question":"Which customers receive the largest average discount?"}
+{"id":"NW36","question":"Which categories have the widest spread in product unit prices?"}
+{"id":"NW37","question":"Which suppliers dominate a category by revenue share?"}
+{"id":"NW38","question":"For each product, how often is it sold with a non-zero discount?"}
+{"id":"NW39","question":"Which months have the highest freight-to-revenue ratio?"}
+{"id":"NW40","question":"Which employees are connected to the most distinct regions via territories?"}

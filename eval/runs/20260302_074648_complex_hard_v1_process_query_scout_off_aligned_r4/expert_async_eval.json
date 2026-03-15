@@ -1,0 +1,509 @@
+{
+  "generated_at_utc": "2026-03-02T07:47:28.742961Z",
+  "reference_sql_path": "eval/datasets/northwind_queries_complex_hard_v1.reference_sql.json",
+  "summary": {
+    "total": 15,
+    "strict_equal_count": 0,
+    "same_cols_set_equal_count": 0,
+    "positional_set_equal_count": 0,
+    "common_cols_set_equal_count": 0,
+    "required_tables_ok_count": 0,
+    "sql_exec_errors_count": 15
+  },
+  "per_query": [
+    {
+      "query_id": "HX1",
+      "question": "Welche Kundenkonten haben ihren Monatsumsatz vom ersten zum letzten aktiven Monat am staerksten gesteigert (mindestens 5 Bestellungen insgesamt)?",
+      "required_tables": [
+        "orders",
+        "order_details",
+        "customers"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "WITH order_totals AS (\n    SELECT o.order_id,\n           o.customer_id,\n           DATE_TRUNC('month', o.order_date)::date AS month,\n           SUM(od.unit_price * od.quantity * (1 - od.discount)) AS order_revenue\n    FROM public.orders o\n    JOIN public.order_details od ON od.order_id = o.order_id\n    GROUP BY o.order_id, o.customer_id, DATE_TRUNC('month', o.order_date)::date\n),\nmonthly AS (\n    SELECT customer_id,\n           month,\n           SUM(order_revenue) AS month_revenue,\n           COUNT(DISTINCT order_id) AS month_orders\n    FROM order_totals\n    GROUP BY customer_id, month\n),\nranked AS (\n    SELECT m.*,\n           ROW_NUMBER() OVER (PARTITION BY m.customer_id ORDER BY m.month) AS rn_first,\n           ROW_NUMBER() OVER (PARTITION BY m.customer_id ORDER BY m.month DESC) AS rn_last\n    FROM monthly m\n),\nfirst_last AS (\n    SELECT r.customer_id,\n           MAX(CASE WHEN rn_first = 1 THEN month END) AS first_month,\n           MAX(CASE WHEN rn_last = 1 THEN month END) AS last_month,\n           MAX(CASE WHEN rn_first = 1 THEN month_revenue END) AS first_month_revenue,\n           MAX(CASE WHEN rn_last = 1 THEN month_revenue END) AS last_month_revenue\n    FROM ranked r\n    GROUP BY r.customer_id\n),\ncustomer_orders AS (\n    SELECT o.customer_id, COUNT(DISTINCT o.order_id) AS total_orders\n    FROM public.orders o\n    GROUP BY o.customer_id\n)\nSELECT c.customer_id,\n       c.company_name,\n       fl.first_month,\n       fl.last_month,\n       fl.first_month_revenue,\n       fl.last_month_revenue,\n       (fl.last_month_revenue - fl.first_month_revenue) AS revenue_growth\nFROM first_last fl\nJOIN customer_orders co ON co.customer_id = fl.customer_id\nJOIN public.customers c ON c.customer_id = fl.customer_id\nWHERE co.total_orders >= 5\n  AND fl.last_month > fl.first_month\nORDER BY revenue_growth DESC, c.customer_id",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "HX10",
+      "question": "Welche Kundensegmente haben hohen Umsatz, aber geringe Wiederkaufrate (Bestellungen pro Kunde)?",
+      "required_tables": [
+        "customer_demographics",
+        "customer_customer_demo",
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "SELECT cd.customer_type_id,\n       cd.customer_desc,\n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue,\n       COUNT(DISTINCT o.order_id) AS order_count,\n       COUNT(DISTINCT c.customer_id) AS customer_count,\n       (COUNT(DISTINCT o.order_id)::numeric / NULLIF(COUNT(DISTINCT c.customer_id), 0)) AS orders_per_customer\nFROM public.customer_demographics cd\nJOIN public.customer_customer_demo ccd ON ccd.customer_type_id = cd.customer_type_id\nJOIN public.customers c ON c.customer_id = ccd.customer_id\nJOIN public.orders o ON o.customer_id = c.customer_id\nJOIN public.order_details od ON od.order_id = o.order_id\nGROUP BY cd.customer_type_id, cd.customer_desc\nORDER BY total_revenue DESC, orders_per_customer ASC, cd.customer_type_id",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "HX11",
+      "question": "Welche Laender kombinieren hohen Umsatz mit langer durchschnittlicher Lieferdauer?",
+      "required_tables": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "SELECT c.country,\n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue,\n       AVG((o.shipped_date - o.order_date)::numeric) FILTER (WHERE o.shipped_date IS NOT NULL AND o.order_date IS NOT NULL) AS avg_shipping_days,\n       COUNT(DISTINCT o.order_id) AS order_count\nFROM public.customers c\nJOIN public.orders o ON o.customer_id = c.customer_id\nJOIN public.order_details od ON od.order_id = o.order_id\nGROUP BY c.country\nORDER BY total_revenue DESC, avg_shipping_days DESC NULLS LAST, c.country",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "HX12",
+      "question": "Welche Kategorien haben nach Rabatt die hoechste Umsatzvolatilitaet zwischen Monaten?",
+      "required_tables": [
+        "categories",
+        "products",
+        "order_details",
+        "orders"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "WITH category_monthly AS (\n    SELECT c.category_id,\n           c.category_name,\n           DATE_TRUNC('month', o.order_date)::date AS month,\n           SUM(od.unit_price * od.quantity * (1 - od.discount)) AS month_revenue\n    FROM public.categories c\n    JOIN public.products p ON p.category_id = c.category_id\n    JOIN public.order_details od ON od.product_id = p.product_id\n    JOIN public.orders o ON o.order_id = od.order_id\n    GROUP BY c.category_id, c.category_name, DATE_TRUNC('month', o.order_date)::date\n),\nvolatility AS (\n    SELECT category_id,\n           category_name,\n           STDDEV_SAMP(month_revenue) AS revenue_stddev,\n           AVG(month_revenue) AS revenue_avg,\n           COUNT(*) AS month_points\n    FROM category_monthly\n    GROUP BY category_id, category_name\n)\nSELECT category_id,\n       category_name,\n       revenue_stddev,\n       revenue_avg,\n       month_points\nFROM volatility\nORDER BY revenue_stddev DESC NULLS LAST, category_id",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "HX13",
+      "question": "Welche Mitarbeitenden dominieren einzelne Regionen stark (Anteil groesser als 50 Prozent des Regionalumsatzes)?",
+      "required_tables": [
+        "employee_territories",
+        "territories",
+        "region",
+        "employees",
+        "orders",
+        "order_details"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "WITH employee_regions AS (\n    SELECT DISTINCT et.employee_id, t.region_id\n    FROM public.employee_territories et\n    JOIN public.territories t ON t.territory_id = et.territory_id\n),\nemployee_region_revenue AS (\n    SELECT r.region_id,\n           r.region_description,\n           e.employee_id,\n           e.first_name,\n           e.last_name,\n           SUM(od.unit_price * od.quantity * (1 - od.discount)) AS revenue\n    FROM employee_regions er\n    JOIN public.region r ON r.region_id = er.region_id\n    JOIN public.employees e ON e.employee_id = er.employee_id\n    JOIN public.orders o ON o.employee_id = e.employee_id\n    JOIN public.order_details od ON od.order_id = o.order_id\n    GROUP BY r.region_id, r.region_description, e.employee_id, e.first_name, e.last_name\n),\nwith_share AS (\n    SELECT err.*,\n           SUM(err.revenue) OVER (PARTITION BY err.region_id) AS region_total_revenue,\n           (err.revenue / NULLIF(SUM(err.revenue) OVER (PARTITION BY err.region_id), 0)) AS region_revenue_share\n    FROM employee_region_revenue err\n)\nSELECT region_id,\n       region_description,\n       employee_id,\n       first_name,\n       last_name,\n       revenue,\n       region_total_revenue,\n       region_revenue_share\nFROM with_share\nWHERE region_revenue_share > 0.50\nORDER BY region_revenue_share DESC, region_id, employee_id",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "HX14",
+      "question": "Welche Kunden bestellen haeufig verschiedene Produktfamilien, aber mit unterdurchschnittlichem Warenkorbwert?",
+      "required_tables": [
+        "orders",
+        "order_details",
+        "products",
+        "customers"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "WITH order_totals AS (\n    SELECT o.order_id,\n           o.customer_id,\n           SUM(od.unit_price * od.quantity * (1 - od.discount)) AS order_value\n    FROM public.orders o\n    JOIN public.order_details od ON od.order_id = o.order_id\n    GROUP BY o.order_id, o.customer_id\n),\ncustomer_category_diversity AS (\n    SELECT o.customer_id,\n           COUNT(DISTINCT p.category_id) AS distinct_categories\n    FROM public.orders o\n    JOIN public.order_details od ON od.order_id = o.order_id\n    JOIN public.products p ON p.product_id = od.product_id\n    GROUP BY o.customer_id\n),\ncustomer_stats AS (\n    SELECT c.customer_id,\n           c.company_name,\n           COUNT(DISTINCT o.order_id) AS order_count,\n           AVG(ot.order_value) AS avg_order_value,\n           ccd.distinct_categories\n    FROM public.customers c\n    JOIN public.orders o ON o.customer_id = c.customer_id\n    JOIN order_totals ot ON ot.order_id = o.order_id\n    JOIN customer_category_diversity ccd ON ccd.customer_id = c.customer_id\n    GROUP BY c.customer_id, c.company_name, ccd.distinct_categories\n),\nbaseline AS (\n    SELECT AVG(avg_order_value) AS global_avg_order_value\n    FROM customer_stats\n)\nSELECT cs.customer_id,\n       cs.company_name,\n       cs.order_count,\n       cs.distinct_categories,\n       cs.avg_order_value\nFROM customer_stats cs\nCROSS JOIN baseline b\nWHERE cs.order_count >= 8\n  AND cs.distinct_categories >= 4\n  AND cs.avg_order_value < b.global_avg_order_value\nORDER BY cs.distinct_categories DESC, cs.order_count DESC, cs.avg_order_value ASC, cs.customer_id",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "HX15",
+      "question": "Bei welchen Versanddienstleistern haeufen sich verspaetete Lieferungen besonders bei hochrabattierten Auftraegen?",
+      "required_tables": [
+        "orders",
+        "order_details",
+        "shippers"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "WITH order_discount AS (\n    SELECT o.order_id,\n           o.ship_via,\n           o.required_date,\n           o.shipped_date,\n           AVG(od.discount) AS avg_discount\n    FROM public.orders o\n    JOIN public.order_details od ON od.order_id = o.order_id\n    GROUP BY o.order_id, o.ship_via, o.required_date, o.shipped_date\n),\nshipper_stats AS (\n    SELECT s.shipper_id,\n           s.company_name,\n           COUNT(*) FILTER (WHERE od.avg_discount >= 0.15) AS high_discount_orders,\n           COUNT(*) FILTER (WHERE od.avg_discount >= 0.15 AND od.shipped_date IS NOT NULL AND od.required_date IS NOT NULL AND od.shipped_date > od.required_date) AS high_discount_late_orders\n    FROM order_discount od\n    JOIN public.shippers s ON s.shipper_id = od.ship_via\n    GROUP BY s.shipper_id, s.company_name\n)\nSELECT shipper_id,\n       company_name,\n       high_discount_orders,\n       high_discount_late_orders,\n       (high_discount_late_orders::numeric / NULLIF(high_discount_orders, 0)) AS high_discount_late_ratio\nFROM shipper_stats\nORDER BY high_discount_late_ratio DESC NULLS LAST, high_discount_late_orders DESC, shipper_id",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "HX2",
+      "question": "Welche Regionen erzielen hohen Umsatz, obwohl ihre Auftragszahl unter dem Median liegt?",
+      "required_tables": [
+        "employee_territories",
+        "territories",
+        "region",
+        "orders",
+        "order_details"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "WITH employee_regions AS (\n    SELECT DISTINCT et.employee_id, t.region_id\n    FROM public.employee_territories et\n    JOIN public.territories t ON t.territory_id = et.territory_id\n),\nregion_stats AS (\n    SELECT r.region_id,\n           r.region_description,\n           COUNT(DISTINCT o.order_id) AS order_count,\n           SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue\n    FROM employee_regions er\n    JOIN public.region r ON r.region_id = er.region_id\n    JOIN public.orders o ON o.employee_id = er.employee_id\n    JOIN public.order_details od ON od.order_id = o.order_id\n    GROUP BY r.region_id, r.region_description\n),\nmedian_orders AS (\n    SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY order_count) AS med_order_count\n    FROM region_stats\n)\nSELECT rs.region_id,\n       rs.region_description,\n       rs.order_count,\n       rs.total_revenue\nFROM region_stats rs\nCROSS JOIN median_orders mo\nWHERE rs.order_count < mo.med_order_count\nORDER BY rs.total_revenue DESC, rs.region_id",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "HX3",
+      "question": "Bei welchen Versanddienstleistern ist der Anteil stark verspaeteter Sendungen (mehr als 3 Tage) am groessten?",
+      "required_tables": [
+        "orders",
+        "shippers"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "SELECT s.shipper_id,\n       s.company_name,\n       COUNT(*) FILTER (WHERE o.shipped_date IS NOT NULL AND o.required_date IS NOT NULL AND (o.shipped_date - o.required_date) > 3) AS strongly_late_orders,\n       COUNT(*) FILTER (WHERE o.shipped_date IS NOT NULL AND o.required_date IS NOT NULL) AS dated_shipped_orders,\n       (COUNT(*) FILTER (WHERE o.shipped_date IS NOT NULL AND o.required_date IS NOT NULL AND (o.shipped_date - o.required_date) > 3)::numeric\n         / NULLIF(COUNT(*) FILTER (WHERE o.shipped_date IS NOT NULL AND o.required_date IS NOT NULL), 0)) AS strongly_late_ratio\nFROM public.orders o\nJOIN public.shippers s ON s.shipper_id = o.ship_via\nGROUP BY s.shipper_id, s.company_name\nORDER BY strongly_late_ratio DESC NULLS LAST, strongly_late_orders DESC, s.shipper_id",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "HX4",
+      "question": "In welchen Produktkategorien kommt mindestens 60 Prozent des rabattierten Umsatzes von nur einem Lieferanten?",
+      "required_tables": [
+        "categories",
+        "products",
+        "suppliers",
+        "order_details"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "WITH supplier_category_revenue AS (\n    SELECT c.category_id,\n           c.category_name,\n           s.supplier_id,\n           s.company_name AS supplier_name,\n           SUM(od.unit_price * od.quantity * (1 - od.discount)) AS revenue\n    FROM public.categories c\n    JOIN public.products p ON p.category_id = c.category_id\n    JOIN public.suppliers s ON s.supplier_id = p.supplier_id\n    JOIN public.order_details od ON od.product_id = p.product_id\n    GROUP BY c.category_id, c.category_name, s.supplier_id, s.company_name\n),\nwith_share AS (\n    SELECT scr.*,\n           SUM(scr.revenue) OVER (PARTITION BY scr.category_id) AS category_total_revenue,\n           (scr.revenue / NULLIF(SUM(scr.revenue) OVER (PARTITION BY scr.category_id), 0)) AS supplier_share\n    FROM supplier_category_revenue scr\n),\nranked AS (\n    SELECT ws.*,\n           ROW_NUMBER() OVER (PARTITION BY ws.category_id ORDER BY ws.supplier_share DESC, ws.supplier_id) AS rn\n    FROM with_share ws\n)\nSELECT category_id,\n       category_name,\n       supplier_id,\n       supplier_name,\n       revenue,\n       category_total_revenue,\n       supplier_share\nFROM ranked\nWHERE rn = 1\n  AND supplier_share >= 0.60\nORDER BY supplier_share DESC, category_id",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "HX5",
+      "question": "Welche Kunden haben ueberdurchschnittliche Rabattquote, aber unterdurchschnittlichen Nettoumsatz pro Bestellung?",
+      "required_tables": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "WITH customer_stats AS (\n    SELECT c.customer_id,\n           c.company_name,\n           AVG(od.discount) AS avg_discount,\n           SUM(od.unit_price * od.quantity * (1 - od.discount)) AS net_revenue,\n           COUNT(DISTINCT o.order_id) AS order_count,\n           (SUM(od.unit_price * od.quantity * (1 - od.discount)) / NULLIF(COUNT(DISTINCT o.order_id), 0)) AS revenue_per_order\n    FROM public.customers c\n    JOIN public.orders o ON o.customer_id = c.customer_id\n    JOIN public.order_details od ON od.order_id = o.order_id\n    GROUP BY c.customer_id, c.company_name\n),\nglobal_baseline AS (\n    SELECT AVG(avg_discount) AS global_avg_discount,\n           AVG(revenue_per_order) AS global_avg_revenue_per_order\n    FROM customer_stats\n)\nSELECT cs.customer_id,\n       cs.company_name,\n       cs.avg_discount,\n       cs.revenue_per_order,\n       cs.net_revenue,\n       cs.order_count\nFROM customer_stats cs\nCROSS JOIN global_baseline gb\nWHERE cs.avg_discount > gb.global_avg_discount\n  AND cs.revenue_per_order < gb.global_avg_revenue_per_order\nORDER BY cs.avg_discount DESC, cs.revenue_per_order ASC, cs.customer_id",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "HX6",
+      "question": "Welche Mitarbeitenden haben viele grenzueberschreitende Auftraege, aber unterdurchschnittlichen Umsatz je Auftrag?",
+      "required_tables": [
+        "employees",
+        "orders",
+        "order_details"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "WITH employee_cross_border AS (\n    SELECT e.employee_id,\n           e.first_name,\n           e.last_name,\n           COUNT(DISTINCT o.order_id) AS cross_orders,\n           SUM(od.unit_price * od.quantity * (1 - od.discount)) AS cross_revenue,\n           (SUM(od.unit_price * od.quantity * (1 - od.discount)) / NULLIF(COUNT(DISTINCT o.order_id), 0)) AS revenue_per_cross_order\n    FROM public.employees e\n    JOIN public.orders o ON o.employee_id = e.employee_id\n    JOIN public.order_details od ON od.order_id = o.order_id\n    WHERE o.ship_country IS NOT NULL\n      AND e.country IS NOT NULL\n      AND o.ship_country <> e.country\n    GROUP BY e.employee_id, e.first_name, e.last_name\n),\nbaseline AS (\n    SELECT AVG(revenue_per_cross_order) AS avg_revenue_per_cross_order\n    FROM employee_cross_border\n)\nSELECT ecb.employee_id,\n       ecb.first_name,\n       ecb.last_name,\n       ecb.cross_orders,\n       ecb.cross_revenue,\n       ecb.revenue_per_cross_order\nFROM employee_cross_border ecb\nCROSS JOIN baseline b\nWHERE ecb.cross_orders >= 5\n  AND ecb.revenue_per_cross_order < b.avg_revenue_per_cross_order\nORDER BY ecb.cross_orders DESC, ecb.revenue_per_cross_order ASC, ecb.employee_id",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "HX7",
+      "question": "Welche Produktpaare aus unterschiedlichen Kategorien werden ueberproportional oft gemeinsam gekauft (Lift gegenueber Unabhaengigkeit)?",
+      "required_tables": [
+        "orders",
+        "order_details",
+        "products",
+        "categories"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "WITH total_orders AS (\n    SELECT COUNT(DISTINCT order_id)::numeric AS n_orders\n    FROM public.orders\n),\nproduct_order_counts AS (\n    SELECT od.product_id,\n           COUNT(DISTINCT od.order_id)::numeric AS product_orders\n    FROM public.order_details od\n    GROUP BY od.product_id\n),\npair_counts AS (\n    SELECT od1.product_id AS product_id_1,\n           od2.product_id AS product_id_2,\n           COUNT(DISTINCT od1.order_id)::numeric AS pair_orders\n    FROM public.order_details od1\n    JOIN public.order_details od2\n      ON od1.order_id = od2.order_id\n     AND od1.product_id < od2.product_id\n    GROUP BY od1.product_id, od2.product_id\n),\npair_with_meta AS (\n    SELECT pc.product_id_1,\n           p1.product_name AS product_name_1,\n           c1.category_name AS category_1,\n           poc1.product_orders AS product_orders_1,\n           pc.product_id_2,\n           p2.product_name AS product_name_2,\n           c2.category_name AS category_2,\n           poc2.product_orders AS product_orders_2,\n           pc.pair_orders\n    FROM pair_counts pc\n    JOIN public.products p1 ON p1.product_id = pc.product_id_1\n    JOIN public.products p2 ON p2.product_id = pc.product_id_2\n    JOIN public.categories c1 ON c1.category_id = p1.category_id\n    JOIN public.categories c2 ON c2.category_id = p2.category_id\n    JOIN product_order_counts poc1 ON poc1.product_id = pc.product_id_1\n    JOIN product_order_counts poc2 ON poc2.product_id = pc.product_id_2\n    WHERE p1.category_id <> p2.category_id\n)\nSELECT pwm.product_id_1,\n       pwm.product_name_1,\n       pwm.category_1,\n       pwm.product_id_2,\n       pwm.product_name_2,\n       pwm.category_2,\n       pwm.pair_orders,\n       (pwm.pair_orders / NULLIF((pwm.product_orders_1 * pwm.product_orders_2) / to2.n_orders, 0)) AS lift\nFROM pair_with_meta pwm\nCROSS JOIN total_orders to2\nWHERE pwm.pair_orders >= 3\nORDER BY lift DESC NULLS LAST, pwm.pair_orders DESC, pwm.product_id_1, pwm.product_id_2",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "HX8",
+      "question": "In welchen Monaten stieg die Frachtkostenquote gegenueber dem Vormonat am staerksten?",
+      "required_tables": [
+        "orders",
+        "order_details"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "WITH order_revenue AS (\n    SELECT o.order_id,\n           DATE_TRUNC('month', o.order_date)::date AS month,\n           o.freight,\n           SUM(od.unit_price * od.quantity * (1 - od.discount)) AS revenue\n    FROM public.orders o\n    JOIN public.order_details od ON od.order_id = o.order_id\n    GROUP BY o.order_id, DATE_TRUNC('month', o.order_date)::date, o.freight\n),\nmonth_agg AS (\n    SELECT month,\n           SUM(freight) AS total_freight,\n           SUM(revenue) AS total_revenue,\n           (SUM(freight) / NULLIF(SUM(revenue), 0)) AS freight_ratio\n    FROM order_revenue\n    GROUP BY month\n),\nwith_prev AS (\n    SELECT month,\n           total_freight,\n           total_revenue,\n           freight_ratio,\n           LAG(freight_ratio) OVER (ORDER BY month) AS prev_ratio\n    FROM month_agg\n)\nSELECT month,\n       total_freight,\n       total_revenue,\n       freight_ratio,\n       (freight_ratio - prev_ratio) AS ratio_increase_vs_prev_month\nFROM with_prev\nWHERE prev_ratio IS NOT NULL\nORDER BY ratio_increase_vs_prev_month DESC, month",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "HX9",
+      "question": "Welche Lieferanten haben viele Produkte, aber einen niedrigen Anteil verkaufter Produkte?",
+      "required_tables": [
+        "suppliers",
+        "products",
+        "order_details"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "WITH supplier_product_coverage AS (\n    SELECT s.supplier_id,\n           s.company_name,\n           COUNT(DISTINCT p.product_id) AS total_products,\n           COUNT(DISTINCT p.product_id) FILTER (WHERE od.order_id IS NOT NULL) AS sold_products\n    FROM public.suppliers s\n    JOIN public.products p ON p.supplier_id = s.supplier_id\n    LEFT JOIN public.order_details od ON od.product_id = p.product_id\n    GROUP BY s.supplier_id, s.company_name\n)\nSELECT supplier_id,\n       company_name,\n       total_products,\n       sold_products,\n       (sold_products::numeric / NULLIF(total_products, 0)) AS sold_share\nFROM supplier_product_coverage\nORDER BY sold_share ASC NULLS FIRST, total_products DESC, supplier_id",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    }
+  ],
+  "manual_review_template": {
+    "instructions": {
+      "labels": [
+        "CORRECT",
+        "PARTIAL",
+        "INCORRECT"
+      ],
+      "reason_codes": [
+        "MISSING_DISCOUNT_FACTOR",
+        "COUNT_NOT_DISTINCT",
+        "WRONG_AGGREGATION_GRAIN",
+        "MISSING_REQUIRED_TABLE",
+        "JOIN_PATH_VIOLATION",
+        "MISSING_TIME_GROUPING",
+        "TOP_K_NOT_APPLIED"
+      ]
+    },
+    "per_query": [
+      {
+        "query_id": "HX1",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "HX10",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "HX11",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "HX12",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "HX13",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "HX14",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "HX15",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "HX2",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "HX3",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "HX4",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "HX5",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "HX6",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "HX7",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "HX8",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "HX9",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      }
+    ]
+  }
+}

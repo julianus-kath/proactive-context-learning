@@ -1,0 +1,440 @@
+{
+  "summary": {
+    "total_queries": 10,
+    "successful": 0,
+    "failed": 10,
+    "success_rate": "0.0%"
+  },
+  "queries": [
+    {
+      "query_id": "NW1",
+      "question": "Return the 5 products that need reordering (units_in_stock < reorder_level), sorted by the largest shortage first. Return exactly: product_id, product_name, units_in_stock, reorder_level.",
+      "status": "failed",
+      "latency_ms": 4,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": null,
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "retrieved_tables_topk": [],
+      "retrieval_eval": null,
+      "reference_result_match": null,
+      "failure_reasons": [],
+      "error": "All connection attempts failed",
+      "error_info": {
+        "type": "CLIENT_EXCEPTION",
+        "message": "All connection attempts failed"
+      }
+    },
+    {
+      "query_id": "NW2",
+      "question": "For each product category, calculate total revenue after discounts as SUM(unit_price * quantity * (1 - discount)). Return all categories with category_name and total_revenue, sorted by total_revenue descending.",
+      "status": "failed",
+      "latency_ms": 1,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": null,
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "retrieved_tables_topk": [],
+      "retrieval_eval": null,
+      "reference_result_match": null,
+      "failure_reasons": [],
+      "error": "All connection attempts failed",
+      "error_info": {
+        "type": "CLIENT_EXCEPTION",
+        "message": "All connection attempts failed"
+      }
+    },
+    {
+      "query_id": "NW3",
+      "question": "List customers with more than 10 distinct orders. Return customer_id, company_name, order_count, and total_order_value where total_order_value = SUM(unit_price * quantity) (without discount adjustment), sorted by total_order_value descending and customer_id.",
+      "status": "failed",
+      "latency_ms": 0,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": null,
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "retrieved_tables_topk": [],
+      "retrieval_eval": null,
+      "reference_result_match": null,
+      "failure_reasons": [],
+      "error": "All connection attempts failed",
+      "error_info": {
+        "type": "CLIENT_EXCEPTION",
+        "message": "All connection attempts failed"
+      }
+    },
+    {
+      "query_id": "NW4",
+      "question": "Using orders and shippers, for each shipping company return shipper_id, company_name, late_shipments (where shipped_date > required_date), and total_shipments.",
+      "status": "failed",
+      "latency_ms": 0,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": null,
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "retrieved_tables_topk": [],
+      "retrieval_eval": null,
+      "reference_result_match": null,
+      "failure_reasons": [],
+      "error": "All connection attempts failed",
+      "error_info": {
+        "type": "CLIENT_EXCEPTION",
+        "message": "All connection attempts failed"
+      }
+    },
+    {
+      "query_id": "NW5",
+      "question": "For each employee, calculate total revenue after discounts from their orders. Join employees, orders, and order_details, and return employee_id, first_name, last_name, total_revenue sorted by total_revenue descending.",
+      "status": "failed",
+      "latency_ms": 0,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": null,
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "retrieved_tables_topk": [],
+      "retrieval_eval": null,
+      "reference_result_match": null,
+      "failure_reasons": [],
+      "error": "All connection attempts failed",
+      "error_info": {
+        "type": "CLIENT_EXCEPTION",
+        "message": "All connection attempts failed"
+      }
+    },
+    {
+      "query_id": "NW6",
+      "question": "Return the top 5 best-selling products by total quantity sold. Use PostgreSQL LIMIT 5. Return product_id, product_name, quantity_sold, sorted by quantity_sold descending and product_id.",
+      "status": "failed",
+      "latency_ms": 0,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": null,
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "retrieved_tables_topk": [],
+      "retrieval_eval": null,
+      "reference_result_match": null,
+      "failure_reasons": [],
+      "error": "All connection attempts failed",
+      "error_info": {
+        "type": "CLIENT_EXCEPTION",
+        "message": "All connection attempts failed"
+      }
+    },
+    {
+      "query_id": "NW7",
+      "question": "Which pairs of suppliers most frequently appear together within the same order? Return supplier_1 and supplier_2 as supplier company names, plus co_order_count = COUNT(DISTINCT order_id), sorted by co_order_count descending, then supplier_1 and supplier_2, top 10.",
+      "status": "failed",
+      "latency_ms": 0,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": null,
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "retrieved_tables_topk": [],
+      "retrieval_eval": null,
+      "reference_result_match": null,
+      "failure_reasons": [],
+      "error": "All connection attempts failed",
+      "error_info": {
+        "type": "CLIENT_EXCEPTION",
+        "message": "All connection attempts failed"
+      }
+    },
+    {
+      "query_id": "NW8",
+      "question": "By customer country, compute average order value with a two-step aggregation: first compute each order total as SUM(unit_price * quantity * (1 - discount)), then average order_total per country. Return country and avg_order_value.",
+      "status": "failed",
+      "latency_ms": 0,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": null,
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "retrieved_tables_topk": [],
+      "retrieval_eval": null,
+      "reference_result_match": null,
+      "failure_reasons": [],
+      "error": "All connection attempts failed",
+      "error_info": {
+        "type": "CLIENT_EXCEPTION",
+        "message": "All connection attempts failed"
+      }
+    },
+    {
+      "query_id": "NW9",
+      "question": "Count distinct pending orders and their discounted total value where shipped_date IS NULL. Return pending_orders = COUNT(DISTINCT order_id) and total_value = SUM(unit_price * quantity * (1 - discount)).",
+      "status": "failed",
+      "latency_ms": 1,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": null,
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "retrieved_tables_topk": [],
+      "retrieval_eval": null,
+      "reference_result_match": null,
+      "failure_reasons": [],
+      "error": "All connection attempts failed",
+      "error_info": {
+        "type": "CLIENT_EXCEPTION",
+        "message": "All connection attempts failed"
+      }
+    },
+    {
+      "query_id": "NW10",
+      "question": "Show monthly revenue trend after discounts by grouping on DATE_TRUNC('month', order_date)::date as month. Return month and revenue, sorted by month.",
+      "status": "failed",
+      "latency_ms": 1,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": null,
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "retrieved_tables_topk": [],
+      "retrieval_eval": null,
+      "reference_result_match": null,
+      "failure_reasons": [],
+      "error": "All connection attempts failed",
+      "error_info": {
+        "type": "CLIENT_EXCEPTION",
+        "message": "All connection attempts failed"
+      }
+    }
+  ]
+}

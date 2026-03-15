@@ -1,0 +1,773 @@
+{
+  "generated_at_utc": "2026-03-15T15:09:06.625258Z",
+  "run_dir": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/20260309_145932_underspecified_v1_process_query_scout_on_r2",
+  "run_id": "20260309_145932_underspecified_v1_process_query_scout_on_r2",
+  "mode_label": "scout_on",
+  "scout_mode_start": {
+    "active": true,
+    "backend": "ScoutRunner",
+    "status": "healthy",
+    "catalog_valid": true,
+    "off_control_mode": null,
+    "meaning": "Scout mode ACTIVE: MCP discovery backend is ScoutRunner. Catalog source is scout_runner_catalog."
+  },
+  "scout_mode_end": {
+    "active": true,
+    "backend": "ScoutRunner",
+    "status": "healthy",
+    "catalog_valid": true,
+    "off_control_mode": null,
+    "meaning": "Scout mode ACTIVE: MCP discovery backend is ScoutRunner. Catalog source is scout_runner_catalog."
+  },
+  "labels_path": "/private/tmp/us_labels_smoke.json",
+  "labels_meta": {},
+  "required_stage_traces": [
+    "discovery",
+    "ranked"
+  ],
+  "strict_stage_traces": false,
+  "summary": {
+    "total_queries": 12,
+    "mean_required_table_recall": 0.24444444444444444,
+    "queries_with_all_required_tables_surfaced": 1,
+    "required_tables_ok_rate": 0.08333333333333333,
+    "sql_present_count": 5,
+    "sql_execution_success_count": 5,
+    "median_latency_ms": 9871.5,
+    "policy_violations": 0,
+    "trace_complete_count": 0,
+    "queries_with_unresolved_required_labels": 0
+  },
+  "per_query": [
+    {
+      "query_id": "US_CL10_U1",
+      "question": "Welche Kundengruppen bringen den meisten Nettoerlös?",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 9907,
+      "error": null,
+      "required_tables_original": [
+        "customer_demographics",
+        "customer_customer_demo",
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "required_tables": [
+        "customer_demographics",
+        "customer_customer_demo",
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 5,
+      "matched_required_table_count": 5,
+      "required_tables_ok": true,
+      "required_table_recall": 1.0,
+      "surfaced_tables": [
+        "customer_customer_demo",
+        "customer_demographics",
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "surfaced_stage_by_required_table": {
+        "customer_demographics": "final_sql",
+        "customer_customer_demo": "final_sql",
+        "customers": "final_sql",
+        "orders": "final_sql",
+        "order_details": "final_sql"
+      },
+      "missing_required_tables": [],
+      "stage_tables": {
+        "discovery": [],
+        "ranked": [
+          "customer_customer_demo",
+          "customer_demographics",
+          "customers",
+          "orders",
+          "order_details"
+        ],
+        "final_sql": [
+          "customer_customer_demo",
+          "customer_demographics",
+          "customers",
+          "orders",
+          "order_details"
+        ]
+      },
+      "trace_stage_presence": {
+        "discovery": false,
+        "ranked": false,
+        "final_sql": true
+      },
+      "missing_required_stage_traces": [
+        "discovery",
+        "ranked"
+      ],
+      "trace_complete": false,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 1.0,
+      "final_sql_required_recall": 1.0,
+      "sql_present": true,
+      "sql_execution_success": true,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": [
+        "final_sql inferred from sql_query",
+        "final_sql inferred from exec_result tables",
+        "ranked fallback inferred from tables_used (legacy artifact)"
+      ]
+    },
+    {
+      "query_id": "US_CL10_U2",
+      "question": "Wer sind unsere wertvollsten Segmente nach Rabatten?",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 10441,
+      "error": null,
+      "required_tables_original": [
+        "customer_demographics",
+        "customer_customer_demo",
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "required_tables": [
+        "customer_demographics",
+        "customer_customer_demo",
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 5,
+      "matched_required_table_count": 3,
+      "required_tables_ok": false,
+      "required_table_recall": 0.6,
+      "surfaced_tables": [
+        "customer_customer_demo",
+        "customer_demographics",
+        "orders"
+      ],
+      "surfaced_stage_by_required_table": {
+        "customer_demographics": "final_sql",
+        "customer_customer_demo": "final_sql",
+        "customers": null,
+        "orders": "final_sql",
+        "order_details": null
+      },
+      "missing_required_tables": [
+        "customers",
+        "order_details"
+      ],
+      "stage_tables": {
+        "discovery": [],
+        "ranked": [
+          "customer_customer_demo",
+          "customer_demographics",
+          "orders"
+        ],
+        "final_sql": [
+          "customer_customer_demo",
+          "customer_demographics",
+          "orders"
+        ]
+      },
+      "trace_stage_presence": {
+        "discovery": false,
+        "ranked": false,
+        "final_sql": true
+      },
+      "missing_required_stage_traces": [
+        "discovery",
+        "ranked"
+      ],
+      "trace_complete": false,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.6,
+      "final_sql_required_recall": 0.6,
+      "sql_present": true,
+      "sql_execution_success": true,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": [
+        "final_sql inferred from sql_query",
+        "final_sql inferred from exec_result tables",
+        "ranked fallback inferred from tables_used (legacy artifact)"
+      ]
+    },
+    {
+      "query_id": "US_CL10_U3",
+      "question": "Welche Zielgruppen liefern den größten Beitrag zum Umsatz nach Abzügen?",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 6047,
+      "error": null,
+      "required_tables_original": [
+        "customer_demographics",
+        "customer_customer_demo",
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "required_tables": [
+        "customer_demographics",
+        "customer_customer_demo",
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 5,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [],
+      "surfaced_stage_by_required_table": {
+        "customer_demographics": null,
+        "customer_customer_demo": null,
+        "customers": null,
+        "orders": null,
+        "order_details": null
+      },
+      "missing_required_tables": [
+        "customer_demographics",
+        "customer_customer_demo",
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "stage_tables": {
+        "discovery": [],
+        "ranked": [],
+        "final_sql": []
+      },
+      "trace_stage_presence": {
+        "discovery": false,
+        "ranked": false,
+        "final_sql": false
+      },
+      "missing_required_stage_traces": [
+        "discovery",
+        "ranked"
+      ],
+      "trace_complete": false,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": false,
+      "sql_execution_success": null,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": []
+    },
+    {
+      "query_id": "US_CL2_U1",
+      "question": "Woher kommt unser Nettoumsatz?",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 20312,
+      "error": null,
+      "required_tables_original": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "required_tables": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 3,
+      "matched_required_table_count": 1,
+      "required_tables_ok": false,
+      "required_table_recall": 0.3333333333333333,
+      "surfaced_tables": [
+        "order_details"
+      ],
+      "surfaced_stage_by_required_table": {
+        "customers": null,
+        "orders": null,
+        "order_details": "final_sql"
+      },
+      "missing_required_tables": [
+        "customers",
+        "orders"
+      ],
+      "stage_tables": {
+        "discovery": [],
+        "ranked": [
+          "order_details"
+        ],
+        "final_sql": [
+          "order_details"
+        ]
+      },
+      "trace_stage_presence": {
+        "discovery": false,
+        "ranked": false,
+        "final_sql": true
+      },
+      "missing_required_stage_traces": [
+        "discovery",
+        "ranked"
+      ],
+      "trace_complete": false,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.3333333333333333,
+      "final_sql_required_recall": 0.3333333333333333,
+      "sql_present": true,
+      "sql_execution_success": true,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": [
+        "final_sql inferred from sql_query",
+        "final_sql inferred from exec_result tables",
+        "ranked fallback inferred from tables_used (legacy artifact)"
+      ]
+    },
+    {
+      "query_id": "US_CL2_U2",
+      "question": "Welche Märkte tragen am meisten zum Erlös bei?",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 7951,
+      "error": null,
+      "required_tables_original": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "required_tables": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 3,
+      "matched_required_table_count": 2,
+      "required_tables_ok": false,
+      "required_table_recall": 0.6666666666666666,
+      "surfaced_tables": [
+        "orders",
+        "order_details"
+      ],
+      "surfaced_stage_by_required_table": {
+        "customers": null,
+        "orders": "final_sql",
+        "order_details": "final_sql"
+      },
+      "missing_required_tables": [
+        "customers"
+      ],
+      "stage_tables": {
+        "discovery": [],
+        "ranked": [
+          "orders",
+          "order_details"
+        ],
+        "final_sql": [
+          "orders",
+          "order_details"
+        ]
+      },
+      "trace_stage_presence": {
+        "discovery": false,
+        "ranked": false,
+        "final_sql": true
+      },
+      "missing_required_stage_traces": [
+        "discovery",
+        "ranked"
+      ],
+      "trace_complete": false,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.6666666666666666,
+      "final_sql_required_recall": 0.6666666666666666,
+      "sql_present": true,
+      "sql_execution_success": true,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": [
+        "final_sql inferred from sql_query",
+        "final_sql inferred from exec_result tables",
+        "ranked fallback inferred from tables_used (legacy artifact)"
+      ]
+    },
+    {
+      "query_id": "US_CL2_U3",
+      "question": "Wo verdienen wir nach Rabatten am meisten Geld?",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 13328,
+      "error": null,
+      "required_tables_original": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "required_tables": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 3,
+      "matched_required_table_count": 1,
+      "required_tables_ok": false,
+      "required_table_recall": 0.3333333333333333,
+      "surfaced_tables": [
+        "order_details"
+      ],
+      "surfaced_stage_by_required_table": {
+        "customers": null,
+        "orders": null,
+        "order_details": "final_sql"
+      },
+      "missing_required_tables": [
+        "customers",
+        "orders"
+      ],
+      "stage_tables": {
+        "discovery": [],
+        "ranked": [
+          "order_details"
+        ],
+        "final_sql": [
+          "order_details"
+        ]
+      },
+      "trace_stage_presence": {
+        "discovery": false,
+        "ranked": false,
+        "final_sql": true
+      },
+      "missing_required_stage_traces": [
+        "discovery",
+        "ranked"
+      ],
+      "trace_complete": false,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.3333333333333333,
+      "final_sql_required_recall": 0.3333333333333333,
+      "sql_present": true,
+      "sql_execution_success": true,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": [
+        "final_sql inferred from sql_query",
+        "final_sql inferred from exec_result tables",
+        "ranked fallback inferred from tables_used (legacy artifact)"
+      ]
+    },
+    {
+      "query_id": "US_CL3_U1",
+      "question": "Welcher Zusteller ist im Schnitt am unpünktlichsten?",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 7789,
+      "error": null,
+      "required_tables_original": [
+        "orders",
+        "shippers"
+      ],
+      "required_tables": [
+        "orders",
+        "shippers"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 2,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [],
+      "surfaced_stage_by_required_table": {
+        "orders": null,
+        "shippers": null
+      },
+      "missing_required_tables": [
+        "orders",
+        "shippers"
+      ],
+      "stage_tables": {
+        "discovery": [],
+        "ranked": [],
+        "final_sql": []
+      },
+      "trace_stage_presence": {
+        "discovery": false,
+        "ranked": false,
+        "final_sql": false
+      },
+      "missing_required_stage_traces": [
+        "discovery",
+        "ranked"
+      ],
+      "trace_complete": false,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": false,
+      "sql_execution_success": null,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": []
+    },
+    {
+      "query_id": "US_CL3_U2",
+      "question": "Über wen kommt es am häufigsten zu Verzögerungen?",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 14839,
+      "error": null,
+      "required_tables_original": [
+        "orders",
+        "shippers"
+      ],
+      "required_tables": [
+        "orders",
+        "shippers"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 2,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [],
+      "surfaced_stage_by_required_table": {
+        "orders": null,
+        "shippers": null
+      },
+      "missing_required_tables": [
+        "orders",
+        "shippers"
+      ],
+      "stage_tables": {
+        "discovery": [],
+        "ranked": [],
+        "final_sql": []
+      },
+      "trace_stage_presence": {
+        "discovery": false,
+        "ranked": false,
+        "final_sql": false
+      },
+      "missing_required_stage_traces": [
+        "discovery",
+        "ranked"
+      ],
+      "trace_complete": false,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": false,
+      "sql_execution_success": null,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": []
+    },
+    {
+      "query_id": "US_CL3_U3",
+      "question": "Bei welchem Versandkanal ist die Terminlage am schwächsten?",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 9836,
+      "error": null,
+      "required_tables_original": [
+        "orders",
+        "shippers"
+      ],
+      "required_tables": [
+        "orders",
+        "shippers"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 2,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [],
+      "surfaced_stage_by_required_table": {
+        "orders": null,
+        "shippers": null
+      },
+      "missing_required_tables": [
+        "orders",
+        "shippers"
+      ],
+      "stage_tables": {
+        "discovery": [],
+        "ranked": [],
+        "final_sql": []
+      },
+      "trace_stage_presence": {
+        "discovery": false,
+        "ranked": false,
+        "final_sql": false
+      },
+      "missing_required_stage_traces": [
+        "discovery",
+        "ranked"
+      ],
+      "trace_complete": false,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": false,
+      "sql_execution_success": null,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": []
+    },
+    {
+      "query_id": "US_CL6_U1",
+      "question": "Wie läuft es monatlich mit Aufträgen und Pünktlichkeit?",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 8765,
+      "error": null,
+      "required_tables_original": [
+        "orders"
+      ],
+      "required_tables": [
+        "orders"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 1,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [],
+      "surfaced_stage_by_required_table": {
+        "orders": null
+      },
+      "missing_required_tables": [
+        "orders"
+      ],
+      "stage_tables": {
+        "discovery": [],
+        "ranked": [],
+        "final_sql": []
+      },
+      "trace_stage_presence": {
+        "discovery": false,
+        "ranked": false,
+        "final_sql": false
+      },
+      "missing_required_stage_traces": [
+        "discovery",
+        "ranked"
+      ],
+      "trace_complete": false,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": false,
+      "sql_execution_success": null,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": []
+    },
+    {
+      "query_id": "US_CL6_U2",
+      "question": "Wie entwickeln sich Nachfrage und Verspätungen über die Zeit?",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 5775,
+      "error": null,
+      "required_tables_original": [
+        "orders"
+      ],
+      "required_tables": [
+        "orders"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 1,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [],
+      "surfaced_stage_by_required_table": {
+        "orders": null
+      },
+      "missing_required_tables": [
+        "orders"
+      ],
+      "stage_tables": {
+        "discovery": [],
+        "ranked": [],
+        "final_sql": []
+      },
+      "trace_stage_presence": {
+        "discovery": false,
+        "ranked": false,
+        "final_sql": false
+      },
+      "missing_required_stage_traces": [
+        "discovery",
+        "ranked"
+      ],
+      "trace_complete": false,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": false,
+      "sql_execution_success": null,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": []
+    },
+    {
+      "query_id": "US_CL6_U3",
+      "question": "Zeig den Monatsverlauf von Volumen und Lieferproblemen.",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 13837,
+      "error": null,
+      "required_tables_original": [
+        "orders"
+      ],
+      "required_tables": [
+        "orders"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 1,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [],
+      "surfaced_stage_by_required_table": {
+        "orders": null
+      },
+      "missing_required_tables": [
+        "orders"
+      ],
+      "stage_tables": {
+        "discovery": [],
+        "ranked": [],
+        "final_sql": []
+      },
+      "trace_stage_presence": {
+        "discovery": false,
+        "ranked": false,
+        "final_sql": false
+      },
+      "missing_required_stage_traces": [
+        "discovery",
+        "ranked"
+      ],
+      "trace_complete": false,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": false,
+      "sql_execution_success": null,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": []
+    }
+  ]
+}

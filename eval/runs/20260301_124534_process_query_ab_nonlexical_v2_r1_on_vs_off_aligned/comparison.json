@@ -1,0 +1,333 @@
+{
+  "generated_at_utc": "2026-03-01T12:45:34.013558Z",
+  "on": {
+    "run_dir": "eval/runs/20260301_124203_nonlexical_v2_process_query_scout_on_r1",
+    "run_id": "20260301_124203_nonlexical_v2_process_query_scout_on_r1",
+    "mode_label": "scout_on",
+    "scout_mode": {
+      "active": true,
+      "backend": "ScoutRunner",
+      "status": "healthy",
+      "catalog_valid": true,
+      "off_control_mode": null,
+      "meaning": "Scout mode ACTIVE: MCP discovery backend is ScoutRunner. Catalog source is scout_runner_catalog."
+    }
+  },
+  "off": {
+    "run_dir": "eval/runs/20260301_124351_nonlexical_v2_process_query_scout_off_aligned_r1",
+    "run_id": "20260301_124351_nonlexical_v2_process_query_scout_off_aligned_r1",
+    "mode_label": "scout_off_aligned",
+    "scout_mode": {
+      "active": false,
+      "backend": "SchemaCatalog",
+      "status": "healthy",
+      "catalog_valid": true,
+      "off_control_mode": "aligned_table_ranker",
+      "meaning": "Scout mode INACTIVE: MCP discovery backend is SchemaCatalog with aligned TableRanker baseline."
+    }
+  },
+  "metrics": {
+    "success_rate_pct": {
+      "on": 100.0,
+      "off": 100.0,
+      "delta_on_minus_off": 0.0
+    },
+    "avg_latency_ms": {
+      "on": 4038.1,
+      "off": 4590.7,
+      "delta_on_minus_off": -552.5999999999999
+    },
+    "p95_latency_ms": {
+      "on": 5893.0,
+      "off": 8826.0,
+      "delta_on_minus_off": -2933.0
+    },
+    "expert_strict_equal_count": {
+      "on": 1,
+      "off": 1,
+      "delta_on_minus_off": 0
+    },
+    "expert_same_cols_set_equal_count": {
+      "on": 1,
+      "off": 1,
+      "delta_on_minus_off": 0
+    },
+    "expert_positional_set_equal_count": {
+      "on": 1,
+      "off": 1,
+      "delta_on_minus_off": 0
+    },
+    "expert_common_cols_set_equal_count": {
+      "on": 3,
+      "off": 3,
+      "delta_on_minus_off": 0
+    },
+    "expert_required_tables_ok_count": {
+      "on": 9,
+      "off": 13,
+      "delta_on_minus_off": -4
+    }
+  },
+  "per_query": [
+    {
+      "query_id": "NL1",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 4404,
+      "off_latency_ms": 4445,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "NL10",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 3574,
+      "off_latency_ms": 3943,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "NL11",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 7021,
+      "off_latency_ms": 4529,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "NL12",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 3792,
+      "off_latency_ms": 3809,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "NL13",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 3027,
+      "off_latency_ms": 3203,
+      "on_sql_present": false,
+      "off_sql_present": false,
+      "on_strict_equal": null,
+      "off_strict_equal": null,
+      "on_positional_set_equal": null,
+      "off_positional_set_equal": null
+    },
+    {
+      "query_id": "NL14",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 2772,
+      "off_latency_ms": 3347,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "NL15",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 4230,
+      "off_latency_ms": 4820,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "NL16",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 5526,
+      "off_latency_ms": 4894,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": true,
+      "off_strict_equal": true,
+      "on_positional_set_equal": true,
+      "off_positional_set_equal": true
+    },
+    {
+      "query_id": "NL17",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 2881,
+      "off_latency_ms": 3187,
+      "on_sql_present": false,
+      "off_sql_present": false,
+      "on_strict_equal": null,
+      "off_strict_equal": null,
+      "on_positional_set_equal": null,
+      "off_positional_set_equal": null
+    },
+    {
+      "query_id": "NL18",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 3335,
+      "off_latency_ms": 4205,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "NL19",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 4194,
+      "off_latency_ms": 8960,
+      "on_sql_present": false,
+      "off_sql_present": false,
+      "on_strict_equal": null,
+      "off_strict_equal": null,
+      "on_positional_set_equal": null,
+      "off_positional_set_equal": null
+    },
+    {
+      "query_id": "NL2",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 5893,
+      "off_latency_ms": 4672,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "NL20",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 3214,
+      "off_latency_ms": 8826,
+      "on_sql_present": false,
+      "off_sql_present": true,
+      "on_strict_equal": null,
+      "off_strict_equal": false,
+      "on_positional_set_equal": null,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "NL3",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 3022,
+      "off_latency_ms": 2925,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "NL4",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 3085,
+      "off_latency_ms": 2737,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "NL5",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 4440,
+      "off_latency_ms": 7602,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "NL6",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 5147,
+      "off_latency_ms": 4032,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "NL7",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 3970,
+      "off_latency_ms": 3721,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "NL8",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 4820,
+      "off_latency_ms": 5168,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "NL9",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 2414,
+      "off_latency_ms": 2789,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "source": "offline_file_audit",
+  "overview": {
+    "tables": 943,
+    "index_available": true
+  },
+  "index_keys": [
+    "column_names",
+    "description_keywords",
+    "normalized_names",
+    "table_names"
+  ]
+}

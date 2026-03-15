@@ -1,0 +1,229 @@
+{
+  "generated_at_utc": "2026-03-09T15:09:14.034280Z",
+  "on": {
+    "run_dir": "eval/runs/20260309_145932_underspecified_v1_process_query_scout_on_r2",
+    "run_id": "20260309_145932_underspecified_v1_process_query_scout_on_r2",
+    "mode_label": "scout_on",
+    "scout_mode": {
+      "active": true,
+      "backend": "ScoutRunner",
+      "status": "healthy",
+      "catalog_valid": true,
+      "off_control_mode": null,
+      "meaning": "Scout mode ACTIVE: MCP discovery backend is ScoutRunner. Catalog source is scout_runner_catalog."
+    }
+  },
+  "off": {
+    "run_dir": "eval/runs/20260309_150238_underspecified_v1_process_query_scout_off_legacy_r2",
+    "run_id": "20260309_150238_underspecified_v1_process_query_scout_off_legacy_r2",
+    "mode_label": "scout_off_legacy",
+    "scout_mode": {
+      "active": false,
+      "backend": "SchemaCatalog",
+      "status": "healthy",
+      "catalog_valid": true,
+      "off_control_mode": "legacy_lexical_schema_linking",
+      "meaning": "Scout mode INACTIVE: MCP discovery backend is SchemaCatalog with legacy lexical schema-linking baseline."
+    }
+  },
+  "metrics": {
+    "success_rate_pct": {
+      "on": 100.0,
+      "off": 100.0,
+      "delta_on_minus_off": 0.0
+    },
+    "avg_latency_ms": {
+      "on": 10735.6,
+      "off": 9771.2,
+      "delta_on_minus_off": 964.3999999999996
+    },
+    "p95_latency_ms": {
+      "on": 20312.0,
+      "off": 16479.0,
+      "delta_on_minus_off": 3833.0
+    },
+    "expert_strict_equal_count": {
+      "on": 2,
+      "off": 2,
+      "delta_on_minus_off": 0
+    },
+    "expert_same_cols_set_equal_count": {
+      "on": 2,
+      "off": 2,
+      "delta_on_minus_off": 0
+    },
+    "expert_positional_set_equal_count": {
+      "on": 2,
+      "off": 2,
+      "delta_on_minus_off": 0
+    },
+    "expert_common_cols_set_equal_count": {
+      "on": 0,
+      "off": 0,
+      "delta_on_minus_off": 0
+    },
+    "expert_required_tables_ok_count": {
+      "on": 1,
+      "off": 3,
+      "delta_on_minus_off": -2
+    }
+  },
+  "per_query": [
+    {
+      "query_id": "US_CL10_U1",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 9907,
+      "off_latency_ms": 7853,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": true,
+      "off_strict_equal": true,
+      "on_positional_set_equal": true,
+      "off_positional_set_equal": true
+    },
+    {
+      "query_id": "US_CL10_U2",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 10441,
+      "off_latency_ms": 16479,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": true,
+      "off_strict_equal": false,
+      "on_positional_set_equal": true,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "US_CL10_U3",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 6047,
+      "off_latency_ms": 7212,
+      "on_sql_present": false,
+      "off_sql_present": true,
+      "on_strict_equal": null,
+      "off_strict_equal": true,
+      "on_positional_set_equal": null,
+      "off_positional_set_equal": true
+    },
+    {
+      "query_id": "US_CL2_U1",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 20312,
+      "off_latency_ms": 10339,
+      "on_sql_present": true,
+      "off_sql_present": false,
+      "on_strict_equal": false,
+      "off_strict_equal": null,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": null
+    },
+    {
+      "query_id": "US_CL2_U2",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 7951,
+      "off_latency_ms": 8852,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "US_CL2_U3",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 13328,
+      "off_latency_ms": 9018,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "US_CL3_U1",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 7789,
+      "off_latency_ms": 4199,
+      "on_sql_present": false,
+      "off_sql_present": false,
+      "on_strict_equal": null,
+      "off_strict_equal": null,
+      "on_positional_set_equal": null,
+      "off_positional_set_equal": null
+    },
+    {
+      "query_id": "US_CL3_U2",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 14839,
+      "off_latency_ms": 13737,
+      "on_sql_present": false,
+      "off_sql_present": true,
+      "on_strict_equal": null,
+      "off_strict_equal": false,
+      "on_positional_set_equal": null,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "US_CL3_U3",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 9836,
+      "off_latency_ms": 13923,
+      "on_sql_present": false,
+      "off_sql_present": true,
+      "on_strict_equal": null,
+      "off_strict_equal": false,
+      "on_positional_set_equal": null,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "US_CL6_U1",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 8765,
+      "off_latency_ms": 12546,
+      "on_sql_present": false,
+      "off_sql_present": true,
+      "on_strict_equal": null,
+      "off_strict_equal": false,
+      "on_positional_set_equal": null,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "US_CL6_U2",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 5775,
+      "off_latency_ms": 6343,
+      "on_sql_present": false,
+      "off_sql_present": false,
+      "on_strict_equal": null,
+      "off_strict_equal": null,
+      "on_positional_set_equal": null,
+      "off_positional_set_equal": null
+    },
+    {
+      "query_id": "US_CL6_U3",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 13837,
+      "off_latency_ms": 6753,
+      "on_sql_present": false,
+      "off_sql_present": false,
+      "on_strict_equal": null,
+      "off_strict_equal": null,
+      "on_positional_set_equal": null,
+      "off_positional_set_equal": null
+    }
+  ]
+}

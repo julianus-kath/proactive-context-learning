@@ -1,0 +1,230 @@
+{
+  "pack_created_at_utc": "2026-03-11T08:19:56.048359Z",
+  "pack_path": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/chatgpt_pro_transfer_pack_2026-03-11",
+  "description": "Curated ablation evidence pack for external review (ChatGPT Pro upload).",
+  "file_count": 43,
+  "raw_files_index": [
+    {
+      "relative_path": "raw/eval/README_cockpit_table_ablation.md",
+      "size_bytes": 5737,
+      "sha256": "1ba8eb44b9548ba10130557b3fe5b5ede80cf10a56958f01b0cb2b8768741bc1"
+    },
+    {
+      "relative_path": "raw/eval/datasets/cockpit_partner_queries_v1.jsonl",
+      "size_bytes": 1821,
+      "sha256": "e35f82235c164ab72e0b500b06da958b9a80a5afec42d97165910b3af63d4930"
+    },
+    {
+      "relative_path": "raw/eval/datasets/cockpit_partner_table_labels_v1.json",
+      "size_bytes": 2645,
+      "sha256": "5f69d1b522b141e7dfba9b68e5152df2e5e6aa9c2e064f6b5075a5bc09dcb19f"
+    },
+    {
+      "relative_path": "raw/eval/datasets/cockpit_partner_table_labels_v1.md",
+      "size_bytes": 1667,
+      "sha256": "9e1cbaf56e68110c41113c1984ffd3d1bbd02b509acf2aa20900e800b94fd6f4"
+    },
+    {
+      "relative_path": "raw/eval/datasets/northwind_queries_ambiguous_v1.jsonl",
+      "size_bytes": 984,
+      "sha256": "ef8b827d7be28db70b0c09c3d7cc08d7bb3d956536b2b46e402c4afcdcca345a"
+    },
+    {
+      "relative_path": "raw/eval/datasets/northwind_queries_complex_hard_v1.jsonl",
+      "size_bytes": 2648,
+      "sha256": "bf08b3aeac68d901cef1ae2604728126f4c0af758e26cb9d37f3568df9f6f026"
+    },
+    {
+      "relative_path": "raw/eval/datasets/northwind_queries_crosslingual_hard_v1.jsonl",
+      "size_bytes": 1513,
+      "sha256": "ac86dba811c74c5b93e791af6578c88567223488163e7b37454fe99f3db66cc3"
+    },
+    {
+      "relative_path": "raw/eval/datasets/northwind_queries_nonlexical_v1.jsonl",
+      "size_bytes": 2388,
+      "sha256": "a4369d9bf0d7017daf8d641c841c11223e19f9b39af08b9e07f0c2c2c55a952a"
+    },
+    {
+      "relative_path": "raw/eval/datasets/northwind_queries_scout_gain_segment_v1.jsonl",
+      "size_bytes": 371,
+      "sha256": "5c9e684cda3f2080afdef6e1b5c3ac8a072df3ad44069dd4d0f60380b08b2466"
+    },
+    {
+      "relative_path": "raw/eval/datasets/northwind_queries_scout_limit_probe_v2.jsonl",
+      "size_bytes": 3062,
+      "sha256": "75f24f5e2773dc6fae77c5e6d99d00e9dab05cc1d9165dab85ab3c475b231b06"
+    },
+    {
+      "relative_path": "raw/eval/datasets/northwind_queries_underspecified_v1.jsonl",
+      "size_bytes": 1863,
+      "sha256": "10d5454a1a7c5bedf654087794f6104c88cd11de59059562acbfb447b1b3d7c5"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260222_214600_ambiguous_v1_scout_ablation/comparison.json",
+      "size_bytes": 8179,
+      "sha256": "d0c8b340ef8a57a5a9912ab495ad65540ff9532d44663242bb4b6e7afb948b95"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260222_214600_ambiguous_v1_scout_ablation/comparison.md",
+      "size_bytes": 1958,
+      "sha256": "a5a80eeef9b9dbadf6be6bd93cac834213a53f153a1c8c53bfeeb9a0e56aa65a"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260223_054125_scout_alignment_audit_v4/comparison.md",
+      "size_bytes": 3438,
+      "sha256": "c16f7cedb66f7f35b4d9a3e855434f8b0ae55a2f892a208abad4717f89ac8be8"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260301_133351_scout_mode_progression_ablation_report/report.md",
+      "size_bytes": 3723,
+      "sha256": "cd478375205e024b7fdc3fffa169fd72e0e176f19e43d55f7b74ae349e752885"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260302_090413_process_query_on_off_aligned_r1_r5_aggregate/report.md",
+      "size_bytes": 3245,
+      "sha256": "6d332c48888bbf6e60b61b8b6498893da54b75bd15864ce45e2ddcd738717828"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260302_143236_scout_gain_segment_cl2_cl6_cl10_r1_r6/analysis.json",
+      "size_bytes": 12395,
+      "sha256": "50963d984e4df114e2ce3398cccd7a280086b7ec0373762219adb43ea4cb8b0a"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260302_143236_scout_gain_segment_cl2_cl6_cl10_r1_r6/report.md",
+      "size_bytes": 2267,
+      "sha256": "b248fa01f6195b5d4b228e79890d0abf936f28c83141df1dc9fe0e8f4b5fa7c2"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260302_190255_scout_boundary_synthesis/report.md",
+      "size_bytes": 2548,
+      "sha256": "8d3d9533b92fcc4fa265bebdd3526c16e60bfcbf0a992042a97ed39995f7e828"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260303_071247_scout_regime_split_claims/report.md",
+      "size_bytes": 5029,
+      "sha256": "3ec9441059287c77090d899befa835b677864f640d66339d6e4461e790e3ef04"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260309_172250_underspecified_v1_on_vs_off_legacy_r2_r4_summary/report.md",
+      "size_bytes": 3279,
+      "sha256": "e9b720fae0bc431be21453489ae63c291fff703b163acf86c2fefdebe0746113"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260309_scout_on_vs_off_legacy_northwind_lexical_synthesis/report.md",
+      "size_bytes": 2748,
+      "sha256": "32ea71192c86a80667050e1049d1278f4817c81fac89ba3cb9cf2c935c6c1c08"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260310_111857_cockpit_partner_label_catalog_check_remote_r1/label_catalog_check.json",
+      "size_bytes": 2517,
+      "sha256": "68206d595c61d9cf6c8c8eb4886ed89bdd4f7b1b5ba8d9895bf545382f0b7425"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260310_111857_cockpit_partner_label_catalog_check_remote_r1/label_catalog_check.md",
+      "size_bytes": 1440,
+      "sha256": "2dab0353126a927d62cad13fef455149671b4da1df87872b1aa450cd4fb416a3"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260310_151923_mcp_search_capability_probe_remote_after_restart/probe.json",
+      "size_bytes": 1898,
+      "sha256": "5bd1ae052e3a0055a8f5827dbbb91b6611ee207d5ea80b47a8c2ef5932553ed1"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260310_151923_mcp_search_capability_probe_remote_after_restart/probe.md",
+      "size_bytes": 510,
+      "sha256": "57070c629f5c8dac46829769be14adc6141478ecf0013092dc5b99ade5c6aea5"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260310_151931_cockpit_partner_remote_mcp_scout_on_aligned_r1/retrieval_table_eval.json",
+      "size_bytes": 24419,
+      "sha256": "6ac37a7cce1b05b065855fbbb23adcc8d94f4c728d7f915b1e60c4f8ede0d7bb"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260310_151931_cockpit_partner_remote_mcp_scout_on_aligned_r1/retrieval_table_eval.md",
+      "size_bytes": 3857,
+      "sha256": "36e2e975f7fd04e6f3492af16d32801484239be1bf6d47abdae4ac30e627d12b"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260311_053124_cockpit_partner_remote_mcp_scout_off_aligned_r1/retrieval_table_eval.json",
+      "size_bytes": 23721,
+      "sha256": "ad29641919be7a67048acc5b82bbcffc60ddb268e1c945c9fef60d90e761599f"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260311_053124_cockpit_partner_remote_mcp_scout_off_aligned_r1/retrieval_table_eval.md",
+      "size_bytes": 3801,
+      "sha256": "eeb82a7e10f4020a21bea4eadf0446cfec1a7ca2f5cbbede8c19702213b207d3"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260311_053138_cockpit_partner_remote_mcp_scout_on_vs_off_aligned_r1/comparison.json",
+      "size_bytes": 13604,
+      "sha256": "a17d09b0c61e603dd91571bc1547afca8751bb15e1b5fa3c3d79773baca40aef"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260311_053138_cockpit_partner_remote_mcp_scout_on_vs_off_aligned_r1/comparison.md",
+      "size_bytes": 1471,
+      "sha256": "af15947800c3d2a66764533a76cdf96fd0885ddb21149570892e53d5d033228e"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260311_061011_cockpit_partner_remote_mcp_off_aligned_r1_vs_r2/comparison.md",
+      "size_bytes": 1469,
+      "sha256": "e5e314513f30ee4d574e1bdab67bbaf579b97e409a0a03ed124aca52b7afbe35"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260311_061011_cockpit_partner_remote_mcp_off_aligned_r1_vs_r3/comparison.md",
+      "size_bytes": 1469,
+      "sha256": "ee0a0198295353255537646bbd4dbc4e44f9bba1fd3b3c5673a1d83369a4e5bf"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260311_075958_cockpit_partner_remote_mcp_scout_off_legacy_r1/retrieval_table_eval.json",
+      "size_bytes": 23638,
+      "sha256": "2109466fdea4eb002a80ef7174c044fe87d27eeed7d0bdff96b8a28af1f83c3b"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260311_075958_cockpit_partner_remote_mcp_scout_off_legacy_r1/retrieval_table_eval.md",
+      "size_bytes": 3962,
+      "sha256": "ec840737b9a3843cc8a32207bd1ab4bd2237a77014546b83ea7315f7dc5fbf21"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260311_080031_cockpit_partner_remote_mcp_off_aligned_vs_off_legacy_r1/comparison.json",
+      "size_bytes": 13688,
+      "sha256": "07b373016f9f0aa688a4e4d3ad6b4050376fc2a437544e9cd245215044d837ac"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260311_080031_cockpit_partner_remote_mcp_off_aligned_vs_off_legacy_r1/comparison.md",
+      "size_bytes": 1461,
+      "sha256": "00414079caf5d5d2652ef74a1bab15ebfad51dccbbcc7b294961cea471306634"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260311_080031_cockpit_partner_remote_mcp_off_legacy_r1_vs_r2/comparison.md",
+      "size_bytes": 1435,
+      "sha256": "bcea91ddbf10a3cdda0b607bda840aea9c5c45a70f20ecc970e2b27545a789ea"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260311_080031_cockpit_partner_remote_mcp_scout_on_vs_off_legacy_r1/comparison.json",
+      "size_bytes": 13744,
+      "sha256": "69d3a3c6878192755f7f6458cbf0c1e640a393d320d7dd6e61f9727c9c271c83"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260311_080031_cockpit_partner_remote_mcp_scout_on_vs_off_legacy_r1/comparison.md",
+      "size_bytes": 1459,
+      "sha256": "0c2b2b65587a58694c3e2a744346152dcbf279251655a92044c3262552d1ad72"
+    },
+    {
+      "relative_path": "raw/eval/runs/20260311_080042_cockpit_partner_remote_mcp_off_legacy_r1_vs_r3/comparison.md",
+      "size_bytes": 1435,
+      "sha256": "2d49a55ddf0b8282916824ca11955eb1ee8481989cfe351a86b2d9e464674be2"
+    },
+    {
+      "relative_path": "raw/eval/runs/ablation_study_master_summary_2026-03-11.md",
+      "size_bytes": 14396,
+      "sha256": "84e1c5b961021f63633daea6a2409cadd5c2d0db5b1b7f57ff8665eda7e16eed"
+    }
+  ],
+  "key_sections": [
+    "mode definitions (on/off aligned/off legacy)",
+    "northwind controlled ablations (h1/h2a)",
+    "production-style cockpit retrieval ablations (h2b)",
+    "label integrity diagnostics",
+    "capability probe diagnostics"
+  ]
+}

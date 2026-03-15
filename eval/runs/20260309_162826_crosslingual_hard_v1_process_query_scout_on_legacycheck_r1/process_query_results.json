@@ -1,0 +1,254 @@
+{
+  "CL1": {
+    "query_id": "CL1",
+    "question": "Welche Lieferanten erzielen den h\u00f6chsten Umsatz nach Rabatten \u00fcber ihre Artikel?",
+    "status": "failed",
+    "http_status": 200,
+    "latency_ms_total": 10467,
+    "error": null,
+    "final_response_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "CL2": {
+    "query_id": "CL2",
+    "question": "Welche Kundenl\u00e4nder bringen den gr\u00f6\u00dften Gesamtumsatz nach Abz\u00fcgen?",
+    "status": "failed",
+    "http_status": 200,
+    "latency_ms_total": 2665,
+    "error": null,
+    "final_response_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "CL3": {
+    "query_id": "CL3",
+    "question": "Bei welchen Versanddienstleistern sind Sendungen im Schnitt am h\u00e4ufigsten versp\u00e4tet?",
+    "status": "failed",
+    "http_status": 200,
+    "latency_ms_total": 2463,
+    "error": null,
+    "final_response_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "CL4": {
+    "query_id": "CL4",
+    "question": "Welche Mitarbeitenden betreuen die meisten unterschiedlichen Kundenkonten?",
+    "status": "failed",
+    "http_status": 200,
+    "latency_ms_total": 2512,
+    "error": null,
+    "final_response_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "CL5": {
+    "query_id": "CL5",
+    "question": "Welche Kundenkonten haben bislang keinerlei Bestellung ausgel\u00f6st?",
+    "status": "failed",
+    "http_status": 200,
+    "latency_ms_total": 2375,
+    "error": null,
+    "final_response_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "CL6": {
+    "query_id": "CL6",
+    "question": "Wie entwickeln sich pro Monat erfasste Auftr\u00e4ge und versp\u00e4tete Auslieferungen?",
+    "status": "failed",
+    "http_status": 200,
+    "latency_ms_total": 1997,
+    "error": null,
+    "final_response_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "CL7": {
+    "query_id": "CL7",
+    "question": "Welche Regionen sind \u00fcber Gebietszuordnungen mit dem h\u00f6chsten Umsatz verbunden?",
+    "status": "failed",
+    "http_status": 200,
+    "latency_ms_total": 2246,
+    "error": null,
+    "final_response_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "CL8": {
+    "query_id": "CL8",
+    "question": "Welche Kunden bestellen h\u00e4ufig, aber mit eher kleinem Warenkorbwert?",
+    "status": "failed",
+    "http_status": 200,
+    "latency_ms_total": 2259,
+    "error": null,
+    "final_response_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "CL9": {
+    "query_id": "CL9",
+    "question": "Bei welchen Lieferanten gibt es Produkte ohne jeglichen Verkauf?",
+    "status": "failed",
+    "http_status": 200,
+    "latency_ms_total": 2431,
+    "error": null,
+    "final_response_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "CL10": {
+    "query_id": "CL10",
+    "question": "Welche Kundensegmente erzeugen den h\u00f6chsten Erl\u00f6s nach Rabatt?",
+    "status": "failed",
+    "http_status": 200,
+    "latency_ms_total": 2331,
+    "error": null,
+    "final_response_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "CL11": {
+    "query_id": "CL11",
+    "question": "Welche Mitarbeitenden verkaufen h\u00e4ufig in andere Ziell\u00e4nder als ihr Heimatland?",
+    "status": "failed",
+    "http_status": 200,
+    "latency_ms_total": 2253,
+    "error": null,
+    "final_response_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "CL12": {
+    "query_id": "CL12",
+    "question": "In welchen Monaten ist Fracht im Verh\u00e4ltnis zum Umsatz am teuersten?",
+    "status": "failed",
+    "http_status": 200,
+    "latency_ms_total": 2492,
+    "error": null,
+    "final_response_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  }
+}

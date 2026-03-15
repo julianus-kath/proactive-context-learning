@@ -1,0 +1,10 @@
+{
+  "status": "offline_file_audit",
+  "timestamp": "2026-02-16T13:50:42.306687Z",
+  "components": {
+    "source": "exported_files",
+    "discovered_catalog_file": "/Users/juli/Downloads/scout_catalog.json",
+    "ground_truth_catalog_file": "/Users/juli/Downloads/catalog_mssql (1).json",
+    "scout_index_file": "/Users/juli/Downloads/scout_index.json"
+  }
+}

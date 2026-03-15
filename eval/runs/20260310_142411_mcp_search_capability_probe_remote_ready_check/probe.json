@@ -1,0 +1,21 @@
+{
+  "generated_at_utc": "2026-03-10T14:24:11.988156Z",
+  "mcp_url": "http://192.168.1.35:8000",
+  "health_status": "healthy",
+  "health_backend": "ScoutRunner",
+  "health_off_control_mode": null,
+  "search_source": "scout_runner",
+  "search_has_ranking_backend_field": false,
+  "search_has_source_details_field": false,
+  "supports_aligned_off_controls": false,
+  "recommendation": "update_remote_mcp_to_aligned_search_tables_implementation",
+  "parsed_search_keys": [
+    "cached",
+    "data",
+    "execution_time_ms",
+    "ok",
+    "page_info",
+    "source"
+  ],
+  "search_preview": "\ud83d\udd0d Search Results for 'show me revenue by customer country'\n\nTotal matches: 2\n\n1. dbo.USysDialogConfigVariants\n   Type: table, Rows: 398, Cols: 8\n   Score: 0.700, Reasons: Column match: showintaskpane, 398 rows\n   Columns: TAN, Mandant, DialogConfigTAN, Caption, IsDefault, ShowInTaskpane, IsUserDefault, Timestamp\n\n2. dbo.KHKWebshopLaender\n   Type: table, Rows: 243, Cols: 10\n   Score: 0.700, Reasons: Column match: wscountryid, 243 rows\n   Columns: WSCountryID, Laendercode2, Laendercode3, Land, IstEU, LocaleID, Sprachcode2, Sprachcode3, Sprache, Timestamp\n\n\n\ud83d\udcca Full response (JSON):\n{\n  \"ok\": true,\n  \"data\": {\n    \"results\": [\n      {\n        \"full_name\": \"dbo.USysDialogConfigVariants\",\n        \"name\": \"USysDialogConfigVariants\",\n        \"schema\": \"dbo\",\n        \"type\": \"table\",\n        \"estimated_rows\": 398,\n        \"column_count\": 8,\n        \"relevance_score\": 0.7000000000000001,\n        \"reasons\": [\n          \"Column match: showintaskpane\",\n          \"398 rows\"\n        ],\n        \"columns\": [\n          {\n            \"name\": \"TAN\",\n            \"data_type\": \"int\",\n            \"max_length\": null,\n            \"precision\": 10,\n            \"scale\": 0,\n            \"nullable\": false,\n       "
+}

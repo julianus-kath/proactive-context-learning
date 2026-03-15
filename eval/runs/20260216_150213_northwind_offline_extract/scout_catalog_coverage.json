@@ -1,0 +1,14 @@
+{
+  "discovered_tables": 14,
+  "ground_truth_tables": 14,
+  "table_coverage_pct": 100.0,
+  "discovered_columns": 92,
+  "ground_truth_columns": 92,
+  "column_coverage_pct": 100.0,
+  "discovered_fk_columns": 13,
+  "ground_truth_fk_columns": 13,
+  "fk_coverage_pct": 100.0,
+  "missing_tables": [],
+  "missing_columns_count": 0,
+  "missing_fk_columns_count": 0
+}

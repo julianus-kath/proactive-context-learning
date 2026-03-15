@@ -1,0 +1,19 @@
+{
+  "run_id": "20260110_144503_get_column_index_fix",
+  "run_name": "get_column_index_fix",
+  "timestamp": "2026-01-10T13:45:03.224859Z",
+  "git_commit": "56e96349ab4401b03b26ab4c693d1c095b8ca2f3",
+  "dataset_path": "eval/datasets/cockpit_queries.jsonl",
+  "mcp_server_url": "http://192.168.1.35:8000",
+  "model": "gpt-4",
+  "prompt_versions": {},
+  "environment": {
+    "python_version": "3.11.2",
+    "machine": "MacBookPro",
+    "platform": "darwin",
+    "cwd": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code"
+  },
+  "total_queries": 10,
+  "completed_queries": 10,
+  "failed_queries": 0
+}

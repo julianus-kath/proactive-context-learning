@@ -1,0 +1,16 @@
+{
+  "generated_at_utc": "2026-03-10T06:25:31.527805Z",
+  "dataset": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/datasets/cockpit_partner_queries_v1.jsonl",
+  "table_labels": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/datasets/cockpit_partner_table_labels_v1.json",
+  "modes": [
+    "scout_on",
+    "scout_off_aligned"
+  ],
+  "replicates": 1,
+  "target": "http://localhost:5001",
+  "mcp_url": "http://localhost:8000",
+  "start_services": false,
+  "dry_run": true,
+  "mode_runs": [],
+  "comparisons": []
+}

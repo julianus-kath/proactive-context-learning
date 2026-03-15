@@ -1,0 +1,412 @@
+{
+  "generated_at_utc": "2026-03-02T13:21:06.943535Z",
+  "reference_sql_path": "eval/datasets/northwind_queries_scout_advantage_v1.reference_sql.json",
+  "summary": {
+    "total": 9,
+    "strict_equal_count": 1,
+    "same_cols_set_equal_count": 1,
+    "positional_set_equal_count": 1,
+    "common_cols_set_equal_count": 0,
+    "required_tables_ok_count": 3,
+    "sql_exec_errors_count": 4
+  },
+  "per_query": [
+    {
+      "query_id": "SA1",
+      "question": "Welche Absatzmaerkte liefern nach Preisnachlaessen den hoechsten Nettoerloes?",
+      "required_tables": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "SELECT c.country,\n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue\nFROM public.customers c\nJOIN public.orders o ON o.customer_id = c.customer_id\nJOIN public.order_details od ON od.order_id = o.order_id\nGROUP BY c.country\nORDER BY total_revenue DESC, c.country",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "SA2",
+      "question": "Aus welchen Kundenlaendern stammt der groesste rabattbereinigte Umsatz?",
+      "required_tables": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "candidate_tables": [
+        "orders",
+        "order_details",
+        "customers"
+      ],
+      "required_tables_ok": true,
+      "candidate_sql": "SELECT c.country, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS rabattbereinigter_umsatz\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nJOIN public.customers c ON o.customer_id = c.customer_id\nGROUP BY c.country\nORDER BY rabattbereinigter_umsatz DESC\nLIMIT 5;",
+      "reference_sql": "SELECT c.country,\n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue\nFROM public.customers c\nJOIN public.orders o ON o.customer_id = c.customer_id\nJOIN public.order_details od ON od.order_id = o.order_id\nGROUP BY c.country\nORDER BY total_revenue DESC, c.country",
+      "candidate_sql_exec_error": null,
+      "reference_sql_exec_error": null,
+      "comparison": {
+        "ref_cols": [
+          "country",
+          "total_revenue"
+        ],
+        "cand_cols": [
+          "country",
+          "rabattbereinigter_umsatz"
+        ],
+        "ref_row_count": 21,
+        "cand_row_count": 5,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols": [
+          "country"
+        ],
+        "common_cols_set_equal": false
+      }
+    },
+    {
+      "query_id": "SA3",
+      "question": "Welche Laender bringen nach Abzug von Nachlaessen den meisten Erlos?",
+      "required_tables": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "candidate_tables": [
+        "orders",
+        "order_details"
+      ],
+      "required_tables_ok": false,
+      "candidate_sql": "SELECT o.ship_country, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY o.ship_country\nORDER BY total_revenue DESC\nLIMIT 5;",
+      "reference_sql": "SELECT c.country,\n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue\nFROM public.customers c\nJOIN public.orders o ON o.customer_id = c.customer_id\nJOIN public.order_details od ON od.order_id = o.order_id\nGROUP BY c.country\nORDER BY total_revenue DESC, c.country",
+      "candidate_sql_exec_error": null,
+      "reference_sql_exec_error": null,
+      "comparison": {
+        "ref_cols": [
+          "country",
+          "total_revenue"
+        ],
+        "cand_cols": [
+          "ship_country",
+          "total_revenue"
+        ],
+        "ref_row_count": 21,
+        "cand_row_count": 5,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols": [
+          "total_revenue"
+        ],
+        "common_cols_set_equal": false
+      }
+    },
+    {
+      "query_id": "SA4",
+      "question": "Wie entwickeln sich monatlich Auftragseingaenge im Vergleich zu stark verspaeteten Zustellungen?",
+      "required_tables": [
+        "orders"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "SELECT DATE_TRUNC('month', o.order_date)::date AS month,\n       COUNT(DISTINCT o.order_id) AS orders_created,\n       COUNT(DISTINCT o.order_id) FILTER (WHERE o.shipped_date > o.required_date) AS late_orders\nFROM public.orders o\nGROUP BY DATE_TRUNC('month', o.order_date)::date\nORDER BY month",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "SA5",
+      "question": "Zeige den Monatsverlauf von Bestellvolumen und Lieferverzoegerungen zusammen.",
+      "required_tables": [
+        "orders"
+      ],
+      "candidate_tables": [
+        "orders",
+        "order_details"
+      ],
+      "required_tables_ok": true,
+      "candidate_sql": "SELECT \n    DATE_TRUNC('month', o.order_date) AS month, \n    SUM(od.quantity * od.unit_price) AS total_order_volume,\n    AVG(CASE WHEN o.shipped_date > o.required_date THEN o.shipped_date - o.required_date ELSE 0 END) AS avg_delivery_delay\nFROM \n    public.orders o\nJOIN \n    public.order_details od ON o.order_id = od.order_id\nGROUP BY \n    month\nORDER BY \n    month;",
+      "reference_sql": "SELECT DATE_TRUNC('month', o.order_date)::date AS month,\n       COUNT(DISTINCT o.order_id) AS orders_created,\n       COUNT(DISTINCT o.order_id) FILTER (WHERE o.shipped_date > o.required_date) AS late_orders\nFROM public.orders o\nGROUP BY DATE_TRUNC('month', o.order_date)::date\nORDER BY month",
+      "candidate_sql_exec_error": null,
+      "reference_sql_exec_error": null,
+      "comparison": {
+        "ref_cols": [
+          "month",
+          "orders_created",
+          "late_orders"
+        ],
+        "cand_cols": [
+          "month",
+          "total_order_volume",
+          "avg_delivery_delay"
+        ],
+        "ref_row_count": 23,
+        "cand_row_count": 23,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols": [
+          "month"
+        ],
+        "common_cols_set_equal": false
+      }
+    },
+    {
+      "query_id": "SA6",
+      "question": "In welchen Monaten steigen Auftraege, waehrend sich verspaetete Auslieferungen haeuften?",
+      "required_tables": [
+        "orders"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "SELECT DATE_TRUNC('month', o.order_date)::date AS month,\n       COUNT(DISTINCT o.order_id) AS orders_created,\n       COUNT(DISTINCT o.order_id) FILTER (WHERE o.shipped_date > o.required_date) AS late_orders\nFROM public.orders o\nGROUP BY DATE_TRUNC('month', o.order_date)::date\nORDER BY month",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "SA7",
+      "question": "Welche Kaeufersegmente tragen nach Nachlaessen am staerksten zum Ertrag bei?",
+      "required_tables": [
+        "customer_demographics",
+        "customer_customer_demo",
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "candidate_tables": [],
+      "required_tables_ok": false,
+      "candidate_sql": null,
+      "reference_sql": "SELECT cd.customer_type_id,\n       cd.customer_desc,\n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue,\n       COUNT(DISTINCT o.order_id) AS order_count\nFROM public.customer_demographics cd\nJOIN public.customer_customer_demo ccd ON ccd.customer_type_id = cd.customer_type_id\nJOIN public.customers c ON c.customer_id = ccd.customer_id\nJOIN public.orders o ON o.customer_id = c.customer_id\nJOIN public.order_details od ON od.order_id = o.order_id\nGROUP BY cd.customer_type_id, cd.customer_desc\nORDER BY total_revenue DESC, cd.customer_type_id",
+      "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+      "reference_sql_exec_error": null,
+      "comparison": null
+    },
+    {
+      "query_id": "SA8",
+      "question": "Welche Kundengruppen erzeugen den meisten Erlos, wenn Rabatte bereits abgezogen sind?",
+      "required_tables": [
+        "customer_demographics",
+        "customer_customer_demo",
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "candidate_tables": [
+        "orders",
+        "order_details",
+        "customers",
+        "customer_customer_demo",
+        "customer_demographics"
+      ],
+      "required_tables_ok": true,
+      "candidate_sql": "SELECT cd.customer_desc AS Kundengruppe, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS NettoErlos\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nJOIN public.customers c ON o.customer_id = c.customer_id\nJOIN public.customer_customer_demo ccd ON c.customer_id = ccd.customer_id\nJOIN public.customer_demographics cd ON ccd.customer_type_id = cd.customer_type_id\nGROUP BY cd.customer_desc\nORDER BY NettoErlos DESC\nLIMIT 5;",
+      "reference_sql": "SELECT cd.customer_type_id,\n       cd.customer_desc,\n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue,\n       COUNT(DISTINCT o.order_id) AS order_count\nFROM public.customer_demographics cd\nJOIN public.customer_customer_demo ccd ON ccd.customer_type_id = cd.customer_type_id\nJOIN public.customers c ON c.customer_id = ccd.customer_id\nJOIN public.orders o ON o.customer_id = c.customer_id\nJOIN public.order_details od ON od.order_id = o.order_id\nGROUP BY cd.customer_type_id, cd.customer_desc\nORDER BY total_revenue DESC, cd.customer_type_id",
+      "candidate_sql_exec_error": null,
+      "reference_sql_exec_error": null,
+      "comparison": {
+        "ref_cols": [],
+        "cand_cols": [],
+        "ref_row_count": 0,
+        "cand_row_count": 0,
+        "strict_equal": true,
+        "same_cols_set_equal": true,
+        "positional_set_equal": true,
+        "common_cols": [],
+        "common_cols_set_equal": null
+      }
+    },
+    {
+      "query_id": "SA9",
+      "question": "Welche Abnehmerprofile liefern den hoechsten rabattbereinigten Umsatzanteil?",
+      "required_tables": [
+        "customer_demographics",
+        "customer_customer_demo",
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "candidate_tables": [
+        "orders",
+        "order_details"
+      ],
+      "required_tables_ok": false,
+      "candidate_sql": "SELECT o.customer_id, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS rabattbereinigter_umsatz\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY o.customer_id\nORDER BY rabattbereinigter_umsatz DESC\nLIMIT 5;",
+      "reference_sql": "SELECT cd.customer_type_id,\n       cd.customer_desc,\n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue,\n       COUNT(DISTINCT o.order_id) AS order_count\nFROM public.customer_demographics cd\nJOIN public.customer_customer_demo ccd ON ccd.customer_type_id = cd.customer_type_id\nJOIN public.customers c ON c.customer_id = ccd.customer_id\nJOIN public.orders o ON o.customer_id = c.customer_id\nJOIN public.order_details od ON od.order_id = o.order_id\nGROUP BY cd.customer_type_id, cd.customer_desc\nORDER BY total_revenue DESC, cd.customer_type_id",
+      "candidate_sql_exec_error": null,
+      "reference_sql_exec_error": null,
+      "comparison": {
+        "ref_cols": [],
+        "cand_cols": [
+          "customer_id",
+          "rabattbereinigter_umsatz"
+        ],
+        "ref_row_count": 0,
+        "cand_row_count": 5,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols": [],
+        "common_cols_set_equal": null
+      }
+    }
+  ],
+  "manual_review_template": {
+    "instructions": {
+      "labels": [
+        "CORRECT",
+        "PARTIAL",
+        "INCORRECT"
+      ],
+      "reason_codes": [
+        "MISSING_DISCOUNT_FACTOR",
+        "COUNT_NOT_DISTINCT",
+        "WRONG_AGGREGATION_GRAIN",
+        "MISSING_REQUIRED_TABLE",
+        "JOIN_PATH_VIOLATION",
+        "MISSING_TIME_GROUPING",
+        "TOP_K_NOT_APPLIED"
+      ]
+    },
+    "per_query": [
+      {
+        "query_id": "SA1",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "SA2",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": true,
+          "strict_equal": false,
+          "same_cols_set_equal": false,
+          "positional_set_equal": false,
+          "common_cols_set_equal": false,
+          "candidate_sql_exec_error": null,
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "SA3",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": false,
+          "same_cols_set_equal": false,
+          "positional_set_equal": false,
+          "common_cols_set_equal": false,
+          "candidate_sql_exec_error": null,
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "SA4",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "SA5",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": true,
+          "strict_equal": false,
+          "same_cols_set_equal": false,
+          "positional_set_equal": false,
+          "common_cols_set_equal": false,
+          "candidate_sql_exec_error": null,
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "SA6",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "SA7",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": null,
+          "same_cols_set_equal": null,
+          "positional_set_equal": null,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "SA8",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": true,
+          "strict_equal": true,
+          "same_cols_set_equal": true,
+          "positional_set_equal": true,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": null,
+          "reference_sql_exec_error": null
+        }
+      },
+      {
+        "query_id": "SA9",
+        "label": null,
+        "reason_codes": [],
+        "reviewer_notes": "",
+        "auto_summary": {
+          "required_tables_ok": false,
+          "strict_equal": false,
+          "same_cols_set_equal": false,
+          "positional_set_equal": false,
+          "common_cols_set_equal": null,
+          "candidate_sql_exec_error": null,
+          "reference_sql_exec_error": null
+        }
+      }
+    ]
+  }
+}

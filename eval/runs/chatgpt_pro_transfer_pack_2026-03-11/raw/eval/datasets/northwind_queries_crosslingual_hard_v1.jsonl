@@ -1,0 +1,12 @@
+{"id":"CL1","question":"Welche Lieferanten erzielen den höchsten Umsatz nach Rabatten über ihre Artikel?","source_query_id":"NW11"}
+{"id":"CL2","question":"Welche Kundenländer bringen den größten Gesamtumsatz nach Abzügen?","source_query_id":"NW12"}
+{"id":"CL3","question":"Bei welchen Versanddienstleistern sind Sendungen im Schnitt am häufigsten verspätet?","source_query_id":"NW13"}
+{"id":"CL4","question":"Welche Mitarbeitenden betreuen die meisten unterschiedlichen Kundenkonten?","source_query_id":"NW16"}
+{"id":"CL5","question":"Welche Kundenkonten haben bislang keinerlei Bestellung ausgelöst?","source_query_id":"NW17"}
+{"id":"CL6","question":"Wie entwickeln sich pro Monat erfasste Aufträge und verspätete Auslieferungen?","source_query_id":"NW18"}
+{"id":"CL7","question":"Welche Regionen sind über Gebietszuordnungen mit dem höchsten Umsatz verbunden?","source_query_id":"NW23"}
+{"id":"CL8","question":"Welche Kunden bestellen häufig, aber mit eher kleinem Warenkorbwert?","source_query_id":"NW24"}
+{"id":"CL9","question":"Bei welchen Lieferanten gibt es Produkte ohne jeglichen Verkauf?","source_query_id":"NW30"}
+{"id":"CL10","question":"Welche Kundensegmente erzeugen den höchsten Erlös nach Rabatt?","source_query_id":"NW32"}
+{"id":"CL11","question":"Welche Mitarbeitenden verkaufen häufig in andere Zielländer als ihr Heimatland?","source_query_id":"NW33"}
+{"id":"CL12","question":"In welchen Monaten ist Fracht im Verhältnis zum Umsatz am teuersten?","source_query_id":"NW39"}

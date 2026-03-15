@@ -1,0 +1,77 @@
+{
+  "run_id": "20260223_063357_h2a_baseline_scout_off_v3_aligned",
+  "run_name": "h2a_baseline_scout_off_v3_aligned",
+  "timestamp": "2026-02-23T05:33:57.875338Z",
+  "git_commit": "51518b00a19d2243d76decf1c7d503d39c1e980e",
+  "dataset_path": "eval/datasets/northwind_queries.jsonl",
+  "mcp_server_url": "http://localhost:8000",
+  "model": "gpt-4",
+  "prompt_versions": {},
+  "environment": {
+    "python_version": "3.11.2",
+    "machine": "MacBookPro",
+    "platform": "darwin",
+    "cwd": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code"
+  },
+  "total_queries": 10,
+  "completed_queries": 10,
+  "failed_queries": 0,
+  "mcp_health_start": {
+    "url": "http://localhost:8000",
+    "reachable": true,
+    "status_code": 200,
+    "payload": {
+      "status": "healthy",
+      "timestamp": "2026-02-23T05:33:57.950833",
+      "version": "1.0",
+      "components": {
+        "database": {
+          "status": "healthy",
+          "connectivity": true,
+          "dialect": "postgres"
+        },
+        "scout_catalog": {
+          "status": "healthy",
+          "catalog_exists": true,
+          "catalog_valid": true,
+          "backend": "SchemaCatalog",
+          "dialect": "postgres",
+          "table_count": 14
+        }
+      }
+    },
+    "database_dialect": "postgres",
+    "discovery_backend": "SchemaCatalog",
+    "discovery_status": "healthy",
+    "catalog_valid": true
+  },
+  "mcp_health_end": {
+    "url": "http://localhost:8000",
+    "reachable": true,
+    "status_code": 200,
+    "payload": {
+      "status": "healthy",
+      "timestamp": "2026-02-23T05:34:37.565678",
+      "version": "1.0",
+      "components": {
+        "database": {
+          "status": "healthy",
+          "connectivity": true,
+          "dialect": "postgres"
+        },
+        "scout_catalog": {
+          "status": "healthy",
+          "catalog_exists": true,
+          "catalog_valid": true,
+          "backend": "SchemaCatalog",
+          "dialect": "postgres",
+          "table_count": 14
+        }
+      }
+    },
+    "database_dialect": "postgres",
+    "discovery_backend": "SchemaCatalog",
+    "discovery_status": "healthy",
+    "catalog_valid": true
+  }
+}

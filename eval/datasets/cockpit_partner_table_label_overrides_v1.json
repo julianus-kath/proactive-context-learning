@@ -1,0 +1,8 @@
+{
+  "meta": {
+    "description": "Optional manual-confirmed label overrides for cockpit partner table normalization.",
+    "usage": "Entries map partner labels to confirmed live catalog tables.",
+    "generated_at_utc": "2026-03-15T00:00:00Z"
+  },
+  "overrides": []
+}

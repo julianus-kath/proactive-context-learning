@@ -1,0 +1,24 @@
+{
+  "generated_at_utc": "2026-03-10T15:19:23.940363Z",
+  "mcp_url": "http://192.168.1.35:8000",
+  "health_status": "healthy",
+  "health_backend": "ScoutRunner",
+  "health_off_control_mode": null,
+  "search_source": "scout_runner_catalog",
+  "search_has_ranking_backend_field": true,
+  "search_has_source_details_field": true,
+  "supports_aligned_off_controls": true,
+  "recommendation": "ready_for_on_off_aligned_legacy_ablation",
+  "parsed_search_keys": [
+    "cached",
+    "data",
+    "execution_time_ms",
+    "ok",
+    "page_info",
+    "ranking_backend",
+    "ranking_input",
+    "source",
+    "source_details"
+  ],
+  "search_preview": "\ud83d\udd0d Search Results for 'show me revenue by customer country' (Page 1 of 35)\n\nTotal matches: 346\n\n\u2022 dbo.BCSPjmAdressenKontakt (TABLE) - Score: 1.000\n  Rows: ~0\n  Columns: Mandant, Adresse, Kontaktplan, Intervall, Intervalltyp, Wochentag, Tageszeit, Ausfuehrer, AnsprechpartnerID, Information, Timestamp\n  Matched columns: adresse\n  Reasons: Table name match: 1.00, Column name match: 0.80, Fuzzy match: 0.80, Type compatibility: 0.50\n\n\u2022 dbo.BCSPjmAdressenKontaktFolge (TABLE) - Score: 1.000\n  Rows: ~0\n  Columns: Mandant, PosID, Adresse, Vorgang, Timestamp\n  Matched columns: adresse\n  Reasons: Table name match: 1.00, Column name match: 0.80, Fuzzy match: 0.80, Type compatibility: 0.50\n\n\u2022 dbo.BCSPjmObjekte (TABLE) - Score: 1.000\n  Rows: ~0\n  Columns: Mandant, Objektnummer, Objektgruppe, Objektart, ObjektDatum, Bezeichnung, Artikelnummer, ArtMatchcode, Kostentraeger, Seriennummer, Intervall, Intervalltyp, Kto, AnsprechpartnerID, Ansprechart\n  Matched columns: garantiekunde, adresse, adressematchcode\n  Reasons: Column name match: 0.80, Type compatibility: 0.50\n\n\u2022 dbo.BCSPjmObjekteStapelPositionen (TABLE) - Score: 1.000\n  Rows: ~0\n  Columns: Mandant, PosID, Stapel, Objektnummer, BedID, Kunde, A"
+}

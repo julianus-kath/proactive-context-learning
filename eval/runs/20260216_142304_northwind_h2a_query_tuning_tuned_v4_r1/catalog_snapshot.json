@@ -1,0 +1,1992 @@
+{
+  "discovered_catalog": {
+    "source": "catalog_cache",
+    "timestamp": "2026-02-16T13:23:04.434283Z",
+    "cache_path": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/mcp_server/cache/catalog_postgres.json",
+    "cache_metadata": {
+      "dialect": "postgres",
+      "timestamp": 1771246822.076961,
+      "table_count": 14,
+      "ttl": 3600
+    },
+    "tables": {
+      "public.categories": {
+        "schema": "public",
+        "name": "categories",
+        "type": "BASE TABLE",
+        "estimated_rows": 8,
+        "columns": [
+          {
+            "name": "category_id",
+            "type": "smallint",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "category_name",
+            "type": "character varying",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "description",
+            "type": "text",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "picture",
+            "type": "bytea",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          }
+        ],
+        "primary_keys": [
+          "category_id"
+        ],
+        "foreign_keys": []
+      },
+      "public.customer_customer_demo": {
+        "schema": "public",
+        "name": "customer_customer_demo",
+        "type": "BASE TABLE",
+        "estimated_rows": -1,
+        "columns": [
+          {
+            "name": "customer_id",
+            "type": "character varying",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": true,
+            "role_hints": null
+          },
+          {
+            "name": "customer_type_id",
+            "type": "character varying",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": true,
+            "role_hints": null
+          }
+        ],
+        "primary_keys": [
+          "customer_id",
+          "customer_type_id"
+        ],
+        "foreign_keys": [
+          {
+            "column": "customer_type_id",
+            "referenced_table": "customer_demographics",
+            "referenced_schema": "public",
+            "referenced_column": "customer_type_id"
+          },
+          {
+            "column": "customer_id",
+            "referenced_table": "customers",
+            "referenced_schema": "public",
+            "referenced_column": "customer_id"
+          }
+        ]
+      },
+      "public.customer_demographics": {
+        "schema": "public",
+        "name": "customer_demographics",
+        "type": "BASE TABLE",
+        "estimated_rows": -1,
+        "columns": [
+          {
+            "name": "customer_type_id",
+            "type": "character varying",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "customer_desc",
+            "type": "text",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          }
+        ],
+        "primary_keys": [
+          "customer_type_id"
+        ],
+        "foreign_keys": []
+      },
+      "public.customers": {
+        "schema": "public",
+        "name": "customers",
+        "type": "BASE TABLE",
+        "estimated_rows": 91,
+        "columns": [
+          {
+            "name": "customer_id",
+            "type": "character varying",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "company_name",
+            "type": "character varying",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "contact_name",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "contact_title",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "address",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "city",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "region",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "postal_code",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "country",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "phone",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "fax",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          }
+        ],
+        "primary_keys": [
+          "customer_id"
+        ],
+        "foreign_keys": []
+      },
+      "public.employee_territories": {
+        "schema": "public",
+        "name": "employee_territories",
+        "type": "BASE TABLE",
+        "estimated_rows": 49,
+        "columns": [
+          {
+            "name": "employee_id",
+            "type": "smallint",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": true,
+            "role_hints": null
+          },
+          {
+            "name": "territory_id",
+            "type": "character varying",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": true,
+            "role_hints": null
+          }
+        ],
+        "primary_keys": [
+          "employee_id",
+          "territory_id"
+        ],
+        "foreign_keys": [
+          {
+            "column": "territory_id",
+            "referenced_table": "territories",
+            "referenced_schema": "public",
+            "referenced_column": "territory_id"
+          },
+          {
+            "column": "employee_id",
+            "referenced_table": "employees",
+            "referenced_schema": "public",
+            "referenced_column": "employee_id"
+          }
+        ]
+      },
+      "public.employees": {
+        "schema": "public",
+        "name": "employees",
+        "type": "BASE TABLE",
+        "estimated_rows": 9,
+        "columns": [
+          {
+            "name": "employee_id",
+            "type": "smallint",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "last_name",
+            "type": "character varying",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "first_name",
+            "type": "character varying",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "title",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "title_of_courtesy",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "birth_date",
+            "type": "date",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "hire_date",
+            "type": "date",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "address",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "city",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "region",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "postal_code",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "country",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "home_phone",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "extension",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "photo",
+            "type": "bytea",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "notes",
+            "type": "text",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "reports_to",
+            "type": "smallint",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": true,
+            "role_hints": null
+          },
+          {
+            "name": "photo_path",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          }
+        ],
+        "primary_keys": [
+          "employee_id"
+        ],
+        "foreign_keys": [
+          {
+            "column": "reports_to",
+            "referenced_table": "employees",
+            "referenced_schema": "public",
+            "referenced_column": "employee_id"
+          }
+        ]
+      },
+      "public.order_details": {
+        "schema": "public",
+        "name": "order_details",
+        "type": "BASE TABLE",
+        "estimated_rows": 2155,
+        "columns": [
+          {
+            "name": "order_id",
+            "type": "smallint",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": true,
+            "role_hints": null
+          },
+          {
+            "name": "product_id",
+            "type": "smallint",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": true,
+            "role_hints": null
+          },
+          {
+            "name": "unit_price",
+            "type": "real",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "quantity",
+            "type": "smallint",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "discount",
+            "type": "real",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          }
+        ],
+        "primary_keys": [
+          "order_id",
+          "product_id"
+        ],
+        "foreign_keys": [
+          {
+            "column": "product_id",
+            "referenced_table": "products",
+            "referenced_schema": "public",
+            "referenced_column": "product_id"
+          },
+          {
+            "column": "order_id",
+            "referenced_table": "orders",
+            "referenced_schema": "public",
+            "referenced_column": "order_id"
+          }
+        ]
+      },
+      "public.orders": {
+        "schema": "public",
+        "name": "orders",
+        "type": "BASE TABLE",
+        "estimated_rows": 830,
+        "columns": [
+          {
+            "name": "order_id",
+            "type": "smallint",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "customer_id",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": true,
+            "role_hints": null
+          },
+          {
+            "name": "employee_id",
+            "type": "smallint",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": true,
+            "role_hints": null
+          },
+          {
+            "name": "order_date",
+            "type": "date",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "required_date",
+            "type": "date",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "shipped_date",
+            "type": "date",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "ship_via",
+            "type": "smallint",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": true,
+            "role_hints": null
+          },
+          {
+            "name": "freight",
+            "type": "real",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "ship_name",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "ship_address",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "ship_city",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "ship_region",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "ship_postal_code",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "ship_country",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          }
+        ],
+        "primary_keys": [
+          "order_id"
+        ],
+        "foreign_keys": [
+          {
+            "column": "customer_id",
+            "referenced_table": "customers",
+            "referenced_schema": "public",
+            "referenced_column": "customer_id"
+          },
+          {
+            "column": "employee_id",
+            "referenced_table": "employees",
+            "referenced_schema": "public",
+            "referenced_column": "employee_id"
+          },
+          {
+            "column": "ship_via",
+            "referenced_table": "shippers",
+            "referenced_schema": "public",
+            "referenced_column": "shipper_id"
+          }
+        ]
+      },
+      "public.products": {
+        "schema": "public",
+        "name": "products",
+        "type": "BASE TABLE",
+        "estimated_rows": 77,
+        "columns": [
+          {
+            "name": "product_id",
+            "type": "smallint",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "product_name",
+            "type": "character varying",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "supplier_id",
+            "type": "smallint",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": true,
+            "role_hints": null
+          },
+          {
+            "name": "category_id",
+            "type": "smallint",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": true,
+            "role_hints": null
+          },
+          {
+            "name": "quantity_per_unit",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "unit_price",
+            "type": "real",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "units_in_stock",
+            "type": "smallint",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "units_on_order",
+            "type": "smallint",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "reorder_level",
+            "type": "smallint",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "discontinued",
+            "type": "integer",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          }
+        ],
+        "primary_keys": [
+          "product_id"
+        ],
+        "foreign_keys": [
+          {
+            "column": "category_id",
+            "referenced_table": "categories",
+            "referenced_schema": "public",
+            "referenced_column": "category_id"
+          },
+          {
+            "column": "supplier_id",
+            "referenced_table": "suppliers",
+            "referenced_schema": "public",
+            "referenced_column": "supplier_id"
+          }
+        ]
+      },
+      "public.region": {
+        "schema": "public",
+        "name": "region",
+        "type": "BASE TABLE",
+        "estimated_rows": 4,
+        "columns": [
+          {
+            "name": "region_id",
+            "type": "smallint",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "region_description",
+            "type": "character varying",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          }
+        ],
+        "primary_keys": [
+          "region_id"
+        ],
+        "foreign_keys": []
+      },
+      "public.shippers": {
+        "schema": "public",
+        "name": "shippers",
+        "type": "BASE TABLE",
+        "estimated_rows": 6,
+        "columns": [
+          {
+            "name": "shipper_id",
+            "type": "smallint",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "company_name",
+            "type": "character varying",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "phone",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          }
+        ],
+        "primary_keys": [
+          "shipper_id"
+        ],
+        "foreign_keys": []
+      },
+      "public.suppliers": {
+        "schema": "public",
+        "name": "suppliers",
+        "type": "BASE TABLE",
+        "estimated_rows": 29,
+        "columns": [
+          {
+            "name": "supplier_id",
+            "type": "smallint",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "company_name",
+            "type": "character varying",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "contact_name",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "contact_title",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "address",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "city",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "region",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "postal_code",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "country",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "phone",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "fax",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "homepage",
+            "type": "text",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          }
+        ],
+        "primary_keys": [
+          "supplier_id"
+        ],
+        "foreign_keys": []
+      },
+      "public.territories": {
+        "schema": "public",
+        "name": "territories",
+        "type": "BASE TABLE",
+        "estimated_rows": 53,
+        "columns": [
+          {
+            "name": "territory_id",
+            "type": "character varying",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "territory_description",
+            "type": "character varying",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "region_id",
+            "type": "smallint",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": true,
+            "role_hints": null
+          }
+        ],
+        "primary_keys": [
+          "territory_id"
+        ],
+        "foreign_keys": [
+          {
+            "column": "region_id",
+            "referenced_table": "region",
+            "referenced_schema": "public",
+            "referenced_column": "region_id"
+          }
+        ]
+      },
+      "public.us_states": {
+        "schema": "public",
+        "name": "us_states",
+        "type": "BASE TABLE",
+        "estimated_rows": 51,
+        "columns": [
+          {
+            "name": "state_id",
+            "type": "smallint",
+            "nullable": false,
+            "default": null,
+            "is_primary_key": true,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "state_name",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "state_abbr",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          },
+          {
+            "name": "state_region",
+            "type": "character varying",
+            "nullable": true,
+            "default": null,
+            "is_primary_key": false,
+            "is_foreign_key": false,
+            "role_hints": null
+          }
+        ],
+        "primary_keys": [
+          "state_id"
+        ],
+        "foreign_keys": []
+      }
+    }
+  },
+  "ground_truth_catalog": {
+    "source": "information_schema",
+    "timestamp": "2026-02-16T13:23:04.433841Z",
+    "tables": {
+      "public.categories": {
+        "schema": "public",
+        "name": "categories",
+        "type": "BASE TABLE",
+        "columns": [
+          {
+            "name": "category_id",
+            "type": "smallint",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": false
+          },
+          {
+            "name": "category_name",
+            "type": "character varying",
+            "nullable": false,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "description",
+            "type": "text",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "picture",
+            "type": "bytea",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          }
+        ],
+        "primary_keys": [
+          "category_id"
+        ],
+        "foreign_keys": []
+      },
+      "public.customer_customer_demo": {
+        "schema": "public",
+        "name": "customer_customer_demo",
+        "type": "BASE TABLE",
+        "columns": [
+          {
+            "name": "customer_id",
+            "type": "character varying",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": true
+          },
+          {
+            "name": "customer_type_id",
+            "type": "character varying",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": true
+          }
+        ],
+        "primary_keys": [
+          "customer_id",
+          "customer_type_id"
+        ],
+        "foreign_keys": [
+          {
+            "column": "customer_id",
+            "foreign_table": "public.customers",
+            "foreign_column": "customer_id"
+          },
+          {
+            "column": "customer_type_id",
+            "foreign_table": "public.customer_demographics",
+            "foreign_column": "customer_type_id"
+          }
+        ]
+      },
+      "public.customer_demographics": {
+        "schema": "public",
+        "name": "customer_demographics",
+        "type": "BASE TABLE",
+        "columns": [
+          {
+            "name": "customer_type_id",
+            "type": "character varying",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": false
+          },
+          {
+            "name": "customer_desc",
+            "type": "text",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          }
+        ],
+        "primary_keys": [
+          "customer_type_id"
+        ],
+        "foreign_keys": []
+      },
+      "public.customers": {
+        "schema": "public",
+        "name": "customers",
+        "type": "BASE TABLE",
+        "columns": [
+          {
+            "name": "customer_id",
+            "type": "character varying",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": false
+          },
+          {
+            "name": "company_name",
+            "type": "character varying",
+            "nullable": false,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "contact_name",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "contact_title",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "address",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "city",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "region",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "postal_code",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "country",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "phone",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "fax",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          }
+        ],
+        "primary_keys": [
+          "customer_id"
+        ],
+        "foreign_keys": []
+      },
+      "public.employee_territories": {
+        "schema": "public",
+        "name": "employee_territories",
+        "type": "BASE TABLE",
+        "columns": [
+          {
+            "name": "employee_id",
+            "type": "smallint",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": true
+          },
+          {
+            "name": "territory_id",
+            "type": "character varying",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": true
+          }
+        ],
+        "primary_keys": [
+          "employee_id",
+          "territory_id"
+        ],
+        "foreign_keys": [
+          {
+            "column": "employee_id",
+            "foreign_table": "public.employees",
+            "foreign_column": "employee_id"
+          },
+          {
+            "column": "territory_id",
+            "foreign_table": "public.territories",
+            "foreign_column": "territory_id"
+          }
+        ]
+      },
+      "public.employees": {
+        "schema": "public",
+        "name": "employees",
+        "type": "BASE TABLE",
+        "columns": [
+          {
+            "name": "employee_id",
+            "type": "smallint",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": false
+          },
+          {
+            "name": "last_name",
+            "type": "character varying",
+            "nullable": false,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "first_name",
+            "type": "character varying",
+            "nullable": false,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "title",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "title_of_courtesy",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "birth_date",
+            "type": "date",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "hire_date",
+            "type": "date",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "address",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "city",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "region",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "postal_code",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "country",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "home_phone",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "extension",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "photo",
+            "type": "bytea",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "notes",
+            "type": "text",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "reports_to",
+            "type": "smallint",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": true
+          },
+          {
+            "name": "photo_path",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          }
+        ],
+        "primary_keys": [
+          "employee_id"
+        ],
+        "foreign_keys": [
+          {
+            "column": "reports_to",
+            "foreign_table": "public.employees",
+            "foreign_column": "employee_id"
+          }
+        ]
+      },
+      "public.order_details": {
+        "schema": "public",
+        "name": "order_details",
+        "type": "BASE TABLE",
+        "columns": [
+          {
+            "name": "order_id",
+            "type": "smallint",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": true
+          },
+          {
+            "name": "product_id",
+            "type": "smallint",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": true
+          },
+          {
+            "name": "unit_price",
+            "type": "real",
+            "nullable": false,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "quantity",
+            "type": "smallint",
+            "nullable": false,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "discount",
+            "type": "real",
+            "nullable": false,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          }
+        ],
+        "primary_keys": [
+          "order_id",
+          "product_id"
+        ],
+        "foreign_keys": [
+          {
+            "column": "order_id",
+            "foreign_table": "public.orders",
+            "foreign_column": "order_id"
+          },
+          {
+            "column": "product_id",
+            "foreign_table": "public.products",
+            "foreign_column": "product_id"
+          }
+        ]
+      },
+      "public.orders": {
+        "schema": "public",
+        "name": "orders",
+        "type": "BASE TABLE",
+        "columns": [
+          {
+            "name": "order_id",
+            "type": "smallint",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": false
+          },
+          {
+            "name": "customer_id",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": true
+          },
+          {
+            "name": "employee_id",
+            "type": "smallint",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": true
+          },
+          {
+            "name": "order_date",
+            "type": "date",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "required_date",
+            "type": "date",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "shipped_date",
+            "type": "date",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "ship_via",
+            "type": "smallint",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": true
+          },
+          {
+            "name": "freight",
+            "type": "real",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "ship_name",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "ship_address",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "ship_city",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "ship_region",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "ship_postal_code",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "ship_country",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          }
+        ],
+        "primary_keys": [
+          "order_id"
+        ],
+        "foreign_keys": [
+          {
+            "column": "customer_id",
+            "foreign_table": "public.customers",
+            "foreign_column": "customer_id"
+          },
+          {
+            "column": "employee_id",
+            "foreign_table": "public.employees",
+            "foreign_column": "employee_id"
+          },
+          {
+            "column": "ship_via",
+            "foreign_table": "public.shippers",
+            "foreign_column": "shipper_id"
+          }
+        ]
+      },
+      "public.products": {
+        "schema": "public",
+        "name": "products",
+        "type": "BASE TABLE",
+        "columns": [
+          {
+            "name": "product_id",
+            "type": "smallint",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": false
+          },
+          {
+            "name": "product_name",
+            "type": "character varying",
+            "nullable": false,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "supplier_id",
+            "type": "smallint",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": true
+          },
+          {
+            "name": "category_id",
+            "type": "smallint",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": true
+          },
+          {
+            "name": "quantity_per_unit",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "unit_price",
+            "type": "real",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "units_in_stock",
+            "type": "smallint",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "units_on_order",
+            "type": "smallint",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "reorder_level",
+            "type": "smallint",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "discontinued",
+            "type": "integer",
+            "nullable": false,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          }
+        ],
+        "primary_keys": [
+          "product_id"
+        ],
+        "foreign_keys": [
+          {
+            "column": "category_id",
+            "foreign_table": "public.categories",
+            "foreign_column": "category_id"
+          },
+          {
+            "column": "supplier_id",
+            "foreign_table": "public.suppliers",
+            "foreign_column": "supplier_id"
+          }
+        ]
+      },
+      "public.region": {
+        "schema": "public",
+        "name": "region",
+        "type": "BASE TABLE",
+        "columns": [
+          {
+            "name": "region_id",
+            "type": "smallint",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": false
+          },
+          {
+            "name": "region_description",
+            "type": "character varying",
+            "nullable": false,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          }
+        ],
+        "primary_keys": [
+          "region_id"
+        ],
+        "foreign_keys": []
+      },
+      "public.shippers": {
+        "schema": "public",
+        "name": "shippers",
+        "type": "BASE TABLE",
+        "columns": [
+          {
+            "name": "shipper_id",
+            "type": "smallint",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": false
+          },
+          {
+            "name": "company_name",
+            "type": "character varying",
+            "nullable": false,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "phone",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          }
+        ],
+        "primary_keys": [
+          "shipper_id"
+        ],
+        "foreign_keys": []
+      },
+      "public.suppliers": {
+        "schema": "public",
+        "name": "suppliers",
+        "type": "BASE TABLE",
+        "columns": [
+          {
+            "name": "supplier_id",
+            "type": "smallint",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": false
+          },
+          {
+            "name": "company_name",
+            "type": "character varying",
+            "nullable": false,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "contact_name",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "contact_title",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "address",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "city",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "region",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "postal_code",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "country",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "phone",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "fax",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "homepage",
+            "type": "text",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          }
+        ],
+        "primary_keys": [
+          "supplier_id"
+        ],
+        "foreign_keys": []
+      },
+      "public.territories": {
+        "schema": "public",
+        "name": "territories",
+        "type": "BASE TABLE",
+        "columns": [
+          {
+            "name": "territory_id",
+            "type": "character varying",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": false
+          },
+          {
+            "name": "territory_description",
+            "type": "character varying",
+            "nullable": false,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "region_id",
+            "type": "smallint",
+            "nullable": false,
+            "is_primary_key": false,
+            "is_foreign_key": true
+          }
+        ],
+        "primary_keys": [
+          "territory_id"
+        ],
+        "foreign_keys": [
+          {
+            "column": "region_id",
+            "foreign_table": "public.region",
+            "foreign_column": "region_id"
+          }
+        ]
+      },
+      "public.us_states": {
+        "schema": "public",
+        "name": "us_states",
+        "type": "BASE TABLE",
+        "columns": [
+          {
+            "name": "state_id",
+            "type": "smallint",
+            "nullable": false,
+            "is_primary_key": true,
+            "is_foreign_key": false
+          },
+          {
+            "name": "state_name",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "state_abbr",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          },
+          {
+            "name": "state_region",
+            "type": "character varying",
+            "nullable": true,
+            "is_primary_key": false,
+            "is_foreign_key": false
+          }
+        ],
+        "primary_keys": [
+          "state_id"
+        ],
+        "foreign_keys": []
+      }
+    }
+  },
+  "coverage": {
+    "discovered_tables": 14,
+    "ground_truth_tables": 14,
+    "table_coverage_pct": 100.0,
+    "discovered_columns": 92,
+    "ground_truth_columns": 92,
+    "column_coverage_pct": 100.0,
+    "discovered_fk_columns": 13,
+    "ground_truth_fk_columns": 13,
+    "fk_coverage_pct": 100.0,
+    "missing_tables": [],
+    "missing_columns_count": 0,
+    "missing_fk_columns_count": 0
+  }
+}

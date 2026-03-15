@@ -1,0 +1,470 @@
+{
+  "instructions": {
+    "labels": [
+      "CORRECT",
+      "PARTIAL",
+      "INCORRECT"
+    ],
+    "reason_codes": [
+      "MISSING_DISCOUNT_FACTOR",
+      "COUNT_NOT_DISTINCT",
+      "WRONG_AGGREGATION_GRAIN",
+      "MISSING_REQUIRED_TABLE",
+      "JOIN_PATH_VIOLATION",
+      "MISSING_TIME_GROUPING",
+      "TOP_K_NOT_APPLIED"
+    ]
+  },
+  "per_query": [
+    {
+      "query_id": "NW11",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW12",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW13",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": true,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW14",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW15",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": true,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW16",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW17",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": true,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW18",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW19",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW20",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW21",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": true,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW22",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW23",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW24",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW25",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": true,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW26",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW27",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW28",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW29",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW30",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": true,
+        "same_cols_set_equal": true,
+        "positional_set_equal": true,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW31",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW32",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": true,
+        "same_cols_set_equal": true,
+        "positional_set_equal": true,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW33",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW34",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW35",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW36",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW37",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW38",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": true,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW39",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW40",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": true,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    }
+  ]
+}

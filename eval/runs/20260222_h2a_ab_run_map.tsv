@@ -1,0 +1,5 @@
+dataset	mode	run_name	run_id
+eval/datasets/northwind_queries.jsonl	on	h2a_baseline_scout_on	20260222_213930_h2a_baseline_scout_on
+eval/datasets/northwind_queries.jsonl	off	h2a_baseline_scout_off	20260222_214019_h2a_baseline_scout_off
+eval/datasets/northwind_queries_tuned_v5.jsonl	on	h2a_tunedv5_scout_on	20260222_214101_h2a_tunedv5_scout_on
+eval/datasets/northwind_queries_tuned_v5.jsonl	off	h2a_tunedv5_scout_off	20260222_214145_h2a_tunedv5_scout_off

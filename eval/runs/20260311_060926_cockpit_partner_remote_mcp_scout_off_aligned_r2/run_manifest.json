@@ -1,0 +1,10 @@
+{
+  "run_id": "20260311_060926_cockpit_partner_remote_mcp_scout_off_aligned_r2",
+  "run_name": "cockpit_partner_remote_mcp_scout_off_aligned_r2",
+  "mode_label": "scout_off_aligned",
+  "dataset_path": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/datasets/cockpit_partner_queries_v1.jsonl",
+  "labels_path": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/datasets/cockpit_partner_table_labels_v1.json",
+  "mcp_url": "http://192.168.1.35:8000",
+  "limit": 25,
+  "generated_at_utc": "2026-03-11T06:09:28.601825Z"
+}

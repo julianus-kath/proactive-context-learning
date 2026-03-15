@@ -1,0 +1,470 @@
+{
+  "generated_at_utc": "2026-03-10T11:19:41.211030Z",
+  "left": {
+    "run_dir": null,
+    "run_id": "20260310_111456_cockpit_partner_remote_mcp_scout_on_r1",
+    "mode_label": "scout_on_remote"
+  },
+  "right": {
+    "run_dir": null,
+    "run_id": "20260310_111756_cockpit_partner_remote_mcp_scout_on_r2",
+    "mode_label": "scout_on_remote"
+  },
+  "aggregate": {
+    "mean_recall_at_1": {
+      "left": 0.0,
+      "right": 0.0,
+      "delta_left_minus_right": 0.0
+    },
+    "required_tables_ok_count_at_1": {
+      "left": 0,
+      "right": 0,
+      "delta_left_minus_right": 0.0
+    },
+    "required_tables_ok_rate_at_1": {
+      "left": 0.0,
+      "right": 0.0,
+      "delta_left_minus_right": 0.0
+    },
+    "any_required_hit_rate_at_1": {
+      "left": 0.0,
+      "right": 0.0,
+      "delta_left_minus_right": 0.0
+    },
+    "mean_recall_at_3": {
+      "left": 0.1111,
+      "right": 0.1111,
+      "delta_left_minus_right": 0.0
+    },
+    "required_tables_ok_count_at_3": {
+      "left": 1,
+      "right": 1,
+      "delta_left_minus_right": 0.0
+    },
+    "required_tables_ok_rate_at_3": {
+      "left": 0.1111,
+      "right": 0.1111,
+      "delta_left_minus_right": 0.0
+    },
+    "any_required_hit_rate_at_3": {
+      "left": 0.1111,
+      "right": 0.1111,
+      "delta_left_minus_right": 0.0
+    },
+    "mean_recall_at_5": {
+      "left": 0.1111,
+      "right": 0.1111,
+      "delta_left_minus_right": 0.0
+    },
+    "required_tables_ok_count_at_5": {
+      "left": 1,
+      "right": 1,
+      "delta_left_minus_right": 0.0
+    },
+    "required_tables_ok_rate_at_5": {
+      "left": 0.1111,
+      "right": 0.1111,
+      "delta_left_minus_right": 0.0
+    },
+    "any_required_hit_rate_at_5": {
+      "left": 0.1111,
+      "right": 0.1111,
+      "delta_left_minus_right": 0.0
+    },
+    "mean_recall_at_10": {
+      "left": 0.2222,
+      "right": 0.2222,
+      "delta_left_minus_right": 0.0
+    },
+    "required_tables_ok_count_at_10": {
+      "left": 2,
+      "right": 2,
+      "delta_left_minus_right": 0.0
+    },
+    "required_tables_ok_rate_at_10": {
+      "left": 0.2222,
+      "right": 0.2222,
+      "delta_left_minus_right": 0.0
+    },
+    "any_required_hit_rate_at_10": {
+      "left": 0.2222,
+      "right": 0.2222,
+      "delta_left_minus_right": 0.0
+    },
+    "mean_recall_at_25": {
+      "left": 0.2222,
+      "right": 0.2222,
+      "delta_left_minus_right": 0.0
+    },
+    "required_tables_ok_count_at_25": {
+      "left": 2,
+      "right": 2,
+      "delta_left_minus_right": 0.0
+    },
+    "required_tables_ok_rate_at_25": {
+      "left": 0.2222,
+      "right": 0.2222,
+      "delta_left_minus_right": 0.0
+    },
+    "any_required_hit_rate_at_25": {
+      "left": 0.2222,
+      "right": 0.2222,
+      "delta_left_minus_right": 0.0
+    },
+    "mrr": {
+      "left": 0.0509,
+      "right": 0.0509,
+      "delta_left_minus_right": 0.0
+    }
+  },
+  "per_query": [
+    {
+      "query_id": "CP9",
+      "left_recall_at_5": 0.0,
+      "right_recall_at_5": 0.0,
+      "delta_recall_at_5": 0.0,
+      "left_recall_at_10": 0.0,
+      "right_recall_at_10": 0.0,
+      "delta_recall_at_10": 0.0,
+      "left_required_ok_at_10": false,
+      "right_required_ok_at_10": false,
+      "left_top10": [
+        "khkppsrueckmeldungen",
+        "khkppsbdestempelbackup",
+        "khkppsbdeap",
+        "tkhkppsmitarbeiterbuchungen",
+        "khkppsfabelegepositionen",
+        "khkppsfabelege",
+        "khkppsfabelegeagpositionen",
+        "khkppsffbeistellpos",
+        "khkppsbdestempel",
+        "osemzizsallohnartenerfassung"
+      ],
+      "right_top10": [
+        "khkppsrueckmeldungen",
+        "khkppsbdestempelbackup",
+        "khkppsbdeap",
+        "tkhkppsmitarbeiterbuchungen",
+        "khkppsfabelegepositionen",
+        "khkppsfabelege",
+        "khkppsfabelegeagpositionen",
+        "khkppsffbeistellpos",
+        "khkppsbdestempel",
+        "osemzizsallohnartenerfassung"
+      ],
+      "required_tables": [
+        "osemzizzebuchungen",
+        "khkppsstempel",
+        "khkppsbelege",
+        "khkpppsbelegeagpositionen"
+      ]
+    },
+    {
+      "query_id": "CP8",
+      "left_recall_at_5": 0.0,
+      "right_recall_at_5": 0.0,
+      "delta_recall_at_5": 0.0,
+      "left_recall_at_10": 0.0,
+      "right_recall_at_10": 0.0,
+      "delta_recall_at_10": 0.0,
+      "left_required_ok_at_10": false,
+      "right_required_ok_at_10": false,
+      "left_top10": [
+        "khklagerplatzbuchungen",
+        "khkppsrueckmeldungen",
+        "khkppsbdestempelbackup",
+        "osemzizsalquellensteuertarif",
+        "khkbuchungsjournal",
+        "khkartikelbewertungmekhistorie",
+        "khkvkbelegepositionen",
+        "khkppsbdeap",
+        "khkppsbdemafm",
+        "khkppsbdemafmart"
+      ],
+      "right_top10": [
+        "khklagerplatzbuchungen",
+        "khkppsrueckmeldungen",
+        "khkppsbdestempelbackup",
+        "osemzizsalquellensteuertarif",
+        "khkbuchungsjournal",
+        "khkartikelbewertungmekhistorie",
+        "khkvkbelegepositionen",
+        "khkppsbdeap",
+        "khkppsbdemafm",
+        "khkppsbdemafmart"
+      ],
+      "required_tables": [
+        "khkppsbelege",
+        "khkpppsbelegeagpositionen",
+        "khkppsstempel"
+      ]
+    },
+    {
+      "query_id": "CP7",
+      "left_recall_at_5": 0.0,
+      "right_recall_at_5": 0.0,
+      "delta_recall_at_5": 0.0,
+      "left_recall_at_10": 1.0,
+      "right_recall_at_10": 1.0,
+      "delta_recall_at_10": 0.0,
+      "left_required_ok_at_10": true,
+      "right_required_ok_at_10": true,
+      "left_top10": [
+        "khkppsrueckmeldungen",
+        "khkppsbdestempelbackup",
+        "khkartikelbewertungmekhistorie",
+        "khkvkbelegepositionen",
+        "khkppsbdeap",
+        "khkppsbdemafm",
+        "khkvkbelegezkd",
+        "khkbuchungserfassung",
+        "khkdruckbelegekennzeichen",
+        "khkppsfabelegepositionen"
+      ],
+      "right_top10": [
+        "khkppsrueckmeldungen",
+        "khkppsbdestempelbackup",
+        "khkartikelbewertungmekhistorie",
+        "khkvkbelegepositionen",
+        "khkppsbdeap",
+        "khkppsbdemafm",
+        "khkvkbelegezkd",
+        "khkbuchungserfassung",
+        "khkdruckbelegekennzeichen",
+        "khkppsfabelegepositionen"
+      ],
+      "required_tables": [
+        "khkbuchungserfassung"
+      ]
+    },
+    {
+      "query_id": "CP6",
+      "left_recall_at_5": 0.0,
+      "right_recall_at_5": 0.0,
+      "delta_recall_at_5": 0.0,
+      "left_recall_at_10": 0.0,
+      "right_recall_at_10": 0.0,
+      "delta_recall_at_10": 0.0,
+      "left_required_ok_at_10": false,
+      "right_required_ok_at_10": false,
+      "left_top10": [
+        "khkppsfabelegepositionen",
+        "khkppsfabelegeagpositionen",
+        "khkppsffmatbeigestellt",
+        "khkppsffmaterial",
+        "khkppsressourcenpositionen",
+        "khkdispoartikel",
+        "tkhkprintpositionartikelvk",
+        "tkhkppsprintfapos",
+        "tkhkppsressourcenpositionen",
+        "khkppsgemeinkostensaetze"
+      ],
+      "right_top10": [
+        "khkppsfabelegepositionen",
+        "khkppsfabelegeagpositionen",
+        "khkppsffmatbeigestellt",
+        "khkppsffmaterial",
+        "khkppsressourcenpositionen",
+        "khkdispoartikel",
+        "tkhkprintpositionartikelvk",
+        "tkhkppsprintfapos",
+        "tkhkppsressourcenpositionen",
+        "khkppsgemeinkostensaetze"
+      ],
+      "required_tables": [
+        "khkekbelege",
+        "khkekbelegepositionen",
+        "khkekbelegepositionenlager"
+      ]
+    },
+    {
+      "query_id": "CP5",
+      "left_recall_at_5": 0.0,
+      "right_recall_at_5": 0.0,
+      "delta_recall_at_5": 0.0,
+      "left_recall_at_10": 0.0,
+      "right_recall_at_10": 0.0,
+      "delta_recall_at_10": 0.0,
+      "left_required_ok_at_10": false,
+      "right_required_ok_at_10": false,
+      "left_top10": [
+        "khkartikelvarianten",
+        "osemzizsallohnartenerfassung",
+        "osemzizsalpersonalstammabrechnungsparameter",
+        "khkartikelgruppen",
+        "khkmitarbeiter",
+        "khkekbelegarten"
+      ],
+      "right_top10": [
+        "khkartikelvarianten",
+        "osemzizsallohnartenerfassung",
+        "osemzizsalpersonalstammabrechnungsparameter",
+        "khkartikelgruppen",
+        "khkmitarbeiter",
+        "khkekbelegarten"
+      ],
+      "required_tables": [
+        "osemzizzebuchungen",
+        "khkppsstempel"
+      ]
+    },
+    {
+      "query_id": "CP4",
+      "left_recall_at_5": 1.0,
+      "right_recall_at_5": 1.0,
+      "delta_recall_at_5": 0.0,
+      "left_recall_at_10": 1.0,
+      "right_recall_at_10": 1.0,
+      "delta_recall_at_10": 0.0,
+      "left_required_ok_at_10": true,
+      "right_required_ok_at_10": true,
+      "left_top10": [
+        "khkppsrueckmeldungen",
+        "khkvkbelegepositionen",
+        "osemzizzebuchungen",
+        "khkvkbelege",
+        "osemzizzeabrechnungendetailtarif",
+        "khkppsfabelegepositionen",
+        "khkstatvk",
+        "osemzizsalabrechnungendetail",
+        "khkppsfabelegeagpositionen",
+        "khkartikel"
+      ],
+      "right_top10": [
+        "khkppsrueckmeldungen",
+        "khkvkbelegepositionen",
+        "osemzizzebuchungen",
+        "khkvkbelege",
+        "osemzizzeabrechnungendetailtarif",
+        "khkppsfabelegepositionen",
+        "khkstatvk",
+        "osemzizsalabrechnungendetail",
+        "khkppsfabelegeagpositionen",
+        "khkartikel"
+      ],
+      "required_tables": [
+        "osemzizzebuchungen"
+      ]
+    },
+    {
+      "query_id": "CP3",
+      "left_recall_at_5": 0.0,
+      "right_recall_at_5": 0.0,
+      "delta_recall_at_5": 0.0,
+      "left_recall_at_10": 0.0,
+      "right_recall_at_10": 0.0,
+      "delta_recall_at_10": 0.0,
+      "left_required_ok_at_10": false,
+      "right_required_ok_at_10": false,
+      "left_top10": [
+        "osemzizsalquellensteuertarif",
+        "osemzizzebuchungen",
+        "khkvkbelege",
+        "osemzizzeabrechnungendetailtag",
+        "osemzizzeabrechnungendetailtarif",
+        "khkppsfabelegepositionen",
+        "khkstatvk",
+        "osemzizsalabrechnungendetail",
+        "khkppsfabelege",
+        "khkppsfabelegeagpositionen"
+      ],
+      "right_top10": [
+        "osemzizsalquellensteuertarif",
+        "osemzizzebuchungen",
+        "khkvkbelege",
+        "osemzizzeabrechnungendetailtag",
+        "osemzizzeabrechnungendetailtarif",
+        "khkppsfabelegepositionen",
+        "khkstatvk",
+        "osemzizsalabrechnungendetail",
+        "khkppsfabelege",
+        "khkppsfabelegeagpositionen"
+      ],
+      "required_tables": [
+        "khkppsbelege",
+        "khkpppsbelegeagpositionen",
+        "khkppsstempel"
+      ]
+    },
+    {
+      "query_id": "CP2",
+      "left_recall_at_5": 0.0,
+      "right_recall_at_5": 0.0,
+      "delta_recall_at_5": 0.0,
+      "left_recall_at_10": 0.0,
+      "right_recall_at_10": 0.0,
+      "delta_recall_at_10": 0.0,
+      "left_required_ok_at_10": false,
+      "right_required_ok_at_10": false,
+      "left_top10": [
+        "khklagerplatzbuchungen",
+        "khkbuchungsjournal",
+        "khkkostenjournal",
+        "khkbuchungserfassung",
+        "khkkostenumsatz",
+        "khkkontenumsatz",
+        "khkbuchungserfassunga",
+        "khkppsffbestellmengen",
+        "osemzizsalabrechnungenferien",
+        "tkhkbuchungsnachweis"
+      ],
+      "right_top10": [
+        "khklagerplatzbuchungen",
+        "khkbuchungsjournal",
+        "khkkostenjournal",
+        "khkbuchungserfassung",
+        "khkkostenumsatz",
+        "khkkontenumsatz",
+        "khkbuchungserfassunga",
+        "khkppsffbestellmengen",
+        "osemzizsalabrechnungenferien",
+        "tkhkbuchungsnachweis"
+      ],
+      "required_tables": [
+        "khkvkbelege",
+        "khkbelegepositionen"
+      ]
+    },
+    {
+      "query_id": "CP1",
+      "left_recall_at_5": 0.0,
+      "right_recall_at_5": 0.0,
+      "delta_recall_at_5": 0.0,
+      "left_recall_at_10": 0.0,
+      "right_recall_at_10": 0.0,
+      "delta_recall_at_10": 0.0,
+      "left_required_ok_at_10": false,
+      "right_required_ok_at_10": false,
+      "left_top10": [
+        "khklagerplatzbuchungen",
+        "khkppsfabelegepositionen",
+        "khkppsfabelegeagpositionen",
+        "khkppsffmatbeigestellt",
+        "khkppsffmaterial",
+        "khkppsressourcenpositionen",
+        "khkdispoartikel",
+        "tkhkprintpositionartikelvk",
+        "tkhkppsprintfapos",
+        "tkhkppsressourcenpositionen"
+      ],
+      "right_top10": [
+        "khklagerplatzbuchungen",
+        "khkppsfabelegepositionen",
+        "khkppsfabelegeagpositionen",
+        "khkppsffmatbeigestellt",
+        "khkppsffmaterial",
+        "khkppsressourcenpositionen",
+        "khkdispoartikel",
+        "tkhkprintpositionartikelvk",
+        "tkhkppsprintfapos",
+        "tkhkppsressourcenpositionen"
+      ],
+      "required_tables": [
+        "khkartikel",
+        "khkartikellieferanten",
+        "khkartikelvarianten"
+      ]
+    }
+  ],
+  "query_count_compared": 9
+}

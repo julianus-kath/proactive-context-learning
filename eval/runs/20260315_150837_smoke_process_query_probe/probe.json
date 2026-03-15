@@ -1,0 +1,141 @@
+{
+  "generated_at_utc": "2026-03-15T15:08:37.827772Z",
+  "required_stage_traces": [
+    "discovery",
+    "ranked"
+  ],
+  "short_timeout_s": 1.0,
+  "medium_timeout_s": 2.0,
+  "sample_query": "H2b feasibility ping: list one table relevant to this request.",
+  "endpoints": [
+    {
+      "endpoint": "http://localhost:5001",
+      "health_attempts": [
+        {
+          "success": false,
+          "status_code": null,
+          "elapsed_ms": 4,
+          "body_preview": null,
+          "error": "[Errno 61] Connection refused",
+          "auth_variant": "none"
+        },
+        {
+          "success": false,
+          "status_code": null,
+          "elapsed_ms": 0,
+          "body_preview": null,
+          "error": "[Errno 61] Connection refused",
+          "auth_variant": "payload_api_key"
+        },
+        {
+          "success": false,
+          "status_code": null,
+          "elapsed_ms": 0,
+          "body_preview": null,
+          "error": "[Errno 61] Connection refused",
+          "auth_variant": "x_api_key"
+        },
+        {
+          "success": false,
+          "status_code": null,
+          "elapsed_ms": 0,
+          "body_preview": null,
+          "error": "[Errno 61] Connection refused",
+          "auth_variant": "bearer"
+        }
+      ],
+      "process_query_attempts": [
+        {
+          "success": false,
+          "status_code": null,
+          "elapsed_ms": 0,
+          "response": null,
+          "error": "[Errno 61] Connection refused",
+          "auth_variant": "none",
+          "timeout_s": 1.0
+        },
+        {
+          "success": false,
+          "status_code": null,
+          "elapsed_ms": 0,
+          "response": null,
+          "error": "[Errno 61] Connection refused",
+          "auth_variant": "none",
+          "timeout_s": 2.0
+        },
+        {
+          "success": false,
+          "status_code": null,
+          "elapsed_ms": 0,
+          "response": null,
+          "error": "[Errno 61] Connection refused",
+          "auth_variant": "payload_api_key",
+          "timeout_s": 1.0
+        },
+        {
+          "success": false,
+          "status_code": null,
+          "elapsed_ms": 0,
+          "response": null,
+          "error": "[Errno 61] Connection refused",
+          "auth_variant": "payload_api_key",
+          "timeout_s": 2.0
+        },
+        {
+          "success": false,
+          "status_code": null,
+          "elapsed_ms": 0,
+          "response": null,
+          "error": "[Errno 61] Connection refused",
+          "auth_variant": "x_api_key",
+          "timeout_s": 1.0
+        },
+        {
+          "success": false,
+          "status_code": null,
+          "elapsed_ms": 0,
+          "response": null,
+          "error": "[Errno 61] Connection refused",
+          "auth_variant": "x_api_key",
+          "timeout_s": 2.0
+        },
+        {
+          "success": false,
+          "status_code": null,
+          "elapsed_ms": 0,
+          "response": null,
+          "error": "[Errno 61] Connection refused",
+          "auth_variant": "bearer",
+          "timeout_s": 1.0
+        },
+        {
+          "success": false,
+          "status_code": null,
+          "elapsed_ms": 0,
+          "response": null,
+          "error": "[Errno 61] Connection refused",
+          "auth_variant": "bearer",
+          "timeout_s": 2.0
+        }
+      ],
+      "health_success_count": 0,
+      "process_query_success_count": 0,
+      "trace_stage_presence": null,
+      "trace_observed_paths": null,
+      "raw_response_keys": null
+    }
+  ],
+  "verdict": "blocked",
+  "blocked_reasons": [
+    "No reachable `/process_query` endpoint with successful response."
+  ],
+  "best_trace_stage_presence": {
+    "discovery": false,
+    "ranked": false,
+    "final_sql": false
+  },
+  "missing_required_stages": [
+    "discovery",
+    "ranked"
+  ]
+}

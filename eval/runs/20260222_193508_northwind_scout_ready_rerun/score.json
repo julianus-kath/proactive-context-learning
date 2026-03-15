@@ -1,0 +1,79 @@
+{
+  "run_id": "20260222_193508_northwind_scout_ready_rerun",
+  "run_name": "northwind_scout_ready_rerun",
+  "timestamp": "2026-02-22T18:35:08.190053Z",
+  "metrics": {
+    "total_queries": 10,
+    "successful_queries": 10,
+    "failed_queries": 0,
+    "success_rate": "100.0%",
+    "sql_executed_rate": "100.0%",
+    "non_empty_results_rate": "100.0%",
+    "entity_metric_join_correct_count": 0,
+    "entity_metric_join_correct_rate": "0.0%",
+    "avg_latency_ms": 4323.6
+  },
+  "failure_analysis": {},
+  "per_query_status": {
+    "NW1": {
+      "status": "success",
+      "latency_ms": 4440,
+      "row_count": 5,
+      "error": null
+    },
+    "NW2": {
+      "status": "success",
+      "latency_ms": 8248,
+      "row_count": 8,
+      "error": null
+    },
+    "NW3": {
+      "status": "success",
+      "latency_ms": 4735,
+      "row_count": 28,
+      "error": null
+    },
+    "NW4": {
+      "status": "success",
+      "latency_ms": 3566,
+      "row_count": 3,
+      "error": null
+    },
+    "NW5": {
+      "status": "success",
+      "latency_ms": 3546,
+      "row_count": 9,
+      "error": null
+    },
+    "NW6": {
+      "status": "success",
+      "latency_ms": 2713,
+      "row_count": 5,
+      "error": null
+    },
+    "NW7": {
+      "status": "success",
+      "latency_ms": 3740,
+      "row_count": 100,
+      "error": null
+    },
+    "NW8": {
+      "status": "success",
+      "latency_ms": 5270,
+      "row_count": 21,
+      "error": null
+    },
+    "NW9": {
+      "status": "success",
+      "latency_ms": 2498,
+      "row_count": 1,
+      "error": null
+    },
+    "NW10": {
+      "status": "success",
+      "latency_ms": 4480,
+      "row_count": 23,
+      "error": null
+    }
+  }
+}

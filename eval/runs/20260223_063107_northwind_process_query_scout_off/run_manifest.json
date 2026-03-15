@@ -1,0 +1,88 @@
+{
+  "run_id": "20260223_063107_northwind_process_query_scout_off",
+  "run_name": "northwind_process_query_scout_off",
+  "mode_label": "scout_off",
+  "generated_at_utc": "2026-02-23T06:31:47.226006Z",
+  "dataset_path": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/datasets/northwind_queries.jsonl",
+  "reference_sql_path": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/datasets/northwind_queries.reference_sql.json",
+  "expert_sheet_path": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/datasets/northwind_expert_review_sheet.md",
+  "target_url": "http://localhost:5001",
+  "mcp_url": "http://localhost:8000",
+  "request_timeout_s": 180.0,
+  "request_concurrency": 1,
+  "evaluate_expert": true,
+  "eval_concurrency": 4,
+  "mcp_query_limit": 1000,
+  "mcp_health_start": {
+    "url": "http://localhost:8000",
+    "reachable": true,
+    "status_code": 200,
+    "payload": {
+      "status": "healthy",
+      "timestamp": "2026-02-23T06:31:07.487828",
+      "version": "1.0",
+      "components": {
+        "database": {
+          "status": "healthy",
+          "connectivity": true,
+          "dialect": "postgres"
+        },
+        "scout_catalog": {
+          "status": "healthy",
+          "catalog_exists": true,
+          "catalog_valid": true,
+          "backend": "SchemaCatalog",
+          "dialect": "postgres",
+          "table_count": 14
+        }
+      }
+    },
+    "database_dialect": "postgres",
+    "discovery_backend": "SchemaCatalog",
+    "discovery_status": "healthy",
+    "catalog_valid": true
+  },
+  "mcp_health_end": {
+    "url": "http://localhost:8000",
+    "reachable": true,
+    "status_code": 200,
+    "payload": {
+      "status": "healthy",
+      "timestamp": "2026-02-23T06:31:47.217014",
+      "version": "1.0",
+      "components": {
+        "database": {
+          "status": "healthy",
+          "connectivity": true,
+          "dialect": "postgres"
+        },
+        "scout_catalog": {
+          "status": "healthy",
+          "catalog_exists": true,
+          "catalog_valid": true,
+          "backend": "SchemaCatalog",
+          "dialect": "postgres",
+          "table_count": 14
+        }
+      }
+    },
+    "database_dialect": "postgres",
+    "discovery_backend": "SchemaCatalog",
+    "discovery_status": "healthy",
+    "catalog_valid": true
+  },
+  "scout_mode_start": {
+    "active": false,
+    "backend": "SchemaCatalog",
+    "status": "healthy",
+    "catalog_valid": true,
+    "meaning": "Scout mode INACTIVE: MCP discovery backend is SchemaCatalog. Catalog source is schema_catalog."
+  },
+  "scout_mode_end": {
+    "active": false,
+    "backend": "SchemaCatalog",
+    "status": "healthy",
+    "catalog_valid": true,
+    "meaning": "Scout mode INACTIVE: MCP discovery backend is SchemaCatalog. Catalog source is schema_catalog."
+  }
+}

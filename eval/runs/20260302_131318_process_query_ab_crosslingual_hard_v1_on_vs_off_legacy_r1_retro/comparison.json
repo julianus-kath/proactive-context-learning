@@ -1,0 +1,229 @@
+{
+  "generated_at_utc": "2026-03-02T13:13:18.290879Z",
+  "on": {
+    "run_dir": "eval/runs/20260301_131827_crosslingual_hard_v1_process_query_scout_on_r1",
+    "run_id": "20260301_131827_crosslingual_hard_v1_process_query_scout_on_r1",
+    "mode_label": "scout_on",
+    "scout_mode": {
+      "active": true,
+      "backend": "ScoutRunner",
+      "status": "healthy",
+      "catalog_valid": true,
+      "off_control_mode": null,
+      "meaning": "Scout mode ACTIVE: MCP discovery backend is ScoutRunner. Catalog source is scout_runner_catalog."
+    }
+  },
+  "off": {
+    "run_dir": "eval/runs/20260301_132133_crosslingual_hard_v1_process_query_scout_off_legacy_r1",
+    "run_id": "20260301_132133_crosslingual_hard_v1_process_query_scout_off_legacy_r1",
+    "mode_label": "scout_off_legacy_lexical",
+    "scout_mode": {
+      "active": false,
+      "backend": "SchemaCatalog",
+      "status": "healthy",
+      "catalog_valid": true,
+      "off_control_mode": "legacy_lexical_schema_linking",
+      "meaning": "Scout mode INACTIVE: MCP discovery backend is SchemaCatalog with legacy lexical schema-linking baseline."
+    }
+  },
+  "metrics": {
+    "success_rate_pct": {
+      "on": 100.0,
+      "off": 100.0,
+      "delta_on_minus_off": 0.0
+    },
+    "avg_latency_ms": {
+      "on": 4599.8,
+      "off": 5859.2,
+      "delta_on_minus_off": -1259.3999999999996
+    },
+    "p95_latency_ms": {
+      "on": 8719.0,
+      "off": 11772.0,
+      "delta_on_minus_off": -3053.0
+    },
+    "expert_strict_equal_count": {
+      "on": 2,
+      "off": 3,
+      "delta_on_minus_off": -1
+    },
+    "expert_same_cols_set_equal_count": {
+      "on": 2,
+      "off": 3,
+      "delta_on_minus_off": -1
+    },
+    "expert_positional_set_equal_count": {
+      "on": 2,
+      "off": 3,
+      "delta_on_minus_off": -1
+    },
+    "expert_common_cols_set_equal_count": {
+      "on": 1,
+      "off": 2,
+      "delta_on_minus_off": -1
+    },
+    "expert_required_tables_ok_count": {
+      "on": 7,
+      "off": 9,
+      "delta_on_minus_off": -2
+    }
+  },
+  "per_query": [
+    {
+      "query_id": "CL1",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 3623,
+      "off_latency_ms": 4043,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "CL10",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 5094,
+      "off_latency_ms": 4728,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": true,
+      "off_strict_equal": true,
+      "on_positional_set_equal": true,
+      "off_positional_set_equal": true
+    },
+    {
+      "query_id": "CL11",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 3803,
+      "off_latency_ms": 6095,
+      "on_sql_present": false,
+      "off_sql_present": true,
+      "on_strict_equal": null,
+      "off_strict_equal": false,
+      "on_positional_set_equal": null,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "CL12",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 4709,
+      "off_latency_ms": 5806,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "CL2",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 8719,
+      "off_latency_ms": 10031,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": true,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": true
+    },
+    {
+      "query_id": "CL3",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 4041,
+      "off_latency_ms": 6602,
+      "on_sql_present": false,
+      "off_sql_present": true,
+      "on_strict_equal": null,
+      "off_strict_equal": false,
+      "on_positional_set_equal": null,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "CL4",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 3881,
+      "off_latency_ms": 3465,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "CL5",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 3330,
+      "off_latency_ms": 3096,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "CL6",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 4936,
+      "off_latency_ms": 7667,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "CL7",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 4928,
+      "off_latency_ms": 11772,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "CL8",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 5035,
+      "off_latency_ms": 3295,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": false,
+      "off_strict_equal": false,
+      "on_positional_set_equal": false,
+      "off_positional_set_equal": false
+    },
+    {
+      "query_id": "CL9",
+      "on_status": "success",
+      "off_status": "success",
+      "on_latency_ms": 3098,
+      "off_latency_ms": 3710,
+      "on_sql_present": true,
+      "off_sql_present": true,
+      "on_strict_equal": true,
+      "off_strict_equal": true,
+      "on_positional_set_equal": true,
+      "off_positional_set_equal": true
+    }
+  ]
+}

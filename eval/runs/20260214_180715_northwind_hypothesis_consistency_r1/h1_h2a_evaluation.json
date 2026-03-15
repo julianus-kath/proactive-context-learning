@@ -1,0 +1,44 @@
+{
+  "run_id": "20260214_180715_northwind_hypothesis_consistency_r1",
+  "dataset": "eval/datasets/northwind_queries.jsonl",
+  "h1": {
+    "catalog_coverage": {
+      "discovered_tables": 14,
+      "ground_truth_tables": 14,
+      "table_coverage_pct": 100.0,
+      "discovered_columns": 92,
+      "ground_truth_columns": 92,
+      "column_coverage_pct": 100.0,
+      "discovered_fk_columns": 13,
+      "ground_truth_fk_columns": 13,
+      "fk_coverage_pct": 100.0,
+      "missing_tables": [],
+      "missing_columns_count": 0,
+      "missing_fk_columns_count": 0
+    },
+    "retrieval_quality": {
+      "queries_with_contracts": 10,
+      "avg_recall_at_3": 0.0,
+      "avg_recall_at_5": 0.0,
+      "all_required_in_top_5_rate_pct": 0.0
+    }
+  },
+  "h2a": {
+    "semantic_counts": {
+      "CORRECT": 0,
+      "PARTIAL": 0,
+      "INCORRECT": 10
+    },
+    "strict_accuracy_pct": 0.0,
+    "acceptable_accuracy_pct": 0.0,
+    "reference_equivalence": {
+      "checked_queries": 0,
+      "matched_queries": 0,
+      "match_rate_pct": null
+    }
+  },
+  "instrumentation": {
+    "avg_total_llm_calls": 0.0,
+    "queries_with_missing_total_calls": []
+  }
+}

@@ -1,0 +1,2643 @@
+{
+  "NL1": {
+    "query_id": "NL1",
+    "question": "Which items are bringing in the most money overall after markdowns are applied?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 2809,
+    "error": null,
+    "final_response_text": "The top 5 items bringing in the most money after markdowns are applied are:\n\n1. Product ID 38 with a total revenue of approximately $141,397\n2. Product ID 29 with a total revenue of approximately $80,369\n3. Product ID 59 with a total revenue of approximately $71,156\n4. Product ID 62 with a total revenue of approximately $47,235\n5. Product ID 60 with a total revenue of approximately $46,825",
+    "sql_query": "SELECT od.product_id, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue\nFROM public.order_details od\nGROUP BY od.product_id\nORDER BY total_revenue DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "product_id": "38",
+          "total_revenue": "141396.7356273254"
+        },
+        {
+          "product_id": "29",
+          "total_revenue": "80368.6724385033"
+        },
+        {
+          "product_id": "59",
+          "total_revenue": "71155.69990943"
+        },
+        {
+          "product_id": "62",
+          "total_revenue": "47234.969978504174"
+        },
+        {
+          "product_id": "60",
+          "total_revenue": "46825.48029542655"
+        }
+      ],
+      "rows": [
+        {
+          "product_id": "38",
+          "total_revenue": "141396.7356273254"
+        },
+        {
+          "product_id": "29",
+          "total_revenue": "80368.6724385033"
+        },
+        {
+          "product_id": "59",
+          "total_revenue": "71155.69990943"
+        },
+        {
+          "product_id": "62",
+          "total_revenue": "47234.969978504174"
+        },
+        {
+          "product_id": "60",
+          "total_revenue": "46825.48029542655"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "product_id",
+        "total_revenue"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.order_details"
+      ]
+    },
+    "tables_used": [
+      "public.order_details"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "product_id": "38",
+        "total_revenue": "141396.7356273254"
+      },
+      {
+        "product_id": "29",
+        "total_revenue": "80368.6724385033"
+      },
+      {
+        "product_id": "59",
+        "total_revenue": "71155.69990943"
+      },
+      {
+        "product_id": "62",
+        "total_revenue": "47234.969978504174"
+      },
+      {
+        "product_id": "60",
+        "total_revenue": "46825.48029542655"
+      }
+    ]
+  },
+  "NL2": {
+    "query_id": "NL2",
+    "question": "Which buyers contribute the largest discounted spend?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 3147,
+    "error": null,
+    "final_response_text": "The top 5 buyers contributing the largest discounted spend are:\n\n1. **SAVEA** with a discounted spend of approximately CHF 11,311.44\n2. **ERNSH** with a discounted spend of approximately CHF 8,361.70\n3. **HUNGO** with a discounted spend of approximately CHF 7,337.49\n4. **QUICK** with a discounted spend of approximately CHF 7,206.09\n5. **QUEEN** with a discounted spend of approximately CHF 4,508.60",
+    "sql_query": "SELECT o.customer_id, SUM(od.unit_price * od.quantity * od.discount) AS discounted_spend\nFROM public.order_details od\nJOIN public.orders o ON od.order_id = o.order_id\nGROUP BY o.customer_id\nORDER BY discounted_spend DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "customer_id": "SAVEA",
+          "discounted_spend": "11311.440102321503"
+        },
+        {
+          "customer_id": "ERNSH",
+          "discounted_spend": "8361.70163823629"
+        },
+        {
+          "customer_id": "HUNGO",
+          "discounted_spend": "7337.485080972463"
+        },
+        {
+          "customer_id": "QUICK",
+          "discounted_spend": "7206.08511729218"
+        },
+        {
+          "customer_id": "QUEEN",
+          "discounted_spend": "4508.602574698664"
+        }
+      ],
+      "rows": [
+        {
+          "customer_id": "SAVEA",
+          "discounted_spend": "11311.440102321503"
+        },
+        {
+          "customer_id": "ERNSH",
+          "discounted_spend": "8361.70163823629"
+        },
+        {
+          "customer_id": "HUNGO",
+          "discounted_spend": "7337.485080972463"
+        },
+        {
+          "customer_id": "QUICK",
+          "discounted_spend": "7206.08511729218"
+        },
+        {
+          "customer_id": "QUEEN",
+          "discounted_spend": "4508.602574698664"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "customer_id",
+        "discounted_spend"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.order_details",
+        "public.orders"
+      ]
+    },
+    "tables_used": [
+      "public.order_details",
+      "public.orders"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "customer_id": "SAVEA",
+        "discounted_spend": "11311.440102321503"
+      },
+      {
+        "customer_id": "ERNSH",
+        "discounted_spend": "8361.70163823629"
+      },
+      {
+        "customer_id": "HUNGO",
+        "discounted_spend": "7337.485080972463"
+      },
+      {
+        "customer_id": "QUICK",
+        "discounted_spend": "7206.08511729218"
+      },
+      {
+        "customer_id": "QUEEN",
+        "discounted_spend": "4508.602574698664"
+      }
+    ]
+  },
+  "NL3": {
+    "query_id": "NL3",
+    "question": "Which delivery companies tend to be the slowest on average?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 6625,
+    "error": null,
+    "final_response_text": "The delivery companies with the slowest average delivery times are:\n\n1. **United Package** with an average delivery time of approximately 9.23 days.\n2. **Speedy Express** with an average delivery time of approximately 8.57 days.\n3. **Federal Shipping** with an average delivery time of approximately 7.47 days.",
+    "sql_query": "SELECT s.company_name, AVG(o.shipped_date - o.order_date) AS average_delivery_time\nFROM public.orders o\nJOIN public.shippers s ON o.ship_via = s.shipper_id\nWHERE o.shipped_date IS NOT NULL\nGROUP BY s.company_name\nORDER BY average_delivery_time DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "company_name": "United Package",
+          "average_delivery_time": "9.234920634920634"
+        },
+        {
+          "company_name": "Speedy Express",
+          "average_delivery_time": "8.571428571428571"
+        },
+        {
+          "company_name": "Federal Shipping",
+          "average_delivery_time": "7.473895582329317"
+        }
+      ],
+      "rows": [
+        {
+          "company_name": "United Package",
+          "average_delivery_time": "9.234920634920634"
+        },
+        {
+          "company_name": "Speedy Express",
+          "average_delivery_time": "8.571428571428571"
+        },
+        {
+          "company_name": "Federal Shipping",
+          "average_delivery_time": "7.473895582329317"
+        }
+      ],
+      "row_count": 3,
+      "columns": [
+        "company_name",
+        "average_delivery_time"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.shippers"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.shippers"
+    ],
+    "row_count": 3,
+    "result_preview": [
+      {
+        "company_name": "United Package",
+        "average_delivery_time": "9.234920634920634"
+      },
+      {
+        "company_name": "Speedy Express",
+        "average_delivery_time": "8.571428571428571"
+      },
+      {
+        "company_name": "Federal Shipping",
+        "average_delivery_time": "7.473895582329317"
+      }
+    ]
+  },
+  "NL4": {
+    "query_id": "NL4",
+    "question": "Which item families are most affected by markdowns?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 3388,
+    "error": null,
+    "final_response_text": "The item families most affected by markdowns are:\n\n1. **Beverages** with a total discount value of approximately 18,659.\n2. **Dairy Products** with a total discount value of approximately 16,823.\n3. **Meat/Poultry** with a total discount value of approximately 15,166.\n4. **Seafood** with a total discount value of approximately 10,361.\n5. **Confections** with a total discount value of approximately 9,742.",
+    "sql_query": "SELECT c.category_name, SUM(od.discount * od.unit_price * od.quantity) AS total_discount_value\nFROM public.order_details od\nJOIN public.products p ON od.product_id = p.product_id\nJOIN public.categories c ON p.category_id = c.category_id\nGROUP BY c.category_name\nORDER BY total_discount_value DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "category_name": "Beverages",
+          "total_discount_value": "18658.7701382339"
+        },
+        {
+          "category_name": "Dairy Products",
+          "total_discount_value": "16823.21531725675"
+        },
+        {
+          "category_name": "Meat/Poultry",
+          "total_discount_value": "15166.440740942955"
+        },
+        {
+          "category_name": "Seafood",
+          "total_discount_value": "10361.352615758777"
+        },
+        {
+          "category_name": "Confections",
+          "total_discount_value": "9741.875124454498"
+        }
+      ],
+      "rows": [
+        {
+          "category_name": "Beverages",
+          "total_discount_value": "18658.7701382339"
+        },
+        {
+          "category_name": "Dairy Products",
+          "total_discount_value": "16823.21531725675"
+        },
+        {
+          "category_name": "Meat/Poultry",
+          "total_discount_value": "15166.440740942955"
+        },
+        {
+          "category_name": "Seafood",
+          "total_discount_value": "10361.352615758777"
+        },
+        {
+          "category_name": "Confections",
+          "total_discount_value": "9741.875124454498"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "category_name",
+        "total_discount_value"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.order_details",
+        "public.products",
+        "public.categories"
+      ]
+    },
+    "tables_used": [
+      "public.order_details",
+      "public.products",
+      "public.categories"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "category_name": "Beverages",
+        "total_discount_value": "18658.7701382339"
+      },
+      {
+        "category_name": "Dairy Products",
+        "total_discount_value": "16823.21531725675"
+      },
+      {
+        "category_name": "Meat/Poultry",
+        "total_discount_value": "15166.440740942955"
+      },
+      {
+        "category_name": "Seafood",
+        "total_discount_value": "10361.352615758777"
+      },
+      {
+        "category_name": "Confections",
+        "total_discount_value": "9741.875124454498"
+      }
+    ]
+  },
+  "NL5": {
+    "query_id": "NL5",
+    "question": "Where are average basket values highest by buyer location?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 3720,
+    "error": null,
+    "final_response_text": "The average basket values are highest in the following buyer locations:\n\n1. **Austria**: CHF 1,024.03\n2. **Ireland**: CHF 908.73\n3. **Denmark**: CHF 710.02\n4. **Germany**: CHF 702.09\n5. **USA**: CHF 697.68\n\nThese values represent the average order value per country, calculated from the unit price, quantity, and discount applied to each order.",
+    "sql_query": "SELECT c.country, AVG(od.unit_price * od.quantity * (1 - od.discount)) AS average_basket_value\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nJOIN public.customers c ON o.customer_id = c.customer_id\nGROUP BY c.country\nORDER BY average_basket_value DESC",
+    "exec_result": {
+      "data": [
+        {
+          "country": "Austria",
+          "average_basket_value": "1024.0307052692096"
+        },
+        {
+          "country": "Ireland",
+          "average_basket_value": "908.7255469362816"
+        },
+        {
+          "country": "Denmark",
+          "average_basket_value": "710.0222284393984"
+        },
+        {
+          "country": "Germany",
+          "average_basket_value": "702.087296506741"
+        },
+        {
+          "country": "USA",
+          "average_basket_value": "697.6835519949055"
+        },
+        {
+          "country": "Canada",
+          "average_basket_value": "669.2838680103997"
+        },
+        {
+          "country": "Switzerland",
+          "average_basket_value": "609.4742110332213"
+        },
+        {
+          "country": "Belgium",
+          "average_basket_value": "604.0152730041849"
+        },
+        {
+          "country": "Sweden",
+          "average_basket_value": "561.8055661958003"
+        },
+        {
+          "country": "Brazil",
+          "average_basket_value": "526.7279625826861"
+        },
+        {
+          "country": "Venezuela",
+          "average_basket_value": "481.44600643170884"
+        },
+        {
+          "country": "France",
+          "average_basket_value": "442.16479635631526"
+        },
+        {
+          "country": "UK",
+          "average_basket_value": "436.82451786840676"
+        },
+        {
+          "country": "Portugal",
+          "average_basket_value": "382.4120837385704"
+        },
+        {
+          "country": "Norway",
+          "average_basket_value": "358.4468759596348"
+        },
+        {
+          "country": "Finland",
+          "average_basket_value": "348.33430682906123"
+        },
+        {
+          "country": "Spain",
+          "average_basket_value": "333.0222219814195"
+        },
+        {
+          "country": "Mexico",
+          "average_basket_value": "327.52885377595203"
+        },
+        {
+          "country": "Italy",
+          "average_basket_value": "297.5500927895041"
+        },
+        {
+          "country": "Argentina",
+          "average_basket_value": "238.79705855425667"
+        }
+      ],
+      "rows": [
+        {
+          "country": "Austria",
+          "average_basket_value": "1024.0307052692096"
+        },
+        {
+          "country": "Ireland",
+          "average_basket_value": "908.7255469362816"
+        },
+        {
+          "country": "Denmark",
+          "average_basket_value": "710.0222284393984"
+        },
+        {
+          "country": "Germany",
+          "average_basket_value": "702.087296506741"
+        },
+        {
+          "country": "USA",
+          "average_basket_value": "697.6835519949055"
+        },
+        {
+          "country": "Canada",
+          "average_basket_value": "669.2838680103997"
+        },
+        {
+          "country": "Switzerland",
+          "average_basket_value": "609.4742110332213"
+        },
+        {
+          "country": "Belgium",
+          "average_basket_value": "604.0152730041849"
+        },
+        {
+          "country": "Sweden",
+          "average_basket_value": "561.8055661958003"
+        },
+        {
+          "country": "Brazil",
+          "average_basket_value": "526.7279625826861"
+        },
+        {
+          "country": "Venezuela",
+          "average_basket_value": "481.44600643170884"
+        },
+        {
+          "country": "France",
+          "average_basket_value": "442.16479635631526"
+        },
+        {
+          "country": "UK",
+          "average_basket_value": "436.82451786840676"
+        },
+        {
+          "country": "Portugal",
+          "average_basket_value": "382.4120837385704"
+        },
+        {
+          "country": "Norway",
+          "average_basket_value": "358.4468759596348"
+        },
+        {
+          "country": "Finland",
+          "average_basket_value": "348.33430682906123"
+        },
+        {
+          "country": "Spain",
+          "average_basket_value": "333.0222219814195"
+        },
+        {
+          "country": "Mexico",
+          "average_basket_value": "327.52885377595203"
+        },
+        {
+          "country": "Italy",
+          "average_basket_value": "297.5500927895041"
+        },
+        {
+          "country": "Argentina",
+          "average_basket_value": "238.79705855425667"
+        }
+      ],
+      "row_count": 21,
+      "columns": [
+        "country",
+        "average_basket_value"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details",
+        "public.customers"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details",
+      "public.customers"
+    ],
+    "row_count": 21,
+    "result_preview": [
+      {
+        "country": "Austria",
+        "average_basket_value": "1024.0307052692096"
+      },
+      {
+        "country": "Ireland",
+        "average_basket_value": "908.7255469362816"
+      },
+      {
+        "country": "Denmark",
+        "average_basket_value": "710.0222284393984"
+      },
+      {
+        "country": "Germany",
+        "average_basket_value": "702.087296506741"
+      },
+      {
+        "country": "USA",
+        "average_basket_value": "697.6835519949055"
+      },
+      {
+        "country": "Canada",
+        "average_basket_value": "669.2838680103997"
+      },
+      {
+        "country": "Switzerland",
+        "average_basket_value": "609.4742110332213"
+      },
+      {
+        "country": "Belgium",
+        "average_basket_value": "604.0152730041849"
+      },
+      {
+        "country": "Sweden",
+        "average_basket_value": "561.8055661958003"
+      },
+      {
+        "country": "Brazil",
+        "average_basket_value": "526.7279625826861"
+      },
+      {
+        "country": "Venezuela",
+        "average_basket_value": "481.44600643170884"
+      },
+      {
+        "country": "France",
+        "average_basket_value": "442.16479635631526"
+      },
+      {
+        "country": "UK",
+        "average_basket_value": "436.82451786840676"
+      },
+      {
+        "country": "Portugal",
+        "average_basket_value": "382.4120837385704"
+      },
+      {
+        "country": "Norway",
+        "average_basket_value": "358.4468759596348"
+      },
+      {
+        "country": "Finland",
+        "average_basket_value": "348.33430682906123"
+      },
+      {
+        "country": "Spain",
+        "average_basket_value": "333.0222219814195"
+      },
+      {
+        "country": "Mexico",
+        "average_basket_value": "327.52885377595203"
+      },
+      {
+        "country": "Italy",
+        "average_basket_value": "297.5500927895041"
+      },
+      {
+        "country": "Argentina",
+        "average_basket_value": "238.79705855425667"
+      }
+    ]
+  },
+  "NL6": {
+    "query_id": "NL6",
+    "question": "How does discounted income evolve month by month?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 2853,
+    "error": null,
+    "final_response_text": "The discounted income has evolved as follows over the months:\n\n- July 1996: CHF 27,861.90\n- January 1997: CHF 61,258.07\n- December 1997: CHF 71,398.43\n- January 1998: CHF 94,222.11\n- February 1998: CHF 99,415.29\n\nThis shows a general upward trend in discounted income over the observed period.",
+    "sql_query": "SELECT DATE_TRUNC('month', o.order_date) AS month, \n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS discounted_income\nFROM public.order_details od\nJOIN public.orders o ON od.order_id = o.order_id\nGROUP BY month\nORDER BY month;",
+    "exec_result": {
+      "data": [
+        {
+          "month": "1996-07-01T00:00:00+00:00",
+          "discounted_income": "27861.89512966156"
+        },
+        {
+          "month": "1996-08-01T00:00:00+00:00",
+          "discounted_income": "25485.275070743264"
+        },
+        {
+          "month": "1996-09-01T00:00:00+00:00",
+          "discounted_income": "26381.400132587554"
+        },
+        {
+          "month": "1996-10-01T00:00:00+00:00",
+          "discounted_income": "37515.72494547888"
+        },
+        {
+          "month": "1996-11-01T00:00:00+00:00",
+          "discounted_income": "45600.04521113701"
+        },
+        {
+          "month": "1996-12-01T00:00:00+00:00",
+          "discounted_income": "45239.630493214434"
+        },
+        {
+          "month": "1997-01-01T00:00:00+00:00",
+          "discounted_income": "61258.0701679784"
+        },
+        {
+          "month": "1997-02-01T00:00:00+00:00",
+          "discounted_income": "38483.6349503243"
+        },
+        {
+          "month": "1997-03-01T00:00:00+00:00",
+          "discounted_income": "38547.22010972678"
+        },
+        {
+          "month": "1997-04-01T00:00:00+00:00",
+          "discounted_income": "53032.95238894149"
+        },
+        {
+          "month": "1997-05-01T00:00:00+00:00",
+          "discounted_income": "53781.28982514166"
+        },
+        {
+          "month": "1997-06-01T00:00:00+00:00",
+          "discounted_income": "36362.80233480245"
+        },
+        {
+          "month": "1997-07-01T00:00:00+00:00",
+          "discounted_income": "51020.85751860481"
+        },
+        {
+          "month": "1997-08-01T00:00:00+00:00",
+          "discounted_income": "47287.66968825523"
+        },
+        {
+          "month": "1997-09-01T00:00:00+00:00",
+          "discounted_income": "55629.24240174934"
+        },
+        {
+          "month": "1997-10-01T00:00:00+00:00",
+          "discounted_income": "66749.22577572716"
+        },
+        {
+          "month": "1997-11-01T00:00:00+00:00",
+          "discounted_income": "43533.80876756514"
+        },
+        {
+          "month": "1997-12-01T00:00:00+00:00",
+          "discounted_income": "71398.42846388379"
+        },
+        {
+          "month": "1998-01-01T00:00:00+00:00",
+          "discounted_income": "94222.1102069358"
+        },
+        {
+          "month": "1998-02-01T00:00:00+00:00",
+          "discounted_income": "99415.2873830082"
+        }
+      ],
+      "rows": [
+        {
+          "month": "1996-07-01T00:00:00+00:00",
+          "discounted_income": "27861.89512966156"
+        },
+        {
+          "month": "1996-08-01T00:00:00+00:00",
+          "discounted_income": "25485.275070743264"
+        },
+        {
+          "month": "1996-09-01T00:00:00+00:00",
+          "discounted_income": "26381.400132587554"
+        },
+        {
+          "month": "1996-10-01T00:00:00+00:00",
+          "discounted_income": "37515.72494547888"
+        },
+        {
+          "month": "1996-11-01T00:00:00+00:00",
+          "discounted_income": "45600.04521113701"
+        },
+        {
+          "month": "1996-12-01T00:00:00+00:00",
+          "discounted_income": "45239.630493214434"
+        },
+        {
+          "month": "1997-01-01T00:00:00+00:00",
+          "discounted_income": "61258.0701679784"
+        },
+        {
+          "month": "1997-02-01T00:00:00+00:00",
+          "discounted_income": "38483.6349503243"
+        },
+        {
+          "month": "1997-03-01T00:00:00+00:00",
+          "discounted_income": "38547.22010972678"
+        },
+        {
+          "month": "1997-04-01T00:00:00+00:00",
+          "discounted_income": "53032.95238894149"
+        },
+        {
+          "month": "1997-05-01T00:00:00+00:00",
+          "discounted_income": "53781.28982514166"
+        },
+        {
+          "month": "1997-06-01T00:00:00+00:00",
+          "discounted_income": "36362.80233480245"
+        },
+        {
+          "month": "1997-07-01T00:00:00+00:00",
+          "discounted_income": "51020.85751860481"
+        },
+        {
+          "month": "1997-08-01T00:00:00+00:00",
+          "discounted_income": "47287.66968825523"
+        },
+        {
+          "month": "1997-09-01T00:00:00+00:00",
+          "discounted_income": "55629.24240174934"
+        },
+        {
+          "month": "1997-10-01T00:00:00+00:00",
+          "discounted_income": "66749.22577572716"
+        },
+        {
+          "month": "1997-11-01T00:00:00+00:00",
+          "discounted_income": "43533.80876756514"
+        },
+        {
+          "month": "1997-12-01T00:00:00+00:00",
+          "discounted_income": "71398.42846388379"
+        },
+        {
+          "month": "1998-01-01T00:00:00+00:00",
+          "discounted_income": "94222.1102069358"
+        },
+        {
+          "month": "1998-02-01T00:00:00+00:00",
+          "discounted_income": "99415.2873830082"
+        }
+      ],
+      "row_count": 23,
+      "columns": [
+        "month",
+        "discounted_income"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.order_details",
+        "public.orders"
+      ]
+    },
+    "tables_used": [
+      "public.order_details",
+      "public.orders"
+    ],
+    "row_count": 23,
+    "result_preview": [
+      {
+        "month": "1996-07-01T00:00:00+00:00",
+        "discounted_income": "27861.89512966156"
+      },
+      {
+        "month": "1996-08-01T00:00:00+00:00",
+        "discounted_income": "25485.275070743264"
+      },
+      {
+        "month": "1996-09-01T00:00:00+00:00",
+        "discounted_income": "26381.400132587554"
+      },
+      {
+        "month": "1996-10-01T00:00:00+00:00",
+        "discounted_income": "37515.72494547888"
+      },
+      {
+        "month": "1996-11-01T00:00:00+00:00",
+        "discounted_income": "45600.04521113701"
+      },
+      {
+        "month": "1996-12-01T00:00:00+00:00",
+        "discounted_income": "45239.630493214434"
+      },
+      {
+        "month": "1997-01-01T00:00:00+00:00",
+        "discounted_income": "61258.0701679784"
+      },
+      {
+        "month": "1997-02-01T00:00:00+00:00",
+        "discounted_income": "38483.6349503243"
+      },
+      {
+        "month": "1997-03-01T00:00:00+00:00",
+        "discounted_income": "38547.22010972678"
+      },
+      {
+        "month": "1997-04-01T00:00:00+00:00",
+        "discounted_income": "53032.95238894149"
+      },
+      {
+        "month": "1997-05-01T00:00:00+00:00",
+        "discounted_income": "53781.28982514166"
+      },
+      {
+        "month": "1997-06-01T00:00:00+00:00",
+        "discounted_income": "36362.80233480245"
+      },
+      {
+        "month": "1997-07-01T00:00:00+00:00",
+        "discounted_income": "51020.85751860481"
+      },
+      {
+        "month": "1997-08-01T00:00:00+00:00",
+        "discounted_income": "47287.66968825523"
+      },
+      {
+        "month": "1997-09-01T00:00:00+00:00",
+        "discounted_income": "55629.24240174934"
+      },
+      {
+        "month": "1997-10-01T00:00:00+00:00",
+        "discounted_income": "66749.22577572716"
+      },
+      {
+        "month": "1997-11-01T00:00:00+00:00",
+        "discounted_income": "43533.80876756514"
+      },
+      {
+        "month": "1997-12-01T00:00:00+00:00",
+        "discounted_income": "71398.42846388379"
+      },
+      {
+        "month": "1998-01-01T00:00:00+00:00",
+        "discounted_income": "94222.1102069358"
+      },
+      {
+        "month": "1998-02-01T00:00:00+00:00",
+        "discounted_income": "99415.2873830082"
+      }
+    ]
+  },
+  "NL7": {
+    "query_id": "NL7",
+    "question": "Which upstream partners generate the most discounted turnover through their goods?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 3451,
+    "error": null,
+    "final_response_text": "The top 5 upstream partners generating the most discounted turnover through their goods are:\n\n1. Supplier ID 18 with a discounted turnover of approximately 153,691.28\n2. Supplier ID 12 with a discounted turnover of approximately 145,372.40\n3. Supplier ID 28 with a discounted turnover of approximately 117,981.18\n4. Supplier ID 7 with a discounted turnover of approximately 106,459.78\n5. Supplier ID 24 with a discounted turnover of approximately 65,626.77",
+    "sql_query": "SELECT p.supplier_id, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS discounted_turnover\nFROM public.order_details od\nJOIN public.products p ON od.product_id = p.product_id\nGROUP BY p.supplier_id\nORDER BY discounted_turnover DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "supplier_id": "18",
+          "discounted_turnover": "153691.2755027201"
+        },
+        {
+          "supplier_id": "12",
+          "discounted_turnover": "145372.39966947702"
+        },
+        {
+          "supplier_id": "28",
+          "discounted_turnover": "117981.18020485654"
+        },
+        {
+          "supplier_id": "7",
+          "discounted_turnover": "106459.77607838642"
+        },
+        {
+          "supplier_id": "24",
+          "discounted_turnover": "65626.77016849845"
+        }
+      ],
+      "rows": [
+        {
+          "supplier_id": "18",
+          "discounted_turnover": "153691.2755027201"
+        },
+        {
+          "supplier_id": "12",
+          "discounted_turnover": "145372.39966947702"
+        },
+        {
+          "supplier_id": "28",
+          "discounted_turnover": "117981.18020485654"
+        },
+        {
+          "supplier_id": "7",
+          "discounted_turnover": "106459.77607838642"
+        },
+        {
+          "supplier_id": "24",
+          "discounted_turnover": "65626.77016849845"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "supplier_id",
+        "discounted_turnover"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.order_details",
+        "public.products"
+      ]
+    },
+    "tables_used": [
+      "public.order_details",
+      "public.products"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "supplier_id": "18",
+        "discounted_turnover": "153691.2755027201"
+      },
+      {
+        "supplier_id": "12",
+        "discounted_turnover": "145372.39966947702"
+      },
+      {
+        "supplier_id": "28",
+        "discounted_turnover": "117981.18020485654"
+      },
+      {
+        "supplier_id": "7",
+        "discounted_turnover": "106459.77607838642"
+      },
+      {
+        "supplier_id": "24",
+        "discounted_turnover": "65626.77016849845"
+      }
+    ]
+  },
+  "NL8": {
+    "query_id": "NL8",
+    "question": "For each freight carrier, how late are shipments on average and how often are they late?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4375,
+    "error": null,
+    "final_response_text": "Here are the average delays and the count of late shipments for each freight carrier:\n\n- **Federal Shipping**: Average delay of approximately -20 days, with 9 late shipments.\n- **Speedy Express**: Average delay of approximately -19.5 days, with 12 late shipments.\n- **United Package**: Average delay of approximately -18.8 days, with 16 late shipments.\n\nThe negative average delay indicates that shipments are generally delivered earlier than required.",
+    "sql_query": "SELECT s.company_name AS freight_carrier, \n       AVG(o.shipped_date - o.required_date) AS avg_delay_days, \n       SUM(CASE WHEN o.shipped_date > o.required_date THEN 1 ELSE 0 END) AS late_shipments_count\nFROM public.orders o\nJOIN public.shippers s ON o.ship_via = s.shipper_id\nGROUP BY s.company_name",
+    "exec_result": {
+      "data": [
+        {
+          "freight_carrier": "Federal Shipping",
+          "avg_delay_days": "-19.96385542168675",
+          "late_shipments_count": "9"
+        },
+        {
+          "freight_carrier": "Speedy Express",
+          "avg_delay_days": "-19.485714285714284",
+          "late_shipments_count": "12"
+        },
+        {
+          "freight_carrier": "United Package",
+          "avg_delay_days": "-18.765079365079366",
+          "late_shipments_count": "16"
+        }
+      ],
+      "rows": [
+        {
+          "freight_carrier": "Federal Shipping",
+          "avg_delay_days": "-19.96385542168675",
+          "late_shipments_count": "9"
+        },
+        {
+          "freight_carrier": "Speedy Express",
+          "avg_delay_days": "-19.485714285714284",
+          "late_shipments_count": "12"
+        },
+        {
+          "freight_carrier": "United Package",
+          "avg_delay_days": "-18.765079365079366",
+          "late_shipments_count": "16"
+        }
+      ],
+      "row_count": 3,
+      "columns": [
+        "freight_carrier",
+        "avg_delay_days",
+        "late_shipments_count"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.shippers"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.shippers"
+    ],
+    "row_count": 3,
+    "result_preview": [
+      {
+        "freight_carrier": "Federal Shipping",
+        "avg_delay_days": "-19.96385542168675",
+        "late_shipments_count": "9"
+      },
+      {
+        "freight_carrier": "Speedy Express",
+        "avg_delay_days": "-19.485714285714284",
+        "late_shipments_count": "12"
+      },
+      {
+        "freight_carrier": "United Package",
+        "avg_delay_days": "-18.765079365079366",
+        "late_shipments_count": "16"
+      }
+    ]
+  },
+  "NL9": {
+    "query_id": "NL9",
+    "question": "Which staff members serve the broadest buyer base?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 2742,
+    "error": null,
+    "final_response_text": "The staff members serving the broadest buyer base are:\n\n1. Employee ID 4, serving 75 unique customers.\n2. Employee ID 1, serving 65 unique customers.\n3. Employee ID 3, serving 63 unique customers.\n4. Employee ID 2, serving 59 unique customers.\n5. Employee ID 8, serving 56 unique customers.",
+    "sql_query": "SELECT o.employee_id, COUNT(DISTINCT o.customer_id) AS unique_customers\nFROM public.orders o\nGROUP BY o.employee_id\nORDER BY unique_customers DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "employee_id": "4",
+          "unique_customers": "75"
+        },
+        {
+          "employee_id": "1",
+          "unique_customers": "65"
+        },
+        {
+          "employee_id": "3",
+          "unique_customers": "63"
+        },
+        {
+          "employee_id": "2",
+          "unique_customers": "59"
+        },
+        {
+          "employee_id": "8",
+          "unique_customers": "56"
+        }
+      ],
+      "rows": [
+        {
+          "employee_id": "4",
+          "unique_customers": "75"
+        },
+        {
+          "employee_id": "1",
+          "unique_customers": "65"
+        },
+        {
+          "employee_id": "3",
+          "unique_customers": "63"
+        },
+        {
+          "employee_id": "2",
+          "unique_customers": "59"
+        },
+        {
+          "employee_id": "8",
+          "unique_customers": "56"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "employee_id",
+        "unique_customers"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders"
+      ]
+    },
+    "tables_used": [
+      "public.orders"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "employee_id": "4",
+        "unique_customers": "75"
+      },
+      {
+        "employee_id": "1",
+        "unique_customers": "65"
+      },
+      {
+        "employee_id": "3",
+        "unique_customers": "63"
+      },
+      {
+        "employee_id": "2",
+        "unique_customers": "59"
+      },
+      {
+        "employee_id": "8",
+        "unique_customers": "56"
+      }
+    ]
+  },
+  "NL10": {
+    "query_id": "NL10",
+    "question": "Which accounts have never transacted?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 3755,
+    "error": null,
+    "final_response_text": "The accounts that have never transacted are:\n\n1. Paris sp\u00e9cialit\u00e9s (Customer ID: PARIS)\n2. FISSA Fabrica Inter. Salchichas S.A. (Customer ID: FISSA)",
+    "sql_query": "SELECT c.customer_id, c.company_name\nFROM public.customers c\nLEFT JOIN public.orders o ON c.customer_id = o.customer_id\nWHERE o.order_id IS NULL;",
+    "exec_result": {
+      "data": [
+        {
+          "customer_id": "PARIS",
+          "company_name": "Paris sp\u00e9cialit\u00e9s"
+        },
+        {
+          "customer_id": "FISSA",
+          "company_name": "FISSA Fabrica Inter. Salchichas S.A."
+        }
+      ],
+      "rows": [
+        {
+          "customer_id": "PARIS",
+          "company_name": "Paris sp\u00e9cialit\u00e9s"
+        },
+        {
+          "customer_id": "FISSA",
+          "company_name": "FISSA Fabrica Inter. Salchichas S.A."
+        }
+      ],
+      "row_count": 2,
+      "columns": [
+        "customer_id",
+        "company_name"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.customers",
+        "public.orders"
+      ]
+    },
+    "tables_used": [
+      "public.customers",
+      "public.orders"
+    ],
+    "row_count": 2,
+    "result_preview": [
+      {
+        "customer_id": "PARIS",
+        "company_name": "Paris sp\u00e9cialit\u00e9s"
+      },
+      {
+        "customer_id": "FISSA",
+        "company_name": "FISSA Fabrica Inter. Salchichas S.A."
+      }
+    ]
+  },
+  "NL11": {
+    "query_id": "NL11",
+    "question": "Across months, how many transactions were created and how many missed the promised ship date?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 3723,
+    "error": null,
+    "final_response_text": "Here is a summary of transactions and those that missed the promised ship date across months:\n\n- **July 1996**: 22 transactions, 1 missed ship date\n- **August 1996**: 25 transactions, 2 missed ship dates\n- **September 1996**: 23 transactions, 2 missed ship dates\n- **October 1996**: 26 transactions, 1 missed ship date\n- **November 1996**: 25 transactions, 0 missed ship dates\n- **December 1996**: 31 transactions, 1 missed ship date\n- **January 1997**: 33 transactions, 2 missed ship dates\n- **February 1997**: 29 transactions, 2 missed ship dates\n- **March 1997**: 30 transactions, 1 missed ship date\n- **April 1997**: 31 transactions, 1 missed ship date\n\nThis pattern continues with varying numbers of transactions and missed ship dates each month. If you need more details for specific months, let me know!",
+    "sql_query": "SELECT DATE_TRUNC('month', order_date) AS month, COUNT(order_id) AS total_transactions, SUM(CASE WHEN shipped_date > required_date THEN 1 ELSE 0 END) AS missed_ship_dates\nFROM public.orders\nGROUP BY month\nORDER BY month;",
+    "exec_result": {
+      "data": [
+        {
+          "month": "1996-07-01T00:00:00+00:00",
+          "total_transactions": "22",
+          "missed_ship_dates": "1"
+        },
+        {
+          "month": "1996-08-01T00:00:00+00:00",
+          "total_transactions": "25",
+          "missed_ship_dates": "2"
+        },
+        {
+          "month": "1996-09-01T00:00:00+00:00",
+          "total_transactions": "23",
+          "missed_ship_dates": "2"
+        },
+        {
+          "month": "1996-10-01T00:00:00+00:00",
+          "total_transactions": "26",
+          "missed_ship_dates": "1"
+        },
+        {
+          "month": "1996-11-01T00:00:00+00:00",
+          "total_transactions": "25",
+          "missed_ship_dates": "0"
+        },
+        {
+          "month": "1996-12-01T00:00:00+00:00",
+          "total_transactions": "31",
+          "missed_ship_dates": "1"
+        },
+        {
+          "month": "1997-01-01T00:00:00+00:00",
+          "total_transactions": "33",
+          "missed_ship_dates": "2"
+        },
+        {
+          "month": "1997-02-01T00:00:00+00:00",
+          "total_transactions": "29",
+          "missed_ship_dates": "2"
+        },
+        {
+          "month": "1997-03-01T00:00:00+00:00",
+          "total_transactions": "30",
+          "missed_ship_dates": "1"
+        },
+        {
+          "month": "1997-04-01T00:00:00+00:00",
+          "total_transactions": "31",
+          "missed_ship_dates": "1"
+        },
+        {
+          "month": "1997-05-01T00:00:00+00:00",
+          "total_transactions": "32",
+          "missed_ship_dates": "2"
+        },
+        {
+          "month": "1997-06-01T00:00:00+00:00",
+          "total_transactions": "30",
+          "missed_ship_dates": "1"
+        },
+        {
+          "month": "1997-07-01T00:00:00+00:00",
+          "total_transactions": "33",
+          "missed_ship_dates": "2"
+        },
+        {
+          "month": "1997-08-01T00:00:00+00:00",
+          "total_transactions": "33",
+          "missed_ship_dates": "0"
+        },
+        {
+          "month": "1997-09-01T00:00:00+00:00",
+          "total_transactions": "37",
+          "missed_ship_dates": "3"
+        },
+        {
+          "month": "1997-10-01T00:00:00+00:00",
+          "total_transactions": "38",
+          "missed_ship_dates": "2"
+        },
+        {
+          "month": "1997-11-01T00:00:00+00:00",
+          "total_transactions": "34",
+          "missed_ship_dates": "3"
+        },
+        {
+          "month": "1997-12-01T00:00:00+00:00",
+          "total_transactions": "48",
+          "missed_ship_dates": "3"
+        },
+        {
+          "month": "1998-01-01T00:00:00+00:00",
+          "total_transactions": "55",
+          "missed_ship_dates": "4"
+        },
+        {
+          "month": "1998-02-01T00:00:00+00:00",
+          "total_transactions": "54",
+          "missed_ship_dates": "0"
+        }
+      ],
+      "rows": [
+        {
+          "month": "1996-07-01T00:00:00+00:00",
+          "total_transactions": "22",
+          "missed_ship_dates": "1"
+        },
+        {
+          "month": "1996-08-01T00:00:00+00:00",
+          "total_transactions": "25",
+          "missed_ship_dates": "2"
+        },
+        {
+          "month": "1996-09-01T00:00:00+00:00",
+          "total_transactions": "23",
+          "missed_ship_dates": "2"
+        },
+        {
+          "month": "1996-10-01T00:00:00+00:00",
+          "total_transactions": "26",
+          "missed_ship_dates": "1"
+        },
+        {
+          "month": "1996-11-01T00:00:00+00:00",
+          "total_transactions": "25",
+          "missed_ship_dates": "0"
+        },
+        {
+          "month": "1996-12-01T00:00:00+00:00",
+          "total_transactions": "31",
+          "missed_ship_dates": "1"
+        },
+        {
+          "month": "1997-01-01T00:00:00+00:00",
+          "total_transactions": "33",
+          "missed_ship_dates": "2"
+        },
+        {
+          "month": "1997-02-01T00:00:00+00:00",
+          "total_transactions": "29",
+          "missed_ship_dates": "2"
+        },
+        {
+          "month": "1997-03-01T00:00:00+00:00",
+          "total_transactions": "30",
+          "missed_ship_dates": "1"
+        },
+        {
+          "month": "1997-04-01T00:00:00+00:00",
+          "total_transactions": "31",
+          "missed_ship_dates": "1"
+        },
+        {
+          "month": "1997-05-01T00:00:00+00:00",
+          "total_transactions": "32",
+          "missed_ship_dates": "2"
+        },
+        {
+          "month": "1997-06-01T00:00:00+00:00",
+          "total_transactions": "30",
+          "missed_ship_dates": "1"
+        },
+        {
+          "month": "1997-07-01T00:00:00+00:00",
+          "total_transactions": "33",
+          "missed_ship_dates": "2"
+        },
+        {
+          "month": "1997-08-01T00:00:00+00:00",
+          "total_transactions": "33",
+          "missed_ship_dates": "0"
+        },
+        {
+          "month": "1997-09-01T00:00:00+00:00",
+          "total_transactions": "37",
+          "missed_ship_dates": "3"
+        },
+        {
+          "month": "1997-10-01T00:00:00+00:00",
+          "total_transactions": "38",
+          "missed_ship_dates": "2"
+        },
+        {
+          "month": "1997-11-01T00:00:00+00:00",
+          "total_transactions": "34",
+          "missed_ship_dates": "3"
+        },
+        {
+          "month": "1997-12-01T00:00:00+00:00",
+          "total_transactions": "48",
+          "missed_ship_dates": "3"
+        },
+        {
+          "month": "1998-01-01T00:00:00+00:00",
+          "total_transactions": "55",
+          "missed_ship_dates": "4"
+        },
+        {
+          "month": "1998-02-01T00:00:00+00:00",
+          "total_transactions": "54",
+          "missed_ship_dates": "0"
+        }
+      ],
+      "row_count": 23,
+      "columns": [
+        "month",
+        "total_transactions",
+        "missed_ship_dates"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders"
+      ]
+    },
+    "tables_used": [
+      "public.orders"
+    ],
+    "row_count": 23,
+    "result_preview": [
+      {
+        "month": "1996-07-01T00:00:00+00:00",
+        "total_transactions": "22",
+        "missed_ship_dates": "1"
+      },
+      {
+        "month": "1996-08-01T00:00:00+00:00",
+        "total_transactions": "25",
+        "missed_ship_dates": "2"
+      },
+      {
+        "month": "1996-09-01T00:00:00+00:00",
+        "total_transactions": "23",
+        "missed_ship_dates": "2"
+      },
+      {
+        "month": "1996-10-01T00:00:00+00:00",
+        "total_transactions": "26",
+        "missed_ship_dates": "1"
+      },
+      {
+        "month": "1996-11-01T00:00:00+00:00",
+        "total_transactions": "25",
+        "missed_ship_dates": "0"
+      },
+      {
+        "month": "1996-12-01T00:00:00+00:00",
+        "total_transactions": "31",
+        "missed_ship_dates": "1"
+      },
+      {
+        "month": "1997-01-01T00:00:00+00:00",
+        "total_transactions": "33",
+        "missed_ship_dates": "2"
+      },
+      {
+        "month": "1997-02-01T00:00:00+00:00",
+        "total_transactions": "29",
+        "missed_ship_dates": "2"
+      },
+      {
+        "month": "1997-03-01T00:00:00+00:00",
+        "total_transactions": "30",
+        "missed_ship_dates": "1"
+      },
+      {
+        "month": "1997-04-01T00:00:00+00:00",
+        "total_transactions": "31",
+        "missed_ship_dates": "1"
+      },
+      {
+        "month": "1997-05-01T00:00:00+00:00",
+        "total_transactions": "32",
+        "missed_ship_dates": "2"
+      },
+      {
+        "month": "1997-06-01T00:00:00+00:00",
+        "total_transactions": "30",
+        "missed_ship_dates": "1"
+      },
+      {
+        "month": "1997-07-01T00:00:00+00:00",
+        "total_transactions": "33",
+        "missed_ship_dates": "2"
+      },
+      {
+        "month": "1997-08-01T00:00:00+00:00",
+        "total_transactions": "33",
+        "missed_ship_dates": "0"
+      },
+      {
+        "month": "1997-09-01T00:00:00+00:00",
+        "total_transactions": "37",
+        "missed_ship_dates": "3"
+      },
+      {
+        "month": "1997-10-01T00:00:00+00:00",
+        "total_transactions": "38",
+        "missed_ship_dates": "2"
+      },
+      {
+        "month": "1997-11-01T00:00:00+00:00",
+        "total_transactions": "34",
+        "missed_ship_dates": "3"
+      },
+      {
+        "month": "1997-12-01T00:00:00+00:00",
+        "total_transactions": "48",
+        "missed_ship_dates": "3"
+      },
+      {
+        "month": "1998-01-01T00:00:00+00:00",
+        "total_transactions": "55",
+        "missed_ship_dates": "4"
+      },
+      {
+        "month": "1998-02-01T00:00:00+00:00",
+        "total_transactions": "54",
+        "missed_ship_dates": "0"
+      }
+    ]
+  },
+  "NL12": {
+    "query_id": "NL12",
+    "question": "Which offerings most frequently receive high markdown rates?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 3567,
+    "error": null,
+    "final_response_text": "The offerings that most frequently receive high markdown rates (discounts greater than 20%) are:\n\n1. **Chang** with 16 high discounts\n2. **Nord-Ost Matjeshering** with 10 high discounts\n3. **Gnocchi di nonna Alice** with 9 high discounts\n4. **Inlagd Sill** with 9 high discounts\n5. **Chai** with 9 high discounts\n\nThese products have been marked down the most frequently.",
+    "sql_query": "SELECT p.product_name, COUNT(od.discount) AS high_discount_count\nFROM public.order_details od\nJOIN public.products p ON od.product_id = p.product_id\nWHERE od.discount > 0.2\nGROUP BY p.product_name\nORDER BY high_discount_count DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "product_name": "Chang",
+          "high_discount_count": "16"
+        },
+        {
+          "product_name": "Nord-Ost Matjeshering",
+          "high_discount_count": "10"
+        },
+        {
+          "product_name": "Gnocchi di nonna Alice",
+          "high_discount_count": "9"
+        },
+        {
+          "product_name": "Inlagd Sill",
+          "high_discount_count": "9"
+        },
+        {
+          "product_name": "Chai",
+          "high_discount_count": "9"
+        }
+      ],
+      "rows": [
+        {
+          "product_name": "Chang",
+          "high_discount_count": "16"
+        },
+        {
+          "product_name": "Nord-Ost Matjeshering",
+          "high_discount_count": "10"
+        },
+        {
+          "product_name": "Gnocchi di nonna Alice",
+          "high_discount_count": "9"
+        },
+        {
+          "product_name": "Inlagd Sill",
+          "high_discount_count": "9"
+        },
+        {
+          "product_name": "Chai",
+          "high_discount_count": "9"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "product_name",
+        "high_discount_count"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.order_details",
+        "public.products"
+      ]
+    },
+    "tables_used": [
+      "public.order_details",
+      "public.products"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "product_name": "Chang",
+        "high_discount_count": "16"
+      },
+      {
+        "product_name": "Nord-Ost Matjeshering",
+        "high_discount_count": "10"
+      },
+      {
+        "product_name": "Gnocchi di nonna Alice",
+        "high_discount_count": "9"
+      },
+      {
+        "product_name": "Inlagd Sill",
+        "high_discount_count": "9"
+      },
+      {
+        "product_name": "Chai",
+        "high_discount_count": "9"
+      }
+    ]
+  },
+  "NL13": {
+    "query_id": "NL13",
+    "question": "Which geographic areas are associated with the highest income through staff territory assignment?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 3381,
+    "error": null,
+    "final_response_text": "I found tables related to staff territory assignments, specifically `employee_territories` and `territories`, but there is no direct match for \"income\" in the database. To determine the geographic areas associated with the highest income through staff territory assignment, we would typically need a table that links territories to sales or revenue data.\n\nIf you have any specific tables or columns in mind that might contain income or sales data, please let me know, or I can explore further with different search terms.",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "NL14": {
+    "query_id": "NL14",
+    "question": "Who buys often but with relatively small ticket sizes?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 3449,
+    "error": null,
+    "final_response_text": "Here are five customers who frequently place orders but with relatively small average order values:\n\n1. **Laughing Bacchus Wine Cellars**: 8 orders, average order value of $65.31\n2. **Galer\u00eda del gastr\u00f3nomo**: 8 orders, average order value of $104.59\n3. **Romero y tomillo**: 14 orders, average order value of $104.81\n4. **North/South**: 6 orders, average order value of $108.17\n5. **Ana Trujillo Emparedados y helados**: 10 orders, average order value of $140.29\n\nThese customers have placed more than five orders, but their average order values are relatively low.",
+    "sql_query": "SELECT c.customer_id, c.company_name, COUNT(o.order_id) AS order_count, AVG(od.unit_price * od.quantity) AS avg_order_value\nFROM public.customers c\nJOIN public.orders o ON c.customer_id = o.customer_id\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY c.customer_id, c.company_name\nHAVING COUNT(o.order_id) > 5\nORDER BY avg_order_value ASC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "customer_id": "LAUGB",
+          "company_name": "Laughing Bacchus Wine Cellars",
+          "order_count": "8",
+          "avg_order_value": "65.31249904632568"
+        },
+        {
+          "customer_id": "GALED",
+          "company_name": "Galer\u00eda del gastr\u00f3nomo",
+          "order_count": "8",
+          "avg_order_value": "104.5874993801117"
+        },
+        {
+          "customer_id": "ROMEY",
+          "company_name": "Romero y tomillo",
+          "order_count": "14",
+          "avg_order_value": "104.80642989703587"
+        },
+        {
+          "customer_id": "NORTS",
+          "company_name": "North/South",
+          "order_count": "6",
+          "avg_order_value": "108.16666666666667"
+        },
+        {
+          "customer_id": "ANATR",
+          "company_name": "Ana Trujillo Emparedados y helados",
+          "order_count": "10",
+          "avg_order_value": "140.2949990272522"
+        }
+      ],
+      "rows": [
+        {
+          "customer_id": "LAUGB",
+          "company_name": "Laughing Bacchus Wine Cellars",
+          "order_count": "8",
+          "avg_order_value": "65.31249904632568"
+        },
+        {
+          "customer_id": "GALED",
+          "company_name": "Galer\u00eda del gastr\u00f3nomo",
+          "order_count": "8",
+          "avg_order_value": "104.5874993801117"
+        },
+        {
+          "customer_id": "ROMEY",
+          "company_name": "Romero y tomillo",
+          "order_count": "14",
+          "avg_order_value": "104.80642989703587"
+        },
+        {
+          "customer_id": "NORTS",
+          "company_name": "North/South",
+          "order_count": "6",
+          "avg_order_value": "108.16666666666667"
+        },
+        {
+          "customer_id": "ANATR",
+          "company_name": "Ana Trujillo Emparedados y helados",
+          "order_count": "10",
+          "avg_order_value": "140.2949990272522"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "customer_id",
+        "company_name",
+        "order_count",
+        "avg_order_value"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.customers",
+        "public.orders",
+        "public.order_details"
+      ]
+    },
+    "tables_used": [
+      "public.customers",
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "customer_id": "LAUGB",
+        "company_name": "Laughing Bacchus Wine Cellars",
+        "order_count": "8",
+        "avg_order_value": "65.31249904632568"
+      },
+      {
+        "customer_id": "GALED",
+        "company_name": "Galer\u00eda del gastr\u00f3nomo",
+        "order_count": "8",
+        "avg_order_value": "104.5874993801117"
+      },
+      {
+        "customer_id": "ROMEY",
+        "company_name": "Romero y tomillo",
+        "order_count": "14",
+        "avg_order_value": "104.80642989703587"
+      },
+      {
+        "customer_id": "NORTS",
+        "company_name": "North/South",
+        "order_count": "6",
+        "avg_order_value": "108.16666666666667"
+      },
+      {
+        "customer_id": "ANATR",
+        "company_name": "Ana Trujillo Emparedados y helados",
+        "order_count": "10",
+        "avg_order_value": "140.2949990272522"
+      }
+    ]
+  },
+  "NL15": {
+    "query_id": "NL15",
+    "question": "Which pairs of offerings are commonly bought together across different product families?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4685,
+    "error": null,
+    "final_response_text": "Here are the top pairs of products that are commonly bought together across different product families:\n\n1. **Sir Rodney's Scones** and **Sirop d'\u00e9rable** - bought together 8 times\n2. **Pavlova** and **Gorgonzola Telino** - bought together 7 times\n3. **Gorgonzola Telino** and **Mozzarella di Giovanni** - bought together 6 times\n4. **Camembert Pierrot** and **Flotemysost** - bought together 6 times\n5. **Pavlova** and **Camembert Pierrot** - bought together 6 times\n\nThese pairs indicate popular combinations that customers tend to purchase together.",
+    "sql_query": "SELECT p1.product_name AS product1, p2.product_name AS product2, COUNT(*) AS times_bought_together\nFROM public.order_details od1\nJOIN public.order_details od2 ON od1.order_id = od2.order_id AND od1.product_id < od2.product_id\nJOIN public.products p1 ON od1.product_id = p1.product_id\nJOIN public.products p2 ON od2.product_id = p2.product_id\nGROUP BY p1.product_name, p2.product_name\nORDER BY times_bought_together DESC\nLIMIT 10;",
+    "exec_result": {
+      "data": [
+        {
+          "product1": "Sir Rodney's Scones",
+          "product2": "Sirop d'\u00e9rable",
+          "times_bought_together": "8"
+        },
+        {
+          "product1": "Pavlova",
+          "product2": "Gorgonzola Telino",
+          "times_bought_together": "7"
+        },
+        {
+          "product1": "Gorgonzola Telino",
+          "product2": "Mozzarella di Giovanni",
+          "times_bought_together": "6"
+        },
+        {
+          "product1": "Camembert Pierrot",
+          "product2": "Flotemysost",
+          "times_bought_together": "6"
+        },
+        {
+          "product1": "Pavlova",
+          "product2": "Camembert Pierrot",
+          "times_bought_together": "6"
+        },
+        {
+          "product1": "Pavlova",
+          "product2": "Tarte au sucre",
+          "times_bought_together": "6"
+        },
+        {
+          "product1": "Nord-Ost Matjeshering",
+          "product2": "Tourti\u00e8re",
+          "times_bought_together": "6"
+        },
+        {
+          "product1": "P\u00e2t\u00e9 chinois",
+          "product2": "Tarte au sucre",
+          "times_bought_together": "5"
+        },
+        {
+          "product1": "Chang",
+          "product2": "Raclette Courdavault",
+          "times_bought_together": "5"
+        },
+        {
+          "product1": "Chang",
+          "product2": "Gorgonzola Telino",
+          "times_bought_together": "5"
+        }
+      ],
+      "rows": [
+        {
+          "product1": "Sir Rodney's Scones",
+          "product2": "Sirop d'\u00e9rable",
+          "times_bought_together": "8"
+        },
+        {
+          "product1": "Pavlova",
+          "product2": "Gorgonzola Telino",
+          "times_bought_together": "7"
+        },
+        {
+          "product1": "Gorgonzola Telino",
+          "product2": "Mozzarella di Giovanni",
+          "times_bought_together": "6"
+        },
+        {
+          "product1": "Camembert Pierrot",
+          "product2": "Flotemysost",
+          "times_bought_together": "6"
+        },
+        {
+          "product1": "Pavlova",
+          "product2": "Camembert Pierrot",
+          "times_bought_together": "6"
+        },
+        {
+          "product1": "Pavlova",
+          "product2": "Tarte au sucre",
+          "times_bought_together": "6"
+        },
+        {
+          "product1": "Nord-Ost Matjeshering",
+          "product2": "Tourti\u00e8re",
+          "times_bought_together": "6"
+        },
+        {
+          "product1": "P\u00e2t\u00e9 chinois",
+          "product2": "Tarte au sucre",
+          "times_bought_together": "5"
+        },
+        {
+          "product1": "Chang",
+          "product2": "Raclette Courdavault",
+          "times_bought_together": "5"
+        },
+        {
+          "product1": "Chang",
+          "product2": "Gorgonzola Telino",
+          "times_bought_together": "5"
+        }
+      ],
+      "row_count": 10,
+      "columns": [
+        "product1",
+        "product2",
+        "times_bought_together"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.order_details",
+        "public.order_details",
+        "public.products",
+        "public.products"
+      ]
+    },
+    "tables_used": [
+      "public.order_details",
+      "public.products"
+    ],
+    "row_count": 10,
+    "result_preview": [
+      {
+        "product1": "Sir Rodney's Scones",
+        "product2": "Sirop d'\u00e9rable",
+        "times_bought_together": "8"
+      },
+      {
+        "product1": "Pavlova",
+        "product2": "Gorgonzola Telino",
+        "times_bought_together": "7"
+      },
+      {
+        "product1": "Gorgonzola Telino",
+        "product2": "Mozzarella di Giovanni",
+        "times_bought_together": "6"
+      },
+      {
+        "product1": "Camembert Pierrot",
+        "product2": "Flotemysost",
+        "times_bought_together": "6"
+      },
+      {
+        "product1": "Pavlova",
+        "product2": "Camembert Pierrot",
+        "times_bought_together": "6"
+      },
+      {
+        "product1": "Pavlova",
+        "product2": "Tarte au sucre",
+        "times_bought_together": "6"
+      },
+      {
+        "product1": "Nord-Ost Matjeshering",
+        "product2": "Tourti\u00e8re",
+        "times_bought_together": "6"
+      },
+      {
+        "product1": "P\u00e2t\u00e9 chinois",
+        "product2": "Tarte au sucre",
+        "times_bought_together": "5"
+      },
+      {
+        "product1": "Chang",
+        "product2": "Raclette Courdavault",
+        "times_bought_together": "5"
+      },
+      {
+        "product1": "Chang",
+        "product2": "Gorgonzola Telino",
+        "times_bought_together": "5"
+      }
+    ]
+  },
+  "NL16": {
+    "query_id": "NL16",
+    "question": "Which vendors have offerings that never got sold?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 5314,
+    "error": null,
+    "final_response_text": "There are no vendors with offerings that have never been sold. All vendor products have been included in at least one order.",
+    "sql_query": "SELECT s.company_name\nFROM public.suppliers s\nLEFT JOIN public.products p ON s.supplier_id = p.supplier_id\nLEFT JOIN public.order_details od ON p.product_id = od.product_id\nWHERE od.product_id IS NULL;",
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": 0,
+      "columns": [],
+      "ok": true,
+      "tables_used": [
+        "public.suppliers",
+        "public.products",
+        "public.order_details"
+      ]
+    },
+    "tables_used": [
+      "public.suppliers",
+      "public.products",
+      "public.order_details"
+    ],
+    "row_count": 0,
+    "result_preview": []
+  },
+  "NL17": {
+    "query_id": "NL17",
+    "question": "Which audience segments produce the most discounted turnover?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 8779,
+    "error": null,
+    "final_response_text": "The top customer segments producing the most discounted turnover are:\n\n1. **QUICK-Stop** from Germany with a discounted turnover of approximately $110,277.\n2. **Ernst Handel** from Austria with a discounted turnover of approximately $104,875.\n3. **Save-a-lot Markets** from the USA with a discounted turnover of approximately $104,362.\n4. **Rattlesnake Canyon Grocery** from the USA with a discounted turnover of approximately $51,098.\n5. **Hungry Owl All-Night Grocers** from Ireland with a discounted turnover of approximately $49,980.\n\nThese segments represent the highest discounted sales across different countries.",
+    "sql_query": "SELECT c.company_name, c.country, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS discounted_turnover\nFROM public.order_details od\nJOIN public.orders o ON od.order_id = o.order_id\nJOIN public.customers c ON o.customer_id = c.customer_id\nGROUP BY c.company_name, c.country\nORDER BY discounted_turnover DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "company_name": "QUICK-Stop",
+          "country": "Germany",
+          "discounted_turnover": "110277.30503039382"
+        },
+        {
+          "company_name": "Ernst Handel",
+          "country": "Austria",
+          "discounted_turnover": "104874.97814367746"
+        },
+        {
+          "company_name": "Save-a-lot Markets",
+          "country": "USA",
+          "discounted_turnover": "104361.94954039395"
+        },
+        {
+          "company_name": "Rattlesnake Canyon Grocery",
+          "country": "USA",
+          "discounted_turnover": "51097.80082826822"
+        },
+        {
+          "company_name": "Hungry Owl All-Night Grocers",
+          "country": "Ireland",
+          "discounted_turnover": "49979.90508149549"
+        }
+      ],
+      "rows": [
+        {
+          "company_name": "QUICK-Stop",
+          "country": "Germany",
+          "discounted_turnover": "110277.30503039382"
+        },
+        {
+          "company_name": "Ernst Handel",
+          "country": "Austria",
+          "discounted_turnover": "104874.97814367746"
+        },
+        {
+          "company_name": "Save-a-lot Markets",
+          "country": "USA",
+          "discounted_turnover": "104361.94954039395"
+        },
+        {
+          "company_name": "Rattlesnake Canyon Grocery",
+          "country": "USA",
+          "discounted_turnover": "51097.80082826822"
+        },
+        {
+          "company_name": "Hungry Owl All-Night Grocers",
+          "country": "Ireland",
+          "discounted_turnover": "49979.90508149549"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "company_name",
+        "country",
+        "discounted_turnover"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.order_details",
+        "public.orders",
+        "public.customers"
+      ]
+    },
+    "tables_used": [
+      "public.order_details",
+      "public.orders",
+      "public.customers"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "company_name": "QUICK-Stop",
+        "country": "Germany",
+        "discounted_turnover": "110277.30503039382"
+      },
+      {
+        "company_name": "Ernst Handel",
+        "country": "Austria",
+        "discounted_turnover": "104874.97814367746"
+      },
+      {
+        "company_name": "Save-a-lot Markets",
+        "country": "USA",
+        "discounted_turnover": "104361.94954039395"
+      },
+      {
+        "company_name": "Rattlesnake Canyon Grocery",
+        "country": "USA",
+        "discounted_turnover": "51097.80082826822"
+      },
+      {
+        "company_name": "Hungry Owl All-Night Grocers",
+        "country": "Ireland",
+        "discounted_turnover": "49979.90508149549"
+      }
+    ]
+  },
+  "NL18": {
+    "query_id": "NL18",
+    "question": "Which team members most often sell into destination countries different from their own?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 2887,
+    "error": null,
+    "final_response_text": "The team members who most often sell into destination countries different from their own are:\n\n1. Margaret Peacock with 134 sales.\n2. Janet Leverling with 106 sales.\n3. Nancy Davolio with 102 sales.\n4. Andrew Fuller with 87 sales.\n5. Laura Callahan with 85 sales.\n\nThese individuals frequently handle international sales.",
+    "sql_query": "SELECT e.first_name, e.last_name, COUNT(o.order_id) AS different_country_sales\nFROM public.orders o\nJOIN public.employees e ON o.employee_id = e.employee_id\nJOIN public.customers c ON o.customer_id = c.customer_id\nWHERE e.country <> o.ship_country\nGROUP BY e.first_name, e.last_name\nORDER BY different_country_sales DESC",
+    "exec_result": {
+      "data": [
+        {
+          "first_name": "Margaret",
+          "last_name": "Peacock",
+          "different_country_sales": "134"
+        },
+        {
+          "first_name": "Janet",
+          "last_name": "Leverling",
+          "different_country_sales": "106"
+        },
+        {
+          "first_name": "Nancy",
+          "last_name": "Davolio",
+          "different_country_sales": "102"
+        },
+        {
+          "first_name": "Andrew",
+          "last_name": "Fuller",
+          "different_country_sales": "87"
+        },
+        {
+          "first_name": "Laura",
+          "last_name": "Callahan",
+          "different_country_sales": "85"
+        },
+        {
+          "first_name": "Robert",
+          "last_name": "King",
+          "different_country_sales": "67"
+        },
+        {
+          "first_name": "Michael",
+          "last_name": "Suyama",
+          "different_country_sales": "62"
+        },
+        {
+          "first_name": "Steven",
+          "last_name": "Buchanan",
+          "different_country_sales": "40"
+        },
+        {
+          "first_name": "Anne",
+          "last_name": "Dodsworth",
+          "different_country_sales": "39"
+        }
+      ],
+      "rows": [
+        {
+          "first_name": "Margaret",
+          "last_name": "Peacock",
+          "different_country_sales": "134"
+        },
+        {
+          "first_name": "Janet",
+          "last_name": "Leverling",
+          "different_country_sales": "106"
+        },
+        {
+          "first_name": "Nancy",
+          "last_name": "Davolio",
+          "different_country_sales": "102"
+        },
+        {
+          "first_name": "Andrew",
+          "last_name": "Fuller",
+          "different_country_sales": "87"
+        },
+        {
+          "first_name": "Laura",
+          "last_name": "Callahan",
+          "different_country_sales": "85"
+        },
+        {
+          "first_name": "Robert",
+          "last_name": "King",
+          "different_country_sales": "67"
+        },
+        {
+          "first_name": "Michael",
+          "last_name": "Suyama",
+          "different_country_sales": "62"
+        },
+        {
+          "first_name": "Steven",
+          "last_name": "Buchanan",
+          "different_country_sales": "40"
+        },
+        {
+          "first_name": "Anne",
+          "last_name": "Dodsworth",
+          "different_country_sales": "39"
+        }
+      ],
+      "row_count": 9,
+      "columns": [
+        "first_name",
+        "last_name",
+        "different_country_sales"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.employees",
+        "public.customers"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.employees",
+      "public.customers"
+    ],
+    "row_count": 9,
+    "result_preview": [
+      {
+        "first_name": "Margaret",
+        "last_name": "Peacock",
+        "different_country_sales": "134"
+      },
+      {
+        "first_name": "Janet",
+        "last_name": "Leverling",
+        "different_country_sales": "106"
+      },
+      {
+        "first_name": "Nancy",
+        "last_name": "Davolio",
+        "different_country_sales": "102"
+      },
+      {
+        "first_name": "Andrew",
+        "last_name": "Fuller",
+        "different_country_sales": "87"
+      },
+      {
+        "first_name": "Laura",
+        "last_name": "Callahan",
+        "different_country_sales": "85"
+      },
+      {
+        "first_name": "Robert",
+        "last_name": "King",
+        "different_country_sales": "67"
+      },
+      {
+        "first_name": "Michael",
+        "last_name": "Suyama",
+        "different_country_sales": "62"
+      },
+      {
+        "first_name": "Steven",
+        "last_name": "Buchanan",
+        "different_country_sales": "40"
+      },
+      {
+        "first_name": "Anne",
+        "last_name": "Dodsworth",
+        "different_country_sales": "39"
+      }
+    ]
+  },
+  "NL19": {
+    "query_id": "NL19",
+    "question": "Within each offering family, who is the leading contributor by revenue share?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4674,
+    "error": null,
+    "final_response_text": "Here are the leading contributors by revenue share within each offering family (category):\n\n- **Category 1**: C\u00f4te de Blaye with a revenue of approximately $149,984.\n- **Category 2**: Vegie-spread with a revenue of approximately $17,696.\n\nThese products have the highest revenue within their respective categories. If you need more details or additional categories, let me know!",
+    "sql_query": "SELECT p.category_id, p.product_name, SUM(od.unit_price * od.quantity) AS revenue\nFROM public.order_details od\nJOIN public.products p ON od.product_id = p.product_id\nGROUP BY p.category_id, p.product_name\nORDER BY p.category_id, revenue DESC",
+    "exec_result": {
+      "data": [
+        {
+          "category_id": "1",
+          "product_name": "C\u00f4te de Blaye",
+          "revenue": "149984.20082092285"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Ipoh Coffee",
+          "revenue": "25079.199867248535"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Chang",
+          "revenue": "18559.19992351532"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Lakkalik\u00f6\u00f6ri",
+          "revenue": "16793.999908447266"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Steeleye Stout",
+          "revenue": "14536.799856185913"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Chai",
+          "revenue": "14277.599933624268"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Chartreuse verte",
+          "revenue": "13150.799880981445"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Outback Lager",
+          "revenue": "11472.0"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Rh\u00f6nbr\u00e4u Klosterbier",
+          "revenue": "8650.549962997437"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Sasquatch Ale",
+          "revenue": "6677.999972343445"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Guaran\u00e1 Fant\u00e1stica",
+          "revenue": "4782.599970340729"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Laughing Lumberjack Lager",
+          "revenue": "2561.9999990463257"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Vegie-spread",
+          "revenue": "17696.30004119873"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Sirop d'\u00e9rable",
+          "revenue": "16438.79990005493"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Louisiana Fiery Hot Pepper Sauce",
+          "revenue": "14606.999431610107"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Northwoods Cranberry Sauce",
+          "revenue": "13760.0"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Gula Malacca",
+          "revenue": "10524.200233459473"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Original Frankfurter gr\u00fcne So\u00dfe",
+          "revenue": "9684.999912261963"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Chef Anton's Cajun Seasoning",
+          "revenue": "9424.800046920776"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Grandma's Boysenberry Spread",
+          "revenue": "7345.0"
+        }
+      ],
+      "rows": [
+        {
+          "category_id": "1",
+          "product_name": "C\u00f4te de Blaye",
+          "revenue": "149984.20082092285"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Ipoh Coffee",
+          "revenue": "25079.199867248535"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Chang",
+          "revenue": "18559.19992351532"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Lakkalik\u00f6\u00f6ri",
+          "revenue": "16793.999908447266"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Steeleye Stout",
+          "revenue": "14536.799856185913"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Chai",
+          "revenue": "14277.599933624268"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Chartreuse verte",
+          "revenue": "13150.799880981445"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Outback Lager",
+          "revenue": "11472.0"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Rh\u00f6nbr\u00e4u Klosterbier",
+          "revenue": "8650.549962997437"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Sasquatch Ale",
+          "revenue": "6677.999972343445"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Guaran\u00e1 Fant\u00e1stica",
+          "revenue": "4782.599970340729"
+        },
+        {
+          "category_id": "1",
+          "product_name": "Laughing Lumberjack Lager",
+          "revenue": "2561.9999990463257"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Vegie-spread",
+          "revenue": "17696.30004119873"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Sirop d'\u00e9rable",
+          "revenue": "16438.79990005493"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Louisiana Fiery Hot Pepper Sauce",
+          "revenue": "14606.999431610107"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Northwoods Cranberry Sauce",
+          "revenue": "13760.0"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Gula Malacca",
+          "revenue": "10524.200233459473"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Original Frankfurter gr\u00fcne So\u00dfe",
+          "revenue": "9684.999912261963"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Chef Anton's Cajun Seasoning",
+          "revenue": "9424.800046920776"
+        },
+        {
+          "category_id": "2",
+          "product_name": "Grandma's Boysenberry Spread",
+          "revenue": "7345.0"
+        }
+      ],
+      "row_count": 77,
+      "columns": [
+        "category_id",
+        "product_name",
+        "revenue"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.order_details",
+        "public.products"
+      ]
+    },
+    "tables_used": [
+      "public.order_details",
+      "public.products"
+    ],
+    "row_count": 77,
+    "result_preview": [
+      {
+        "category_id": "1",
+        "product_name": "C\u00f4te de Blaye",
+        "revenue": "149984.20082092285"
+      },
+      {
+        "category_id": "1",
+        "product_name": "Ipoh Coffee",
+        "revenue": "25079.199867248535"
+      },
+      {
+        "category_id": "1",
+        "product_name": "Chang",
+        "revenue": "18559.19992351532"
+      },
+      {
+        "category_id": "1",
+        "product_name": "Lakkalik\u00f6\u00f6ri",
+        "revenue": "16793.999908447266"
+      },
+      {
+        "category_id": "1",
+        "product_name": "Steeleye Stout",
+        "revenue": "14536.799856185913"
+      },
+      {
+        "category_id": "1",
+        "product_name": "Chai",
+        "revenue": "14277.599933624268"
+      },
+      {
+        "category_id": "1",
+        "product_name": "Chartreuse verte",
+        "revenue": "13150.799880981445"
+      },
+      {
+        "category_id": "1",
+        "product_name": "Outback Lager",
+        "revenue": "11472.0"
+      },
+      {
+        "category_id": "1",
+        "product_name": "Rh\u00f6nbr\u00e4u Klosterbier",
+        "revenue": "8650.549962997437"
+      },
+      {
+        "category_id": "1",
+        "product_name": "Sasquatch Ale",
+        "revenue": "6677.999972343445"
+      },
+      {
+        "category_id": "1",
+        "product_name": "Guaran\u00e1 Fant\u00e1stica",
+        "revenue": "4782.599970340729"
+      },
+      {
+        "category_id": "1",
+        "product_name": "Laughing Lumberjack Lager",
+        "revenue": "2561.9999990463257"
+      },
+      {
+        "category_id": "2",
+        "product_name": "Vegie-spread",
+        "revenue": "17696.30004119873"
+      },
+      {
+        "category_id": "2",
+        "product_name": "Sirop d'\u00e9rable",
+        "revenue": "16438.79990005493"
+      },
+      {
+        "category_id": "2",
+        "product_name": "Louisiana Fiery Hot Pepper Sauce",
+        "revenue": "14606.999431610107"
+      },
+      {
+        "category_id": "2",
+        "product_name": "Northwoods Cranberry Sauce",
+        "revenue": "13760.0"
+      },
+      {
+        "category_id": "2",
+        "product_name": "Gula Malacca",
+        "revenue": "10524.200233459473"
+      },
+      {
+        "category_id": "2",
+        "product_name": "Original Frankfurter gr\u00fcne So\u00dfe",
+        "revenue": "9684.999912261963"
+      },
+      {
+        "category_id": "2",
+        "product_name": "Chef Anton's Cajun Seasoning",
+        "revenue": "9424.800046920776"
+      },
+      {
+        "category_id": "2",
+        "product_name": "Grandma's Boysenberry Spread",
+        "revenue": "7345.0"
+      }
+    ]
+  },
+  "NL20": {
+    "query_id": "NL20",
+    "question": "In which months is logistics cost highest relative to earned turnover?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 3566,
+    "error": null,
+    "final_response_text": "I couldn't find any specific tables related to \"logistics cost\" or \"turnover\" in the database. It's possible that these concepts are stored under different names or combined with other data. \n\nIf you have any other terms or related concepts that might be used in your database for logistics costs or turnover, please let me know, and I can search for those. Alternatively, if you have access to the database schema or documentation, it might provide insights into how these data points are stored.",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  }
+}

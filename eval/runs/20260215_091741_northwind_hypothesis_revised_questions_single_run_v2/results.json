@@ -1,0 +1,1583 @@
+{
+  "NW1": {
+    "query_id": "NW1",
+    "question": "List the 5 products that should be reordered, where units_in_stock is below reorder_level, ordered by the largest shortage first.",
+    "status": "success",
+    "final_answer_text": "Here are the 5 products that should be reordered, as their units in stock are below the reorder level, ordered by the largest shortage:\n\n1. **Gorgonzola Telino**: 0 units in stock, reorder level 20, shortage of 20 units.\n2. **Louisiana Hot Spiced Okra**: 4 units in stock, reorder level 20, shortage of 16 units.\n3. **Mascarpone Fabioli**: 9 units in stock, reorder level 25, shortage of 16 units.\n4. **Outback Lager**: 15 units in stock, reorder level 30, shortage of 15 units.\n5. **Gravad lax**: 11 units in stock, reorder level 25, shortage of 14 units.",
+    "sql_generated": [
+      "SELECT product_name, units_in_stock, reorder_level, (reorder_level - units_in_stock) AS shortage\nFROM public.products\nWHERE units_in_stock < reorder_level\nORDER BY shortage DESC\nLIMIT 5;"
+    ],
+    "sql_executed": [
+      "SELECT product_name, units_in_stock, reorder_level, (reorder_level - units_in_stock) AS shortage\nFROM public.products\nWHERE units_in_stock < reorder_level\nORDER BY shortage DESC\nLIMIT 5;"
+    ],
+    "tables_used": [
+      "public.products"
+    ],
+    "row_count": 5,
+    "latency_ms_total": 11051,
+    "retries": 0,
+    "result_preview": [
+      {
+        "product_name": "Gorgonzola Telino",
+        "units_in_stock": "0",
+        "reorder_level": "20",
+        "shortage": "20"
+      },
+      {
+        "product_name": "Louisiana Hot Spiced Okra",
+        "units_in_stock": "4",
+        "reorder_level": "20",
+        "shortage": "16"
+      },
+      {
+        "product_name": "Mascarpone Fabioli",
+        "units_in_stock": "9",
+        "reorder_level": "25",
+        "shortage": "16"
+      },
+      {
+        "product_name": "Outback Lager",
+        "units_in_stock": "15",
+        "reorder_level": "30",
+        "shortage": "15"
+      },
+      {
+        "product_name": "Gravad lax",
+        "units_in_stock": "11",
+        "reorder_level": "25",
+        "shortage": "14"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": "PARTIAL",
+    "semantic_failure_reasons": [
+      "REFERENCE_RESULT_MISMATCH"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW1",
+    "retrieval_log": [
+      {
+        "tool_name": "discover_tables",
+        "query": "Lagerbestand Nachbestellung",
+        "top_tables": [],
+        "table_scores": []
+      },
+      {
+        "tool_name": "discover_tables",
+        "query": "Bestand Nachbestellung",
+        "top_tables": [],
+        "table_scores": []
+      },
+      {
+        "tool_name": "discover_tables",
+        "query": "Lager Artikel",
+        "top_tables": [
+          "public.order_details",
+          "public.products"
+        ],
+        "table_scores": [
+          {
+            "name": "public.order_details",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.products",
+            "relevance": 1.0
+          }
+        ]
+      }
+    ],
+    "retrieved_tables_topk": [
+      "public.order_details",
+      "public.products"
+    ],
+    "retrieval_eval": {
+      "required_tables": [
+        "products"
+      ],
+      "retrieved_tables": [
+        "order_details",
+        "products"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "all_required_in_top_3": true,
+      "all_required_in_top_5": true
+    },
+    "reference_result_match": false,
+    "reference_result_info": {
+      "checked": true,
+      "match": false,
+      "candidate_row_count": 5,
+      "reference_row_count": 5
+    },
+    "semantic_review_method": "contract_rules_plus_reference_sql",
+    "llm_usage": {
+      "total": 5,
+      "intent": 0,
+      "discovery": 3,
+      "join": 1,
+      "repair": 0,
+      "answer": 1
+    },
+    "node_entry_counts": {
+      "discovery": 3,
+      "join_sql": 1
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 5,
+    "total_graph_cycles": 5,
+    "model": "gpt-4o"
+  },
+  "NW2": {
+    "query_id": "NW2",
+    "question": "For each product category, compute total discounted revenue using unit_price * quantity * (1 - discount), and show which category has the highest revenue.",
+    "status": "success",
+    "final_answer_text": "The product category with the highest total discounted revenue is \"Beverages,\" with a total revenue of approximately 267,868.18.",
+    "sql_generated": [
+      "SELECT c.category_name, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_discounted_revenue\nFROM public.order_details od\nJOIN public.products p ON od.product_id = p.product_id\nJOIN public.categories c ON p.category_id = c.category_id\nGROUP BY c.category_name\nORDER BY total_discounted_revenue DESC\nLIMIT 1;"
+    ],
+    "sql_executed": [
+      "SELECT c.category_name, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_discounted_revenue\nFROM public.order_details od\nJOIN public.products p ON od.product_id = p.product_id\nJOIN public.categories c ON p.category_id = c.category_id\nGROUP BY c.category_name\nORDER BY total_discounted_revenue DESC\nLIMIT 1;"
+    ],
+    "tables_used": [
+      "public.order_details",
+      "public.products",
+      "public.categories"
+    ],
+    "row_count": 1,
+    "latency_ms_total": 7962,
+    "retries": 0,
+    "result_preview": [
+      {
+        "category_name": "Beverages",
+        "total_discounted_revenue": "267868.17978624784"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": "PARTIAL",
+    "semantic_failure_reasons": [
+      "REFERENCE_RESULT_MISMATCH"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW2",
+    "retrieval_log": [
+      {
+        "tool_name": "discover_tables",
+        "query": "Artikelkategorie Umsatz Rabatt",
+        "top_tables": [
+          "public.orders",
+          "public.order_details"
+        ],
+        "table_scores": [
+          {
+            "name": "public.orders",
+            "relevance": 0.7
+          },
+          {
+            "name": "public.order_details",
+            "relevance": 0.68
+          }
+        ]
+      },
+      {
+        "tool_name": "discover_tables",
+        "query": "Kategorie",
+        "top_tables": [],
+        "table_scores": []
+      },
+      {
+        "tool_name": "discover_tables",
+        "query": "Produktkategorie",
+        "top_tables": [
+          "public.products",
+          "public.order_details"
+        ],
+        "table_scores": [
+          {
+            "name": "public.products",
+            "relevance": 0.96
+          },
+          {
+            "name": "public.order_details",
+            "relevance": 0.76
+          }
+        ]
+      },
+      {
+        "tool_name": "get_schema",
+        "query": "",
+        "top_tables": [
+          "category_id",
+          "supplier_id",
+          "product_id",
+          "product_name",
+          "quantity_per_unit"
+        ],
+        "table_scores": [
+          {
+            "name": "category_id",
+            "relevance": null
+          },
+          {
+            "name": "supplier_id",
+            "relevance": null
+          },
+          {
+            "name": "product_id",
+            "relevance": null
+          },
+          {
+            "name": "product_name",
+            "relevance": null
+          },
+          {
+            "name": "quantity_per_unit",
+            "relevance": null
+          }
+        ]
+      },
+      {
+        "tool_name": "get_schema",
+        "query": "",
+        "top_tables": [
+          "category_id",
+          "category_name",
+          "description",
+          "picture"
+        ],
+        "table_scores": [
+          {
+            "name": "category_id",
+            "relevance": null
+          },
+          {
+            "name": "category_name",
+            "relevance": null
+          },
+          {
+            "name": "description",
+            "relevance": null
+          },
+          {
+            "name": "picture",
+            "relevance": null
+          }
+        ]
+      }
+    ],
+    "retrieved_tables_topk": [
+      "public.products",
+      "public.order_details",
+      "public.orders",
+      "category_id",
+      "supplier_id"
+    ],
+    "retrieval_eval": {
+      "required_tables": [
+        "categories",
+        "products",
+        "order_details"
+      ],
+      "retrieved_tables": [
+        "products",
+        "order_details",
+        "orders",
+        "category_id",
+        "supplier_id"
+      ],
+      "recall_at_3": 0.6667,
+      "recall_at_5": 0.6667,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": false
+    },
+    "reference_result_match": false,
+    "reference_result_info": {
+      "checked": true,
+      "match": false,
+      "candidate_row_count": 1,
+      "reference_row_count": 8
+    },
+    "semantic_review_method": "contract_rules_plus_reference_sql",
+    "llm_usage": {
+      "total": 7,
+      "intent": 0,
+      "discovery": 5,
+      "join": 1,
+      "repair": 0,
+      "answer": 1
+    },
+    "node_entry_counts": {
+      "discovery": 5,
+      "join_sql": 1
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 7,
+    "total_graph_cycles": 7,
+    "model": "gpt-4o"
+  },
+  "NW3": {
+    "query_id": "NW3",
+    "question": "Which customers have placed more than 10 distinct orders, and what is their total order value?",
+    "status": "success",
+    "final_answer_text": "Here are some of the customers who have placed more than 10 distinct orders along with their total order value:\n\n1. **Around the Horn**: 13 orders, total value CHF 13,390.65\n2. **Berglunds snabbk\u00f6p**: 18 orders, total value CHF 24,927.58\n3. **Blondesddsl p\u00e8re et fils**: 11 orders, total value CHF 18,534.08\n4. **Bon app'**: 17 orders, total value CHF 21,963.25\n5. **Bottom-Dollar Markets**: 14 orders, total value CHF 20,801.60\n\nThese are just a few examples from the list. If you need more details, let me know!",
+    "sql_generated": [
+      "SELECT c.company_name, COUNT(DISTINCT o.order_id) AS order_count, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_order_value\nFROM public.customers c\nJOIN public.orders o ON c.customer_id = o.customer_id\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY c.company_name\nHAVING COUNT(DISTINCT o.order_id) > 10"
+    ],
+    "sql_executed": [
+      "SELECT c.company_name, COUNT(DISTINCT o.order_id) AS order_count, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_order_value\nFROM public.customers c\nJOIN public.orders o ON c.customer_id = o.customer_id\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY c.company_name\nHAVING COUNT(DISTINCT o.order_id) > 10"
+    ],
+    "tables_used": [
+      "public.customers",
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 28,
+    "latency_ms_total": 5308,
+    "retries": 0,
+    "result_preview": [
+      {
+        "company_name": "Around the Horn",
+        "order_count": "13",
+        "total_order_value": "13390.649973928183"
+      },
+      {
+        "company_name": "Berglunds snabbk\u00f6p",
+        "order_count": "18",
+        "total_order_value": "24927.577430965972"
+      },
+      {
+        "company_name": "Blondesddsl p\u00e8re et fils",
+        "order_count": "11",
+        "total_order_value": "18534.080079345105"
+      },
+      {
+        "company_name": "Bon app'",
+        "order_count": "17",
+        "total_order_value": "21963.252461684533"
+      },
+      {
+        "company_name": "Bottom-Dollar Markets",
+        "order_count": "14",
+        "total_order_value": "20801.59995229095"
+      },
+      {
+        "company_name": "Ernst Handel",
+        "order_count": "30",
+        "total_order_value": "104874.97814367746"
+      },
+      {
+        "company_name": "Folk och f\u00e4 HB",
+        "order_count": "19",
+        "total_order_value": "29567.562490026656"
+      },
+      {
+        "company_name": "Frankenversand",
+        "order_count": "15",
+        "total_order_value": "26656.559403990017"
+      },
+      {
+        "company_name": "Great Lakes Food Market",
+        "order_count": "11",
+        "total_order_value": "18507.44997092657"
+      },
+      {
+        "company_name": "Hanari Carnes",
+        "order_count": "14",
+        "total_order_value": "32841.369948457475"
+      },
+      {
+        "company_name": "HILARION-Abastos",
+        "order_count": "18",
+        "total_order_value": "22768.76392572349"
+      },
+      {
+        "company_name": "Hungry Owl All-Night Grocers",
+        "order_count": "19",
+        "total_order_value": "49979.90508149548"
+      },
+      {
+        "company_name": "K\u00f6niglich Essen",
+        "order_count": "14",
+        "total_order_value": "30908.383872538416"
+      },
+      {
+        "company_name": "La maison d'Asie",
+        "order_count": "14",
+        "total_order_value": "9328.200014907121"
+      },
+      {
+        "company_name": "Lehmanns Marktstand",
+        "order_count": "15",
+        "total_order_value": "19261.409954871837"
+      },
+      {
+        "company_name": "LILA-Supermercado",
+        "order_count": "14",
+        "total_order_value": "16076.599920950532"
+      },
+      {
+        "company_name": "LINO-Delicateses",
+        "order_count": "12",
+        "total_order_value": "16476.56491531938"
+      },
+      {
+        "company_name": "M\u00e8re Paillarde",
+        "order_count": "13",
+        "total_order_value": "28872.19015611842"
+      },
+      {
+        "company_name": "Queen Cozinha",
+        "order_count": "13",
+        "total_order_value": "25717.497604973578"
+      },
+      {
+        "company_name": "QUICK-Stop",
+        "order_count": "28",
+        "total_order_value": "110277.30503039382"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": "PARTIAL",
+    "semantic_failure_reasons": [
+      "REFERENCE_RESULT_MISMATCH"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW3",
+    "retrieval_log": [
+      {
+        "tool_name": "discover_tables",
+        "query": "Kunden Bestellung",
+        "top_tables": [
+          "public.customer_customer_demo",
+          "public.customer_demographics",
+          "public.customers",
+          "public.order_details",
+          "public.orders"
+        ],
+        "table_scores": [
+          {
+            "name": "public.customer_customer_demo",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.customer_demographics",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.customers",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.order_details",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.orders",
+            "relevance": 1.0
+          }
+        ]
+      }
+    ],
+    "retrieved_tables_topk": [
+      "public.customer_customer_demo",
+      "public.customer_demographics",
+      "public.customers",
+      "public.order_details",
+      "public.orders"
+    ],
+    "retrieval_eval": {
+      "required_tables": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "retrieved_tables": [
+        "customer_customer_demo",
+        "customer_demographics",
+        "customers",
+        "order_details",
+        "orders"
+      ],
+      "recall_at_3": 0.3333,
+      "recall_at_5": 1.0,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": true
+    },
+    "reference_result_match": false,
+    "reference_result_info": {
+      "checked": true,
+      "match": false,
+      "candidate_row_count": 28,
+      "reference_row_count": 28
+    },
+    "semantic_review_method": "contract_rules_plus_reference_sql",
+    "llm_usage": {
+      "total": 3,
+      "intent": 0,
+      "discovery": 1,
+      "join": 1,
+      "repair": 0,
+      "answer": 1
+    },
+    "node_entry_counts": {
+      "discovery": 1,
+      "join_sql": 1
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 3,
+    "total_graph_cycles": 3,
+    "model": "gpt-4o"
+  },
+  "NW4": {
+    "query_id": "NW4",
+    "question": "For each shipper, count late shipments where shipped_date > required_date, and also show total shipments.",
+    "status": "failed",
+    "final_answer_text": "I couldn't find the exact tables or columns related to shipments with \"shipped_date\" and \"required_date\". It seems the database might not have these specific fields or they might be named differently. \n\nIf you have any other details or specific table names, please let me know, and I can refine the search. Alternatively, you can provide more context or check if there are other related terms that might be used in your database.",
+    "sql_generated": [],
+    "sql_executed": [],
+    "tables_used": [],
+    "row_count": null,
+    "latency_ms_total": 4377,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [
+      "EVALUATION_SKIPPED_NO_SQL"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW4",
+    "retrieval_log": [
+      {
+        "tool_name": "discover_tables",
+        "query": "Lieferant Lieferung Versanddatum ErforderlichesDatum",
+        "top_tables": [
+          "public.order_details",
+          "public.suppliers"
+        ],
+        "table_scores": [
+          {
+            "name": "public.order_details",
+            "relevance": 0.2
+          },
+          {
+            "name": "public.suppliers",
+            "relevance": 0.12
+          }
+        ]
+      },
+      {
+        "tool_name": "discover_tables",
+        "query": "Lieferung Versanddatum ErforderlichesDatum",
+        "top_tables": [
+          "public.order_details",
+          "public.suppliers"
+        ],
+        "table_scores": [
+          {
+            "name": "public.order_details",
+            "relevance": 0.2
+          },
+          {
+            "name": "public.suppliers",
+            "relevance": 0.12
+          }
+        ]
+      }
+    ],
+    "retrieved_tables_topk": [
+      "public.order_details",
+      "public.suppliers"
+    ],
+    "retrieval_eval": {
+      "required_tables": [
+        "orders",
+        "shippers"
+      ],
+      "retrieved_tables": [
+        "order_details",
+        "suppliers"
+      ],
+      "recall_at_3": 0.0,
+      "recall_at_5": 0.0,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": false
+    },
+    "reference_result_match": null,
+    "reference_result_info": null,
+    "semantic_review_method": "skipped_no_sql",
+    "llm_usage": {
+      "total": 3,
+      "intent": 0,
+      "discovery": 2,
+      "join": 0,
+      "repair": 0,
+      "answer": 1
+    },
+    "node_entry_counts": {
+      "discovery": 2,
+      "join_sql": 0
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 1,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 3,
+    "total_graph_cycles": 3,
+    "model": "gpt-4o",
+    "failure_reasons": [
+      "missing_sql",
+      "missing_tables",
+      "missing_results"
+    ]
+  },
+  "NW5": {
+    "query_id": "NW5",
+    "question": "Which employees generated the most discounted revenue from their orders?",
+    "status": "success",
+    "final_answer_text": "The employees who generated the most discounted revenue from their orders are as follows:\n\n1. Employee ID 4 with a discounted revenue of CHF 232,891\n2. Employee ID 3 with a discounted revenue of CHF 202,813\n3. Employee ID 1 with a discounted revenue of CHF 192,108\n4. Employee ID 2 with a discounted revenue of CHF 166,538\n5. Employee ID 8 with a discounted revenue of CHF 126,862\n\nThese figures represent the total revenue after applying discounts on their respective orders.",
+    "sql_generated": [
+      "SELECT o.employee_id, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS discounted_revenue\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY o.employee_id\nORDER BY discounted_revenue DESC\nLIMIT 5;"
+    ],
+    "sql_executed": [
+      "SELECT o.employee_id, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS discounted_revenue\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY o.employee_id\nORDER BY discounted_revenue DESC\nLIMIT 5;"
+    ],
+    "tables_used": [
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 5,
+    "latency_ms_total": 5505,
+    "retries": 0,
+    "result_preview": [
+      {
+        "employee_id": "4",
+        "discounted_revenue": "232890.84598203757"
+      },
+      {
+        "employee_id": "3",
+        "discounted_revenue": "202812.84238787484"
+      },
+      {
+        "employee_id": "1",
+        "discounted_revenue": "192107.60465689204"
+      },
+      {
+        "employee_id": "2",
+        "discounted_revenue": "166537.75528742478"
+      },
+      {
+        "employee_id": "8",
+        "discounted_revenue": "126862.2774778762"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": "INCORRECT",
+    "semantic_failure_reasons": [
+      "REQUIRED_TABLES_MISSING:employees",
+      "REFERENCE_RESULT_MISMATCH"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW5",
+    "retrieval_log": [
+      {
+        "tool_name": "discover_tables",
+        "query": "Mitarbeiter Rabatt Umsatz Bestellung",
+        "top_tables": [
+          "public.order_details",
+          "public.orders",
+          "public.products"
+        ],
+        "table_scores": [
+          {
+            "name": "public.order_details",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.orders",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.products",
+            "relevance": 1.0
+          }
+        ]
+      },
+      {
+        "tool_name": "get_schema",
+        "query": "",
+        "top_tables": [
+          "product_id",
+          "order_id",
+          "unit_price",
+          "quantity",
+          "discount"
+        ],
+        "table_scores": [
+          {
+            "name": "product_id",
+            "relevance": null
+          },
+          {
+            "name": "order_id",
+            "relevance": null
+          },
+          {
+            "name": "unit_price",
+            "relevance": null
+          },
+          {
+            "name": "quantity",
+            "relevance": null
+          },
+          {
+            "name": "discount",
+            "relevance": null
+          }
+        ]
+      }
+    ],
+    "retrieved_tables_topk": [
+      "public.order_details",
+      "public.orders",
+      "public.products",
+      "product_id",
+      "order_id"
+    ],
+    "retrieval_eval": {
+      "required_tables": [
+        "employees",
+        "orders",
+        "order_details"
+      ],
+      "retrieved_tables": [
+        "order_details",
+        "orders",
+        "products",
+        "product_id",
+        "order_id"
+      ],
+      "recall_at_3": 0.6667,
+      "recall_at_5": 0.6667,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": false
+    },
+    "reference_result_match": false,
+    "reference_result_info": {
+      "checked": true,
+      "match": false,
+      "candidate_row_count": 5,
+      "reference_row_count": 9
+    },
+    "semantic_review_method": "contract_rules_plus_reference_sql",
+    "llm_usage": {
+      "total": 4,
+      "intent": 0,
+      "discovery": 2,
+      "join": 1,
+      "repair": 0,
+      "answer": 1
+    },
+    "node_entry_counts": {
+      "discovery": 2,
+      "join_sql": 1
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 4,
+    "total_graph_cycles": 4,
+    "model": "gpt-4o"
+  },
+  "NW6": {
+    "query_id": "NW6",
+    "question": "What are the top 5 products by total quantity sold?",
+    "status": "success",
+    "final_answer_text": "The top 5 products by total quantity sold are:\n\n1. **Camembert Pierrot** with 1,577 units sold\n2. **Raclette Courdavault** with 1,496 units sold\n3. **Gorgonzola Telino** with 1,397 units sold\n4. **Gnocchi di nonna Alice** with 1,263 units sold\n5. **Pavlova** with 1,158 units sold",
+    "sql_generated": [
+      "SELECT p.product_name, SUM(od.quantity) as total_quantity_sold\nFROM public.products p\nJOIN public.order_details od ON p.product_id = od.product_id\nGROUP BY p.product_name\nORDER BY total_quantity_sold DESC\nLIMIT 5;"
+    ],
+    "sql_executed": [
+      "SELECT p.product_name, SUM(od.quantity) as total_quantity_sold\nFROM public.products p\nJOIN public.order_details od ON p.product_id = od.product_id\nGROUP BY p.product_name\nORDER BY total_quantity_sold DESC\nLIMIT 5;"
+    ],
+    "tables_used": [
+      "public.products",
+      "public.order_details"
+    ],
+    "row_count": 5,
+    "latency_ms_total": 3485,
+    "retries": 0,
+    "result_preview": [
+      {
+        "product_name": "Camembert Pierrot",
+        "total_quantity_sold": "1577"
+      },
+      {
+        "product_name": "Raclette Courdavault",
+        "total_quantity_sold": "1496"
+      },
+      {
+        "product_name": "Gorgonzola Telino",
+        "total_quantity_sold": "1397"
+      },
+      {
+        "product_name": "Gnocchi di nonna Alice",
+        "total_quantity_sold": "1263"
+      },
+      {
+        "product_name": "Pavlova",
+        "total_quantity_sold": "1158"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": "PARTIAL",
+    "semantic_failure_reasons": [
+      "REFERENCE_RESULT_MISMATCH"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW6",
+    "retrieval_log": [
+      {
+        "tool_name": "discover_tables",
+        "query": "Artikel Verkauf Menge",
+        "top_tables": [
+          "public.order_details",
+          "public.products",
+          "public.orders"
+        ],
+        "table_scores": [
+          {
+            "name": "public.order_details",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.products",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.orders",
+            "relevance": 0.7
+          }
+        ]
+      }
+    ],
+    "retrieved_tables_topk": [
+      "public.order_details",
+      "public.products",
+      "public.orders"
+    ],
+    "retrieval_eval": {
+      "required_tables": [
+        "products",
+        "order_details"
+      ],
+      "retrieved_tables": [
+        "order_details",
+        "products",
+        "orders"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "all_required_in_top_3": true,
+      "all_required_in_top_5": true
+    },
+    "reference_result_match": false,
+    "reference_result_info": {
+      "checked": true,
+      "match": false,
+      "candidate_row_count": 5,
+      "reference_row_count": 5
+    },
+    "semantic_review_method": "contract_rules_plus_reference_sql",
+    "llm_usage": {
+      "total": 3,
+      "intent": 0,
+      "discovery": 1,
+      "join": 1,
+      "repair": 0,
+      "answer": 1
+    },
+    "node_entry_counts": {
+      "discovery": 1,
+      "join_sql": 1
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 3,
+    "total_graph_cycles": 3,
+    "model": "gpt-4o"
+  },
+  "NW7": {
+    "query_id": "NW7",
+    "question": "Which pairs of suppliers appear together in the same orders most often? Return supplier_1, supplier_2, and the co-order count.",
+    "status": "success",
+    "final_answer_text": "Here are the top pairs of suppliers that appear together in the same orders most often:\n\n1. Supplier 8 and Supplier 12 appear together in 32 orders.\n2. Supplier 7 and Supplier 12 appear together in 25 orders.\n3. Supplier 2 and Supplier 12 appear together in 23 orders.\n4. Supplier 7 and Supplier 14 appear together in 23 orders.\n5. Supplier 7 and Supplier 28 appear together in 22 orders.\n6. Supplier 8 and Supplier 15 appear together in 21 orders.\n7. Supplier 7 and Supplier 8 appear together in 21 orders.\n8. Supplier 8 and Supplier 28 appear together in 20 orders.\n9. Supplier 7 and Supplier 15 appear together in 19 orders.\n10. Supplier 12 and Supplier 19 appear together in 18 orders.\n\nThese pairs have the highest co-order counts.",
+    "sql_generated": [
+      "SELECT p1.supplier_id AS supplier_1, p2.supplier_id AS supplier_2, COUNT(*) AS co_order_count\nFROM public.order_details od1\nJOIN public.products p1 ON od1.product_id = p1.product_id\nJOIN public.order_details od2 ON od1.order_id = od2.order_id\nJOIN public.products p2 ON od2.product_id = p2.product_id\nWHERE p1.supplier_id < p2.supplier_id\nGROUP BY p1.supplier_id, p2.supplier_id\nORDER BY co_order_count DESC\nLIMIT 10;"
+    ],
+    "sql_executed": [
+      "SELECT p1.supplier_id AS supplier_1, p2.supplier_id AS supplier_2, COUNT(*) AS co_order_count\nFROM public.order_details od1\nJOIN public.products p1 ON od1.product_id = p1.product_id\nJOIN public.order_details od2 ON od1.order_id = od2.order_id\nJOIN public.products p2 ON od2.product_id = p2.product_id\nWHERE p1.supplier_id < p2.supplier_id\nGROUP BY p1.supplier_id, p2.supplier_id\nORDER BY co_order_count DESC\nLIMIT 10;"
+    ],
+    "tables_used": [
+      "public.order_details",
+      "public.products"
+    ],
+    "row_count": 10,
+    "latency_ms_total": 7825,
+    "retries": 0,
+    "result_preview": [
+      {
+        "supplier_1": "8",
+        "supplier_2": "12",
+        "co_order_count": "32"
+      },
+      {
+        "supplier_1": "7",
+        "supplier_2": "12",
+        "co_order_count": "25"
+      },
+      {
+        "supplier_1": "2",
+        "supplier_2": "12",
+        "co_order_count": "23"
+      },
+      {
+        "supplier_1": "7",
+        "supplier_2": "14",
+        "co_order_count": "23"
+      },
+      {
+        "supplier_1": "7",
+        "supplier_2": "28",
+        "co_order_count": "22"
+      },
+      {
+        "supplier_1": "8",
+        "supplier_2": "15",
+        "co_order_count": "21"
+      },
+      {
+        "supplier_1": "7",
+        "supplier_2": "8",
+        "co_order_count": "21"
+      },
+      {
+        "supplier_1": "8",
+        "supplier_2": "28",
+        "co_order_count": "20"
+      },
+      {
+        "supplier_1": "7",
+        "supplier_2": "15",
+        "co_order_count": "19"
+      },
+      {
+        "supplier_1": "12",
+        "supplier_2": "19",
+        "co_order_count": "18"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": "INCORRECT",
+    "semantic_failure_reasons": [
+      "REQUIRED_TABLES_MISSING:suppliers",
+      "REFERENCE_RESULT_MISMATCH"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW7",
+    "retrieval_log": [
+      {
+        "tool_name": "discover_tables",
+        "query": "Lieferant Bestellung",
+        "top_tables": [
+          "public.order_details",
+          "public.orders",
+          "public.products",
+          "public.suppliers"
+        ],
+        "table_scores": [
+          {
+            "name": "public.order_details",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.orders",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.products",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.suppliers",
+            "relevance": 0.17
+          }
+        ]
+      }
+    ],
+    "retrieved_tables_topk": [
+      "public.order_details",
+      "public.orders",
+      "public.products",
+      "public.suppliers"
+    ],
+    "retrieval_eval": {
+      "required_tables": [
+        "suppliers",
+        "products",
+        "order_details"
+      ],
+      "retrieved_tables": [
+        "order_details",
+        "orders",
+        "products",
+        "suppliers"
+      ],
+      "recall_at_3": 0.6667,
+      "recall_at_5": 1.0,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": true
+    },
+    "reference_result_match": false,
+    "reference_result_info": {
+      "checked": true,
+      "match": false,
+      "candidate_row_count": 10,
+      "reference_row_count": 10
+    },
+    "semantic_review_method": "contract_rules_plus_reference_sql",
+    "llm_usage": {
+      "total": 3,
+      "intent": 0,
+      "discovery": 1,
+      "join": 1,
+      "repair": 0,
+      "answer": 1
+    },
+    "node_entry_counts": {
+      "discovery": 1,
+      "join_sql": 1
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 3,
+    "total_graph_cycles": 3,
+    "model": "gpt-4o"
+  },
+  "NW8": {
+    "query_id": "NW8",
+    "question": "Calculate average order value by customer country, where each order value is summed per order before taking the country average.",
+    "status": "success",
+    "final_answer_text": "Here is the average order value by customer country, where each order value is summed per order before taking the country average:\n\n1. **Austria**: CHF 3,200.10\n2. **Ireland**: CHF 2,630.52\n3. **USA**: CHF 2,012.99\n4. **Germany**: CHF 1,887.58\n5. **Denmark**: CHF 1,814.50\n6. **Belgium**: CHF 1,780.26\n7. **Switzerland**: CHF 1,760.70\n8. **Canada**: CHF 1,673.21\n9. **Sweden**: CHF 1,472.84\n10. **Brazil**: CHF 1,288.26\n\nThese values represent the average order value for each country, calculated by summing the order values per order and then averaging them by country.",
+    "sql_generated": [
+      "SELECT c.country, AVG(order_value) AS average_order_value\nFROM (\n    SELECT o.customer_id, o.order_id, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS order_value\n    FROM public.orders o\n    JOIN public.order_details od ON o.order_id = od.order_id\n    GROUP BY o.order_id\n) AS order_totals\nJOIN public.customers c ON order_totals.customer_id = c.customer_id\nGROUP BY c.country\nORDER BY average_order_value DESC;"
+    ],
+    "sql_executed": [
+      "SELECT c.country, AVG(order_value) AS average_order_value\nFROM (\n    SELECT o.customer_id, o.order_id, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS order_value\n    FROM public.orders o\n    JOIN public.order_details od ON o.order_id = od.order_id\n    GROUP BY o.order_id\n) AS order_totals\nJOIN public.customers c ON order_totals.customer_id = c.customer_id\nGROUP BY c.country\nORDER BY average_order_value DESC;"
+    ],
+    "tables_used": [
+      "public.orders",
+      "public.order_details",
+      "public.customers"
+    ],
+    "row_count": 21,
+    "latency_ms_total": 4824,
+    "retries": 0,
+    "result_preview": [
+      {
+        "country": "Austria",
+        "average_order_value": "3200.0959539662795"
+      },
+      {
+        "country": "Ireland",
+        "average_order_value": "2630.5213200787102"
+      },
+      {
+        "country": "USA",
+        "average_order_value": "2012.988609034482"
+      },
+      {
+        "country": "Germany",
+        "average_order_value": "1887.5789611000907"
+      },
+      {
+        "country": "Denmark",
+        "average_order_value": "1814.5012504562405"
+      },
+      {
+        "country": "Belgium",
+        "average_order_value": "1780.2555414860185"
+      },
+      {
+        "country": "Switzerland",
+        "average_order_value": "1760.7032763181949"
+      },
+      {
+        "country": "Canada",
+        "average_order_value": "1673.2096700259995"
+      },
+      {
+        "country": "Sweden",
+        "average_order_value": "1472.8416194862873"
+      },
+      {
+        "country": "Brazil",
+        "average_order_value": "1288.2623663166903"
+      },
+      {
+        "country": "Venezuela",
+        "average_order_value": "1235.0136686726446"
+      },
+      {
+        "country": "France",
+        "average_order_value": "1056.6015912930131"
+      },
+      {
+        "country": "UK",
+        "average_order_value": "1053.0591055756236"
+      },
+      {
+        "country": "Norway",
+        "average_order_value": "955.8583358923594"
+      },
+      {
+        "country": "Portugal",
+        "average_order_value": "882.4894240120856"
+      },
+      {
+        "country": "Finland",
+        "average_order_value": "855.0023894895138"
+      },
+      {
+        "country": "Mexico",
+        "average_order_value": "842.2170525667336"
+      },
+      {
+        "country": "Spain",
+        "average_order_value": "781.8782603042022"
+      },
+      {
+        "country": "Italy",
+        "average_order_value": "563.2198184944184"
+      },
+      {
+        "country": "Argentina",
+        "average_order_value": "507.4437494277954"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": "PARTIAL",
+    "semantic_failure_reasons": [
+      "REFERENCE_RESULT_MISMATCH"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW8",
+    "retrieval_log": [
+      {
+        "tool_name": "discover_tables",
+        "query": "Bestellung Kunde Land",
+        "top_tables": [
+          "public.customer_customer_demo",
+          "public.customer_demographics",
+          "public.customers",
+          "public.order_details",
+          "public.orders"
+        ],
+        "table_scores": [
+          {
+            "name": "public.customer_customer_demo",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.customer_demographics",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.customers",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.order_details",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.orders",
+            "relevance": 1.0
+          }
+        ]
+      }
+    ],
+    "retrieved_tables_topk": [
+      "public.customer_customer_demo",
+      "public.customer_demographics",
+      "public.customers",
+      "public.order_details",
+      "public.orders"
+    ],
+    "retrieval_eval": {
+      "required_tables": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "retrieved_tables": [
+        "customer_customer_demo",
+        "customer_demographics",
+        "customers",
+        "order_details",
+        "orders"
+      ],
+      "recall_at_3": 0.3333,
+      "recall_at_5": 1.0,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": true
+    },
+    "reference_result_match": false,
+    "reference_result_info": {
+      "checked": true,
+      "match": false,
+      "candidate_row_count": 21,
+      "reference_row_count": 21
+    },
+    "semantic_review_method": "contract_rules_plus_reference_sql",
+    "llm_usage": {
+      "total": 3,
+      "intent": 0,
+      "discovery": 1,
+      "join": 1,
+      "repair": 0,
+      "answer": 1
+    },
+    "node_entry_counts": {
+      "discovery": 1,
+      "join_sql": 1
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 3,
+    "total_graph_cycles": 3,
+    "model": "gpt-4o"
+  },
+  "NW9": {
+    "query_id": "NW9",
+    "question": "How many distinct orders are pending shipment (shipped_date IS NULL), and what is their total discounted value?",
+    "status": "success",
+    "final_answer_text": "There are 21 distinct orders pending shipment, with a total discounted value of approximately 25,937.43.",
+    "sql_generated": [
+      "SELECT COUNT(DISTINCT o.order_id) AS pending_orders_count, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_discounted_value\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nWHERE o.shipped_date IS NULL;"
+    ],
+    "sql_executed": [
+      "SELECT COUNT(DISTINCT o.order_id) AS pending_orders_count, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_discounted_value\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nWHERE o.shipped_date IS NULL;"
+    ],
+    "tables_used": [
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 1,
+    "latency_ms_total": 3126,
+    "retries": 0,
+    "result_preview": [
+      {
+        "pending_orders_count": "21",
+        "total_discounted_value": "25937.430325874306"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": "PARTIAL",
+    "semantic_failure_reasons": [
+      "REFERENCE_RESULT_MISMATCH"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW9",
+    "retrieval_log": [
+      {
+        "tool_name": "discover_tables",
+        "query": "Bestellung Versanddatum NULL Rabattwert",
+        "top_tables": [
+          "public.order_details",
+          "public.orders",
+          "public.products"
+        ],
+        "table_scores": [
+          {
+            "name": "public.order_details",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.orders",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.products",
+            "relevance": 1.0
+          }
+        ]
+      }
+    ],
+    "retrieved_tables_topk": [
+      "public.order_details",
+      "public.orders",
+      "public.products"
+    ],
+    "retrieval_eval": {
+      "required_tables": [
+        "orders",
+        "order_details"
+      ],
+      "retrieved_tables": [
+        "order_details",
+        "orders",
+        "products"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "all_required_in_top_3": true,
+      "all_required_in_top_5": true
+    },
+    "reference_result_match": false,
+    "reference_result_info": {
+      "checked": true,
+      "match": false,
+      "candidate_row_count": 1,
+      "reference_row_count": 1
+    },
+    "semantic_review_method": "contract_rules_plus_reference_sql",
+    "llm_usage": {
+      "total": 3,
+      "intent": 0,
+      "discovery": 1,
+      "join": 1,
+      "repair": 0,
+      "answer": 1
+    },
+    "node_entry_counts": {
+      "discovery": 1,
+      "join_sql": 1
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 3,
+    "total_graph_cycles": 3,
+    "model": "gpt-4o"
+  },
+  "NW10": {
+    "query_id": "NW10",
+    "question": "Show the monthly discounted revenue trend by order month.",
+    "status": "success",
+    "final_answer_text": "Here is the monthly discounted revenue trend by order month:\n\n- **July 1996**: CHF 27,861.90\n- **August 1996**: CHF 25,485.28\n- **September 1996**: CHF 26,381.40\n- **October 1996**: CHF 37,515.72\n- **November 1996**: CHF 45,600.05\n- **December 1996**: CHF 45,239.63\n- **January 1997**: CHF 61,258.07\n- **February 1997**: CHF 38,483.63\n- **March 1997**: CHF 38,547.22\n- **April 1997**: CHF 53,032.95\n- **May 1997**: CHF 53,781.29\n- **June 1997**: CHF 36,362.80\n- **July 1997**: CHF 51,020.86\n- **August 1997**: CHF 47,287.67\n- **September 1997**: CHF 55,629.24\n- **October 1997**: CHF 66,749.23\n- **November 1997**: CHF 43,533.81\n- **December 1997**: CHF 71,398.43\n- **January 1998**: CHF 94,222.11\n- **February 1998**: CHF 99,415.29\n\nThis trend shows the monthly revenue after applying discounts on orders.",
+    "sql_generated": [
+      "SELECT TO_CHAR(o.order_date, 'YYYY-MM') AS order_month, \n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS discounted_revenue\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY order_month\nORDER BY order_month;"
+    ],
+    "sql_executed": [
+      "SELECT TO_CHAR(o.order_date, 'YYYY-MM') AS order_month, \n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS discounted_revenue\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY order_month\nORDER BY order_month;"
+    ],
+    "tables_used": [
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 23,
+    "latency_ms_total": 4036,
+    "retries": 0,
+    "result_preview": [
+      {
+        "order_month": "1996-07",
+        "discounted_revenue": "27861.89512966156"
+      },
+      {
+        "order_month": "1996-08",
+        "discounted_revenue": "25485.275070743264"
+      },
+      {
+        "order_month": "1996-09",
+        "discounted_revenue": "26381.400132587554"
+      },
+      {
+        "order_month": "1996-10",
+        "discounted_revenue": "37515.72494547888"
+      },
+      {
+        "order_month": "1996-11",
+        "discounted_revenue": "45600.04521113701"
+      },
+      {
+        "order_month": "1996-12",
+        "discounted_revenue": "45239.630493214434"
+      },
+      {
+        "order_month": "1997-01",
+        "discounted_revenue": "61258.0701679784"
+      },
+      {
+        "order_month": "1997-02",
+        "discounted_revenue": "38483.6349503243"
+      },
+      {
+        "order_month": "1997-03",
+        "discounted_revenue": "38547.22010972678"
+      },
+      {
+        "order_month": "1997-04",
+        "discounted_revenue": "53032.95238894149"
+      },
+      {
+        "order_month": "1997-05",
+        "discounted_revenue": "53781.28982514166"
+      },
+      {
+        "order_month": "1997-06",
+        "discounted_revenue": "36362.80233480245"
+      },
+      {
+        "order_month": "1997-07",
+        "discounted_revenue": "51020.85751860481"
+      },
+      {
+        "order_month": "1997-08",
+        "discounted_revenue": "47287.66968825523"
+      },
+      {
+        "order_month": "1997-09",
+        "discounted_revenue": "55629.24240174934"
+      },
+      {
+        "order_month": "1997-10",
+        "discounted_revenue": "66749.22577572716"
+      },
+      {
+        "order_month": "1997-11",
+        "discounted_revenue": "43533.80876756514"
+      },
+      {
+        "order_month": "1997-12",
+        "discounted_revenue": "71398.42846388379"
+      },
+      {
+        "order_month": "1998-01",
+        "discounted_revenue": "94222.1102069358"
+      },
+      {
+        "order_month": "1998-02",
+        "discounted_revenue": "99415.2873830082"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": "INCORRECT",
+    "semantic_failure_reasons": [
+      "MONTHLY_GROUPING_MISSING",
+      "REFERENCE_RESULT_MISMATCH"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW10",
+    "retrieval_log": [
+      {
+        "tool_name": "discover_tables",
+        "query": "Umsatz Bestellung Monat",
+        "top_tables": [
+          "public.order_details",
+          "public.orders",
+          "public.products"
+        ],
+        "table_scores": [
+          {
+            "name": "public.order_details",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.orders",
+            "relevance": 1.0
+          },
+          {
+            "name": "public.products",
+            "relevance": 1.0
+          }
+        ]
+      }
+    ],
+    "retrieved_tables_topk": [
+      "public.order_details",
+      "public.orders",
+      "public.products"
+    ],
+    "retrieval_eval": {
+      "required_tables": [
+        "orders",
+        "order_details"
+      ],
+      "retrieved_tables": [
+        "order_details",
+        "orders",
+        "products"
+      ],
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "all_required_in_top_3": true,
+      "all_required_in_top_5": true
+    },
+    "reference_result_match": false,
+    "reference_result_info": {
+      "checked": true,
+      "match": false,
+      "candidate_row_count": 23,
+      "reference_row_count": 23
+    },
+    "semantic_review_method": "contract_rules_plus_reference_sql",
+    "llm_usage": {
+      "total": 3,
+      "intent": 0,
+      "discovery": 1,
+      "join": 1,
+      "repair": 0,
+      "answer": 1
+    },
+    "node_entry_counts": {
+      "discovery": 1,
+      "join_sql": 1
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 3,
+    "total_graph_cycles": 3,
+    "model": "gpt-4o"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "run_id": "20260111_172026_kpi_library",
+  "total_queries": 10,
+  "successful": 9,
+  "failed": 1,
+  "success_rate": "90.0%",
+  "results_dir": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/20260111_172026_kpi_library"
+}

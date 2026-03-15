@@ -1,0 +1,13 @@
+{
+  "run_id": "20260216_141838_northwind_h2a_query_tuning_tuned_v3_r2",
+  "total_queries": 10,
+  "successful": 10,
+  "failed": 0,
+  "success_rate": "100.0%",
+  "semantic_strict_accuracy_pct": 100.0,
+  "semantic_acceptable_accuracy_pct": 100.0,
+  "catalog_table_coverage_pct": 100.0,
+  "catalog_column_coverage_pct": 100.0,
+  "retrieval_avg_recall_at_5": 0.8833,
+  "results_dir": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/20260216_141838_northwind_h2a_query_tuning_tuned_v3_r2"
+}

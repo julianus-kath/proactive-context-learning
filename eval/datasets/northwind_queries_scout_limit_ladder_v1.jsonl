@@ -1,0 +1,15 @@
+{"id":"LT1_CL2","question":"Zeige den gesamten Umsatz nach Rabatt pro Kundenland, absteigend nach Umsatz.","tier":"T1","type":"lexical_direct","source_query_id":"CL2"}
+{"id":"LT1_CL6","question":"Zeige pro Monat die Anzahl der Auftraege und der verspaeteten Auslieferungen.","tier":"T1","type":"lexical_direct","source_query_id":"CL6"}
+{"id":"LT1_CL10","question":"Zeige den Umsatz nach Rabatt je Kundensegment.","tier":"T1","type":"lexical_direct","source_query_id":"CL10"}
+{"id":"LT2_CL2","question":"Welche Kundenlaender bringen den groessten rabattbereinigten Umsatz?","tier":"T2","type":"mild_synonym","source_query_id":"CL2"}
+{"id":"LT2_CL6","question":"Wie entwickelt sich monatlich das Auftragsvolumen im Vergleich zu verspaeteten Zustellungen?","tier":"T2","type":"mild_synonym","source_query_id":"CL6"}
+{"id":"LT2_CL10","question":"Welche Kundensegmente erzeugen den hoechsten Erloes nach Nachlaessen?","tier":"T2","type":"mild_synonym","source_query_id":"CL10"}
+{"id":"LT3_CL2","question":"Aus welchen Absatzmaerkten stammt der groesste Nettoerloes nach Preisnachlaessen?","tier":"T3","type":"business_paraphrase","source_query_id":"CL2"}
+{"id":"LT3_CL6","question":"Wie verhalten sich Nachfrage und Lieferverzug im Monatsverlauf?","tier":"T3","type":"business_paraphrase","source_query_id":"CL6"}
+{"id":"LT3_CL10","question":"Welche Abnehmergruppen sind die wichtigsten Ertragsbringer nach Rabatt?","tier":"T3","type":"business_paraphrase","source_query_id":"CL10"}
+{"id":"LT4_CL2","question":"Welche geographischen Zielmaerkte liefern den groessten Beitrag zum bereinigten Verkaufsertrag?","tier":"T4","type":"implicit_entity","source_query_id":"CL2"}
+{"id":"LT4_CL6","question":"Wie laufen Intake und Lieferueberfaelligkeit im monatlichen Takt zusammen?","tier":"T4","type":"implicit_entity","source_query_id":"CL6"}
+{"id":"LT4_CL10","question":"Welche Profilgruppen im Kundenstamm monetarisieren am staerksten nach Preiszugestaendnissen?","tier":"T4","type":"implicit_entity","source_query_id":"CL10"}
+{"id":"LT5_CL2","question":"Welche Absatzraeume finanzieren den groessten Nettoanteil unserer Verkaeufe?","tier":"T5","type":"high_indirection","source_query_id":"CL2"}
+{"id":"LT5_CL6","question":"Zeige die Zeitreihe, in der Nachfragefluss und Ueberfaelligkeit der Zustellung gemeinsam sichtbar werden.","tier":"T5","type":"high_indirection","source_query_id":"CL6"}
+{"id":"LT5_CL10","question":"Welche Typen im Kundenportfolio tragen nach verrechneten Preiszugestaendnissen den hoechsten Umsatz?","tier":"T5","type":"high_indirection","source_query_id":"CL10"}

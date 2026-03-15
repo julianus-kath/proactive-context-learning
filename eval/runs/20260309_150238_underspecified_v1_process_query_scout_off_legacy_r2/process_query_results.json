@@ -1,0 +1,941 @@
+{
+  "US_CL2_U1": {
+    "query_id": "US_CL2_U1",
+    "question": "Woher kommt unser Nettoumsatz?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 10339,
+    "error": null,
+    "final_response_text": "Der Nettoumsatz kann aus den Tabellen \"order_details\" und \"orders\" abgeleitet werden. Die Tabelle \"order_details\" enth\u00e4lt Informationen zu den Bestellpositionen, einschlie\u00dflich \"unit_price\", \"quantity\" und \"discount\", die f\u00fcr die Berechnung des Nettoumsatzes entscheidend sind. Die Tabelle \"orders\" enth\u00e4lt zus\u00e4tzliche Informationen zu den Bestellungen selbst. \n\nUm den Nettoumsatz zu berechnen, k\u00f6nnen wir die Formel verwenden: \n\n\\[ \\text{Nettoumsatz} = \\sum (\\text{unit\\_price} \\times \\text{quantity} \\times (1 - \\text{discount})) \\]\n\nM\u00f6chtest du eine detaillierte Abfrage, um den Nettoumsatz zu berechnen?",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "US_CL2_U2": {
+    "query_id": "US_CL2_U2",
+    "question": "Welche M\u00e4rkte tragen am meisten zum Erl\u00f6s bei?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 8852,
+    "error": null,
+    "final_response_text": "Die M\u00e4rkte, die am meisten zum Erl\u00f6s beitragen, sind:\n\n1. USA mit einem Erl\u00f6s von etwa 245'585\n2. Deutschland mit etwa 230'285\n3. \u00d6sterreich mit etwa 128'004\n4. Brasilien mit etwa 106'926\n5. Frankreich mit etwa 81'358\n\nDiese Zahlen basieren auf den Verk\u00e4ufen in den jeweiligen L\u00e4ndern.",
+    "sql_query": "SELECT c.country, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nJOIN public.customers c ON o.customer_id = c.customer_id\nGROUP BY c.country\nORDER BY total_revenue DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "country": "USA",
+          "total_revenue": "245584.61030220677"
+        },
+        {
+          "country": "Germany",
+          "total_revenue": "230284.63325421108"
+        },
+        {
+          "country": "Austria",
+          "total_revenue": "128003.8381586512"
+        },
+        {
+          "country": "Brazil",
+          "total_revenue": "106925.7764042853"
+        },
+        {
+          "country": "France",
+          "total_revenue": "81358.322529562"
+        }
+      ],
+      "rows": [
+        {
+          "country": "USA",
+          "total_revenue": "245584.61030220677"
+        },
+        {
+          "country": "Germany",
+          "total_revenue": "230284.63325421108"
+        },
+        {
+          "country": "Austria",
+          "total_revenue": "128003.8381586512"
+        },
+        {
+          "country": "Brazil",
+          "total_revenue": "106925.7764042853"
+        },
+        {
+          "country": "France",
+          "total_revenue": "81358.322529562"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "country",
+        "total_revenue"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details",
+        "public.customers"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details",
+      "public.customers"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "country": "USA",
+        "total_revenue": "245584.61030220677"
+      },
+      {
+        "country": "Germany",
+        "total_revenue": "230284.63325421108"
+      },
+      {
+        "country": "Austria",
+        "total_revenue": "128003.8381586512"
+      },
+      {
+        "country": "Brazil",
+        "total_revenue": "106925.7764042853"
+      },
+      {
+        "country": "France",
+        "total_revenue": "81358.322529562"
+      }
+    ]
+  },
+  "US_CL2_U3": {
+    "query_id": "US_CL2_U3",
+    "question": "Wo verdienen wir nach Rabatten am meisten Geld?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 9018,
+    "error": null,
+    "final_response_text": "Die Produkte, bei denen wir nach Rabatten am meisten verdienen, sind:\n\n1. **C\u00f4te de Blaye** mit einem Nettoumsatz von etwa CHF 141'397\n2. **Th\u00fcringer Rostbratwurst** mit einem Nettoumsatz von etwa CHF 80'369\n3. **Raclette Courdavault** mit einem Nettoumsatz von etwa CHF 71'156\n4. **Tarte au sucre** mit einem Nettoumsatz von etwa CHF 47'235\n5. **Camembert Pierrot** mit einem Nettoumsatz von etwa CHF 46'825\n\nDiese Produkte generieren den h\u00f6chsten Umsatz nach Abzug der Rabatte.",
+    "sql_query": "SELECT p.product_name, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS net_revenue\nFROM public.order_details od\nJOIN public.products p ON od.product_id = p.product_id\nGROUP BY p.product_name\nORDER BY net_revenue DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "product_name": "C\u00f4te de Blaye",
+          "net_revenue": "141396.7356273254"
+        },
+        {
+          "product_name": "Th\u00fcringer Rostbratwurst",
+          "net_revenue": "80368.6724385033"
+        },
+        {
+          "product_name": "Raclette Courdavault",
+          "net_revenue": "71155.69990943"
+        },
+        {
+          "product_name": "Tarte au sucre",
+          "net_revenue": "47234.969978504174"
+        },
+        {
+          "product_name": "Camembert Pierrot",
+          "net_revenue": "46825.48029542655"
+        }
+      ],
+      "rows": [
+        {
+          "product_name": "C\u00f4te de Blaye",
+          "net_revenue": "141396.7356273254"
+        },
+        {
+          "product_name": "Th\u00fcringer Rostbratwurst",
+          "net_revenue": "80368.6724385033"
+        },
+        {
+          "product_name": "Raclette Courdavault",
+          "net_revenue": "71155.69990943"
+        },
+        {
+          "product_name": "Tarte au sucre",
+          "net_revenue": "47234.969978504174"
+        },
+        {
+          "product_name": "Camembert Pierrot",
+          "net_revenue": "46825.48029542655"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "product_name",
+        "net_revenue"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.order_details",
+        "public.products"
+      ]
+    },
+    "tables_used": [
+      "public.order_details",
+      "public.products"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "product_name": "C\u00f4te de Blaye",
+        "net_revenue": "141396.7356273254"
+      },
+      {
+        "product_name": "Th\u00fcringer Rostbratwurst",
+        "net_revenue": "80368.6724385033"
+      },
+      {
+        "product_name": "Raclette Courdavault",
+        "net_revenue": "71155.69990943"
+      },
+      {
+        "product_name": "Tarte au sucre",
+        "net_revenue": "47234.969978504174"
+      },
+      {
+        "product_name": "Camembert Pierrot",
+        "net_revenue": "46825.48029542655"
+      }
+    ]
+  },
+  "US_CL3_U1": {
+    "query_id": "US_CL3_U1",
+    "question": "Welcher Zusteller ist im Schnitt am unp\u00fcnktlichsten?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4199,
+    "error": null,
+    "final_response_text": "Ich konnte keine spezifischen Tabellen oder Spalten finden, die direkt mit der P\u00fcnktlichkeit von Zustellern in Verbindung stehen. Es scheint, dass die Datenbank keine expliziten Informationen \u00fcber die P\u00fcnktlichkeit von Lieferungen oder Zustellern enth\u00e4lt. \n\nFalls du andere Begriffe oder Details hast, die ich verwenden k\u00f6nnte, lass es mich wissen! Alternativ k\u00f6nntest du pr\u00fcfen, ob es andere relevante Daten gibt, die ich durchsuchen kann.",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "US_CL3_U2": {
+    "query_id": "US_CL3_U2",
+    "question": "\u00dcber wen kommt es am h\u00e4ufigsten zu Verz\u00f6gerungen?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 13737,
+    "error": null,
+    "final_response_text": "Die Kunden, bei denen es am h\u00e4ufigsten zu Lieferverz\u00f6gerungen kommt, sind:\n\n1. **Hungry Owl All-Night Grocers** mit 3 Verz\u00f6gerungen\n2. **Gourmet Lanchonetes** ebenfalls mit 3 Verz\u00f6gerungen\n3. **Bon app'** mit 2 Verz\u00f6gerungen\n4. **HILARION-Abastos** mit 2 Verz\u00f6gerungen\n5. **Berglunds snabbk\u00f6p** mit 2 Verz\u00f6gerungen\n\nDiese Kunden haben die meisten Verz\u00f6gerungen bei ihren Bestellungen erlebt.",
+    "sql_query": "SELECT c.company_name, COUNT(*) AS delay_count\nFROM public.orders o\nJOIN public.customers c ON o.customer_id = c.customer_id\nWHERE o.shipped_date > o.required_date\nGROUP BY c.company_name\nORDER BY delay_count DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "company_name": "Hungry Owl All-Night Grocers",
+          "delay_count": "3"
+        },
+        {
+          "company_name": "Gourmet Lanchonetes",
+          "delay_count": "3"
+        },
+        {
+          "company_name": "Bon app'",
+          "delay_count": "2"
+        },
+        {
+          "company_name": "HILARION-Abastos",
+          "delay_count": "2"
+        },
+        {
+          "company_name": "Berglunds snabbk\u00f6p",
+          "delay_count": "2"
+        }
+      ],
+      "rows": [
+        {
+          "company_name": "Hungry Owl All-Night Grocers",
+          "delay_count": "3"
+        },
+        {
+          "company_name": "Gourmet Lanchonetes",
+          "delay_count": "3"
+        },
+        {
+          "company_name": "Bon app'",
+          "delay_count": "2"
+        },
+        {
+          "company_name": "HILARION-Abastos",
+          "delay_count": "2"
+        },
+        {
+          "company_name": "Berglunds snabbk\u00f6p",
+          "delay_count": "2"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "company_name",
+        "delay_count"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.customers"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.customers"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "company_name": "Hungry Owl All-Night Grocers",
+        "delay_count": "3"
+      },
+      {
+        "company_name": "Gourmet Lanchonetes",
+        "delay_count": "3"
+      },
+      {
+        "company_name": "Bon app'",
+        "delay_count": "2"
+      },
+      {
+        "company_name": "HILARION-Abastos",
+        "delay_count": "2"
+      },
+      {
+        "company_name": "Berglunds snabbk\u00f6p",
+        "delay_count": "2"
+      }
+    ]
+  },
+  "US_CL3_U3": {
+    "query_id": "US_CL3_U3",
+    "question": "Bei welchem Versandkanal ist die Terminlage am schw\u00e4chsten?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 13923,
+    "error": null,
+    "final_response_text": "Die durchschnittliche Verz\u00f6gerung pro Versandkanal zeigt, dass alle Kan\u00e4le im Durchschnitt vor dem erforderlichen Datum versenden. Hier sind die Ergebnisse:\n\n- Versandkanal 2: durchschnittlich 18,77 Tage vor dem erforderlichen Datum\n- Versandkanal 1: durchschnittlich 19,49 Tage vor dem erforderlichen Datum\n- Versandkanal 3: durchschnittlich 19,96 Tage vor dem erforderlichen Datum\n\nDer Versandkanal mit der schw\u00e4chsten Terminlage (am wenigsten vor dem erforderlichen Datum) ist somit Versandkanal 2.",
+    "sql_query": "SELECT ship_via, AVG(shipped_date - required_date) AS avg_delay\nFROM public.orders\nWHERE shipped_date IS NOT NULL\nGROUP BY ship_via\nORDER BY avg_delay DESC",
+    "exec_result": {
+      "data": [
+        {
+          "ship_via": "2",
+          "avg_delay": "-18.765079365079366"
+        },
+        {
+          "ship_via": "1",
+          "avg_delay": "-19.485714285714284"
+        },
+        {
+          "ship_via": "3",
+          "avg_delay": "-19.96385542168675"
+        }
+      ],
+      "rows": [
+        {
+          "ship_via": "2",
+          "avg_delay": "-18.765079365079366"
+        },
+        {
+          "ship_via": "1",
+          "avg_delay": "-19.485714285714284"
+        },
+        {
+          "ship_via": "3",
+          "avg_delay": "-19.96385542168675"
+        }
+      ],
+      "row_count": 3,
+      "columns": [
+        "ship_via",
+        "avg_delay"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders"
+      ]
+    },
+    "tables_used": [
+      "public.orders"
+    ],
+    "row_count": 3,
+    "result_preview": [
+      {
+        "ship_via": "2",
+        "avg_delay": "-18.765079365079366"
+      },
+      {
+        "ship_via": "1",
+        "avg_delay": "-19.485714285714284"
+      },
+      {
+        "ship_via": "3",
+        "avg_delay": "-19.96385542168675"
+      }
+    ]
+  },
+  "US_CL6_U1": {
+    "query_id": "US_CL6_U1",
+    "question": "Wie l\u00e4uft es monatlich mit Auftr\u00e4gen und P\u00fcnktlichkeit?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 12546,
+    "error": null,
+    "final_response_text": "Hier sind die monatlichen Auftragszahlen und die P\u00fcnktlichkeit der Lieferungen:\n\n- **Mai 1998**: 14 Auftr\u00e4ge, 28.6% p\u00fcnktlich\n- **April 1998**: 74 Auftr\u00e4ge, 85.1% p\u00fcnktlich\n- **M\u00e4rz 1998**: 73 Auftr\u00e4ge, 94.5% p\u00fcnktlich\n- **Februar 1998**: 54 Auftr\u00e4ge, 100% p\u00fcnktlich\n- **Januar 1998**: 55 Auftr\u00e4ge, 92.7% p\u00fcnktlich\n\nDie P\u00fcnktlichkeit variiert monatlich, wobei einige Monate wie Februar 1998 eine perfekte P\u00fcnktlichkeit aufweisen.",
+    "sql_query": "SELECT \n    DATE_TRUNC('month', o.order_date) AS monat, \n    COUNT(o.order_id) AS anzahl_auftraege,\n    SUM(CASE WHEN o.shipped_date <= o.required_date THEN 1 ELSE 0 END) * 100.0 / COUNT(o.order_id) AS puenktlichkeit_prozent\nFROM \n    public.orders o\nGROUP BY \n    monat\nORDER BY \n    monat DESC;",
+    "exec_result": {
+      "data": [
+        {
+          "monat": "1998-05-01T00:00:00+00:00",
+          "anzahl_auftraege": "14",
+          "puenktlichkeit_prozent": "28.571428571428573"
+        },
+        {
+          "monat": "1998-04-01T00:00:00+00:00",
+          "anzahl_auftraege": "74",
+          "puenktlichkeit_prozent": "85.13513513513513"
+        },
+        {
+          "monat": "1998-03-01T00:00:00+00:00",
+          "anzahl_auftraege": "73",
+          "puenktlichkeit_prozent": "94.52054794520548"
+        },
+        {
+          "monat": "1998-02-01T00:00:00+00:00",
+          "anzahl_auftraege": "54",
+          "puenktlichkeit_prozent": "100.0"
+        },
+        {
+          "monat": "1998-01-01T00:00:00+00:00",
+          "anzahl_auftraege": "55",
+          "puenktlichkeit_prozent": "92.72727272727273"
+        },
+        {
+          "monat": "1997-12-01T00:00:00+00:00",
+          "anzahl_auftraege": "48",
+          "puenktlichkeit_prozent": "93.75"
+        },
+        {
+          "monat": "1997-11-01T00:00:00+00:00",
+          "anzahl_auftraege": "34",
+          "puenktlichkeit_prozent": "91.17647058823529"
+        },
+        {
+          "monat": "1997-10-01T00:00:00+00:00",
+          "anzahl_auftraege": "38",
+          "puenktlichkeit_prozent": "94.73684210526316"
+        },
+        {
+          "monat": "1997-09-01T00:00:00+00:00",
+          "anzahl_auftraege": "37",
+          "puenktlichkeit_prozent": "91.89189189189189"
+        },
+        {
+          "monat": "1997-08-01T00:00:00+00:00",
+          "anzahl_auftraege": "33",
+          "puenktlichkeit_prozent": "100.0"
+        },
+        {
+          "monat": "1997-07-01T00:00:00+00:00",
+          "anzahl_auftraege": "33",
+          "puenktlichkeit_prozent": "93.93939393939394"
+        },
+        {
+          "monat": "1997-06-01T00:00:00+00:00",
+          "anzahl_auftraege": "30",
+          "puenktlichkeit_prozent": "96.66666666666667"
+        },
+        {
+          "monat": "1997-05-01T00:00:00+00:00",
+          "anzahl_auftraege": "32",
+          "puenktlichkeit_prozent": "93.75"
+        },
+        {
+          "monat": "1997-04-01T00:00:00+00:00",
+          "anzahl_auftraege": "31",
+          "puenktlichkeit_prozent": "96.7741935483871"
+        },
+        {
+          "monat": "1997-03-01T00:00:00+00:00",
+          "anzahl_auftraege": "30",
+          "puenktlichkeit_prozent": "96.66666666666667"
+        },
+        {
+          "monat": "1997-02-01T00:00:00+00:00",
+          "anzahl_auftraege": "29",
+          "puenktlichkeit_prozent": "93.10344827586206"
+        },
+        {
+          "monat": "1997-01-01T00:00:00+00:00",
+          "anzahl_auftraege": "33",
+          "puenktlichkeit_prozent": "93.93939393939394"
+        },
+        {
+          "monat": "1996-12-01T00:00:00+00:00",
+          "anzahl_auftraege": "31",
+          "puenktlichkeit_prozent": "96.7741935483871"
+        },
+        {
+          "monat": "1996-11-01T00:00:00+00:00",
+          "anzahl_auftraege": "25",
+          "puenktlichkeit_prozent": "100.0"
+        },
+        {
+          "monat": "1996-10-01T00:00:00+00:00",
+          "anzahl_auftraege": "26",
+          "puenktlichkeit_prozent": "96.15384615384616"
+        }
+      ],
+      "rows": [
+        {
+          "monat": "1998-05-01T00:00:00+00:00",
+          "anzahl_auftraege": "14",
+          "puenktlichkeit_prozent": "28.571428571428573"
+        },
+        {
+          "monat": "1998-04-01T00:00:00+00:00",
+          "anzahl_auftraege": "74",
+          "puenktlichkeit_prozent": "85.13513513513513"
+        },
+        {
+          "monat": "1998-03-01T00:00:00+00:00",
+          "anzahl_auftraege": "73",
+          "puenktlichkeit_prozent": "94.52054794520548"
+        },
+        {
+          "monat": "1998-02-01T00:00:00+00:00",
+          "anzahl_auftraege": "54",
+          "puenktlichkeit_prozent": "100.0"
+        },
+        {
+          "monat": "1998-01-01T00:00:00+00:00",
+          "anzahl_auftraege": "55",
+          "puenktlichkeit_prozent": "92.72727272727273"
+        },
+        {
+          "monat": "1997-12-01T00:00:00+00:00",
+          "anzahl_auftraege": "48",
+          "puenktlichkeit_prozent": "93.75"
+        },
+        {
+          "monat": "1997-11-01T00:00:00+00:00",
+          "anzahl_auftraege": "34",
+          "puenktlichkeit_prozent": "91.17647058823529"
+        },
+        {
+          "monat": "1997-10-01T00:00:00+00:00",
+          "anzahl_auftraege": "38",
+          "puenktlichkeit_prozent": "94.73684210526316"
+        },
+        {
+          "monat": "1997-09-01T00:00:00+00:00",
+          "anzahl_auftraege": "37",
+          "puenktlichkeit_prozent": "91.89189189189189"
+        },
+        {
+          "monat": "1997-08-01T00:00:00+00:00",
+          "anzahl_auftraege": "33",
+          "puenktlichkeit_prozent": "100.0"
+        },
+        {
+          "monat": "1997-07-01T00:00:00+00:00",
+          "anzahl_auftraege": "33",
+          "puenktlichkeit_prozent": "93.93939393939394"
+        },
+        {
+          "monat": "1997-06-01T00:00:00+00:00",
+          "anzahl_auftraege": "30",
+          "puenktlichkeit_prozent": "96.66666666666667"
+        },
+        {
+          "monat": "1997-05-01T00:00:00+00:00",
+          "anzahl_auftraege": "32",
+          "puenktlichkeit_prozent": "93.75"
+        },
+        {
+          "monat": "1997-04-01T00:00:00+00:00",
+          "anzahl_auftraege": "31",
+          "puenktlichkeit_prozent": "96.7741935483871"
+        },
+        {
+          "monat": "1997-03-01T00:00:00+00:00",
+          "anzahl_auftraege": "30",
+          "puenktlichkeit_prozent": "96.66666666666667"
+        },
+        {
+          "monat": "1997-02-01T00:00:00+00:00",
+          "anzahl_auftraege": "29",
+          "puenktlichkeit_prozent": "93.10344827586206"
+        },
+        {
+          "monat": "1997-01-01T00:00:00+00:00",
+          "anzahl_auftraege": "33",
+          "puenktlichkeit_prozent": "93.93939393939394"
+        },
+        {
+          "monat": "1996-12-01T00:00:00+00:00",
+          "anzahl_auftraege": "31",
+          "puenktlichkeit_prozent": "96.7741935483871"
+        },
+        {
+          "monat": "1996-11-01T00:00:00+00:00",
+          "anzahl_auftraege": "25",
+          "puenktlichkeit_prozent": "100.0"
+        },
+        {
+          "monat": "1996-10-01T00:00:00+00:00",
+          "anzahl_auftraege": "26",
+          "puenktlichkeit_prozent": "96.15384615384616"
+        }
+      ],
+      "row_count": 23,
+      "columns": [
+        "monat",
+        "anzahl_auftraege",
+        "puenktlichkeit_prozent"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders"
+      ]
+    },
+    "tables_used": [
+      "public.orders"
+    ],
+    "row_count": 23,
+    "result_preview": [
+      {
+        "monat": "1998-05-01T00:00:00+00:00",
+        "anzahl_auftraege": "14",
+        "puenktlichkeit_prozent": "28.571428571428573"
+      },
+      {
+        "monat": "1998-04-01T00:00:00+00:00",
+        "anzahl_auftraege": "74",
+        "puenktlichkeit_prozent": "85.13513513513513"
+      },
+      {
+        "monat": "1998-03-01T00:00:00+00:00",
+        "anzahl_auftraege": "73",
+        "puenktlichkeit_prozent": "94.52054794520548"
+      },
+      {
+        "monat": "1998-02-01T00:00:00+00:00",
+        "anzahl_auftraege": "54",
+        "puenktlichkeit_prozent": "100.0"
+      },
+      {
+        "monat": "1998-01-01T00:00:00+00:00",
+        "anzahl_auftraege": "55",
+        "puenktlichkeit_prozent": "92.72727272727273"
+      },
+      {
+        "monat": "1997-12-01T00:00:00+00:00",
+        "anzahl_auftraege": "48",
+        "puenktlichkeit_prozent": "93.75"
+      },
+      {
+        "monat": "1997-11-01T00:00:00+00:00",
+        "anzahl_auftraege": "34",
+        "puenktlichkeit_prozent": "91.17647058823529"
+      },
+      {
+        "monat": "1997-10-01T00:00:00+00:00",
+        "anzahl_auftraege": "38",
+        "puenktlichkeit_prozent": "94.73684210526316"
+      },
+      {
+        "monat": "1997-09-01T00:00:00+00:00",
+        "anzahl_auftraege": "37",
+        "puenktlichkeit_prozent": "91.89189189189189"
+      },
+      {
+        "monat": "1997-08-01T00:00:00+00:00",
+        "anzahl_auftraege": "33",
+        "puenktlichkeit_prozent": "100.0"
+      },
+      {
+        "monat": "1997-07-01T00:00:00+00:00",
+        "anzahl_auftraege": "33",
+        "puenktlichkeit_prozent": "93.93939393939394"
+      },
+      {
+        "monat": "1997-06-01T00:00:00+00:00",
+        "anzahl_auftraege": "30",
+        "puenktlichkeit_prozent": "96.66666666666667"
+      },
+      {
+        "monat": "1997-05-01T00:00:00+00:00",
+        "anzahl_auftraege": "32",
+        "puenktlichkeit_prozent": "93.75"
+      },
+      {
+        "monat": "1997-04-01T00:00:00+00:00",
+        "anzahl_auftraege": "31",
+        "puenktlichkeit_prozent": "96.7741935483871"
+      },
+      {
+        "monat": "1997-03-01T00:00:00+00:00",
+        "anzahl_auftraege": "30",
+        "puenktlichkeit_prozent": "96.66666666666667"
+      },
+      {
+        "monat": "1997-02-01T00:00:00+00:00",
+        "anzahl_auftraege": "29",
+        "puenktlichkeit_prozent": "93.10344827586206"
+      },
+      {
+        "monat": "1997-01-01T00:00:00+00:00",
+        "anzahl_auftraege": "33",
+        "puenktlichkeit_prozent": "93.93939393939394"
+      },
+      {
+        "monat": "1996-12-01T00:00:00+00:00",
+        "anzahl_auftraege": "31",
+        "puenktlichkeit_prozent": "96.7741935483871"
+      },
+      {
+        "monat": "1996-11-01T00:00:00+00:00",
+        "anzahl_auftraege": "25",
+        "puenktlichkeit_prozent": "100.0"
+      },
+      {
+        "monat": "1996-10-01T00:00:00+00:00",
+        "anzahl_auftraege": "26",
+        "puenktlichkeit_prozent": "96.15384615384616"
+      }
+    ]
+  },
+  "US_CL6_U2": {
+    "query_id": "US_CL6_U2",
+    "question": "Wie entwickeln sich Nachfrage und Versp\u00e4tungen \u00fcber die Zeit?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 6343,
+    "error": null,
+    "final_response_text": "Es scheint, dass die Datenbank keine direkten Tabellen oder Spalten enth\u00e4lt, die explizit \"Nachfrage\" oder \"Versp\u00e4tungen\" \u00fcber die Zeit abbilden. Allerdings k\u00f6nnten wir die \"orders\" und \"order_details\" Tabellen nutzen, um die Nachfrage zu analysieren, indem wir die Bestellmengen \u00fcber die Zeit betrachten. Versp\u00e4tungen k\u00f6nnten durch den Vergleich von \"required_date\" und \"shipped_date\" in der \"orders\" Tabelle ermittelt werden.\n\nM\u00f6chtest du, dass ich eine Abfrage erstelle, um die Nachfrage und Versp\u00e4tungen basierend auf diesen Annahmen zu analysieren?",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "US_CL6_U3": {
+    "query_id": "US_CL6_U3",
+    "question": "Zeig den Monatsverlauf von Volumen und Lieferproblemen.",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 6753,
+    "error": null,
+    "final_response_text": "Es scheint, dass die Datenbank keine spezifischen Tabellen oder Spalten enth\u00e4lt, die direkt mit \"Volumen\" oder \"Lieferprobleme\" verkn\u00fcpft sind. M\u00f6glicherweise sind diese Informationen in anderen Kontexten oder unter anderen Bezeichnungen gespeichert.\n\nUm den Monatsverlauf von Volumen und Lieferproblemen zu analysieren, k\u00f6nnten wir folgende Ans\u00e4tze in Betracht ziehen:\n\n1. **Volumen**: Dies k\u00f6nnte sich auf die Menge der bestellten oder gelieferten Produkte beziehen. Wir k\u00f6nnten die `order_details` Tabelle verwenden, um die Menge (`quantity`) der Bestellungen zu aggregieren.\n\n2. **Lieferprobleme**: Diese k\u00f6nnten als Verz\u00f6gerungen in der `orders` Tabelle identifiziert werden, indem wir das geplante Lieferdatum (`required_date`) mit dem tats\u00e4chlichen Lieferdatum (`shipped_date`) vergleichen.\n\nSoll ich eine Abfrage erstellen, die diese Annahmen verwendet, um den Monatsverlauf zu analysieren?",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "US_CL10_U1": {
+    "query_id": "US_CL10_U1",
+    "question": "Welche Kundengruppen bringen den meisten Nettoerl\u00f6s?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 7853,
+    "error": null,
+    "final_response_text": "Es scheint, dass es keine Daten gibt, die den Nettoerl\u00f6s nach Kundengruppen aufschl\u00fcsseln. M\u00f6glicherweise sind die Kundengruppen nicht korrekt zugeordnet oder es fehlen entsprechende Bestellungen in der Datenbank. Wenn du weitere Informationen oder eine andere Analyse ben\u00f6tigst, lass es mich wissen!",
+    "sql_query": "SELECT cd.customer_desc AS Kundengruppe, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS Nettoerl\u00f6s\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nJOIN public.customer_customer_demo ccd ON o.customer_id = ccd.customer_id\nJOIN public.customer_demographics cd ON ccd.customer_type_id = cd.customer_type_id\nGROUP BY cd.customer_desc\nORDER BY Nettoerl\u00f6s DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": 0,
+      "columns": [],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details",
+        "public.customer_customer_demo",
+        "public.customer_demographics"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details",
+      "public.customer_customer_demo",
+      "public.customer_demographics"
+    ],
+    "row_count": 0,
+    "result_preview": []
+  },
+  "US_CL10_U2": {
+    "query_id": "US_CL10_U2",
+    "question": "Wer sind unsere wertvollsten Segmente nach Rabatten?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 16479,
+    "error": null,
+    "final_response_text": "Die wertvollsten Segmente nach Rabatten sind:\n\n1. **Save-a-lot Markets** mit einem Rabattwert von CHF 11'311.44\n2. **Ernst Handel** mit einem Rabattwert von CHF 8'361.70\n3. **Hungry Owl All-Night Grocers** mit einem Rabattwert von CHF 7'337.49\n4. **QUICK-Stop** mit einem Rabattwert von CHF 7'206.09\n5. **Queen Cozinha** mit einem Rabattwert von CHF 4'508.60\n\nDiese Kunden haben die h\u00f6chsten kumulierten Rabatte erhalten.",
+    "sql_query": "SELECT c.customer_id, c.company_name, SUM(od.discount * od.unit_price * od.quantity) AS total_discount_value\nFROM public.order_details od\nJOIN public.orders o ON od.order_id = o.order_id\nJOIN public.customers c ON o.customer_id = c.customer_id\nGROUP BY c.customer_id, c.company_name\nORDER BY total_discount_value DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "customer_id": "SAVEA",
+          "company_name": "Save-a-lot Markets",
+          "total_discount_value": "11311.440135478973"
+        },
+        {
+          "customer_id": "ERNSH",
+          "company_name": "Ernst Handel",
+          "total_discount_value": "8361.701644212008"
+        },
+        {
+          "customer_id": "HUNGO",
+          "company_name": "Hungry Owl All-Night Grocers",
+          "total_discount_value": "7337.485068798065"
+        },
+        {
+          "customer_id": "QUICK",
+          "company_name": "QUICK-Stop",
+          "total_discount_value": "7206.08511698246"
+        },
+        {
+          "customer_id": "QUEEN",
+          "company_name": "Queen Cozinha",
+          "total_discount_value": "4508.602557837963"
+        }
+      ],
+      "rows": [
+        {
+          "customer_id": "SAVEA",
+          "company_name": "Save-a-lot Markets",
+          "total_discount_value": "11311.440135478973"
+        },
+        {
+          "customer_id": "ERNSH",
+          "company_name": "Ernst Handel",
+          "total_discount_value": "8361.701644212008"
+        },
+        {
+          "customer_id": "HUNGO",
+          "company_name": "Hungry Owl All-Night Grocers",
+          "total_discount_value": "7337.485068798065"
+        },
+        {
+          "customer_id": "QUICK",
+          "company_name": "QUICK-Stop",
+          "total_discount_value": "7206.08511698246"
+        },
+        {
+          "customer_id": "QUEEN",
+          "company_name": "Queen Cozinha",
+          "total_discount_value": "4508.602557837963"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "customer_id",
+        "company_name",
+        "total_discount_value"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.order_details",
+        "public.orders",
+        "public.customers"
+      ]
+    },
+    "tables_used": [
+      "public.order_details",
+      "public.orders",
+      "public.customers"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "customer_id": "SAVEA",
+        "company_name": "Save-a-lot Markets",
+        "total_discount_value": "11311.440135478973"
+      },
+      {
+        "customer_id": "ERNSH",
+        "company_name": "Ernst Handel",
+        "total_discount_value": "8361.701644212008"
+      },
+      {
+        "customer_id": "HUNGO",
+        "company_name": "Hungry Owl All-Night Grocers",
+        "total_discount_value": "7337.485068798065"
+      },
+      {
+        "customer_id": "QUICK",
+        "company_name": "QUICK-Stop",
+        "total_discount_value": "7206.08511698246"
+      },
+      {
+        "customer_id": "QUEEN",
+        "company_name": "Queen Cozinha",
+        "total_discount_value": "4508.602557837963"
+      }
+    ]
+  },
+  "US_CL10_U3": {
+    "query_id": "US_CL10_U3",
+    "question": "Welche Zielgruppen liefern den gr\u00f6\u00dften Beitrag zum Umsatz nach Abz\u00fcgen?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 7212,
+    "error": null,
+    "final_response_text": "Es scheint, dass es keine Daten gibt, die den Umsatz nach Abz\u00fcgen f\u00fcr die verschiedenen Zielgruppen in der aktuellen Datenbank widerspiegeln. M\u00f6glicherweise sind die relevanten Daten nicht vorhanden oder es gibt keine Zuordnung zwischen den Bestellungen und den Zielgruppen. Wenn du weitere Informationen oder eine andere Analyse ben\u00f6tigst, lass es mich wissen!",
+    "sql_query": "SELECT cd.customer_desc AS Zielgruppe, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS Umsatz_nach_Abz\u00fcgen\nFROM public.order_details od\nJOIN public.orders o ON od.order_id = o.order_id\nJOIN public.customers c ON o.customer_id = c.customer_id\nJOIN public.customer_customer_demo ccd ON c.customer_id = ccd.customer_id\nJOIN public.customer_demographics cd ON ccd.customer_type_id = cd.customer_type_id\nGROUP BY cd.customer_desc\nORDER BY Umsatz_nach_Abz\u00fcgen DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": 0,
+      "columns": [],
+      "ok": true,
+      "tables_used": [
+        "public.order_details",
+        "public.orders",
+        "public.customers",
+        "public.customer_customer_demo",
+        "public.customer_demographics"
+      ]
+    },
+    "tables_used": [
+      "public.order_details",
+      "public.orders",
+      "public.customers",
+      "public.customer_customer_demo",
+      "public.customer_demographics"
+    ],
+    "row_count": 0,
+    "result_preview": []
+  }
+}

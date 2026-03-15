@@ -1,0 +1,192 @@
+{
+  "Q1": {
+    "query_id": "Q1",
+    "question": "Wann m\u00fcssen wir neues \u00d856 Material nachbestellen, basierend auf aktuellem Lagerbestand (Rohmaterial + Halbfertigprodukte), offenen Kundenauftr\u00e4gen und Wiederbeschaffungszeit?",
+    "status": "failed",
+    "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+    "latency_ms_total": 29,
+    "sql_executed": [],
+    "tables_used": [],
+    "error_info": {
+      "type": "CLIENT_EXCEPTION",
+      "message": "HTTP 404: {\"detail\":\"Not Found\"}"
+    },
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null
+  },
+  "Q2": {
+    "query_id": "Q2",
+    "question": "Wann wurde die Bestellung [BESTELLNUMMER] geliefert (Lieferdatum + Status), und gab es Teillieferungen?",
+    "status": "failed",
+    "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+    "latency_ms_total": 1,
+    "sql_executed": [],
+    "tables_used": [],
+    "error_info": {
+      "type": "CLIENT_EXCEPTION",
+      "message": "HTTP 404: {\"detail\":\"Not Found\"}"
+    },
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null
+  },
+  "Q3": {
+    "query_id": "Q3",
+    "question": "Wie viele Teile wurden in den Morgenstunden 04:00\u201307:00 produziert im Vergleich zu 08:00\u201311:00 (letzte 14 Tage)?",
+    "status": "failed",
+    "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+    "latency_ms_total": 5,
+    "sql_executed": [],
+    "tables_used": [],
+    "error_info": {
+      "type": "CLIENT_EXCEPTION",
+      "message": "HTTP 404: {\"detail\":\"Not Found\"}"
+    },
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null
+  },
+  "Q4": {
+    "query_id": "Q4",
+    "question": "Halten sich alle Mitarbeitenden an die vorgeschriebenen Anwesenheits- und Pausenzeiten (letzte 30 Tage) \u2013 und wer sind die gr\u00f6ssten Ausreisser?",
+    "status": "failed",
+    "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+    "latency_ms_total": 1,
+    "sql_executed": [],
+    "tables_used": [],
+    "error_info": {
+      "type": "CLIENT_EXCEPTION",
+      "message": "HTTP 404: {\"detail\":\"Not Found\"}"
+    },
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null
+  },
+  "Q5": {
+    "query_id": "Q5",
+    "question": "Was hat der Mitarbeitende [MITARBEITER] heute Morgen gemacht (04:00\u201311:00)? Bitte nach T\u00e4tigkeit/Auftrag gruppieren (Zeiterfassung + ERP-R\u00fcckmeldungen).",
+    "status": "failed",
+    "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+    "latency_ms_total": 5,
+    "sql_executed": [],
+    "tables_used": [],
+    "error_info": {
+      "type": "CLIENT_EXCEPTION",
+      "message": "HTTP 404: {\"detail\":\"Not Found\"}"
+    },
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null
+  },
+  "Q6": {
+    "query_id": "Q6",
+    "question": "Wurde Material [MATERIAL] bereits angeliefert und im Lager gebucht (Wareneingang)? Falls nein: was ist der aktuelle Status der zugeh\u00f6rigen Bestellung/Lieferung?",
+    "status": "failed",
+    "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+    "latency_ms_total": 2,
+    "sql_executed": [],
+    "tables_used": [],
+    "error_info": {
+      "type": "CLIENT_EXCEPTION",
+      "message": "HTTP 404: {\"detail\":\"Not Found\"}"
+    },
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null
+  },
+  "Q7": {
+    "query_id": "Q7",
+    "question": "Korrelieren nicht erf\u00fcllte Wartungspunkte mit h\u00f6heren Wartungskosten (letzte 12 Monate)? Bitte mit Kennzahl/Trend und kurzer Interpretation.",
+    "status": "failed",
+    "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+    "latency_ms_total": 2,
+    "sql_executed": [],
+    "tables_used": [],
+    "error_info": {
+      "type": "CLIENT_EXCEPTION",
+      "message": "HTTP 404: {\"detail\":\"Not Found\"}"
+    },
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null
+  },
+  "Q8": {
+    "query_id": "Q8",
+    "question": "Wie ist das Verh\u00e4ltnis Vorgabe zu Ist pro Artikel und Mitarbeitendem (letzter Monat) \u2013 wo sind die gr\u00f6ssten Abweichungen?",
+    "status": "failed",
+    "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+    "latency_ms_total": 3,
+    "sql_executed": [],
+    "tables_used": [],
+    "error_info": {
+      "type": "CLIENT_EXCEPTION",
+      "message": "HTTP 404: {\"detail\":\"Not Found\"}"
+    },
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null
+  },
+  "Q9": {
+    "query_id": "Q9",
+    "question": "Gibt es systematische Abweichungen zwischen Start Zeiterfassung und Start BDE (Zeit/ERP) \u2013 pro Mitarbeitendem und als Gesamttendenz (letzte 30 Tage)?",
+    "status": "failed",
+    "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+    "latency_ms_total": 2,
+    "sql_executed": [],
+    "tables_used": [],
+    "error_info": {
+      "type": "CLIENT_EXCEPTION",
+      "message": "HTTP 404: {\"detail\":\"Not Found\"}"
+    },
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null
+  },
+  "Q10": {
+    "query_id": "Q10",
+    "question": "Welche 5 Artikel verursachen aktuell die gr\u00f6ssten operativen Probleme (z.B. h\u00e4ufige Abweichungen, Nacharbeit, versp\u00e4tete Lieferungen) in den letzten 8 Wochen?",
+    "status": "failed",
+    "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+    "latency_ms_total": 1,
+    "sql_executed": [],
+    "tables_used": [],
+    "error_info": {
+      "type": "CLIENT_EXCEPTION",
+      "message": "HTTP 404: {\"detail\":\"Not Found\"}"
+    },
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null
+  }
+}

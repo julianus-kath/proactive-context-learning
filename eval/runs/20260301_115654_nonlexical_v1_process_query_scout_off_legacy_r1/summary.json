@@ -1,0 +1,28 @@
+{
+  "run_id": "20260301_115654_nonlexical_v1_process_query_scout_off_legacy_r1",
+  "run_name": "nonlexical_v1_process_query_scout_off_legacy_r1",
+  "mode_label": "scout_off_legacy_lexical",
+  "total_queries": 20,
+  "successes": 0,
+  "failures": 20,
+  "success_rate": 0.0,
+  "avg_latency_ms": 1819.0,
+  "p95_latency_ms": 1963.0,
+  "scout_mode_start": {
+    "active": false,
+    "backend": "SchemaCatalog",
+    "status": "healthy",
+    "catalog_valid": true,
+    "off_control_mode": "legacy_lexical_schema_linking",
+    "meaning": "Scout mode INACTIVE: MCP discovery backend is SchemaCatalog with legacy lexical schema-linking baseline."
+  },
+  "scout_mode_end": {
+    "active": false,
+    "backend": "SchemaCatalog",
+    "status": "healthy",
+    "catalog_valid": true,
+    "off_control_mode": "legacy_lexical_schema_linking",
+    "meaning": "Scout mode INACTIVE: MCP discovery backend is SchemaCatalog with legacy lexical schema-linking baseline."
+  },
+  "results_dir": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/20260301_115654_nonlexical_v1_process_query_scout_off_legacy_r1"
+}

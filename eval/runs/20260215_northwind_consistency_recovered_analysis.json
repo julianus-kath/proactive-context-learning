@@ -1,0 +1,319 @@
+{
+  "analysis_timestamp_utc": "2026-02-15T07:38:16.774297+00:00",
+  "run_ids": [
+    "20260215_083337_northwind_hypothesis_consistency_recovered_r1",
+    "20260215_083426_northwind_hypothesis_consistency_recovered_r2",
+    "20260215_083511_northwind_hypothesis_consistency_recovered_r3",
+    "20260215_083556_northwind_hypothesis_consistency_recovered_r4",
+    "20260215_083640_northwind_hypothesis_consistency_recovered_r5"
+  ],
+  "runs": [
+    {
+      "run_id": "20260215_083337_northwind_hypothesis_consistency_recovered_r1",
+      "successful": 10,
+      "failed": 0,
+      "success_rate_pct": 100.0,
+      "semantic_strict_accuracy_pct": 10.0,
+      "semantic_acceptable_accuracy_pct": 60.0,
+      "catalog_table_coverage_pct": 100.0,
+      "catalog_column_coverage_pct": 100.0,
+      "retrieval_avg_recall_at_5": 0.85,
+      "reference_match_rate_pct": 10.0,
+      "avg_total_llm_calls": 3.8,
+      "avg_latency_ms_total": 4849.2,
+      "quota_errors_detected": 0
+    },
+    {
+      "run_id": "20260215_083426_northwind_hypothesis_consistency_recovered_r2",
+      "successful": 9,
+      "failed": 1,
+      "success_rate_pct": 90.0,
+      "semantic_strict_accuracy_pct": 0.0,
+      "semantic_acceptable_accuracy_pct": 22.22,
+      "catalog_table_coverage_pct": 100.0,
+      "catalog_column_coverage_pct": 100.0,
+      "retrieval_avg_recall_at_5": 0.8333,
+      "reference_match_rate_pct": 0.0,
+      "avg_total_llm_calls": 3.6,
+      "avg_latency_ms_total": 4369.0,
+      "quota_errors_detected": 0
+    },
+    {
+      "run_id": "20260215_083511_northwind_hypothesis_consistency_recovered_r3",
+      "successful": 10,
+      "failed": 0,
+      "success_rate_pct": 100.0,
+      "semantic_strict_accuracy_pct": 0.0,
+      "semantic_acceptable_accuracy_pct": 40.0,
+      "catalog_table_coverage_pct": 100.0,
+      "catalog_column_coverage_pct": 100.0,
+      "retrieval_avg_recall_at_5": 0.85,
+      "reference_match_rate_pct": 0.0,
+      "avg_total_llm_calls": 3.4,
+      "avg_latency_ms_total": 4458.0,
+      "quota_errors_detected": 0
+    },
+    {
+      "run_id": "20260215_083556_northwind_hypothesis_consistency_recovered_r4",
+      "successful": 10,
+      "failed": 0,
+      "success_rate_pct": 100.0,
+      "semantic_strict_accuracy_pct": 10.0,
+      "semantic_acceptable_accuracy_pct": 50.0,
+      "catalog_table_coverage_pct": 100.0,
+      "catalog_column_coverage_pct": 100.0,
+      "retrieval_avg_recall_at_5": 0.85,
+      "reference_match_rate_pct": 10.0,
+      "avg_total_llm_calls": 3.7,
+      "avg_latency_ms_total": 4321.7,
+      "quota_errors_detected": 0
+    },
+    {
+      "run_id": "20260215_083640_northwind_hypothesis_consistency_recovered_r5",
+      "successful": 10,
+      "failed": 0,
+      "success_rate_pct": 100.0,
+      "semantic_strict_accuracy_pct": 0.0,
+      "semantic_acceptable_accuracy_pct": 40.0,
+      "catalog_table_coverage_pct": 100.0,
+      "catalog_column_coverage_pct": 100.0,
+      "retrieval_avg_recall_at_5": 0.85,
+      "reference_match_rate_pct": 0.0,
+      "avg_total_llm_calls": 3.4,
+      "avg_latency_ms_total": 4022.5,
+      "quota_errors_detected": 0
+    }
+  ],
+  "aggregate": {
+    "run_count": 5,
+    "metric_stats": {
+      "success_rate_pct": {
+        "n": 5,
+        "mean": 98.0,
+        "stddev": 4.0,
+        "min": 90.0,
+        "max": 100.0
+      },
+      "semantic_strict_accuracy_pct": {
+        "n": 5,
+        "mean": 4.0,
+        "stddev": 4.899,
+        "min": 0.0,
+        "max": 10.0
+      },
+      "semantic_acceptable_accuracy_pct": {
+        "n": 5,
+        "mean": 42.444,
+        "stddev": 12.54,
+        "min": 22.22,
+        "max": 60.0
+      },
+      "reference_match_rate_pct": {
+        "n": 5,
+        "mean": 4.0,
+        "stddev": 4.899,
+        "min": 0.0,
+        "max": 10.0
+      },
+      "catalog_table_coverage_pct": {
+        "n": 5,
+        "mean": 100.0,
+        "stddev": 0.0,
+        "min": 100.0,
+        "max": 100.0
+      },
+      "catalog_column_coverage_pct": {
+        "n": 5,
+        "mean": 100.0,
+        "stddev": 0.0,
+        "min": 100.0,
+        "max": 100.0
+      },
+      "retrieval_avg_recall_at_5": {
+        "n": 5,
+        "mean": 0.8467,
+        "stddev": 0.0067,
+        "min": 0.8333,
+        "max": 0.85
+      },
+      "avg_total_llm_calls": {
+        "n": 5,
+        "mean": 3.58,
+        "stddev": 0.16,
+        "min": 3.4,
+        "max": 3.8
+      },
+      "avg_latency_ms_total": {
+        "n": 5,
+        "mean": 4404.08,
+        "stddev": 266.3305,
+        "min": 4022.5,
+        "max": 4849.2
+      }
+    },
+    "quota_errors_total": 0
+  },
+  "per_query": {
+    "NW1": {
+      "attempts": 5,
+      "successes": 4,
+      "success_rate_pct": 80.0,
+      "semantic_counts": {
+        "PARTIAL": 4
+      },
+      "dominant_semantic_label": "PARTIAL",
+      "reference_match_rate_pct": 0.0,
+      "avg_recall_at_5": 0.8,
+      "avg_latency_ms_total": 5158.6
+    },
+    "NW10": {
+      "attempts": 5,
+      "successes": 5,
+      "success_rate_pct": 100.0,
+      "semantic_counts": {
+        "PARTIAL": 5
+      },
+      "dominant_semantic_label": "PARTIAL",
+      "reference_match_rate_pct": 0.0,
+      "avg_recall_at_5": 1.0,
+      "avg_latency_ms_total": 4848.4
+    },
+    "NW2": {
+      "attempts": 5,
+      "successes": 5,
+      "success_rate_pct": 100.0,
+      "semantic_counts": {
+        "CORRECT": 2,
+        "INCORRECT": 3
+      },
+      "dominant_semantic_label": "INCORRECT",
+      "reference_match_rate_pct": 40.0,
+      "avg_recall_at_5": 0.6667,
+      "avg_latency_ms_total": 5330.0
+    },
+    "NW3": {
+      "attempts": 5,
+      "successes": 5,
+      "success_rate_pct": 100.0,
+      "semantic_counts": {
+        "INCORRECT": 5
+      },
+      "dominant_semantic_label": "INCORRECT",
+      "reference_match_rate_pct": 0.0,
+      "avg_recall_at_5": 1.0,
+      "avg_latency_ms_total": 5015.4
+    },
+    "NW4": {
+      "attempts": 5,
+      "successes": 5,
+      "success_rate_pct": 100.0,
+      "semantic_counts": {
+        "INCORRECT": 5
+      },
+      "dominant_semantic_label": "INCORRECT",
+      "reference_match_rate_pct": 0.0,
+      "avg_recall_at_5": 0.5,
+      "avg_latency_ms_total": 3478.0
+    },
+    "NW5": {
+      "attempts": 5,
+      "successes": 5,
+      "success_rate_pct": 100.0,
+      "semantic_counts": {
+        "PARTIAL": 1,
+        "INCORRECT": 4
+      },
+      "dominant_semantic_label": "INCORRECT",
+      "reference_match_rate_pct": 0.0,
+      "avg_recall_at_5": 0.6667,
+      "avg_latency_ms_total": 5157.8
+    },
+    "NW6": {
+      "attempts": 5,
+      "successes": 5,
+      "success_rate_pct": 100.0,
+      "semantic_counts": {
+        "PARTIAL": 5
+      },
+      "dominant_semantic_label": "PARTIAL",
+      "reference_match_rate_pct": 0.0,
+      "avg_recall_at_5": 1.0,
+      "avg_latency_ms_total": 3126.2
+    },
+    "NW7": {
+      "attempts": 5,
+      "successes": 5,
+      "success_rate_pct": 100.0,
+      "semantic_counts": {
+        "PARTIAL": 4,
+        "INCORRECT": 1
+      },
+      "dominant_semantic_label": "PARTIAL",
+      "reference_match_rate_pct": 0.0,
+      "avg_recall_at_5": 1.0,
+      "avg_latency_ms_total": 4965.8
+    },
+    "NW8": {
+      "attempts": 5,
+      "successes": 5,
+      "success_rate_pct": 100.0,
+      "semantic_counts": {
+        "INCORRECT": 5
+      },
+      "dominant_semantic_label": "INCORRECT",
+      "reference_match_rate_pct": 0.0,
+      "avg_recall_at_5": 0.6667,
+      "avg_latency_ms_total": 4122.0
+    },
+    "NW9": {
+      "attempts": 5,
+      "successes": 5,
+      "success_rate_pct": 100.0,
+      "semantic_counts": {
+        "INCORRECT": 5
+      },
+      "dominant_semantic_label": "INCORRECT",
+      "reference_match_rate_pct": 0.0,
+      "avg_recall_at_5": 1.0,
+      "avg_latency_ms_total": 2838.6
+    }
+  },
+  "comparison_to_baseline": {
+    "baseline_run_id": "20260214_103753_northwind_hypothesis_eval_v2",
+    "baseline_values": {
+      "success_rate_pct": 100.0,
+      "semantic_strict_accuracy_pct": 10.0,
+      "semantic_acceptable_accuracy_pct": 40.0,
+      "reference_match_rate_pct": 10.0,
+      "retrieval_avg_recall_at_5": 0.85,
+      "avg_total_llm_calls": 3.7
+    },
+    "recovered_mean_values": {
+      "success_rate_pct": 98.0,
+      "semantic_strict_accuracy_pct": 4.0,
+      "semantic_acceptable_accuracy_pct": 42.444,
+      "reference_match_rate_pct": 4.0,
+      "retrieval_avg_recall_at_5": 0.8467,
+      "avg_total_llm_calls": 3.58
+    },
+    "delta_recovered_minus_baseline": {
+      "success_rate_pct": -2.0,
+      "semantic_strict_accuracy_pct": -6.0,
+      "semantic_acceptable_accuracy_pct": 2.444,
+      "reference_match_rate_pct": -6.0,
+      "retrieval_avg_recall_at_5": -0.0033,
+      "avg_total_llm_calls": -0.12
+    },
+    "quota_recovery_check_run": {
+      "run_id": "20260215_083230_northwind_hypothesis_quota_recovered_check",
+      "success_rate_pct": 90.0,
+      "semantic_strict_accuracy_pct": 11.11,
+      "semantic_acceptable_accuracy_pct": 22.22
+    }
+  },
+  "notes": [
+    "This analysis covers only post-quota-recovery consistency runs (r1..r5).",
+    "No 429 quota errors were detected in these five runs.",
+    "Variability is concentrated in NW1 generation stability; other queries were stable successes in this batch."
+  ]
+}

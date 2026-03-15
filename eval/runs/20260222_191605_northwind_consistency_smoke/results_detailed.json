@@ -1,0 +1,49 @@
+{
+  "summary": {
+    "total_queries": 1,
+    "successful": 0,
+    "failed": 1,
+    "success_rate": "0.0%"
+  },
+  "queries": [
+    {
+      "query_id": "NW_SMOKE1",
+      "question": "How many customers are in the database?",
+      "status": "failed",
+      "latency_ms": 3227,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": "There are 91 customers in the database, as indicated by the `public.customers` table.",
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "failure_reasons": [
+        "missing_sql",
+        "missing_tables",
+        "missing_results"
+      ]
+    }
+  ]
+}

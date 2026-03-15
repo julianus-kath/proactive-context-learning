@@ -1,0 +1,104 @@
+{
+  "run_id": "20260302_185811_scout_limit_probe_v2_process_query_scout_on_r3",
+  "run_name": "scout_limit_probe_v2_process_query_scout_on_r3",
+  "mode_label": "scout_on_r3",
+  "generated_at_utc": "2026-03-02T19:00:27.210095Z",
+  "dataset_path": "eval/datasets/northwind_queries_scout_limit_probe_v2.jsonl",
+  "reference_sql_path": "eval/datasets/northwind_queries_scout_limit_probe_v2.reference_sql.json",
+  "expert_sheet_path": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/datasets/northwind_expert_review_sheet.md",
+  "target_url": "http://localhost:5001",
+  "mcp_url": "http://localhost:8000",
+  "request_timeout_s": 180.0,
+  "request_concurrency": 1,
+  "evaluate_expert": true,
+  "eval_concurrency": 4,
+  "mcp_query_limit": 1000,
+  "mcp_health_start": {
+    "url": "http://localhost:8000",
+    "reachable": true,
+    "status_code": 200,
+    "payload": {
+      "status": "healthy",
+      "timestamp": "2026-03-02T18:58:11.126866",
+      "version": "1.0",
+      "components": {
+        "database": {
+          "status": "healthy",
+          "connectivity": true,
+          "dialect": "postgres"
+        },
+        "scout_catalog": {
+          "status": "healthy",
+          "catalog_exists": true,
+          "catalog_valid": true,
+          "catalog_age_hours": 11.775813819166668,
+          "catalog_ttl_hours": 168,
+          "build_in_progress": false,
+          "build_count": 0,
+          "last_build_duration": 0.0,
+          "last_build_time": null,
+          "compressed_size_mb": 0.0,
+          "compression_ratio": 0.0818726625512549,
+          "backend": "ScoutRunner"
+        }
+      }
+    },
+    "database_dialect": "postgres",
+    "discovery_backend": "ScoutRunner",
+    "discovery_status": "healthy",
+    "catalog_valid": true,
+    "off_control_mode": null
+  },
+  "mcp_health_end": {
+    "url": "http://localhost:8000",
+    "reachable": true,
+    "status_code": 200,
+    "payload": {
+      "status": "healthy",
+      "timestamp": "2026-03-02T19:00:27.203533",
+      "version": "1.0",
+      "components": {
+        "database": {
+          "status": "healthy",
+          "connectivity": true,
+          "dialect": "postgres"
+        },
+        "scout_catalog": {
+          "status": "healthy",
+          "catalog_exists": true,
+          "catalog_valid": true,
+          "catalog_age_hours": 11.813611040277777,
+          "catalog_ttl_hours": 168,
+          "build_in_progress": false,
+          "build_count": 0,
+          "last_build_duration": 0.0,
+          "last_build_time": null,
+          "compressed_size_mb": 0.0,
+          "compression_ratio": 0.0818726625512549,
+          "backend": "ScoutRunner"
+        }
+      }
+    },
+    "database_dialect": "postgres",
+    "discovery_backend": "ScoutRunner",
+    "discovery_status": "healthy",
+    "catalog_valid": true,
+    "off_control_mode": null
+  },
+  "scout_mode_start": {
+    "active": true,
+    "backend": "ScoutRunner",
+    "status": "healthy",
+    "catalog_valid": true,
+    "off_control_mode": null,
+    "meaning": "Scout mode ACTIVE: MCP discovery backend is ScoutRunner. Catalog source is scout_runner_catalog."
+  },
+  "scout_mode_end": {
+    "active": true,
+    "backend": "ScoutRunner",
+    "status": "healthy",
+    "catalog_valid": true,
+    "off_control_mode": null,
+    "meaning": "Scout mode ACTIVE: MCP discovery backend is ScoutRunner. Catalog source is scout_runner_catalog."
+  }
+}

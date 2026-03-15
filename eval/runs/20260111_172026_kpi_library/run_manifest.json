@@ -1,0 +1,19 @@
+{
+  "run_id": "20260111_172026_kpi_library",
+  "run_name": "kpi_library",
+  "timestamp": "2026-01-11T16:20:26.766210Z",
+  "git_commit": "3e2351a133ca72d774bb2b5dc142e354647e837b",
+  "dataset_path": "eval/datasets/cockpit_queries.jsonl",
+  "mcp_server_url": "http://192.168.1.35:8000",
+  "model": "gpt-4",
+  "prompt_versions": {},
+  "environment": {
+    "python_version": "3.11.2",
+    "machine": "MacBookPro",
+    "platform": "darwin",
+    "cwd": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code"
+  },
+  "total_queries": 10,
+  "completed_queries": 9,
+  "failed_queries": 1
+}

@@ -1,0 +1,160 @@
+{
+  "instructions": {
+    "labels": [
+      "CORRECT",
+      "PARTIAL",
+      "INCORRECT"
+    ],
+    "reason_codes": [
+      "MISSING_DISCOUNT_FACTOR",
+      "COUNT_NOT_DISTINCT",
+      "WRONG_AGGREGATION_GRAIN",
+      "MISSING_REQUIRED_TABLE",
+      "JOIN_PATH_VIOLATION",
+      "MISSING_TIME_GROUPING",
+      "TOP_K_NOT_APPLIED"
+    ]
+  },
+  "per_query": [
+    {
+      "query_id": "NL1",
+      "source_query_id": "NW1",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL2",
+      "source_query_id": "NW3",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL3",
+      "source_query_id": "NW4",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL4",
+      "source_query_id": "NW6",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL5",
+      "source_query_id": "NW8",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL6",
+      "source_query_id": "NW10",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL7",
+      "source_query_id": "NW11",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL8",
+      "source_query_id": "NW13",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL9",
+      "source_query_id": "NW16",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL10",
+      "source_query_id": "NW17",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL11",
+      "source_query_id": "NW18",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL12",
+      "source_query_id": "NW20",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL13",
+      "source_query_id": "NW23",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL14",
+      "source_query_id": "NW24",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL15",
+      "source_query_id": "NW27",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL16",
+      "source_query_id": "NW30",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL17",
+      "source_query_id": "NW32",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL18",
+      "source_query_id": "NW33",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL19",
+      "source_query_id": "NW37",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    },
+    {
+      "query_id": "NL20",
+      "source_query_id": "NW39",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": ""
+    }
+  ]
+}

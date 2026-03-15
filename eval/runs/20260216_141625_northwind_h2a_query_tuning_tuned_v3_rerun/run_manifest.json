@@ -1,0 +1,19 @@
+{
+  "run_id": "20260216_141625_northwind_h2a_query_tuning_tuned_v3_rerun",
+  "run_name": "northwind_h2a_query_tuning_tuned_v3_rerun",
+  "timestamp": "2026-02-16T13:16:25.665974Z",
+  "git_commit": "2ba3e2d8c1b92225570267fd1e49c50f7c477b71",
+  "dataset_path": "eval/datasets/northwind_queries_tuned_v3.jsonl",
+  "mcp_server_url": "http://localhost:8000",
+  "model": "gpt-4o",
+  "prompt_versions": {},
+  "environment": {
+    "python_version": "3.11.2",
+    "machine": "MacBookPro",
+    "platform": "darwin",
+    "cwd": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code"
+  },
+  "total_queries": 10,
+  "completed_queries": 9,
+  "failed_queries": 1
+}

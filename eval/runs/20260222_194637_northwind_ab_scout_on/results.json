@@ -1,0 +1,882 @@
+{
+  "NW1": {
+    "query_id": "NW1",
+    "question": "Show the five products that should be reordered, meaning stock on hand is below the reorder level, sorted by the largest shortage first.",
+    "status": "success",
+    "final_answer_text": "Here are the five products that should be reordered, sorted by the largest shortage first:\n\n1. **Gorgonzola Telino** - Shortage: 20 units\n2. **Louisiana Hot Spiced Okra** - Shortage: 16 units\n3. **Mascarpone Fabioli** - Shortage: 16 units\n4. **Outback Lager** - Shortage: 15 units\n5. **Gravad lax** - Shortage: 14 units\n\nThese products have stock levels below their reorder levels.",
+    "sql_generated": [
+      "SELECT TOP 5 product_name, (reorder_level - units_in_stock) AS shortage\nFROM public.products\nWHERE units_in_stock < reorder_level\nORDER BY shortage DESC"
+    ],
+    "sql_executed": [
+      "SELECT TOP 5 product_name, (reorder_level - units_in_stock) AS shortage\nFROM public.products\nWHERE units_in_stock < reorder_level\nORDER BY shortage DESC"
+    ],
+    "tables_used": [
+      "public.products"
+    ],
+    "row_count": 5,
+    "latency_ms_total": 3419,
+    "retries": 0,
+    "result_preview": [
+      {
+        "product_name": "Gorgonzola Telino",
+        "shortage": "20"
+      },
+      {
+        "product_name": "Louisiana Hot Spiced Okra",
+        "shortage": "16"
+      },
+      {
+        "product_name": "Mascarpone Fabioli",
+        "shortage": "16"
+      },
+      {
+        "product_name": "Outback Lager",
+        "shortage": "15"
+      },
+      {
+        "product_name": "Gravad lax",
+        "shortage": "14"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "NW2": {
+    "query_id": "NW2",
+    "question": "For each product category, calculate total revenue after discounts, using price times quantity times one minus discount, and identify the category with the highest revenue.",
+    "status": "success",
+    "final_answer_text": "The product category with the highest total revenue after discounts is \"Beverages,\" with a total revenue of approximately $267,868.18.",
+    "sql_generated": [
+      "SELECT c.category_name, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue\nFROM public.order_details od\nJOIN public.products p ON od.product_id = p.product_id\nJOIN public.categories c ON p.category_id = c.category_id\nGROUP BY c.category_name\nORDER BY total_revenue DESC"
+    ],
+    "sql_executed": [
+      "SELECT c.category_name, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue\nFROM public.order_details od\nJOIN public.products p ON od.product_id = p.product_id\nJOIN public.categories c ON p.category_id = c.category_id\nGROUP BY c.category_name\nORDER BY total_revenue DESC"
+    ],
+    "tables_used": [
+      "public.order_details",
+      "public.products",
+      "public.categories"
+    ],
+    "row_count": 8,
+    "latency_ms_total": 3179,
+    "retries": 0,
+    "result_preview": [
+      {
+        "category_name": "Beverages",
+        "total_revenue": "267868.17978624784"
+      },
+      {
+        "category_name": "Dairy Products",
+        "total_revenue": "234507.2845305777"
+      },
+      {
+        "category_name": "Confections",
+        "total_revenue": "167357.22547338586"
+      },
+      {
+        "category_name": "Meat/Poultry",
+        "total_revenue": "163022.3602687388"
+      },
+      {
+        "category_name": "Seafood",
+        "total_revenue": "131261.7365558489"
+      },
+      {
+        "category_name": "Condiments",
+        "total_revenue": "106047.08460955074"
+      },
+      {
+        "category_name": "Produce",
+        "total_revenue": "99984.58007357619"
+      },
+      {
+        "category_name": "Grains/Cereals",
+        "total_revenue": "95744.58735543818"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "NW3": {
+    "query_id": "NW3",
+    "question": "Which customers have placed more than ten distinct orders, and what is the total value of those orders?",
+    "status": "success",
+    "final_answer_text": "Here are some customers who have placed more than ten distinct orders along with the total value of those orders:\n\n1. **Around the Horn**: 13 orders, Total Value: $13,390.65\n2. **Berglunds snabbk\u00f6p**: 18 orders, Total Value: $24,927.58\n3. **Blondesddsl p\u00e8re et fils**: 11 orders, Total Value: $18,534.08\n4. **Bon app'**: 17 orders, Total Value: $21,963.25\n5. **Bottom-Dollar Markets**: 14 orders, Total Value: $20,801.60\n\nThese are just a few examples from the list. Let me know if you need more details!",
+    "sql_generated": [
+      "SELECT c.customer_id, c.company_name, COUNT(DISTINCT o.order_id) AS order_count, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_order_value\nFROM public.customers c\nJOIN public.orders o ON c.customer_id = o.customer_id\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY c.customer_id, c.company_name\nHAVING COUNT(DISTINCT o.order_id) > 10"
+    ],
+    "sql_executed": [
+      "SELECT c.customer_id, c.company_name, COUNT(DISTINCT o.order_id) AS order_count, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_order_value\nFROM public.customers c\nJOIN public.orders o ON c.customer_id = o.customer_id\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY c.customer_id, c.company_name\nHAVING COUNT(DISTINCT o.order_id) > 10"
+    ],
+    "tables_used": [
+      "public.customers",
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 28,
+    "latency_ms_total": 4055,
+    "retries": 0,
+    "result_preview": [
+      {
+        "customer_id": "AROUT",
+        "company_name": "Around the Horn",
+        "order_count": "13",
+        "total_order_value": "13390.649973928183"
+      },
+      {
+        "customer_id": "BERGS",
+        "company_name": "Berglunds snabbk\u00f6p",
+        "order_count": "18",
+        "total_order_value": "24927.577430965972"
+      },
+      {
+        "customer_id": "BLONP",
+        "company_name": "Blondesddsl p\u00e8re et fils",
+        "order_count": "11",
+        "total_order_value": "18534.080079345105"
+      },
+      {
+        "customer_id": "BONAP",
+        "company_name": "Bon app'",
+        "order_count": "17",
+        "total_order_value": "21963.252461684533"
+      },
+      {
+        "customer_id": "BOTTM",
+        "company_name": "Bottom-Dollar Markets",
+        "order_count": "14",
+        "total_order_value": "20801.59995229095"
+      },
+      {
+        "customer_id": "ERNSH",
+        "company_name": "Ernst Handel",
+        "order_count": "30",
+        "total_order_value": "104874.97814367746"
+      },
+      {
+        "customer_id": "FOLKO",
+        "company_name": "Folk och f\u00e4 HB",
+        "order_count": "19",
+        "total_order_value": "29567.562490026656"
+      },
+      {
+        "customer_id": "FRANK",
+        "company_name": "Frankenversand",
+        "order_count": "15",
+        "total_order_value": "26656.559403990017"
+      },
+      {
+        "customer_id": "GREAL",
+        "company_name": "Great Lakes Food Market",
+        "order_count": "11",
+        "total_order_value": "18507.44997092657"
+      },
+      {
+        "customer_id": "HANAR",
+        "company_name": "Hanari Carnes",
+        "order_count": "14",
+        "total_order_value": "32841.369948457475"
+      },
+      {
+        "customer_id": "HILAA",
+        "company_name": "HILARION-Abastos",
+        "order_count": "18",
+        "total_order_value": "22768.76392572349"
+      },
+      {
+        "customer_id": "HUNGO",
+        "company_name": "Hungry Owl All-Night Grocers",
+        "order_count": "19",
+        "total_order_value": "49979.90508149548"
+      },
+      {
+        "customer_id": "KOENE",
+        "company_name": "K\u00f6niglich Essen",
+        "order_count": "14",
+        "total_order_value": "30908.383872538416"
+      },
+      {
+        "customer_id": "LAMAI",
+        "company_name": "La maison d'Asie",
+        "order_count": "14",
+        "total_order_value": "9328.200014907121"
+      },
+      {
+        "customer_id": "LEHMS",
+        "company_name": "Lehmanns Marktstand",
+        "order_count": "15",
+        "total_order_value": "19261.409954871837"
+      },
+      {
+        "customer_id": "LILAS",
+        "company_name": "LILA-Supermercado",
+        "order_count": "14",
+        "total_order_value": "16076.599920950532"
+      },
+      {
+        "customer_id": "LINOD",
+        "company_name": "LINO-Delicateses",
+        "order_count": "12",
+        "total_order_value": "16476.56491531938"
+      },
+      {
+        "customer_id": "MEREP",
+        "company_name": "M\u00e8re Paillarde",
+        "order_count": "13",
+        "total_order_value": "28872.19015611842"
+      },
+      {
+        "customer_id": "QUEEN",
+        "company_name": "Queen Cozinha",
+        "order_count": "13",
+        "total_order_value": "25717.497604973578"
+      },
+      {
+        "customer_id": "QUICK",
+        "company_name": "QUICK-Stop",
+        "order_count": "28",
+        "total_order_value": "110277.30503039382"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "NW4": {
+    "query_id": "NW4",
+    "question": "For each shipping company, count orders that were shipped later than the required delivery date, and also report total shipped orders.",
+    "status": "success",
+    "final_answer_text": "Here are the counts of orders for each shipping company:\n\n- **Federal Shipping**: 9 orders were shipped later than the required date out of a total of 255 shipped orders.\n- **Speedy Express**: 12 orders were shipped late out of 249 total orders.\n- **United Package**: 16 orders were shipped late out of 326 total orders.",
+    "sql_generated": [
+      "SELECT s.company_name, \n       COUNT(CASE WHEN o.shipped_date > o.required_date THEN 1 END) AS late_orders,\n       COUNT(o.order_id) AS total_orders\nFROM public.orders o\nJOIN public.shippers s ON o.ship_via = s.shipper_id\nGROUP BY s.company_name"
+    ],
+    "sql_executed": [
+      "SELECT s.company_name, \n       COUNT(CASE WHEN o.shipped_date > o.required_date THEN 1 END) AS late_orders,\n       COUNT(o.order_id) AS total_orders\nFROM public.orders o\nJOIN public.shippers s ON o.ship_via = s.shipper_id\nGROUP BY s.company_name"
+    ],
+    "tables_used": [
+      "public.orders",
+      "public.shippers"
+    ],
+    "row_count": 3,
+    "latency_ms_total": 3383,
+    "retries": 0,
+    "result_preview": [
+      {
+        "company_name": "Federal Shipping",
+        "late_orders": "9",
+        "total_orders": "255"
+      },
+      {
+        "company_name": "Speedy Express",
+        "late_orders": "12",
+        "total_orders": "249"
+      },
+      {
+        "company_name": "United Package",
+        "late_orders": "16",
+        "total_orders": "326"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "NW5": {
+    "query_id": "NW5",
+    "question": "Which employees generated the highest total revenue from their orders after discounts?",
+    "status": "success",
+    "final_answer_text": "The employees who generated the highest total revenue from their orders after discounts are:\n\n1. **Margaret Peacock** with a total revenue of approximately $232,891.\n2. **Janet Leverling** with a total revenue of approximately $202,813.\n3. **Nancy Davolio** with a total revenue of approximately $192,108.\n\nThese figures represent the sum of all order revenues after applying discounts.",
+    "sql_generated": [
+      "SELECT e.employee_id, e.first_name, e.last_name, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue\nFROM public.employees e\nJOIN public.orders o ON e.employee_id = o.employee_id\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY e.employee_id, e.first_name, e.last_name\nORDER BY total_revenue DESC"
+    ],
+    "sql_executed": [
+      "SELECT e.employee_id, e.first_name, e.last_name, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue\nFROM public.employees e\nJOIN public.orders o ON e.employee_id = o.employee_id\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY e.employee_id, e.first_name, e.last_name\nORDER BY total_revenue DESC"
+    ],
+    "tables_used": [
+      "public.employees",
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 9,
+    "latency_ms_total": 4707,
+    "retries": 0,
+    "result_preview": [
+      {
+        "employee_id": "4",
+        "first_name": "Margaret",
+        "last_name": "Peacock",
+        "total_revenue": "232890.84598203757"
+      },
+      {
+        "employee_id": "3",
+        "first_name": "Janet",
+        "last_name": "Leverling",
+        "total_revenue": "202812.84238787484"
+      },
+      {
+        "employee_id": "1",
+        "first_name": "Nancy",
+        "last_name": "Davolio",
+        "total_revenue": "192107.60465689204"
+      },
+      {
+        "employee_id": "2",
+        "first_name": "Andrew",
+        "last_name": "Fuller",
+        "total_revenue": "166537.75528742478"
+      },
+      {
+        "employee_id": "8",
+        "first_name": "Laura",
+        "last_name": "Callahan",
+        "total_revenue": "126862.2774778762"
+      },
+      {
+        "employee_id": "7",
+        "first_name": "Robert",
+        "last_name": "King",
+        "total_revenue": "124568.23485103557"
+      },
+      {
+        "employee_id": "9",
+        "first_name": "Anne",
+        "last_name": "Dodsworth",
+        "total_revenue": "77308.06623830303"
+      },
+      {
+        "employee_id": "6",
+        "first_name": "Michael",
+        "last_name": "Suyama",
+        "total_revenue": "73913.12937797053"
+      },
+      {
+        "employee_id": "5",
+        "first_name": "Steven",
+        "last_name": "Buchanan",
+        "total_revenue": "68792.28239394959"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "NW6": {
+    "query_id": "NW6",
+    "question": "Which five products sold the highest total quantity?",
+    "status": "success",
+    "final_answer_text": "The five products with the highest total quantity sold are:\n\n1. **Camembert Pierrot** with 1,577 units\n2. **Raclette Courdavault** with 1,496 units\n3. **Gorgonzola Telino** with 1,397 units\n4. **Gnocchi di nonna Alice** with 1,263 units\n5. **Pavlova** with 1,158 units",
+    "sql_generated": [
+      "SELECT TOP 5 p.product_name, SUM(od.quantity) AS total_quantity\nFROM public.order_details od\nJOIN public.products p ON od.product_id = p.product_id\nGROUP BY p.product_name\nORDER BY total_quantity DESC;"
+    ],
+    "sql_executed": [
+      "SELECT TOP 5 p.product_name, SUM(od.quantity) AS total_quantity\nFROM public.order_details od\nJOIN public.products p ON od.product_id = p.product_id\nGROUP BY p.product_name\nORDER BY total_quantity DESC;"
+    ],
+    "tables_used": [
+      "public.order_details",
+      "public.products"
+    ],
+    "row_count": 5,
+    "latency_ms_total": 2829,
+    "retries": 0,
+    "result_preview": [
+      {
+        "product_name": "Camembert Pierrot",
+        "total_quantity": "1577"
+      },
+      {
+        "product_name": "Raclette Courdavault",
+        "total_quantity": "1496"
+      },
+      {
+        "product_name": "Gorgonzola Telino",
+        "total_quantity": "1397"
+      },
+      {
+        "product_name": "Gnocchi di nonna Alice",
+        "total_quantity": "1263"
+      },
+      {
+        "product_name": "Pavlova",
+        "total_quantity": "1158"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "NW7": {
+    "query_id": "NW7",
+    "question": "Which pairs of suppliers most frequently appear together within the same order? Return both supplier names and the co-order frequency.",
+    "status": "success",
+    "final_answer_text": "The pairs of suppliers that most frequently appear together within the same order are:\n\n1. **Specialty Biscuits, Ltd.** and **Plutzer Lebensmittelgro\u00dfm\u00e4rkte AG** with a co-order frequency of 32.\n2. **Pavlova, Ltd.** and **Plutzer Lebensmittelgro\u00dfm\u00e4rkte AG** with a co-order frequency of 25.\n3. **Pavlova, Ltd.** and **Formaggi Fortini s.r.l.** with a co-order frequency of 23.\n4. **New Orleans Cajun Delights** and **Plutzer Lebensmittelgro\u00dfm\u00e4rkte AG** with a co-order frequency of 23.\n5. **Pavlova, Ltd.** and **Gai p\u00e2turage** with a co-order frequency of 22.\n\nThese pairs frequently supply products that are ordered together.",
+    "sql_generated": [
+      "SELECT s1.company_name AS supplier1, s2.company_name AS supplier2, COUNT(*) AS co_order_frequency\nFROM public.order_details od1\nJOIN public.products p1 ON od1.product_id = p1.product_id\nJOIN public.suppliers s1 ON p1.supplier_id = s1.supplier_id\nJOIN public.order_details od2 ON od1.order_id = od2.order_id AND od1.product_id <> od2.product_id\nJOIN public.products p2 ON od2.product_id = p2.product_id\nJOIN public.suppliers s2 ON p2.supplier_id = s2.supplier_id\nWHERE s1.supplier_id < s2.supplier_id\nGROUP BY s1.company_name, s2.company_name\nORDER BY co_order_frequency DESC"
+    ],
+    "sql_executed": [
+      "SELECT s1.company_name AS supplier1, s2.company_name AS supplier2, COUNT(*) AS co_order_frequency\nFROM public.order_details od1\nJOIN public.products p1 ON od1.product_id = p1.product_id\nJOIN public.suppliers s1 ON p1.supplier_id = s1.supplier_id\nJOIN public.order_details od2 ON od1.order_id = od2.order_id AND od1.product_id <> od2.product_id\nJOIN public.products p2 ON od2.product_id = p2.product_id\nJOIN public.suppliers s2 ON p2.supplier_id = s2.supplier_id\nWHERE s1.supplier_id < s2.supplier_id\nGROUP BY s1.company_name, s2.company_name\nORDER BY co_order_frequency DESC"
+    ],
+    "tables_used": [
+      "public.order_details",
+      "public.products",
+      "public.suppliers"
+    ],
+    "row_count": 100,
+    "latency_ms_total": 6787,
+    "retries": 0,
+    "result_preview": [
+      {
+        "supplier1": "Specialty Biscuits, Ltd.",
+        "supplier2": "Plutzer Lebensmittelgro\u00dfm\u00e4rkte AG",
+        "co_order_frequency": "32"
+      },
+      {
+        "supplier1": "Pavlova, Ltd.",
+        "supplier2": "Plutzer Lebensmittelgro\u00dfm\u00e4rkte AG",
+        "co_order_frequency": "25"
+      },
+      {
+        "supplier1": "Pavlova, Ltd.",
+        "supplier2": "Formaggi Fortini s.r.l.",
+        "co_order_frequency": "23"
+      },
+      {
+        "supplier1": "New Orleans Cajun Delights",
+        "supplier2": "Plutzer Lebensmittelgro\u00dfm\u00e4rkte AG",
+        "co_order_frequency": "23"
+      },
+      {
+        "supplier1": "Pavlova, Ltd.",
+        "supplier2": "Gai p\u00e2turage",
+        "co_order_frequency": "22"
+      },
+      {
+        "supplier1": "Specialty Biscuits, Ltd.",
+        "supplier2": "Norske Meierier",
+        "co_order_frequency": "21"
+      },
+      {
+        "supplier1": "Pavlova, Ltd.",
+        "supplier2": "Specialty Biscuits, Ltd.",
+        "co_order_frequency": "21"
+      },
+      {
+        "supplier1": "Specialty Biscuits, Ltd.",
+        "supplier2": "Gai p\u00e2turage",
+        "co_order_frequency": "20"
+      },
+      {
+        "supplier1": "Pavlova, Ltd.",
+        "supplier2": "Norske Meierier",
+        "co_order_frequency": "19"
+      },
+      {
+        "supplier1": "Plutzer Lebensmittelgro\u00dfm\u00e4rkte AG",
+        "supplier2": "New England Seafood Cannery",
+        "co_order_frequency": "18"
+      },
+      {
+        "supplier1": "Plutzer Lebensmittelgro\u00dfm\u00e4rkte AG",
+        "supplier2": "Leka Trading",
+        "co_order_frequency": "18"
+      },
+      {
+        "supplier1": "Specialty Biscuits, Ltd.",
+        "supplier2": "G'day, Mate",
+        "co_order_frequency": "18"
+      },
+      {
+        "supplier1": "Plutzer Lebensmittelgro\u00dfm\u00e4rkte AG",
+        "supplier2": "Pasta Buttini s.r.l.",
+        "co_order_frequency": "18"
+      },
+      {
+        "supplier1": "Pavlova, Ltd.",
+        "supplier2": "For\u00eats d'\u00e9rables",
+        "co_order_frequency": "18"
+      },
+      {
+        "supplier1": "Pavlova, Ltd.",
+        "supplier2": "New England Seafood Cannery",
+        "co_order_frequency": "17"
+      },
+      {
+        "supplier1": "Plutzer Lebensmittelgro\u00dfm\u00e4rkte AG",
+        "supplier2": "Gai p\u00e2turage",
+        "co_order_frequency": "17"
+      },
+      {
+        "supplier1": "Pavlova, Ltd.",
+        "supplier2": "Leka Trading",
+        "co_order_frequency": "17"
+      },
+      {
+        "supplier1": "Tokyo Traders",
+        "supplier2": "Plutzer Lebensmittelgro\u00dfm\u00e4rkte AG",
+        "co_order_frequency": "17"
+      },
+      {
+        "supplier1": "Norske Meierier",
+        "supplier2": "Gai p\u00e2turage",
+        "co_order_frequency": "17"
+      },
+      {
+        "supplier1": "Plutzer Lebensmittelgro\u00dfm\u00e4rkte AG",
+        "supplier2": "Formaggi Fortini s.r.l.",
+        "co_order_frequency": "16"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "NW8": {
+    "query_id": "NW8",
+    "question": "By customer country, compute the average order value where each order is totaled first and then averaged at the country level.",
+    "status": "success",
+    "final_answer_text": "Here is the average order value by customer country, where each order is totaled first and then averaged at the country level:\n\n- Austria: CHF 3,200.10\n- Ireland: CHF 2,630.52\n- USA: CHF 2,012.99\n- Germany: CHF 1,887.58\n- Denmark: CHF 1,814.50\n\nThese values represent the top five countries with the highest average order values. If you need more details or additional countries, let me know!",
+    "sql_generated": [
+      "SELECT c.country, AVG(order_total) AS average_order_value\nFROM (\n    SELECT o.order_id, o.customer_id, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS order_total\n    FROM public.orders o\n    JOIN public.order_details od ON o.order_id = od.order_id\n    GROUP BY o.order_id, o.customer_id\n) AS order_totals\nJOIN public.customers c ON order_totals.customer_id = c.customer_id\nGROUP BY c.country\nORDER BY average_order_value DESC;"
+    ],
+    "sql_executed": [
+      "SELECT c.country, AVG(order_total) AS average_order_value\nFROM (\n    SELECT o.order_id, o.customer_id, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS order_total\n    FROM public.orders o\n    JOIN public.order_details od ON o.order_id = od.order_id\n    GROUP BY o.order_id, o.customer_id\n) AS order_totals\nJOIN public.customers c ON order_totals.customer_id = c.customer_id\nGROUP BY c.country\nORDER BY average_order_value DESC;"
+    ],
+    "tables_used": [
+      "public.orders",
+      "public.order_details",
+      "public.customers"
+    ],
+    "row_count": 21,
+    "latency_ms_total": 3603,
+    "retries": 0,
+    "result_preview": [
+      {
+        "country": "Austria",
+        "average_order_value": "3200.0959539662795"
+      },
+      {
+        "country": "Ireland",
+        "average_order_value": "2630.5213200787102"
+      },
+      {
+        "country": "USA",
+        "average_order_value": "2012.988609034482"
+      },
+      {
+        "country": "Germany",
+        "average_order_value": "1887.5789611000907"
+      },
+      {
+        "country": "Denmark",
+        "average_order_value": "1814.5012504562405"
+      },
+      {
+        "country": "Belgium",
+        "average_order_value": "1780.2555414860185"
+      },
+      {
+        "country": "Switzerland",
+        "average_order_value": "1760.7032763181949"
+      },
+      {
+        "country": "Canada",
+        "average_order_value": "1673.2096700259995"
+      },
+      {
+        "country": "Sweden",
+        "average_order_value": "1472.8416194862873"
+      },
+      {
+        "country": "Brazil",
+        "average_order_value": "1288.2623663166903"
+      },
+      {
+        "country": "Venezuela",
+        "average_order_value": "1235.0136686726446"
+      },
+      {
+        "country": "France",
+        "average_order_value": "1056.6015912930131"
+      },
+      {
+        "country": "UK",
+        "average_order_value": "1053.0591055756236"
+      },
+      {
+        "country": "Norway",
+        "average_order_value": "955.8583358923594"
+      },
+      {
+        "country": "Portugal",
+        "average_order_value": "882.4894240120856"
+      },
+      {
+        "country": "Finland",
+        "average_order_value": "855.0023894895138"
+      },
+      {
+        "country": "Mexico",
+        "average_order_value": "842.2170525667336"
+      },
+      {
+        "country": "Spain",
+        "average_order_value": "781.8782603042022"
+      },
+      {
+        "country": "Italy",
+        "average_order_value": "563.2198184944184"
+      },
+      {
+        "country": "Argentina",
+        "average_order_value": "507.4437494277954"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "NW9": {
+    "query_id": "NW9",
+    "question": "How many distinct orders have not been shipped yet, and what is their total value after discounts?",
+    "status": "success",
+    "final_answer_text": "There are 21 distinct orders that have not been shipped yet, with a total value of approximately $25,937.43 after discounts.",
+    "sql_generated": [
+      "SELECT COUNT(DISTINCT o.order_id) AS distinct_orders, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_value\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nWHERE o.shipped_date IS NULL;"
+    ],
+    "sql_executed": [
+      "SELECT COUNT(DISTINCT o.order_id) AS distinct_orders, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_value\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nWHERE o.shipped_date IS NULL;"
+    ],
+    "tables_used": [
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 1,
+    "latency_ms_total": 3325,
+    "retries": 0,
+    "result_preview": [
+      {
+        "distinct_orders": "21",
+        "total_value": "25937.430325874306"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "NW10": {
+    "query_id": "NW10",
+    "question": "Show the month-by-month revenue trend after discounts based on order date.",
+    "status": "success",
+    "final_answer_text": "Here is the month-by-month revenue trend after discounts based on order date:\n\n- **1996**\n  - July: $27,861.90\n  - August: $25,485.28\n  - September: $26,381.40\n  - October: $37,515.72\n  - November: $45,600.05\n  - December: $45,239.63\n\n- **1997**\n  - January: $61,258.07\n  - February: $38,483.63\n  - March: $38,547.22\n  - April: $53,032.95\n  - May: $53,781.29\n  - June: $36,362.80\n  - July: $51,020.86\n  - August: $47,287.67\n  - September: $55,629.24\n  - October: $66,749.23\n  - November: $43,533.81\n  - December: $71,398.43\n\n- **1998**\n  - January: $94,222.11\n  - February: $99,415.29\n\nThis trend shows the revenue after applying discounts for each month.",
+    "sql_generated": [
+      "SELECT EXTRACT(YEAR FROM o.order_date) AS Year, EXTRACT(MONTH FROM o.order_date) AS Month, \n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS Revenue\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY Year, Month\nORDER BY Year, Month;"
+    ],
+    "sql_executed": [
+      "SELECT EXTRACT(YEAR FROM o.order_date) AS Year, EXTRACT(MONTH FROM o.order_date) AS Month, \n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS Revenue\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY Year, Month\nORDER BY Year, Month;"
+    ],
+    "tables_used": [
+      "o.order_date",
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 23,
+    "latency_ms_total": 5532,
+    "retries": 0,
+    "result_preview": [
+      {
+        "year": "1996.0",
+        "month": "7.0",
+        "revenue": "27861.89512966156"
+      },
+      {
+        "year": "1996.0",
+        "month": "8.0",
+        "revenue": "25485.275070743264"
+      },
+      {
+        "year": "1996.0",
+        "month": "9.0",
+        "revenue": "26381.400132587554"
+      },
+      {
+        "year": "1996.0",
+        "month": "10.0",
+        "revenue": "37515.72494547888"
+      },
+      {
+        "year": "1996.0",
+        "month": "11.0",
+        "revenue": "45600.04521113701"
+      },
+      {
+        "year": "1996.0",
+        "month": "12.0",
+        "revenue": "45239.630493214434"
+      },
+      {
+        "year": "1997.0",
+        "month": "1.0",
+        "revenue": "61258.0701679784"
+      },
+      {
+        "year": "1997.0",
+        "month": "2.0",
+        "revenue": "38483.6349503243"
+      },
+      {
+        "year": "1997.0",
+        "month": "3.0",
+        "revenue": "38547.22010972678"
+      },
+      {
+        "year": "1997.0",
+        "month": "4.0",
+        "revenue": "53032.95238894149"
+      },
+      {
+        "year": "1997.0",
+        "month": "5.0",
+        "revenue": "53781.28982514166"
+      },
+      {
+        "year": "1997.0",
+        "month": "6.0",
+        "revenue": "36362.80233480245"
+      },
+      {
+        "year": "1997.0",
+        "month": "7.0",
+        "revenue": "51020.85751860481"
+      },
+      {
+        "year": "1997.0",
+        "month": "8.0",
+        "revenue": "47287.66968825523"
+      },
+      {
+        "year": "1997.0",
+        "month": "9.0",
+        "revenue": "55629.24240174934"
+      },
+      {
+        "year": "1997.0",
+        "month": "10.0",
+        "revenue": "66749.22577572716"
+      },
+      {
+        "year": "1997.0",
+        "month": "11.0",
+        "revenue": "43533.80876756514"
+      },
+      {
+        "year": "1997.0",
+        "month": "12.0",
+        "revenue": "71398.42846388379"
+      },
+      {
+        "year": "1998.0",
+        "month": "1.0",
+        "revenue": "94222.1102069358"
+      },
+      {
+        "year": "1998.0",
+        "month": "2.0",
+        "revenue": "99415.2873830082"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  }
+}

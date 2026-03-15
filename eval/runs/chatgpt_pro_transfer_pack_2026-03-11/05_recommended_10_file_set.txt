@@ -1,0 +1,12 @@
+Recommended 10-file upload set (if not uploading zip):
+
+1) /Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/chatgpt_pro_transfer_pack_2026-03-11/00_chatgpt_pro_transfer_pack_readme.md
+2) /Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/chatgpt_pro_transfer_pack_2026-03-11/01_mode_and_setup.md
+3) /Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/chatgpt_pro_transfer_pack_2026-03-11/02_manifest.json
+4) /Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/chatgpt_pro_transfer_pack_2026-03-11/03_dataset_queries_bundle.json
+5) /Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/chatgpt_pro_transfer_pack_2026-03-11/04_key_metrics.json
+6) /Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/chatgpt_pro_transfer_pack_2026-03-11/raw/eval/runs/ablation_study_master_summary_2026-03-11.md
+7) /Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/chatgpt_pro_transfer_pack_2026-03-11/raw/eval/runs/20260302_190255_scout_boundary_synthesis/report.md
+8) /Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/chatgpt_pro_transfer_pack_2026-03-11/raw/eval/runs/20260311_053138_cockpit_partner_remote_mcp_scout_on_vs_off_aligned_r1/comparison.json
+9) /Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/chatgpt_pro_transfer_pack_2026-03-11/raw/eval/runs/20260311_080031_cockpit_partner_remote_mcp_off_aligned_vs_off_legacy_r1/comparison.json
+10) /Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/chatgpt_pro_transfer_pack_2026-03-11/raw/eval/runs/20260311_080031_cockpit_partner_remote_mcp_scout_on_vs_off_legacy_r1/comparison.json

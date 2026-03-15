@@ -1,0 +1,14 @@
+categories
+customer_customer_demo
+customer_demographics
+customers
+employees
+employee_territories
+order_details
+orders
+products
+region
+shippers
+suppliers
+territories
+us_states

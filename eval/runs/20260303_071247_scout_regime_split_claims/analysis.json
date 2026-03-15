@@ -1,0 +1,377 @@
+{
+  "generated_at_utc": "2026-03-03T07:12:47.797690Z",
+  "regime_definitions": {
+    "schema_grounded_paraphrase": "Business paraphrases still anchored to concrete Northwind entities/joins.",
+    "schema_weak_abstraction": "Prompts invoke conceptual groupings not cleanly represented as explicit schema fields.",
+    "temporal_dialect_sensitive": "Temporal KPI composition prompts with higher SQL dialect/operator sensitivity."
+  },
+  "source_artifacts": {
+    "crosslingual_segment_analysis": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/20260302_143236_scout_gain_segment_cl2_cl6_cl10_r1_r6/analysis.json",
+    "v2_probe_analysis": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/20260302_190154_scout_limit_probe_v2_r1_r3_analysis/analysis.json"
+  },
+  "summary_by_dataset_and_regime": {
+    "crosslingual_hard_v1_segment": {
+      "schema_grounded_paraphrase": {
+        "cases": 6,
+        "strict_on": 0,
+        "strict_off": 0,
+        "strict_delta": 0,
+        "required_on": 5,
+        "required_off": 3,
+        "required_delta": 2,
+        "sql_on": 6,
+        "sql_off": 6,
+        "sql_delta": 0,
+        "positional_on": null,
+        "positional_off": null,
+        "positional_delta": null
+      },
+      "temporal_dialect_sensitive": {
+        "cases": 6,
+        "strict_on": 0,
+        "strict_off": 0,
+        "strict_delta": 0,
+        "required_on": 5,
+        "required_off": 2,
+        "required_delta": 3,
+        "sql_on": 5,
+        "sql_off": 2,
+        "sql_delta": 3,
+        "positional_on": null,
+        "positional_off": null,
+        "positional_delta": null
+      },
+      "schema_weak_abstraction": {
+        "cases": 6,
+        "strict_on": 3,
+        "strict_off": 2,
+        "strict_delta": 1,
+        "required_on": 2,
+        "required_off": 2,
+        "required_delta": 0,
+        "sql_on": 3,
+        "sql_off": 2,
+        "sql_delta": 1,
+        "positional_on": null,
+        "positional_off": null,
+        "positional_delta": null
+      }
+    },
+    "scout_limit_probe_v2": {
+      "schema_weak_abstraction": {
+        "cases": 18,
+        "strict_on": 6,
+        "strict_off": 8,
+        "strict_delta": -2,
+        "required_on": 6,
+        "required_off": 8,
+        "required_delta": -2,
+        "sql_on": 11,
+        "sql_off": 12,
+        "sql_delta": -1,
+        "positional_on": 6,
+        "positional_off": 8,
+        "positional_delta": -2
+      },
+      "schema_grounded_paraphrase": {
+        "cases": 18,
+        "strict_on": 0,
+        "strict_off": 1,
+        "strict_delta": -1,
+        "required_on": 3,
+        "required_off": 3,
+        "required_delta": 0,
+        "sql_on": 15,
+        "sql_off": 14,
+        "sql_delta": 1,
+        "positional_on": 12,
+        "positional_off": 10,
+        "positional_delta": 2
+      },
+      "temporal_dialect_sensitive": {
+        "cases": 18,
+        "strict_on": 0,
+        "strict_off": 0,
+        "strict_delta": 0,
+        "required_on": 2,
+        "required_off": 6,
+        "required_delta": -4,
+        "sql_on": 2,
+        "sql_off": 6,
+        "sql_delta": -4,
+        "positional_on": 0,
+        "positional_off": 0,
+        "positional_delta": 0
+      }
+    }
+  },
+  "summary_global_by_regime": {
+    "schema_grounded_paraphrase": {
+      "cases": 24,
+      "strict_on": 0,
+      "strict_off": 1,
+      "strict_delta": -1,
+      "required_on": 8,
+      "required_off": 6,
+      "required_delta": 2,
+      "sql_on": 21,
+      "sql_off": 20,
+      "sql_delta": 1,
+      "positional_on": 12,
+      "positional_off": 10,
+      "positional_delta": 2
+    },
+    "temporal_dialect_sensitive": {
+      "cases": 24,
+      "strict_on": 0,
+      "strict_off": 0,
+      "strict_delta": 0,
+      "required_on": 7,
+      "required_off": 8,
+      "required_delta": -1,
+      "sql_on": 7,
+      "sql_off": 8,
+      "sql_delta": -1,
+      "positional_on": 0,
+      "positional_off": 0,
+      "positional_delta": 0
+    },
+    "schema_weak_abstraction": {
+      "cases": 24,
+      "strict_on": 9,
+      "strict_off": 10,
+      "strict_delta": -1,
+      "required_on": 8,
+      "required_off": 10,
+      "required_delta": -2,
+      "sql_on": 14,
+      "sql_off": 14,
+      "sql_delta": 0,
+      "positional_on": 6,
+      "positional_off": 8,
+      "positional_delta": -2
+    }
+  },
+  "query_regime_mapping": [
+    {
+      "dataset": "crosslingual_hard_v1_segment",
+      "query_id": "CL2",
+      "question": "Welche Kundenl\u00e4nder bringen den gr\u00f6\u00dften Gesamtumsatz nach Abz\u00fcgen?",
+      "regime": "schema_grounded_paraphrase",
+      "notes": "6 paired replicates aggregated"
+    },
+    {
+      "dataset": "crosslingual_hard_v1_segment",
+      "query_id": "CL6",
+      "question": "Wie entwickeln sich pro Monat erfasste Auftr\u00e4ge und versp\u00e4tete Auslieferungen?",
+      "regime": "temporal_dialect_sensitive",
+      "notes": "6 paired replicates aggregated"
+    },
+    {
+      "dataset": "crosslingual_hard_v1_segment",
+      "query_id": "CL10",
+      "question": "Welche Kundensegmente erzeugen den h\u00f6chsten Erl\u00f6s nach Rabatt?",
+      "regime": "schema_weak_abstraction",
+      "notes": "6 paired replicates aggregated"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL10_L1",
+      "question": "Zeige den Umsatz nach Rabatt je Kundensegment.",
+      "regime": "schema_weak_abstraction",
+      "notes": "intent=CL10; level=L1; abstraction=direct_lexical"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL10_L2",
+      "question": "Welche Kundensegmente erzeugen den hoechsten Erloes nach Rabatt?",
+      "regime": "schema_weak_abstraction",
+      "notes": "intent=CL10; level=L2; abstraction=direct_synonym"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL10_L3",
+      "question": "Welche Abnehmergruppen sind die wichtigsten Ertragsbringer nach Nachlaessen?",
+      "regime": "schema_weak_abstraction",
+      "notes": "intent=CL10; level=L3; abstraction=business_paraphrase"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL10_L4",
+      "question": "Welche Profilgruppen im Kundenstamm monetarisieren am staerksten nach Preiszugestaendnissen?",
+      "regime": "schema_weak_abstraction",
+      "notes": "intent=CL10; level=L4; abstraction=implicit_entity"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL10_L5",
+      "question": "Welche Portfoliotypen auf Kundenseite liefern den groessten Beitrag zum bereinigten Umsatz?",
+      "regime": "schema_weak_abstraction",
+      "notes": "intent=CL10; level=L5; abstraction=implicit_jargon"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL10_L6",
+      "question": "Welche Kundencluster tragen am meisten zum Nettoertrag nach Zugestaendnissen bei?",
+      "regime": "schema_weak_abstraction",
+      "notes": "intent=CL10; level=L6; abstraction=high_indirection"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL2_L1",
+      "question": "Zeige den Umsatz nach Rabatt pro Kundenland.",
+      "regime": "schema_grounded_paraphrase",
+      "notes": "intent=CL2; level=L1; abstraction=direct_lexical"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL2_L2",
+      "question": "Welche Kundenlaender liefern den groessten rabattbereinigten Umsatz?",
+      "regime": "schema_grounded_paraphrase",
+      "notes": "intent=CL2; level=L2; abstraction=direct_synonym"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL2_L3",
+      "question": "Aus welchen Absatzmaerkten stammt der hoechste Nettoerloes nach Nachlaessen?",
+      "regime": "schema_grounded_paraphrase",
+      "notes": "intent=CL2; level=L3; abstraction=business_paraphrase"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL2_L4",
+      "question": "Welche geographischen Zielmaerkte tragen am meisten zum bereinigten Verkaufsertrag bei?",
+      "regime": "schema_grounded_paraphrase",
+      "notes": "intent=CL2; level=L4; abstraction=implicit_entity"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL2_L5",
+      "question": "In welchen Vertriebsraeumen entsteht der groesste Beitrag zum Nettoverkauf nach Preiszugestaendnissen?",
+      "regime": "schema_grounded_paraphrase",
+      "notes": "intent=CL2; level=L5; abstraction=implicit_jargon"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL2_L6",
+      "question": "Welche Absatzraeume finanzieren den hoechsten Anteil am nachlass-bereinigten Erloes?",
+      "regime": "schema_grounded_paraphrase",
+      "notes": "intent=CL2; level=L6; abstraction=high_indirection"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL6_L1",
+      "question": "Zeige pro Monat die Anzahl der Auftraege und der verspaeteten Auslieferungen.",
+      "regime": "temporal_dialect_sensitive",
+      "notes": "intent=CL6; level=L1; abstraction=direct_lexical"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL6_L2",
+      "question": "Wie entwickeln sich monatlich Auftragseingaenge und Lieferverzoegerungen?",
+      "regime": "temporal_dialect_sensitive",
+      "notes": "intent=CL6; level=L2; abstraction=direct_synonym"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL6_L3",
+      "question": "Wie verhalten sich Nachfrage und Lieferverzug im Monatsverlauf?",
+      "regime": "temporal_dialect_sensitive",
+      "notes": "intent=CL6; level=L3; abstraction=business_paraphrase"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL6_L4",
+      "question": "Wie laufen Intake und Ueberfaelligkeit der Zustellung im monatlichen Takt zusammen?",
+      "regime": "temporal_dialect_sensitive",
+      "notes": "intent=CL6; level=L4; abstraction=implicit_entity"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL6_L5",
+      "question": "Welche Monatsreihe zeigt gleichzeitig Auftragsfluss und verspaetete Zustellquote?",
+      "regime": "temporal_dialect_sensitive",
+      "notes": "intent=CL6; level=L5; abstraction=implicit_jargon"
+    },
+    {
+      "dataset": "scout_limit_probe_v2",
+      "query_id": "P_CL6_L6",
+      "question": "In welcher zeitlichen Entwicklung koppeln sich Bestellaufkommen und Verzug in der Auslieferung?",
+      "regime": "temporal_dialect_sensitive",
+      "notes": "intent=CL6; level=L6; abstraction=high_indirection"
+    }
+  ],
+  "examples_by_regime": {
+    "schema_grounded_paraphrase": [
+      {
+        "query_id": "CL2",
+        "dataset": "crosslingual_hard_v1_segment",
+        "question": "Welche Kundenl\u00e4nder bringen den gr\u00f6\u00dften Gesamtumsatz nach Abz\u00fcgen?"
+      },
+      {
+        "query_id": "P_CL2_L1",
+        "dataset": "scout_limit_probe_v2",
+        "question": "Zeige den Umsatz nach Rabatt pro Kundenland."
+      },
+      {
+        "query_id": "P_CL2_L2",
+        "dataset": "scout_limit_probe_v2",
+        "question": "Welche Kundenlaender liefern den groessten rabattbereinigten Umsatz?"
+      },
+      {
+        "query_id": "P_CL2_L3",
+        "dataset": "scout_limit_probe_v2",
+        "question": "Aus welchen Absatzmaerkten stammt der hoechste Nettoerloes nach Nachlaessen?"
+      }
+    ],
+    "temporal_dialect_sensitive": [
+      {
+        "query_id": "CL6",
+        "dataset": "crosslingual_hard_v1_segment",
+        "question": "Wie entwickeln sich pro Monat erfasste Auftr\u00e4ge und versp\u00e4tete Auslieferungen?"
+      },
+      {
+        "query_id": "P_CL6_L1",
+        "dataset": "scout_limit_probe_v2",
+        "question": "Zeige pro Monat die Anzahl der Auftraege und der verspaeteten Auslieferungen."
+      },
+      {
+        "query_id": "P_CL6_L2",
+        "dataset": "scout_limit_probe_v2",
+        "question": "Wie entwickeln sich monatlich Auftragseingaenge und Lieferverzoegerungen?"
+      },
+      {
+        "query_id": "P_CL6_L3",
+        "dataset": "scout_limit_probe_v2",
+        "question": "Wie verhalten sich Nachfrage und Lieferverzug im Monatsverlauf?"
+      }
+    ],
+    "schema_weak_abstraction": [
+      {
+        "query_id": "CL10",
+        "dataset": "crosslingual_hard_v1_segment",
+        "question": "Welche Kundensegmente erzeugen den h\u00f6chsten Erl\u00f6s nach Rabatt?"
+      },
+      {
+        "query_id": "P_CL10_L1",
+        "dataset": "scout_limit_probe_v2",
+        "question": "Zeige den Umsatz nach Rabatt je Kundensegment."
+      },
+      {
+        "query_id": "P_CL10_L2",
+        "dataset": "scout_limit_probe_v2",
+        "question": "Welche Kundensegmente erzeugen den hoechsten Erloes nach Rabatt?"
+      },
+      {
+        "query_id": "P_CL10_L3",
+        "dataset": "scout_limit_probe_v2",
+        "question": "Welche Abnehmergruppen sind die wichtigsten Ertragsbringer nach Nachlaessen?"
+      }
+    ]
+  },
+  "claim_suggestion": {
+    "primary_positive_claim": "Scout ON improves retrieval/coverage for schema-grounded paraphrase questions (strongest on crosslingual hard segment, positive deltas on required tables and SQL presence).",
+    "boundary_claim": "Scout ON is not uniformly better; performance degrades on schema-weak abstraction and on temporal/dialect-sensitive prompts, where SQL execution/coverage failures increase.",
+    "thesis_positioning": "Use a regime-conditional claim (where Scout helps vs where it does not) instead of a global superiority claim."
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "run_id": "20260302_074916_complex_hard_v1_process_query_scout_off_aligned_r5",
+  "run_name": "complex_hard_v1_process_query_scout_off_aligned_r5",
+  "mode_label": "scout_off_aligned",
+  "total_queries": 15,
+  "successes": 15,
+  "failures": 0,
+  "success_rate": 100.0,
+  "avg_latency_ms": 2456.4,
+  "p95_latency_ms": 6424.0,
+  "scout_mode_start": {
+    "active": false,
+    "backend": null,
+    "status": null,
+    "catalog_valid": null,
+    "off_control_mode": null,
+    "meaning": "Scout mode UNKNOWN: discovery backend not clearly reported. Verify MCP /health before using results for A/B claims."
+  },
+  "scout_mode_end": {
+    "active": false,
+    "backend": null,
+    "status": null,
+    "catalog_valid": null,
+    "off_control_mode": null,
+    "meaning": "Scout mode UNKNOWN: discovery backend not clearly reported. Verify MCP /health before using results for A/B claims."
+  },
+  "results_dir": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/20260302_074916_complex_hard_v1_process_query_scout_off_aligned_r5"
+}

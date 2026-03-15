@@ -1,0 +1,200 @@
+{
+  "instructions": {
+    "labels": [
+      "CORRECT",
+      "PARTIAL",
+      "INCORRECT"
+    ],
+    "reason_codes": [
+      "MISSING_DISCOUNT_FACTOR",
+      "COUNT_NOT_DISTINCT",
+      "WRONG_AGGREGATION_GRAIN",
+      "MISSING_REQUIRED_TABLE",
+      "JOIN_PATH_VIOLATION",
+      "MISSING_TIME_GROUPING",
+      "TOP_K_NOT_APPLIED"
+    ]
+  },
+  "per_query": [
+    {
+      "query_id": "CL1",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": null,
+        "same_cols_set_equal": null,
+        "positional_set_equal": null,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "CL10",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": null,
+        "same_cols_set_equal": null,
+        "positional_set_equal": null,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "CL11",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": null,
+        "same_cols_set_equal": null,
+        "positional_set_equal": null,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "CL12",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": null,
+        "same_cols_set_equal": null,
+        "positional_set_equal": null,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "CL2",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": null,
+        "same_cols_set_equal": null,
+        "positional_set_equal": null,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "CL3",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": null,
+        "same_cols_set_equal": null,
+        "positional_set_equal": null,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "CL4",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": null,
+        "same_cols_set_equal": null,
+        "positional_set_equal": null,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "CL5",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": null,
+        "same_cols_set_equal": null,
+        "positional_set_equal": null,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "CL6",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": null,
+        "same_cols_set_equal": null,
+        "positional_set_equal": null,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "CL7",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": null,
+        "same_cols_set_equal": null,
+        "positional_set_equal": null,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "CL8",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": null,
+        "same_cols_set_equal": null,
+        "positional_set_equal": null,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "CL9",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": false,
+        "strict_equal": null,
+        "same_cols_set_equal": null,
+        "positional_set_equal": null,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": "No candidate SQL in /process_query response",
+        "reference_sql_exec_error": null
+      }
+    }
+  ]
+}

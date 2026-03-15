@@ -1,0 +1,626 @@
+{
+  "NW1": {
+    "query_id": "NW1",
+    "question": "Which 5 products need to be reordered soon based on current stock lev els being below the reorder level?",
+    "status": "failed",
+    "final_answer_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_generated": [],
+    "sql_executed": [],
+    "tables_used": [],
+    "row_count": null,
+    "latency_ms_total": 1929,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [
+      "EVALUATION_SKIPPED_NO_SQL"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW1",
+    "retrieval_log": [],
+    "retrieved_tables_topk": [],
+    "retrieval_eval": {
+      "required_tables": [
+        "products"
+      ],
+      "retrieved_tables": [],
+      "recall_at_3": 0.0,
+      "recall_at_5": 0.0,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": false
+    },
+    "reference_result_match": null,
+    "reference_result_info": null,
+    "semantic_review_method": "skipped_no_sql",
+    "llm_usage": {
+      "total": 0,
+      "intent": 0,
+      "discovery": 0,
+      "join": 0,
+      "repair": 0,
+      "answer": 0
+    },
+    "node_entry_counts": {
+      "discovery": 0,
+      "join_sql": 0
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 0,
+    "total_graph_cycles": 0,
+    "model": "gpt-4o",
+    "failure_reasons": [
+      "missing_sql",
+      "missing_tables",
+      "missing_results"
+    ]
+  },
+  "NW2": {
+    "query_id": "NW2",
+    "question": "What is the total revenue per product category, and which category generates the most revenue?",
+    "status": "failed",
+    "final_answer_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_generated": [],
+    "sql_executed": [],
+    "tables_used": [],
+    "row_count": null,
+    "latency_ms_total": 1875,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [
+      "EVALUATION_SKIPPED_NO_SQL"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW2",
+    "retrieval_log": [],
+    "retrieved_tables_topk": [],
+    "retrieval_eval": {
+      "required_tables": [
+        "categories",
+        "products",
+        "order_details"
+      ],
+      "retrieved_tables": [],
+      "recall_at_3": 0.0,
+      "recall_at_5": 0.0,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": false
+    },
+    "reference_result_match": null,
+    "reference_result_info": null,
+    "semantic_review_method": "skipped_no_sql",
+    "llm_usage": {
+      "total": 0,
+      "intent": 0,
+      "discovery": 0,
+      "join": 0,
+      "repair": 0,
+      "answer": 0
+    },
+    "node_entry_counts": {
+      "discovery": 0,
+      "join_sql": 0
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 0,
+    "total_graph_cycles": 0,
+    "model": "gpt-4o",
+    "failure_reasons": [
+      "missing_sql",
+      "missing_tables",
+      "missing_results"
+    ]
+  },
+  "NW3": {
+    "query_id": "NW3",
+    "question": "Which customers have placed more than 10 orders, and what is their total order value?",
+    "status": "failed",
+    "final_answer_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_generated": [],
+    "sql_executed": [],
+    "tables_used": [],
+    "row_count": null,
+    "latency_ms_total": 1958,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [
+      "EVALUATION_SKIPPED_NO_SQL"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW3",
+    "retrieval_log": [],
+    "retrieved_tables_topk": [],
+    "retrieval_eval": {
+      "required_tables": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "retrieved_tables": [],
+      "recall_at_3": 0.0,
+      "recall_at_5": 0.0,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": false
+    },
+    "reference_result_match": null,
+    "reference_result_info": null,
+    "semantic_review_method": "skipped_no_sql",
+    "llm_usage": {
+      "total": 0,
+      "intent": 0,
+      "discovery": 0,
+      "join": 0,
+      "repair": 0,
+      "answer": 0
+    },
+    "node_entry_counts": {
+      "discovery": 0,
+      "join_sql": 0
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 0,
+    "total_graph_cycles": 0,
+    "model": "gpt-4o",
+    "failure_reasons": [
+      "missing_sql",
+      "missing_tables",
+      "missing_results"
+    ]
+  },
+  "NW4": {
+    "query_id": "NW4",
+    "question": "How many orders were shipped late (shipped_date > required_date), and which shippers had the most delays?",
+    "status": "failed",
+    "final_answer_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_generated": [],
+    "sql_executed": [],
+    "tables_used": [],
+    "row_count": null,
+    "latency_ms_total": 1858,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [
+      "EVALUATION_SKIPPED_NO_SQL"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW4",
+    "retrieval_log": [],
+    "retrieved_tables_topk": [],
+    "retrieval_eval": {
+      "required_tables": [
+        "orders",
+        "shippers"
+      ],
+      "retrieved_tables": [],
+      "recall_at_3": 0.0,
+      "recall_at_5": 0.0,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": false
+    },
+    "reference_result_match": null,
+    "reference_result_info": null,
+    "semantic_review_method": "skipped_no_sql",
+    "llm_usage": {
+      "total": 0,
+      "intent": 0,
+      "discovery": 0,
+      "join": 0,
+      "repair": 0,
+      "answer": 0
+    },
+    "node_entry_counts": {
+      "discovery": 0,
+      "join_sql": 0
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 0,
+    "total_graph_cycles": 0,
+    "model": "gpt-4o",
+    "failure_reasons": [
+      "missing_sql",
+      "missing_tables",
+      "missing_results"
+    ]
+  },
+  "NW5": {
+    "query_id": "NW5",
+    "question": "Which employees have generated the most revenue from their orders?",
+    "status": "failed",
+    "final_answer_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_generated": [],
+    "sql_executed": [],
+    "tables_used": [],
+    "row_count": null,
+    "latency_ms_total": 1726,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [
+      "EVALUATION_SKIPPED_NO_SQL"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW5",
+    "retrieval_log": [],
+    "retrieved_tables_topk": [],
+    "retrieval_eval": {
+      "required_tables": [
+        "employees",
+        "orders",
+        "order_details"
+      ],
+      "retrieved_tables": [],
+      "recall_at_3": 0.0,
+      "recall_at_5": 0.0,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": false
+    },
+    "reference_result_match": null,
+    "reference_result_info": null,
+    "semantic_review_method": "skipped_no_sql",
+    "llm_usage": {
+      "total": 0,
+      "intent": 0,
+      "discovery": 0,
+      "join": 0,
+      "repair": 0,
+      "answer": 0
+    },
+    "node_entry_counts": {
+      "discovery": 0,
+      "join_sql": 0
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 0,
+    "total_graph_cycles": 0,
+    "model": "gpt-4o",
+    "failure_reasons": [
+      "missing_sql",
+      "missing_tables",
+      "missing_results"
+    ]
+  },
+  "NW6": {
+    "query_id": "NW6",
+    "question": "What are the top 5 best-selling products by quantity sold?",
+    "status": "failed",
+    "final_answer_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_generated": [],
+    "sql_executed": [],
+    "tables_used": [],
+    "row_count": null,
+    "latency_ms_total": 1988,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [
+      "EVALUATION_SKIPPED_NO_SQL"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW6",
+    "retrieval_log": [],
+    "retrieved_tables_topk": [],
+    "retrieval_eval": {
+      "required_tables": [
+        "products",
+        "order_details"
+      ],
+      "retrieved_tables": [],
+      "recall_at_3": 0.0,
+      "recall_at_5": 0.0,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": false
+    },
+    "reference_result_match": null,
+    "reference_result_info": null,
+    "semantic_review_method": "skipped_no_sql",
+    "llm_usage": {
+      "total": 0,
+      "intent": 0,
+      "discovery": 0,
+      "join": 0,
+      "repair": 0,
+      "answer": 0
+    },
+    "node_entry_counts": {
+      "discovery": 0,
+      "join_sql": 0
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 0,
+    "total_graph_cycles": 0,
+    "model": "gpt-4o",
+    "failure_reasons": [
+      "missing_sql",
+      "missing_tables",
+      "missing_results"
+    ]
+  },
+  "NW7": {
+    "query_id": "NW7",
+    "question": "Which suppliers provide products that are frequently ordered together in the same order?",
+    "status": "failed",
+    "final_answer_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_generated": [],
+    "sql_executed": [],
+    "tables_used": [],
+    "row_count": null,
+    "latency_ms_total": 1842,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [
+      "EVALUATION_SKIPPED_NO_SQL"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW7",
+    "retrieval_log": [],
+    "retrieved_tables_topk": [],
+    "retrieval_eval": {
+      "required_tables": [
+        "suppliers",
+        "products",
+        "order_details"
+      ],
+      "retrieved_tables": [],
+      "recall_at_3": 0.0,
+      "recall_at_5": 0.0,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": false
+    },
+    "reference_result_match": null,
+    "reference_result_info": null,
+    "semantic_review_method": "skipped_no_sql",
+    "llm_usage": {
+      "total": 0,
+      "intent": 0,
+      "discovery": 0,
+      "join": 0,
+      "repair": 0,
+      "answer": 0
+    },
+    "node_entry_counts": {
+      "discovery": 0,
+      "join_sql": 0
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 0,
+    "total_graph_cycles": 0,
+    "model": "gpt-4o",
+    "failure_reasons": [
+      "missing_sql",
+      "missing_tables",
+      "missing_results"
+    ]
+  },
+  "NW8": {
+    "query_id": "NW8",
+    "question": "What is the average order value by country, and which countries have the highest average?",
+    "status": "failed",
+    "final_answer_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_generated": [],
+    "sql_executed": [],
+    "tables_used": [],
+    "row_count": null,
+    "latency_ms_total": 1724,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [
+      "EVALUATION_SKIPPED_NO_SQL"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW8",
+    "retrieval_log": [],
+    "retrieved_tables_topk": [],
+    "retrieval_eval": {
+      "required_tables": [
+        "customers",
+        "orders",
+        "order_details"
+      ],
+      "retrieved_tables": [],
+      "recall_at_3": 0.0,
+      "recall_at_5": 0.0,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": false
+    },
+    "reference_result_match": null,
+    "reference_result_info": null,
+    "semantic_review_method": "skipped_no_sql",
+    "llm_usage": {
+      "total": 0,
+      "intent": 0,
+      "discovery": 0,
+      "join": 0,
+      "repair": 0,
+      "answer": 0
+    },
+    "node_entry_counts": {
+      "discovery": 0,
+      "join_sql": 0
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 0,
+    "total_graph_cycles": 0,
+    "model": "gpt-4o",
+    "failure_reasons": [
+      "missing_sql",
+      "missing_tables",
+      "missing_results"
+    ]
+  },
+  "NW9": {
+    "query_id": "NW9",
+    "question": "How many orders are still pending shipment (no shipped_date), and what is their total value?",
+    "status": "failed",
+    "final_answer_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_generated": [],
+    "sql_executed": [],
+    "tables_used": [],
+    "row_count": null,
+    "latency_ms_total": 1707,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [
+      "EVALUATION_SKIPPED_NO_SQL"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW9",
+    "retrieval_log": [],
+    "retrieved_tables_topk": [],
+    "retrieval_eval": {
+      "required_tables": [
+        "orders",
+        "order_details"
+      ],
+      "retrieved_tables": [],
+      "recall_at_3": 0.0,
+      "recall_at_5": 0.0,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": false
+    },
+    "reference_result_match": null,
+    "reference_result_info": null,
+    "semantic_review_method": "skipped_no_sql",
+    "llm_usage": {
+      "total": 0,
+      "intent": 0,
+      "discovery": 0,
+      "join": 0,
+      "repair": 0,
+      "answer": 0
+    },
+    "node_entry_counts": {
+      "discovery": 0,
+      "join_sql": 0
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 0,
+    "total_graph_cycles": 0,
+    "model": "gpt-4o",
+    "failure_reasons": [
+      "missing_sql",
+      "missing_tables",
+      "missing_results"
+    ]
+  },
+  "NW10": {
+    "query_id": "NW10",
+    "question": "What is the monthly revenue trend - show revenue per month for the available data?",
+    "status": "failed",
+    "final_answer_text": "I encountered an error while processing your question: Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}",
+    "sql_generated": [],
+    "sql_executed": [],
+    "tables_used": [],
+    "row_count": null,
+    "latency_ms_total": 1837,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [
+      "EVALUATION_SKIPPED_NO_SQL"
+    ],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": "NW10",
+    "retrieval_log": [],
+    "retrieved_tables_topk": [],
+    "retrieval_eval": {
+      "required_tables": [
+        "orders",
+        "order_details"
+      ],
+      "retrieved_tables": [],
+      "recall_at_3": 0.0,
+      "recall_at_5": 0.0,
+      "all_required_in_top_3": false,
+      "all_required_in_top_5": false
+    },
+    "reference_result_match": null,
+    "reference_result_info": null,
+    "semantic_review_method": "skipped_no_sql",
+    "llm_usage": {
+      "total": 0,
+      "intent": 0,
+      "discovery": 0,
+      "join": 0,
+      "repair": 0,
+      "answer": 0
+    },
+    "node_entry_counts": {
+      "discovery": 0,
+      "join_sql": 0
+    },
+    "loop_events": {
+      "discovery_reentered_same_tables": 0,
+      "join_sql_regenerated_same_sql": 0
+    },
+    "total_llm_calls": 0,
+    "total_graph_cycles": 0,
+    "model": "gpt-4o",
+    "failure_reasons": [
+      "missing_sql",
+      "missing_tables",
+      "missing_results"
+    ]
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "generated_at_utc": "2026-03-01T11:59:44.532433Z",
+  "report_type": "process_query_scout_ablation",
+  "pairs": [
+    {
+      "pair_name": "northwind_queries_v1 (historical complete)",
+      "on_run": "20260223_063000_northwind_process_query_scout_on",
+      "off_run": "20260223_063107_northwind_process_query_scout_off",
+      "off_label": "off_aligned_or_legacy_historical",
+      "on_metrics": {
+        "success_rate_pct": 100.0,
+        "avg_latency_ms": 4234.3,
+        "strict_equal_count": 2,
+        "positional_set_equal_count": 4,
+        "common_cols_set_equal_count": 8,
+        "required_tables_ok_count": 8,
+        "sql_exec_errors_count": 0,
+        "quota_failure_count": 0
+      },
+      "off_metrics": {
+        "success_rate_pct": 100.0,
+        "avg_latency_ms": 3968.9,
+        "strict_equal_count": 2,
+        "positional_set_equal_count": 4,
+        "common_cols_set_equal_count": 6,
+        "required_tables_ok_count": 8,
+        "sql_exec_errors_count": 0,
+        "quota_failure_count": 0
+      },
+      "notes": []
+    },
+    {
+      "pair_name": "northwind_more_v1 (historical complete)",
+      "on_run": "20260223_143212_northwind_more_v1_scout_on",
+      "off_run": "20260223_143759_northwind_more_v1_scout_off",
+      "off_label": "off_aligned_or_legacy_historical",
+      "on_metrics": {
+        "success_rate_pct": 100.0,
+        "avg_latency_ms": 7893.8,
+        "strict_equal_count": 2,
+        "positional_set_equal_count": 2,
+        "common_cols_set_equal_count": 7,
+        "required_tables_ok_count": 22,
+        "sql_exec_errors_count": 0,
+        "quota_failure_count": 0
+      },
+      "off_metrics": {
+        "success_rate_pct": 100.0,
+        "avg_latency_ms": 12379.9,
+        "strict_equal_count": 2,
+        "positional_set_equal_count": 2,
+        "common_cols_set_equal_count": 7,
+        "required_tables_ok_count": 23,
+        "sql_exec_errors_count": 0,
+        "quota_failure_count": 0
+      },
+      "notes": []
+    },
+    {
+      "pair_name": "ambiguous_v1 (today, aligned control)",
+      "on_run": "20260301_115155_ambiguous_v1_process_query_scout_on_r1",
+      "off_run": "20260301_115425_ambiguous_v1_process_query_scout_off_aligned_r1",
+      "off_label": "off_aligned",
+      "on_metrics": {
+        "success_rate_pct": 100.0,
+        "avg_latency_ms": 4106.5,
+        "strict_equal_count": 0,
+        "positional_set_equal_count": 0,
+        "common_cols_set_equal_count": 3,
+        "required_tables_ok_count": 10,
+        "sql_exec_errors_count": 0,
+        "quota_failure_count": 0
+      },
+      "off_metrics": {
+        "success_rate_pct": 100.0,
+        "avg_latency_ms": 3764.7,
+        "strict_equal_count": 0,
+        "positional_set_equal_count": 0,
+        "common_cols_set_equal_count": 4,
+        "required_tables_ok_count": 10,
+        "sql_exec_errors_count": 0,
+        "quota_failure_count": 0
+      },
+      "notes": []
+    },
+    {
+      "pair_name": "nonlexical_v1 (today, aligned control)",
+      "on_run": "20260301_115245_nonlexical_v1_process_query_scout_on_r1",
+      "off_run": "20260301_115508_nonlexical_v1_process_query_scout_off_aligned_r1",
+      "off_label": "off_aligned",
+      "on_metrics": {
+        "success_rate_pct": 100.0,
+        "avg_latency_ms": 4044.5,
+        "strict_equal_count": 1,
+        "positional_set_equal_count": 1,
+        "common_cols_set_equal_count": 4,
+        "required_tables_ok_count": 10,
+        "sql_exec_errors_count": 2,
+        "quota_failure_count": 0
+      },
+      "off_metrics": {
+        "success_rate_pct": 20.0,
+        "avg_latency_ms": 2922.7,
+        "strict_equal_count": 0,
+        "positional_set_equal_count": 0,
+        "common_cols_set_equal_count": 1,
+        "required_tables_ok_count": 2,
+        "sql_exec_errors_count": 16,
+        "quota_failure_count": 16
+      },
+      "notes": [
+        "quota_hits_on=0,off=16",
+        "invalid_for_quality_claims_due_to_quota"
+      ]
+    }
+  ],
+  "legacy_runs": [
+    {
+      "run_id": "20260301_115629_ambiguous_v1_process_query_scout_off_legacy_r1",
+      "success_rate_pct": 0.0,
+      "strict_equal_count": 0,
+      "required_tables_ok_count": 0,
+      "sql_exec_errors_count": 10,
+      "quota_failure_count": 10
+    },
+    {
+      "run_id": "20260301_115654_nonlexical_v1_process_query_scout_off_legacy_r1",
+      "success_rate_pct": 0.0,
+      "strict_equal_count": 0,
+      "required_tables_ok_count": 0,
+      "sql_exec_errors_count": 20,
+      "quota_failure_count": 20
+    }
+  ]
+}

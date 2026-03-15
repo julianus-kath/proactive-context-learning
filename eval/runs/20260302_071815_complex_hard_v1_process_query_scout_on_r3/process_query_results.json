@@ -1,0 +1,2129 @@
+{
+  "HX1": {
+    "query_id": "HX1",
+    "question": "Welche Kundenkonten haben ihren Monatsumsatz vom ersten zum letzten aktiven Monat am staerksten gesteigert (mindestens 5 Bestellungen insgesamt)?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 12925,
+    "error": null,
+    "final_response_text": "Die folgenden Kundenkonten haben ihren Monatsumsatz vom ersten zum letzten aktiven Monat am st\u00e4rksten gesteigert, wobei sie mindestens 5 Bestellungen insgesamt get\u00e4tigt haben:\n\n1. **Save-a-lot Markets** (SAVEA): Umsatzsteigerung von CHF 19'352.90\n2. **QUICK-Stop** (QUICK): Umsatzsteigerung von CHF 18'687.60\n3. **Hungry Owl All-Night Grocers** (HUNGO): Umsatzsteigerung von CHF 18'105.64\n4. **Hanari Carnes** (HANAR): Umsatzsteigerung von CHF 15'961.50\n5. **Ernst Handel** (ERNSH): Umsatzsteigerung von CHF 15'936.75\n\nDiese Kunden haben ihre Ums\u00e4tze signifikant gesteigert.",
+    "sql_query": "WITH MonthlySales AS (\n    SELECT \n        o.customer_id, \n        DATE_TRUNC('month', o.order_date) AS month, \n        SUM(od.unit_price * od.quantity) AS monthly_revenue\n    FROM \n        public.orders o\n    JOIN \n        public.order_details od ON o.order_id = od.order_id\n    GROUP BY \n        o.customer_id, DATE_TRUNC('month', o.order_date)\n),\nCustomerGrowth AS (\n    SELECT \n        customer_id,\n        COUNT(DISTINCT month) AS active_months,\n        MIN(monthly_revenue) AS first_month_revenue,\n        MAX(monthly_revenue) AS last_month_revenue,\n        MAX(monthly_revenue) - MIN(monthly_revenue) AS revenue_growth\n    FROM \n        MonthlySales\n    GROUP BY \n        customer_id\n    HAVING \n        COUNT(DISTINCT month) > 1\n),\nFilteredCustomers AS (\n    SELECT \n        o.customer_id\n    FROM \n        public.orders o\n    GROUP BY \n        o.customer_id\n    HAVING \n        COUNT(o.order_id) >= 5\n)\nSELECT \n    cg.customer_id, \n    cu.company_name, \n    cg.first_month_revenue, \n    cg.last_month_revenue, \n    cg.revenue_growth\nFROM \n    CustomerGrowth cg\nJOIN \n    FilteredCustomers fc ON cg.customer_id = fc.customer_id\nJOIN \n    public.customers cu ON cg.customer_id = cu.customer_id\nORDER BY \n    cg.revenue_growth DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "customer_id": "SAVEA",
+          "company_name": "Save-a-lot Markets",
+          "first_month_revenue": "1264.4999885559082",
+          "last_month_revenue": "20617.40008163452",
+          "revenue_growth": "19352.900093078613"
+        },
+        {
+          "customer_id": "QUICK",
+          "company_name": "QUICK-Stop",
+          "first_month_revenue": "182.39999771118164",
+          "last_month_revenue": "18870.0",
+          "revenue_growth": "18687.60000228882"
+        },
+        {
+          "customer_id": "HUNGO",
+          "company_name": "Hungry Owl All-Night Grocers",
+          "first_month_revenue": "996.9999694824219",
+          "last_month_revenue": "19102.640106201172",
+          "revenue_growth": "18105.64013671875"
+        },
+        {
+          "customer_id": "HANAR",
+          "company_name": "Hanari Carnes",
+          "first_month_revenue": "1150.0",
+          "last_month_revenue": "17111.5",
+          "revenue_growth": "15961.5"
+        },
+        {
+          "customer_id": "ERNSH",
+          "company_name": "Ernst Handel",
+          "first_month_revenue": "647.75",
+          "last_month_revenue": "16584.499893188477",
+          "revenue_growth": "15936.749893188477"
+        }
+      ],
+      "rows": [
+        {
+          "customer_id": "SAVEA",
+          "company_name": "Save-a-lot Markets",
+          "first_month_revenue": "1264.4999885559082",
+          "last_month_revenue": "20617.40008163452",
+          "revenue_growth": "19352.900093078613"
+        },
+        {
+          "customer_id": "QUICK",
+          "company_name": "QUICK-Stop",
+          "first_month_revenue": "182.39999771118164",
+          "last_month_revenue": "18870.0",
+          "revenue_growth": "18687.60000228882"
+        },
+        {
+          "customer_id": "HUNGO",
+          "company_name": "Hungry Owl All-Night Grocers",
+          "first_month_revenue": "996.9999694824219",
+          "last_month_revenue": "19102.640106201172",
+          "revenue_growth": "18105.64013671875"
+        },
+        {
+          "customer_id": "HANAR",
+          "company_name": "Hanari Carnes",
+          "first_month_revenue": "1150.0",
+          "last_month_revenue": "17111.5",
+          "revenue_growth": "15961.5"
+        },
+        {
+          "customer_id": "ERNSH",
+          "company_name": "Ernst Handel",
+          "first_month_revenue": "647.75",
+          "last_month_revenue": "16584.499893188477",
+          "revenue_growth": "15936.749893188477"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "customer_id",
+        "company_name",
+        "first_month_revenue",
+        "last_month_revenue",
+        "revenue_growth"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details",
+        "MonthlySales",
+        "public.orders",
+        "CustomerGrowth",
+        "FilteredCustomers",
+        "public.customers"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details",
+      "MonthlySales",
+      "CustomerGrowth",
+      "FilteredCustomers",
+      "public.customers"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "customer_id": "SAVEA",
+        "company_name": "Save-a-lot Markets",
+        "first_month_revenue": "1264.4999885559082",
+        "last_month_revenue": "20617.40008163452",
+        "revenue_growth": "19352.900093078613"
+      },
+      {
+        "customer_id": "QUICK",
+        "company_name": "QUICK-Stop",
+        "first_month_revenue": "182.39999771118164",
+        "last_month_revenue": "18870.0",
+        "revenue_growth": "18687.60000228882"
+      },
+      {
+        "customer_id": "HUNGO",
+        "company_name": "Hungry Owl All-Night Grocers",
+        "first_month_revenue": "996.9999694824219",
+        "last_month_revenue": "19102.640106201172",
+        "revenue_growth": "18105.64013671875"
+      },
+      {
+        "customer_id": "HANAR",
+        "company_name": "Hanari Carnes",
+        "first_month_revenue": "1150.0",
+        "last_month_revenue": "17111.5",
+        "revenue_growth": "15961.5"
+      },
+      {
+        "customer_id": "ERNSH",
+        "company_name": "Ernst Handel",
+        "first_month_revenue": "647.75",
+        "last_month_revenue": "16584.499893188477",
+        "revenue_growth": "15936.749893188477"
+      }
+    ]
+  },
+  "HX2": {
+    "query_id": "HX2",
+    "question": "Welche Regionen erzielen hohen Umsatz, obwohl ihre Auftragszahl unter dem Median liegt?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 7149,
+    "error": null,
+    "final_response_text": "Hier sind die Regionen, die einen hohen Umsatz erzielen, obwohl ihre Auftragsanzahl unter dem Median liegt:\n\n1. **Qu\u00e9bec**: Umsatz von 32,203.90 bei 13 Auftr\u00e4gen\n2. **Nueva Esparta**: Umsatz von 17,889.55 bei 12 Auftr\u00e4gen\n3. **Lara**: Umsatz von 17,825.06 bei 14 Auftr\u00e4gen\n4. **AK**: Umsatz von 16,325.15 bei 10 Auftr\u00e4gen\n5. **Essex**: Umsatz von 13,806.50 bei 13 Auftr\u00e4gen\n\nDiese Regionen haben trotz einer geringeren Anzahl an Auftr\u00e4gen einen beachtlichen Umsatz erzielt.",
+    "sql_query": "WITH RegionUmsatz AS (\n    SELECT o.ship_region AS region, \n           SUM(od.unit_price * od.quantity) AS umsatz,\n           COUNT(DISTINCT o.order_id) AS auftragsanzahl\n    FROM public.orders o\n    JOIN public.order_details od ON o.order_id = od.order_id\n    GROUP BY o.ship_region\n),\nMedianAuftragsanzahl AS (\n    SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY auftragsanzahl) AS median_auftragsanzahl\n    FROM RegionUmsatz\n)\nSELECT ru.region, ru.umsatz, ru.auftragsanzahl\nFROM RegionUmsatz ru\nJOIN MedianAuftragsanzahl ma ON ru.auftragsanzahl < ma.median_auftragsanzahl\nORDER BY ru.umsatz DESC;",
+    "exec_result": {
+      "data": [
+        {
+          "region": "Qu\u00e9bec",
+          "umsatz": "32203.900234222412",
+          "auftragsanzahl": "13"
+        },
+        {
+          "region": "Nueva Esparta",
+          "umsatz": "17889.54993247986",
+          "auftragsanzahl": "12"
+        },
+        {
+          "region": "Lara",
+          "umsatz": "17825.059957504272",
+          "auftragsanzahl": "14"
+        },
+        {
+          "region": "AK",
+          "umsatz": "16325.15002822876",
+          "auftragsanzahl": "10"
+        },
+        {
+          "region": "Essex",
+          "umsatz": "13806.49998140335",
+          "auftragsanzahl": "13"
+        },
+        {
+          "region": "WY",
+          "umsatz": "12489.700090408325",
+          "auftragsanzahl": "9"
+        },
+        {
+          "region": "Isle of Wight",
+          "umsatz": "6146.299984931946",
+          "auftragsanzahl": "10"
+        },
+        {
+          "region": "CA",
+          "umsatz": "3490.0199813842773",
+          "auftragsanzahl": "4"
+        },
+        {
+          "region": "MT",
+          "umsatz": "1947.2399940490723",
+          "auftragsanzahl": "3"
+        },
+        {
+          "region": "DF",
+          "umsatz": "1488.6999969482422",
+          "auftragsanzahl": "2"
+        }
+      ],
+      "rows": [
+        {
+          "region": "Qu\u00e9bec",
+          "umsatz": "32203.900234222412",
+          "auftragsanzahl": "13"
+        },
+        {
+          "region": "Nueva Esparta",
+          "umsatz": "17889.54993247986",
+          "auftragsanzahl": "12"
+        },
+        {
+          "region": "Lara",
+          "umsatz": "17825.059957504272",
+          "auftragsanzahl": "14"
+        },
+        {
+          "region": "AK",
+          "umsatz": "16325.15002822876",
+          "auftragsanzahl": "10"
+        },
+        {
+          "region": "Essex",
+          "umsatz": "13806.49998140335",
+          "auftragsanzahl": "13"
+        },
+        {
+          "region": "WY",
+          "umsatz": "12489.700090408325",
+          "auftragsanzahl": "9"
+        },
+        {
+          "region": "Isle of Wight",
+          "umsatz": "6146.299984931946",
+          "auftragsanzahl": "10"
+        },
+        {
+          "region": "CA",
+          "umsatz": "3490.0199813842773",
+          "auftragsanzahl": "4"
+        },
+        {
+          "region": "MT",
+          "umsatz": "1947.2399940490723",
+          "auftragsanzahl": "3"
+        },
+        {
+          "region": "DF",
+          "umsatz": "1488.6999969482422",
+          "auftragsanzahl": "2"
+        }
+      ],
+      "row_count": 10,
+      "columns": [
+        "region",
+        "umsatz",
+        "auftragsanzahl"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details",
+        "RegionUmsatz",
+        "RegionUmsatz",
+        "MedianAuftragsanzahl"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details",
+      "RegionUmsatz",
+      "MedianAuftragsanzahl"
+    ],
+    "row_count": 10,
+    "result_preview": [
+      {
+        "region": "Qu\u00e9bec",
+        "umsatz": "32203.900234222412",
+        "auftragsanzahl": "13"
+      },
+      {
+        "region": "Nueva Esparta",
+        "umsatz": "17889.54993247986",
+        "auftragsanzahl": "12"
+      },
+      {
+        "region": "Lara",
+        "umsatz": "17825.059957504272",
+        "auftragsanzahl": "14"
+      },
+      {
+        "region": "AK",
+        "umsatz": "16325.15002822876",
+        "auftragsanzahl": "10"
+      },
+      {
+        "region": "Essex",
+        "umsatz": "13806.49998140335",
+        "auftragsanzahl": "13"
+      },
+      {
+        "region": "WY",
+        "umsatz": "12489.700090408325",
+        "auftragsanzahl": "9"
+      },
+      {
+        "region": "Isle of Wight",
+        "umsatz": "6146.299984931946",
+        "auftragsanzahl": "10"
+      },
+      {
+        "region": "CA",
+        "umsatz": "3490.0199813842773",
+        "auftragsanzahl": "4"
+      },
+      {
+        "region": "MT",
+        "umsatz": "1947.2399940490723",
+        "auftragsanzahl": "3"
+      },
+      {
+        "region": "DF",
+        "umsatz": "1488.6999969482422",
+        "auftragsanzahl": "2"
+      }
+    ]
+  },
+  "HX3": {
+    "query_id": "HX3",
+    "question": "Bei welchen Versanddienstleistern ist der Anteil stark verspaeteter Sendungen (mehr als 3 Tage) am groessten?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 5261,
+    "error": null,
+    "final_response_text": "Es scheint, dass die Datenbank keine spezifischen Tabellen oder Spalten enth\u00e4lt, die direkt Informationen \u00fcber versp\u00e4tete Sendungen oder deren Versanddienstleister enthalten. Die Tabelle `public.suppliers` k\u00f6nnte Informationen \u00fcber Versanddienstleister enthalten, aber sie enth\u00e4lt keine Daten zu Lieferungen oder Versp\u00e4tungen.\n\nUm die Frage zu beantworten, ben\u00f6tige ich Zugang zu Tabellen, die Informationen \u00fcber Lieferungen, deren Versanddienstleister und die Lieferzeiten enthalten. Wenn du weitere Details oder andere Begriffe hast, die ich verwenden k\u00f6nnte, lass es mich wissen! Alternativ k\u00f6nntest du pr\u00fcfen, ob solche Daten in einem anderen System oder einer anderen Datenbank verf\u00fcgbar sind.",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "HX4": {
+    "query_id": "HX4",
+    "question": "In welchen Produktkategorien kommt mindestens 60 Prozent des rabattierten Umsatzes von nur einem Lieferanten?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4069,
+    "error": null,
+    "final_response_text": "Es gibt keine Produktkategorien, in denen mindestens 60 Prozent des rabattierten Umsatzes von nur einem Lieferanten stammen.",
+    "sql_query": "SELECT p.category_id, COUNT(DISTINCT p.supplier_id) AS supplier_count, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS discounted_revenue, MAX(od.unit_price * od.quantity * (1 - od.discount)) AS max_supplier_revenue\nFROM public.order_details od\nJOIN public.products p ON od.product_id = p.product_id\nGROUP BY p.category_id\nHAVING MAX(od.unit_price * od.quantity * (1 - od.discount)) >= 0.6 * SUM(od.unit_price * od.quantity * (1 - od.discount))",
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": 0,
+      "columns": [],
+      "ok": true,
+      "tables_used": [
+        "public.order_details",
+        "public.products"
+      ]
+    },
+    "tables_used": [
+      "public.order_details",
+      "public.products"
+    ],
+    "row_count": 0,
+    "result_preview": []
+  },
+  "HX5": {
+    "query_id": "HX5",
+    "question": "Welche Kunden haben ueberdurchschnittliche Rabattquote, aber unterdurchschnittlichen Nettoumsatz pro Bestellung?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 9012,
+    "error": null,
+    "final_response_text": "Hier sind die Kunden, die eine \u00fcberdurchschnittliche Rabattquote, aber einen unterdurchschnittlichen Nettoumsatz pro Bestellung haben:\n\n1. **Toms Spezialit\u00e4ten** (TOMSP) - Rabatt: 8.93%, Nettoumsatz: CHF 341.30\n2. **Wartian Herkku** (WARTH) - Rabatt: 5.41%, Nettoumsatz: CHF 422.94\n3. **Magazzini Alimentari Riuniti** (MAGAA) - Rabatt: 5.00%, Nettoumsatz: CHF 341.72\n4. **Antonio Moreno Taquer\u00eda** (ANTON) - Rabatt: 5.88%, Nettoumsatz: CHF 413.18\n5. **Gourmet Lanchonetes** (GOURL) - Rabatt: 6.84%, Nettoumsatz: CHF 442.85\n\nDiese Kunden erhalten im Durchschnitt h\u00f6here Rabatte, erzielen jedoch einen niedrigeren Nettoumsatz pro Bestellung im Vergleich zum Durchschnitt.",
+    "sql_query": "WITH CustomerOrderStats AS (\n    SELECT \n        o.customer_id, \n        AVG(od.discount) AS avg_discount, \n        AVG(od.unit_price * od.quantity * (1 - od.discount)) AS avg_net_revenue\n    FROM \n        public.orders o\n    JOIN \n        public.order_details od ON o.order_id = od.order_id\n    GROUP BY \n        o.customer_id\n),\nAverageStats AS (\n    SELECT \n        AVG(avg_discount) AS overall_avg_discount, \n        AVG(avg_net_revenue) AS overall_avg_net_revenue\n    FROM \n        CustomerOrderStats\n)\nSELECT \n    c.customer_id, \n    c.company_name, \n    cos.avg_discount, \n    cos.avg_net_revenue\nFROM \n    CustomerOrderStats cos\nJOIN \n    public.customers c ON cos.customer_id = c.customer_id\nCROSS JOIN \n    AverageStats\nWHERE \n    cos.avg_discount > AverageStats.overall_avg_discount\n    AND cos.avg_net_revenue < AverageStats.overall_avg_net_revenue;",
+    "exec_result": {
+      "data": [
+        {
+          "customer_id": "TOMSP",
+          "company_name": "Toms Spezialit\u00e4ten",
+          "avg_discount": "0.08928571535008294",
+          "avg_net_revenue": "341.2957184007551"
+        },
+        {
+          "customer_id": "WARTH",
+          "company_name": "Wartian Herkku",
+          "avg_discount": "0.054054055564306876",
+          "avg_net_revenue": "422.937907717675"
+        },
+        {
+          "customer_id": "MAGAA",
+          "company_name": "Magazzini Alimentari Riuniti",
+          "avg_discount": "0.050000001454637164",
+          "avg_net_revenue": "341.72452147664416"
+        },
+        {
+          "customer_id": "ANTON",
+          "company_name": "Antonio Moreno Taquer\u00eda",
+          "avg_discount": "0.05882353116484249",
+          "avg_net_revenue": "413.17514313765304"
+        },
+        {
+          "customer_id": "GOURL",
+          "company_name": "Gourmet Lanchonetes",
+          "avg_discount": "0.0684210540432679",
+          "avg_net_revenue": "442.84920950312363"
+        },
+        {
+          "customer_id": "WELLI",
+          "company_name": "Wellington Importadora",
+          "avg_discount": "0.08157894799583837",
+          "avg_net_revenue": "319.3789458218766"
+        },
+        {
+          "customer_id": "FURIB",
+          "company_name": "Furia Bacalhau e Frutos do Mar",
+          "avg_discount": "0.09750000312924385",
+          "avg_net_revenue": "321.37112505496293"
+        },
+        {
+          "customer_id": "FAMIA",
+          "company_name": "Familia Arquibaldo",
+          "avg_discount": "0.06315789685437553",
+          "avg_net_revenue": "216.18683806724457"
+        },
+        {
+          "customer_id": "ALFKI",
+          "company_name": "Alfreds Futterkiste",
+          "avg_discount": "0.08750000037252903",
+          "avg_net_revenue": "356.08333412744105"
+        },
+        {
+          "customer_id": "VICTE",
+          "company_name": "Victuailles en stock",
+          "avg_discount": "0.09200000181794167",
+          "avg_net_revenue": "367.2971951058984"
+        },
+        {
+          "customer_id": "OTTIK",
+          "company_name": "Ottilies K\u00e4seladen",
+          "avg_discount": "0.058620690271772184",
+          "avg_net_revenue": "430.9034470076448"
+        },
+        {
+          "customer_id": "LETSS",
+          "company_name": "Let's Stop N Shop",
+          "avg_discount": "0.11000000052154064",
+          "avg_net_revenue": "307.6472482238263"
+        },
+        {
+          "customer_id": "REGGC",
+          "company_name": "Reggiani Caseifici",
+          "avg_discount": "0.0818181832066991",
+          "avg_net_revenue": "320.37454404237593"
+        },
+        {
+          "customer_id": "QUEDE",
+          "company_name": "Que Del\u00edcia",
+          "avg_discount": "0.060416668032606445",
+          "avg_net_revenue": "277.7004141537038"
+        },
+        {
+          "customer_id": "LAMAI",
+          "company_name": "La maison d'Asie",
+          "avg_discount": "0.12580645312705346",
+          "avg_net_revenue": "300.9096779002297"
+        },
+        {
+          "customer_id": "WANDK",
+          "company_name": "Die Wandernde Kuh",
+          "avg_discount": "0.08846153934987691",
+          "avg_net_revenue": "368.7855754988841"
+        }
+      ],
+      "rows": [
+        {
+          "customer_id": "TOMSP",
+          "company_name": "Toms Spezialit\u00e4ten",
+          "avg_discount": "0.08928571535008294",
+          "avg_net_revenue": "341.2957184007551"
+        },
+        {
+          "customer_id": "WARTH",
+          "company_name": "Wartian Herkku",
+          "avg_discount": "0.054054055564306876",
+          "avg_net_revenue": "422.937907717675"
+        },
+        {
+          "customer_id": "MAGAA",
+          "company_name": "Magazzini Alimentari Riuniti",
+          "avg_discount": "0.050000001454637164",
+          "avg_net_revenue": "341.72452147664416"
+        },
+        {
+          "customer_id": "ANTON",
+          "company_name": "Antonio Moreno Taquer\u00eda",
+          "avg_discount": "0.05882353116484249",
+          "avg_net_revenue": "413.17514313765304"
+        },
+        {
+          "customer_id": "GOURL",
+          "company_name": "Gourmet Lanchonetes",
+          "avg_discount": "0.0684210540432679",
+          "avg_net_revenue": "442.84920950312363"
+        },
+        {
+          "customer_id": "WELLI",
+          "company_name": "Wellington Importadora",
+          "avg_discount": "0.08157894799583837",
+          "avg_net_revenue": "319.3789458218766"
+        },
+        {
+          "customer_id": "FURIB",
+          "company_name": "Furia Bacalhau e Frutos do Mar",
+          "avg_discount": "0.09750000312924385",
+          "avg_net_revenue": "321.37112505496293"
+        },
+        {
+          "customer_id": "FAMIA",
+          "company_name": "Familia Arquibaldo",
+          "avg_discount": "0.06315789685437553",
+          "avg_net_revenue": "216.18683806724457"
+        },
+        {
+          "customer_id": "ALFKI",
+          "company_name": "Alfreds Futterkiste",
+          "avg_discount": "0.08750000037252903",
+          "avg_net_revenue": "356.08333412744105"
+        },
+        {
+          "customer_id": "VICTE",
+          "company_name": "Victuailles en stock",
+          "avg_discount": "0.09200000181794167",
+          "avg_net_revenue": "367.2971951058984"
+        },
+        {
+          "customer_id": "OTTIK",
+          "company_name": "Ottilies K\u00e4seladen",
+          "avg_discount": "0.058620690271772184",
+          "avg_net_revenue": "430.9034470076448"
+        },
+        {
+          "customer_id": "LETSS",
+          "company_name": "Let's Stop N Shop",
+          "avg_discount": "0.11000000052154064",
+          "avg_net_revenue": "307.6472482238263"
+        },
+        {
+          "customer_id": "REGGC",
+          "company_name": "Reggiani Caseifici",
+          "avg_discount": "0.0818181832066991",
+          "avg_net_revenue": "320.37454404237593"
+        },
+        {
+          "customer_id": "QUEDE",
+          "company_name": "Que Del\u00edcia",
+          "avg_discount": "0.060416668032606445",
+          "avg_net_revenue": "277.7004141537038"
+        },
+        {
+          "customer_id": "LAMAI",
+          "company_name": "La maison d'Asie",
+          "avg_discount": "0.12580645312705346",
+          "avg_net_revenue": "300.9096779002297"
+        },
+        {
+          "customer_id": "WANDK",
+          "company_name": "Die Wandernde Kuh",
+          "avg_discount": "0.08846153934987691",
+          "avg_net_revenue": "368.7855754988841"
+        }
+      ],
+      "row_count": 16,
+      "columns": [
+        "customer_id",
+        "company_name",
+        "avg_discount",
+        "avg_net_revenue"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details",
+        "CustomerOrderStats",
+        "CustomerOrderStats",
+        "public.customers",
+        "AverageStats"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details",
+      "CustomerOrderStats",
+      "public.customers",
+      "AverageStats"
+    ],
+    "row_count": 16,
+    "result_preview": [
+      {
+        "customer_id": "TOMSP",
+        "company_name": "Toms Spezialit\u00e4ten",
+        "avg_discount": "0.08928571535008294",
+        "avg_net_revenue": "341.2957184007551"
+      },
+      {
+        "customer_id": "WARTH",
+        "company_name": "Wartian Herkku",
+        "avg_discount": "0.054054055564306876",
+        "avg_net_revenue": "422.937907717675"
+      },
+      {
+        "customer_id": "MAGAA",
+        "company_name": "Magazzini Alimentari Riuniti",
+        "avg_discount": "0.050000001454637164",
+        "avg_net_revenue": "341.72452147664416"
+      },
+      {
+        "customer_id": "ANTON",
+        "company_name": "Antonio Moreno Taquer\u00eda",
+        "avg_discount": "0.05882353116484249",
+        "avg_net_revenue": "413.17514313765304"
+      },
+      {
+        "customer_id": "GOURL",
+        "company_name": "Gourmet Lanchonetes",
+        "avg_discount": "0.0684210540432679",
+        "avg_net_revenue": "442.84920950312363"
+      },
+      {
+        "customer_id": "WELLI",
+        "company_name": "Wellington Importadora",
+        "avg_discount": "0.08157894799583837",
+        "avg_net_revenue": "319.3789458218766"
+      },
+      {
+        "customer_id": "FURIB",
+        "company_name": "Furia Bacalhau e Frutos do Mar",
+        "avg_discount": "0.09750000312924385",
+        "avg_net_revenue": "321.37112505496293"
+      },
+      {
+        "customer_id": "FAMIA",
+        "company_name": "Familia Arquibaldo",
+        "avg_discount": "0.06315789685437553",
+        "avg_net_revenue": "216.18683806724457"
+      },
+      {
+        "customer_id": "ALFKI",
+        "company_name": "Alfreds Futterkiste",
+        "avg_discount": "0.08750000037252903",
+        "avg_net_revenue": "356.08333412744105"
+      },
+      {
+        "customer_id": "VICTE",
+        "company_name": "Victuailles en stock",
+        "avg_discount": "0.09200000181794167",
+        "avg_net_revenue": "367.2971951058984"
+      },
+      {
+        "customer_id": "OTTIK",
+        "company_name": "Ottilies K\u00e4seladen",
+        "avg_discount": "0.058620690271772184",
+        "avg_net_revenue": "430.9034470076448"
+      },
+      {
+        "customer_id": "LETSS",
+        "company_name": "Let's Stop N Shop",
+        "avg_discount": "0.11000000052154064",
+        "avg_net_revenue": "307.6472482238263"
+      },
+      {
+        "customer_id": "REGGC",
+        "company_name": "Reggiani Caseifici",
+        "avg_discount": "0.0818181832066991",
+        "avg_net_revenue": "320.37454404237593"
+      },
+      {
+        "customer_id": "QUEDE",
+        "company_name": "Que Del\u00edcia",
+        "avg_discount": "0.060416668032606445",
+        "avg_net_revenue": "277.7004141537038"
+      },
+      {
+        "customer_id": "LAMAI",
+        "company_name": "La maison d'Asie",
+        "avg_discount": "0.12580645312705346",
+        "avg_net_revenue": "300.9096779002297"
+      },
+      {
+        "customer_id": "WANDK",
+        "company_name": "Die Wandernde Kuh",
+        "avg_discount": "0.08846153934987691",
+        "avg_net_revenue": "368.7855754988841"
+      }
+    ]
+  },
+  "HX6": {
+    "query_id": "HX6",
+    "question": "Welche Mitarbeitenden haben viele grenzueberschreitende Auftraege, aber unterdurchschnittlichen Umsatz je Auftrag?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 7006,
+    "error": null,
+    "final_response_text": "Die folgenden Mitarbeitenden haben viele grenz\u00fcberschreitende Auftr\u00e4ge, aber einen unterdurchschnittlichen Umsatz je Auftrag:\n\n1. Mitarbeiter 8: 214 Auftr\u00e4ge, durchschnittlicher Umsatz je Auftrag CHF 494.03\n2. Mitarbeiter 1: 296 Auftr\u00e4ge, durchschnittlicher Umsatz je Auftrag CHF 592.68\n3. Mitarbeiter 2: 204 Auftr\u00e4ge, durchschnittlicher Umsatz je Auftrag CHF 595.38\n4. Mitarbeiter 4: 347 Auftr\u00e4ge, durchschnittlicher Umsatz je Auftrag CHF 602.02\n5. Mitarbeiter 6: 142 Auftr\u00e4ge, durchschnittlicher Umsatz je Auftrag CHF 477.62\n6. Mitarbeiter 3: 271 Auftr\u00e4ge, durchschnittlicher Umsatz je Auftrag CHF 605.44\n\nDiese Mitarbeitenden haben mehr als 5 grenz\u00fcberschreitende Auftr\u00e4ge und der Umsatz je Auftrag liegt unter dem Durchschnitt.",
+    "sql_query": "SELECT o.employee_id, COUNT(o.order_id) AS anzahl_grenzueberschreitende_auftraege, AVG(od.unit_price * od.quantity) AS durchschnittlicher_umsatz_je_auftrag\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nWHERE o.ship_country != 'Germany'\nGROUP BY o.employee_id\nHAVING COUNT(o.order_id) > 5 AND AVG(od.unit_price * od.quantity) < (\n    SELECT AVG(od2.unit_price * od2.quantity)\n    FROM public.orders o2\n    JOIN public.order_details od2 ON o2.order_id = od2.order_id\n)",
+    "exec_result": {
+      "data": [
+        {
+          "employee_id": "8",
+          "anzahl_grenzueberschreitende_auftraege": "214",
+          "durchschnittlicher_umsatz_je_auftrag": "494.02887895619756"
+        },
+        {
+          "employee_id": "1",
+          "anzahl_grenzueberschreitende_auftraege": "296",
+          "durchschnittlicher_umsatz_je_auftrag": "592.6798997456963"
+        },
+        {
+          "employee_id": "2",
+          "anzahl_grenzueberschreitende_auftraege": "204",
+          "durchschnittlicher_umsatz_je_auftrag": "595.3787263631821"
+        },
+        {
+          "employee_id": "4",
+          "anzahl_grenzueberschreitende_auftraege": "347",
+          "durchschnittlicher_umsatz_je_auftrag": "602.0221910559135"
+        },
+        {
+          "employee_id": "6",
+          "anzahl_grenzueberschreitende_auftraege": "142",
+          "durchschnittlicher_umsatz_je_auftrag": "477.62105569369356"
+        },
+        {
+          "employee_id": "3",
+          "anzahl_grenzueberschreitende_auftraege": "271",
+          "durchschnittlicher_umsatz_je_auftrag": "605.4355708980912"
+        }
+      ],
+      "rows": [
+        {
+          "employee_id": "8",
+          "anzahl_grenzueberschreitende_auftraege": "214",
+          "durchschnittlicher_umsatz_je_auftrag": "494.02887895619756"
+        },
+        {
+          "employee_id": "1",
+          "anzahl_grenzueberschreitende_auftraege": "296",
+          "durchschnittlicher_umsatz_je_auftrag": "592.6798997456963"
+        },
+        {
+          "employee_id": "2",
+          "anzahl_grenzueberschreitende_auftraege": "204",
+          "durchschnittlicher_umsatz_je_auftrag": "595.3787263631821"
+        },
+        {
+          "employee_id": "4",
+          "anzahl_grenzueberschreitende_auftraege": "347",
+          "durchschnittlicher_umsatz_je_auftrag": "602.0221910559135"
+        },
+        {
+          "employee_id": "6",
+          "anzahl_grenzueberschreitende_auftraege": "142",
+          "durchschnittlicher_umsatz_je_auftrag": "477.62105569369356"
+        },
+        {
+          "employee_id": "3",
+          "anzahl_grenzueberschreitende_auftraege": "271",
+          "durchschnittlicher_umsatz_je_auftrag": "605.4355708980912"
+        }
+      ],
+      "row_count": 6,
+      "columns": [
+        "employee_id",
+        "anzahl_grenzueberschreitende_auftraege",
+        "durchschnittlicher_umsatz_je_auftrag"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details",
+        "public.orders",
+        "public.order_details"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 6,
+    "result_preview": [
+      {
+        "employee_id": "8",
+        "anzahl_grenzueberschreitende_auftraege": "214",
+        "durchschnittlicher_umsatz_je_auftrag": "494.02887895619756"
+      },
+      {
+        "employee_id": "1",
+        "anzahl_grenzueberschreitende_auftraege": "296",
+        "durchschnittlicher_umsatz_je_auftrag": "592.6798997456963"
+      },
+      {
+        "employee_id": "2",
+        "anzahl_grenzueberschreitende_auftraege": "204",
+        "durchschnittlicher_umsatz_je_auftrag": "595.3787263631821"
+      },
+      {
+        "employee_id": "4",
+        "anzahl_grenzueberschreitende_auftraege": "347",
+        "durchschnittlicher_umsatz_je_auftrag": "602.0221910559135"
+      },
+      {
+        "employee_id": "6",
+        "anzahl_grenzueberschreitende_auftraege": "142",
+        "durchschnittlicher_umsatz_je_auftrag": "477.62105569369356"
+      },
+      {
+        "employee_id": "3",
+        "anzahl_grenzueberschreitende_auftraege": "271",
+        "durchschnittlicher_umsatz_je_auftrag": "605.4355708980912"
+      }
+    ]
+  },
+  "HX7": {
+    "query_id": "HX7",
+    "question": "Welche Produktpaare aus unterschiedlichen Kategorien werden ueberproportional oft gemeinsam gekauft (Lift gegenueber Unabhaengigkeit)?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 11171,
+    "error": null,
+    "final_response_text": "Hier sind die Top 10 Produktpaare aus unterschiedlichen Kategorien, die \u00fcberproportional oft gemeinsam gekauft werden, basierend auf ihrem Lift-Wert:\n\n1. **Confections** und **Condiments**: 8 gemeinsame K\u00e4ufe, Lift = 0.0033\n2. **Confections** und **Dairy Products**: 7 gemeinsame K\u00e4ufe, Lift = 0.0029\n3. **Confections** und **Dairy Products**: 6 gemeinsame K\u00e4ufe, Lift = 0.0024\n4. **Seafood** und **Meat/Poultry**: 6 gemeinsame K\u00e4ufe, Lift = 0.0024\n5. **Beverages** und **Dairy Products**: 5 gemeinsame K\u00e4ufe, Lift = 0.0020\n\nDiese Paare zeigen eine h\u00f6here Wahrscheinlichkeit, zusammen gekauft zu werden, als es bei unabh\u00e4ngigen K\u00e4ufen der Fall w\u00e4re.",
+    "sql_query": "WITH ProductPairs AS (\n  SELECT \n    od1.product_id AS product_id1, \n    od2.product_id AS product_id2, \n    COUNT(*) AS pair_count\n  FROM \n    public.order_details od1\n  JOIN \n    public.order_details od2 ON od1.order_id = od2.order_id AND od1.product_id < od2.product_id\n  GROUP BY \n    od1.product_id, od2.product_id\n),\nProductCategories AS (\n  SELECT \n    p.product_id, \n    c.category_name\n  FROM \n    public.products p\n  JOIN \n    public.categories c ON p.category_id = c.category_id\n),\nCategoryPairs AS (\n  SELECT \n    pp.product_id1, \n    pp.product_id2, \n    pc1.category_name AS category1, \n    pc2.category_name AS category2, \n    pp.pair_count\n  FROM \n    ProductPairs pp\n  JOIN \n    ProductCategories pc1 ON pp.product_id1 = pc1.product_id\n  JOIN \n    ProductCategories pc2 ON pp.product_id2 = pc2.product_id\n  WHERE \n    pc1.category_name <> pc2.category_name\n),\nTotalPairs AS (\n  SELECT \n    SUM(pair_count) AS total_pairs\n  FROM \n    ProductPairs\n),\nLiftCalculation AS (\n  SELECT \n    cp.category1, \n    cp.category2, \n    cp.pair_count, \n    tp.total_pairs, \n    (cp.pair_count::float / tp.total_pairs) AS lift\n  FROM \n    CategoryPairs cp, TotalPairs tp\n)\nSELECT \n  category1, \n  category2, \n  pair_count, \n  lift\nFROM \n  LiftCalculation\nORDER BY \n  lift DESC\nLIMIT 10;",
+    "exec_result": {
+      "data": [
+        {
+          "category1": "Confections",
+          "category2": "Condiments",
+          "pair_count": "8",
+          "lift": "0.0032626427406199023"
+        },
+        {
+          "category1": "Confections",
+          "category2": "Dairy Products",
+          "pair_count": "7",
+          "lift": "0.0028548123980424145"
+        },
+        {
+          "category1": "Confections",
+          "category2": "Dairy Products",
+          "pair_count": "6",
+          "lift": "0.0024469820554649264"
+        },
+        {
+          "category1": "Seafood",
+          "category2": "Meat/Poultry",
+          "pair_count": "6",
+          "lift": "0.0024469820554649264"
+        },
+        {
+          "category1": "Beverages",
+          "category2": "Dairy Products",
+          "pair_count": "5",
+          "lift": "0.0020391517128874386"
+        },
+        {
+          "category1": "Meat/Poultry",
+          "category2": "Dairy Products",
+          "pair_count": "5",
+          "lift": "0.0020391517128874386"
+        },
+        {
+          "category1": "Beverages",
+          "category2": "Dairy Products",
+          "pair_count": "5",
+          "lift": "0.0020391517128874386"
+        },
+        {
+          "category1": "Confections",
+          "category2": "Produce",
+          "pair_count": "5",
+          "lift": "0.0020391517128874386"
+        },
+        {
+          "category1": "Beverages",
+          "category2": "Confections",
+          "pair_count": "5",
+          "lift": "0.0020391517128874386"
+        },
+        {
+          "category1": "Grains/Cereals",
+          "category2": "Condiments",
+          "pair_count": "5",
+          "lift": "0.0020391517128874386"
+        }
+      ],
+      "rows": [
+        {
+          "category1": "Confections",
+          "category2": "Condiments",
+          "pair_count": "8",
+          "lift": "0.0032626427406199023"
+        },
+        {
+          "category1": "Confections",
+          "category2": "Dairy Products",
+          "pair_count": "7",
+          "lift": "0.0028548123980424145"
+        },
+        {
+          "category1": "Confections",
+          "category2": "Dairy Products",
+          "pair_count": "6",
+          "lift": "0.0024469820554649264"
+        },
+        {
+          "category1": "Seafood",
+          "category2": "Meat/Poultry",
+          "pair_count": "6",
+          "lift": "0.0024469820554649264"
+        },
+        {
+          "category1": "Beverages",
+          "category2": "Dairy Products",
+          "pair_count": "5",
+          "lift": "0.0020391517128874386"
+        },
+        {
+          "category1": "Meat/Poultry",
+          "category2": "Dairy Products",
+          "pair_count": "5",
+          "lift": "0.0020391517128874386"
+        },
+        {
+          "category1": "Beverages",
+          "category2": "Dairy Products",
+          "pair_count": "5",
+          "lift": "0.0020391517128874386"
+        },
+        {
+          "category1": "Confections",
+          "category2": "Produce",
+          "pair_count": "5",
+          "lift": "0.0020391517128874386"
+        },
+        {
+          "category1": "Beverages",
+          "category2": "Confections",
+          "pair_count": "5",
+          "lift": "0.0020391517128874386"
+        },
+        {
+          "category1": "Grains/Cereals",
+          "category2": "Condiments",
+          "pair_count": "5",
+          "lift": "0.0020391517128874386"
+        }
+      ],
+      "row_count": 10,
+      "columns": [
+        "category1",
+        "category2",
+        "pair_count",
+        "lift"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.order_details",
+        "public.order_details",
+        "public.products",
+        "public.categories",
+        "ProductPairs",
+        "ProductCategories",
+        "ProductCategories",
+        "ProductPairs",
+        "CategoryPairs",
+        "LiftCalculation"
+      ]
+    },
+    "tables_used": [
+      "public.order_details",
+      "public.products",
+      "public.categories",
+      "ProductPairs",
+      "ProductCategories",
+      "CategoryPairs",
+      "LiftCalculation"
+    ],
+    "row_count": 10,
+    "result_preview": [
+      {
+        "category1": "Confections",
+        "category2": "Condiments",
+        "pair_count": "8",
+        "lift": "0.0032626427406199023"
+      },
+      {
+        "category1": "Confections",
+        "category2": "Dairy Products",
+        "pair_count": "7",
+        "lift": "0.0028548123980424145"
+      },
+      {
+        "category1": "Confections",
+        "category2": "Dairy Products",
+        "pair_count": "6",
+        "lift": "0.0024469820554649264"
+      },
+      {
+        "category1": "Seafood",
+        "category2": "Meat/Poultry",
+        "pair_count": "6",
+        "lift": "0.0024469820554649264"
+      },
+      {
+        "category1": "Beverages",
+        "category2": "Dairy Products",
+        "pair_count": "5",
+        "lift": "0.0020391517128874386"
+      },
+      {
+        "category1": "Meat/Poultry",
+        "category2": "Dairy Products",
+        "pair_count": "5",
+        "lift": "0.0020391517128874386"
+      },
+      {
+        "category1": "Beverages",
+        "category2": "Dairy Products",
+        "pair_count": "5",
+        "lift": "0.0020391517128874386"
+      },
+      {
+        "category1": "Confections",
+        "category2": "Produce",
+        "pair_count": "5",
+        "lift": "0.0020391517128874386"
+      },
+      {
+        "category1": "Beverages",
+        "category2": "Confections",
+        "pair_count": "5",
+        "lift": "0.0020391517128874386"
+      },
+      {
+        "category1": "Grains/Cereals",
+        "category2": "Condiments",
+        "pair_count": "5",
+        "lift": "0.0020391517128874386"
+      }
+    ]
+  },
+  "HX8": {
+    "query_id": "HX8",
+    "question": "In welchen Monaten stieg die Frachtkostenquote gegenueber dem Vormonat am staerksten?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 5401,
+    "error": null,
+    "final_response_text": "Es scheint, dass die Datenbank keine spezifischen Tabellen oder Spalten enth\u00e4lt, die direkt mit der \"Frachtkostenquote\" oder \"Frachtkosten\" in Verbindung stehen. M\u00f6glicherweise sind diese Informationen in einer anderen Form oder unter einem anderen Namen gespeichert.\n\nFalls du weitere Details oder alternative Begriffe hast, die ich verwenden k\u00f6nnte, lass es mich wissen. Alternativ k\u00f6nntest du pr\u00fcfen, ob es andere Begriffe oder Konzepte gibt, die in der Datenbank verwendet werden, um Frachtkosten oder \u00e4hnliche Metriken zu erfassen.",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "HX9": {
+    "query_id": "HX9",
+    "question": "Welche Lieferanten haben viele Produkte, aber einen niedrigen Anteil verkaufter Produkte?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4844,
+    "error": null,
+    "final_response_text": "Es gibt keine Lieferanten, die viele Produkte haben und gleichzeitig einen niedrigen Anteil verkaufter Produkte aufweisen, basierend auf den aktuellen Daten. Wenn du weitere Analysen ben\u00f6tigst oder die Kriterien anpassen m\u00f6chtest, lass es mich wissen!",
+    "sql_query": "SELECT s.company_name, COUNT(p.product_id) AS product_count, \n       SUM(od.quantity) AS total_sold, \n       CASE WHEN COUNT(p.product_id) > 0 THEN SUM(od.quantity) * 1.0 / COUNT(p.product_id) ELSE 0 END AS sold_ratio\nFROM public.suppliers s\nJOIN public.products p ON s.supplier_id = p.supplier_id\nLEFT JOIN public.order_details od ON p.product_id = od.product_id\nGROUP BY s.company_name\nHAVING COUNT(p.product_id) > 0 AND (SUM(od.quantity) * 1.0 / COUNT(p.product_id)) < 0.5\nORDER BY product_count DESC, sold_ratio ASC\nLIMIT 5;",
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": 0,
+      "columns": [],
+      "ok": true,
+      "tables_used": [
+        "public.suppliers",
+        "public.products",
+        "public.order_details"
+      ]
+    },
+    "tables_used": [
+      "public.suppliers",
+      "public.products",
+      "public.order_details"
+    ],
+    "row_count": 0,
+    "result_preview": []
+  },
+  "HX10": {
+    "query_id": "HX10",
+    "question": "Welche Kundensegmente haben hohen Umsatz, aber geringe Wiederkaufrate (Bestellungen pro Kunde)?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4917,
+    "error": null,
+    "final_response_text": "Es gibt keine Kundensegmente, die sowohl einen hohen Umsatz (\u00fcber 10.000) als auch eine geringe Wiederkaufrate (weniger als 2 Bestellungen pro Kunde) aufweisen. Wenn du weitere Analysen oder Anpassungen ben\u00f6tigst, lass es mich wissen!",
+    "sql_query": "SELECT cd.customer_desc AS Kundensegment, \n       SUM(od.unit_price * od.quantity) AS Umsatz, \n       COUNT(DISTINCT o.order_id) / COUNT(DISTINCT o.customer_id) AS Wiederkaufrate\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nJOIN public.customer_customer_demo ccd ON o.customer_id = ccd.customer_id\nJOIN public.customer_demographics cd ON ccd.customer_type_id = cd.customer_type_id\nGROUP BY cd.customer_desc\nHAVING SUM(od.unit_price * od.quantity) > 10000 AND COUNT(DISTINCT o.order_id) / COUNT(DISTINCT o.customer_id) < 2\nORDER BY Umsatz DESC;",
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": 0,
+      "columns": [],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details",
+        "public.customer_customer_demo",
+        "public.customer_demographics"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details",
+      "public.customer_customer_demo",
+      "public.customer_demographics"
+    ],
+    "row_count": 0,
+    "result_preview": []
+  },
+  "HX11": {
+    "query_id": "HX11",
+    "question": "Welche Laender kombinieren hohen Umsatz mit langer durchschnittlicher Lieferdauer?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 7515,
+    "error": null,
+    "final_response_text": "Die L\u00e4nder mit dem h\u00f6chsten Umsatz und einer langen durchschnittlichen Lieferdauer sind:\n\n1. **USA**: Umsatz von 261'482.38 mit einer durchschnittlichen Lieferdauer von 8.76 Tagen.\n2. **Deutschland**: Umsatz von 241'909.13 mit einer durchschnittlichen Lieferdauer von 8.28 Tagen.\n3. **\u00d6sterreich**: Umsatz von 129'375.13 mit einer durchschnittlichen Lieferdauer von 7.49 Tagen.\n4. **Brasilien**: Umsatz von 110'745.68 mit einer durchschnittlichen Lieferdauer von 7.95 Tagen.\n5. **Frankreich**: Umsatz von 84'396.76 mit einer durchschnittlichen Lieferdauer von 8.37 Tagen.",
+    "sql_query": "SELECT o.ship_country, SUM(od.unit_price * od.quantity) AS total_revenue, AVG(o.shipped_date - o.order_date) AS avg_delivery_duration\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nWHERE o.shipped_date IS NOT NULL\nGROUP BY o.ship_country\nORDER BY total_revenue DESC, avg_delivery_duration DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "ship_country": "USA",
+          "total_revenue": "261482.3800163269",
+          "avg_delivery_duration": "8.76"
+        },
+        {
+          "ship_country": "Germany",
+          "total_revenue": "241909.129945755",
+          "avg_delivery_duration": "8.28348909657321"
+        },
+        {
+          "ship_country": "Austria",
+          "total_revenue": "129375.12998867035",
+          "avg_delivery_duration": "7.491525423728814"
+        },
+        {
+          "ship_country": "Brazil",
+          "total_revenue": "110745.68005228043",
+          "avg_delivery_duration": "7.9543147208121825"
+        },
+        {
+          "ship_country": "France",
+          "total_revenue": "84396.7600941658",
+          "avg_delivery_duration": "8.372222222222222"
+        }
+      ],
+      "rows": [
+        {
+          "ship_country": "USA",
+          "total_revenue": "261482.3800163269",
+          "avg_delivery_duration": "8.76"
+        },
+        {
+          "ship_country": "Germany",
+          "total_revenue": "241909.129945755",
+          "avg_delivery_duration": "8.28348909657321"
+        },
+        {
+          "ship_country": "Austria",
+          "total_revenue": "129375.12998867035",
+          "avg_delivery_duration": "7.491525423728814"
+        },
+        {
+          "ship_country": "Brazil",
+          "total_revenue": "110745.68005228043",
+          "avg_delivery_duration": "7.9543147208121825"
+        },
+        {
+          "ship_country": "France",
+          "total_revenue": "84396.7600941658",
+          "avg_delivery_duration": "8.372222222222222"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "ship_country",
+        "total_revenue",
+        "avg_delivery_duration"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "ship_country": "USA",
+        "total_revenue": "261482.3800163269",
+        "avg_delivery_duration": "8.76"
+      },
+      {
+        "ship_country": "Germany",
+        "total_revenue": "241909.129945755",
+        "avg_delivery_duration": "8.28348909657321"
+      },
+      {
+        "ship_country": "Austria",
+        "total_revenue": "129375.12998867035",
+        "avg_delivery_duration": "7.491525423728814"
+      },
+      {
+        "ship_country": "Brazil",
+        "total_revenue": "110745.68005228043",
+        "avg_delivery_duration": "7.9543147208121825"
+      },
+      {
+        "ship_country": "France",
+        "total_revenue": "84396.7600941658",
+        "avg_delivery_duration": "8.372222222222222"
+      }
+    ]
+  },
+  "HX12": {
+    "query_id": "HX12",
+    "question": "Welche Kategorien haben nach Rabatt die hoechste Umsatzvolatilitaet zwischen Monaten?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 7922,
+    "error": null,
+    "final_response_text": "Ich habe die monatlichen Ums\u00e4tze nach Kategorie und Rabatt berechnet. Um die Volatilit\u00e4t zu bestimmen, m\u00fcssten wir die Standardabweichung der monatlichen Ums\u00e4tze f\u00fcr jede Kategorie berechnen. Hier sind einige der monatlichen Ums\u00e4tze f\u00fcr die Kategorie \"Beverages\":\n\n- Juli 1996: CHF 3'182.50\n- August 1996: CHF 4'866.88\n- September 1996: CHF 5'088.40\n- Oktober 1996: CHF 8'187.36\n\nM\u00f6chtest du, dass ich die Volatilit\u00e4t f\u00fcr alle Kategorien berechne?",
+    "sql_query": "SELECT c.category_name, \n       EXTRACT(YEAR FROM o.order_date) AS year, \n       EXTRACT(MONTH FROM o.order_date) AS month, \n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS monthly_revenue\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nJOIN public.products p ON od.product_id = p.product_id\nJOIN public.categories c ON p.category_id = c.category_id\nGROUP BY c.category_name, year, month\nORDER BY c.category_name, year, month;",
+    "exec_result": {
+      "data": [
+        {
+          "category_name": "Beverages",
+          "year": "1996.0",
+          "month": "7.0",
+          "monthly_revenue": "3182.499943315983"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1996.0",
+          "month": "8.0",
+          "monthly_revenue": "4866.879878635407"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1996.0",
+          "month": "9.0",
+          "monthly_revenue": "5088.399903607368"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1996.0",
+          "month": "10.0",
+          "monthly_revenue": "8187.359950634242"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1996.0",
+          "month": "11.0",
+          "monthly_revenue": "17162.060103994012"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1996.0",
+          "month": "12.0",
+          "monthly_revenue": "9431.800029468537"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "1.0",
+          "monthly_revenue": "21904.16017157674"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "2.0",
+          "monthly_revenue": "2845.8399402058126"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "3.0",
+          "monthly_revenue": "10636.880006159545"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "4.0",
+          "monthly_revenue": "7074.349992744625"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "5.0",
+          "monthly_revenue": "15422.24999519065"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "6.0",
+          "monthly_revenue": "3485.424998262897"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "7.0",
+          "monthly_revenue": "7889.224995242432"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "8.0",
+          "monthly_revenue": "5836.924998275936"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "9.0",
+          "monthly_revenue": "5726.699992965907"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "10.0",
+          "monthly_revenue": "8374.899992883205"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "11.0",
+          "monthly_revenue": "3850.9999972730875"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "12.0",
+          "monthly_revenue": "10876.649994187057"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1998.0",
+          "month": "1.0",
+          "monthly_revenue": "27245.39997433126"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1998.0",
+          "month": "2.0",
+          "monthly_revenue": "34599.149980947375"
+        }
+      ],
+      "rows": [
+        {
+          "category_name": "Beverages",
+          "year": "1996.0",
+          "month": "7.0",
+          "monthly_revenue": "3182.499943315983"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1996.0",
+          "month": "8.0",
+          "monthly_revenue": "4866.879878635407"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1996.0",
+          "month": "9.0",
+          "monthly_revenue": "5088.399903607368"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1996.0",
+          "month": "10.0",
+          "monthly_revenue": "8187.359950634242"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1996.0",
+          "month": "11.0",
+          "monthly_revenue": "17162.060103994012"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1996.0",
+          "month": "12.0",
+          "monthly_revenue": "9431.800029468537"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "1.0",
+          "monthly_revenue": "21904.16017157674"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "2.0",
+          "monthly_revenue": "2845.8399402058126"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "3.0",
+          "monthly_revenue": "10636.880006159545"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "4.0",
+          "monthly_revenue": "7074.349992744625"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "5.0",
+          "monthly_revenue": "15422.24999519065"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "6.0",
+          "monthly_revenue": "3485.424998262897"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "7.0",
+          "monthly_revenue": "7889.224995242432"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "8.0",
+          "monthly_revenue": "5836.924998275936"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "9.0",
+          "monthly_revenue": "5726.699992965907"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "10.0",
+          "monthly_revenue": "8374.899992883205"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "11.0",
+          "monthly_revenue": "3850.9999972730875"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1997.0",
+          "month": "12.0",
+          "monthly_revenue": "10876.649994187057"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1998.0",
+          "month": "1.0",
+          "monthly_revenue": "27245.39997433126"
+        },
+        {
+          "category_name": "Beverages",
+          "year": "1998.0",
+          "month": "2.0",
+          "monthly_revenue": "34599.149980947375"
+        }
+      ],
+      "row_count": 100,
+      "columns": [
+        "category_name",
+        "year",
+        "month",
+        "monthly_revenue"
+      ],
+      "ok": true,
+      "tables_used": [
+        "o.order_date",
+        "o.order_date",
+        "public.orders",
+        "public.order_details",
+        "public.products",
+        "public.categories"
+      ]
+    },
+    "tables_used": [
+      "o.order_date",
+      "public.orders",
+      "public.order_details",
+      "public.products",
+      "public.categories"
+    ],
+    "row_count": 100,
+    "result_preview": [
+      {
+        "category_name": "Beverages",
+        "year": "1996.0",
+        "month": "7.0",
+        "monthly_revenue": "3182.499943315983"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1996.0",
+        "month": "8.0",
+        "monthly_revenue": "4866.879878635407"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1996.0",
+        "month": "9.0",
+        "monthly_revenue": "5088.399903607368"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1996.0",
+        "month": "10.0",
+        "monthly_revenue": "8187.359950634242"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1996.0",
+        "month": "11.0",
+        "monthly_revenue": "17162.060103994012"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1996.0",
+        "month": "12.0",
+        "monthly_revenue": "9431.800029468537"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1997.0",
+        "month": "1.0",
+        "monthly_revenue": "21904.16017157674"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1997.0",
+        "month": "2.0",
+        "monthly_revenue": "2845.8399402058126"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1997.0",
+        "month": "3.0",
+        "monthly_revenue": "10636.880006159545"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1997.0",
+        "month": "4.0",
+        "monthly_revenue": "7074.349992744625"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1997.0",
+        "month": "5.0",
+        "monthly_revenue": "15422.24999519065"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1997.0",
+        "month": "6.0",
+        "monthly_revenue": "3485.424998262897"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1997.0",
+        "month": "7.0",
+        "monthly_revenue": "7889.224995242432"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1997.0",
+        "month": "8.0",
+        "monthly_revenue": "5836.924998275936"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1997.0",
+        "month": "9.0",
+        "monthly_revenue": "5726.699992965907"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1997.0",
+        "month": "10.0",
+        "monthly_revenue": "8374.899992883205"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1997.0",
+        "month": "11.0",
+        "monthly_revenue": "3850.9999972730875"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1997.0",
+        "month": "12.0",
+        "monthly_revenue": "10876.649994187057"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1998.0",
+        "month": "1.0",
+        "monthly_revenue": "27245.39997433126"
+      },
+      {
+        "category_name": "Beverages",
+        "year": "1998.0",
+        "month": "2.0",
+        "monthly_revenue": "34599.149980947375"
+      }
+    ]
+  },
+  "HX13": {
+    "query_id": "HX13",
+    "question": "Welche Mitarbeitenden dominieren einzelne Regionen stark (Anteil groesser als 50 Prozent des Regionalumsatzes)?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 8370,
+    "error": null,
+    "final_response_text": "Es gibt derzeit keine Mitarbeitenden, die mehr als 50% des Umsatzes in einer einzelnen Region dominieren. Wenn du weitere Analysen oder eine andere Fragestellung hast, lass es mich wissen!",
+    "sql_query": "WITH regional_sales AS (\n    SELECT e.employee_id, e.first_name, e.last_name, r.region_description, \n           SUM(od.unit_price * od.quantity * (1 - od.discount)) AS employee_sales,\n           SUM(SUM(od.unit_price * od.quantity * (1 - od.discount))) OVER (PARTITION BY r.region_id) AS total_regional_sales\n    FROM public.orders o\n    JOIN public.order_details od ON o.order_id = od.order_id\n    JOIN public.employees e ON o.employee_id = e.employee_id\n    JOIN public.territories t ON o.ship_region = t.territory_id\n    JOIN public.region r ON t.region_id = r.region_id\n    GROUP BY e.employee_id, e.first_name, e.last_name, r.region_description, r.region_id\n)\nSELECT employee_id, first_name, last_name, region_description, employee_sales, total_regional_sales\nFROM regional_sales\nWHERE employee_sales > 0.5 * total_regional_sales",
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": 0,
+      "columns": [],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details",
+        "public.employees",
+        "public.territories",
+        "public.region",
+        "regional_sales"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details",
+      "public.employees",
+      "public.territories",
+      "public.region",
+      "regional_sales"
+    ],
+    "row_count": 0,
+    "result_preview": []
+  },
+  "HX14": {
+    "query_id": "HX14",
+    "question": "Welche Kunden bestellen haeufig verschiedene Produktfamilien, aber mit unterdurchschnittlichem Warenkorbwert?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 10790,
+    "error": null,
+    "final_response_text": "Hier sind einige Kunden, die h\u00e4ufig verschiedene Produktfamilien bestellen, aber einen unterdurchschnittlichen Warenkorbwert haben:\n\n1. **Alfreds Futterkiste**: Bestellt aus 5 Produktfamilien, durchschnittlicher Warenkorbwert von 388.45.\n2. **Ana Trujillo Emparedados y helados**: Bestellt aus 6 Produktfamilien, durchschnittlicher Warenkorbwert von 140.29.\n3. **Antonio Moreno Taquer\u00eda**: Bestellt aus 7 Produktfamilien, durchschnittlicher Warenkorbwert von 468.27.\n4. **Around the Horn**: Bestellt aus 7 Produktfamilien, durchschnittlicher Warenkorbwert von 557.94.\n5. **Blauer See Delikatessen**: Bestellt aus 8 Produktfamilien, durchschnittlicher Warenkorbwert von 269.98.\n\nDiese Kunden zeigen eine Vielfalt in ihren Bestellungen, jedoch mit einem Warenkorbwert unter dem Durchschnitt.",
+    "sql_query": "WITH CustomerOrderValues AS (\n    SELECT \n        o.customer_id, \n        od.product_id, \n        SUM(od.unit_price * od.quantity * (1 - od.discount)) AS order_value\n    FROM public.orders o\n    JOIN public.order_details od ON o.order_id = od.order_id\n    GROUP BY o.customer_id, od.product_id\n),\nAverageOrderValue AS (\n    SELECT \n        customer_id, \n        AVG(order_value) AS avg_order_value\n    FROM CustomerOrderValues\n    GROUP BY customer_id\n),\nProductFamilyCount AS (\n    SELECT \n        o.customer_id, \n        COUNT(DISTINCT p.category_id) AS product_family_count\n    FROM public.orders o\n    JOIN public.order_details od ON o.order_id = od.order_id\n    JOIN public.products p ON od.product_id = p.product_id\n    GROUP BY o.customer_id\n)\nSELECT \n    c.customer_id, \n    c.company_name, \n    pf.product_family_count, \n    a.avg_order_value\nFROM AverageOrderValue a\nJOIN ProductFamilyCount pf ON a.customer_id = pf.customer_id\nJOIN public.customers c ON a.customer_id = c.customer_id\nWHERE pf.product_family_count > 1 AND a.avg_order_value < (\n    SELECT AVG(avg_order_value) FROM AverageOrderValue\n)",
+    "exec_result": {
+      "data": [
+        {
+          "customer_id": "ALFKI",
+          "company_name": "Alfreds Futterkiste",
+          "product_family_count": "5",
+          "avg_order_value": "388.45454632084477"
+        },
+        {
+          "customer_id": "ANATR",
+          "company_name": "Ana Trujillo Emparedados y helados",
+          "product_family_count": "6",
+          "avg_order_value": "140.2949990272522"
+        },
+        {
+          "customer_id": "ANTON",
+          "company_name": "Antonio Moreno Taquer\u00eda",
+          "product_family_count": "7",
+          "avg_order_value": "468.26516222267344"
+        },
+        {
+          "customer_id": "AROUT",
+          "company_name": "Around the Horn",
+          "product_family_count": "7",
+          "avg_order_value": "557.9437489136743"
+        },
+        {
+          "customer_id": "BLAUS",
+          "company_name": "Blauer See Delikatessen",
+          "product_family_count": "8",
+          "avg_order_value": "269.98333263397217"
+        },
+        {
+          "customer_id": "BSBEV",
+          "company_name": "B's Beverages",
+          "product_family_count": "7",
+          "avg_order_value": "320.52105210956773"
+        },
+        {
+          "customer_id": "CACTU",
+          "company_name": "Cactus Comidas para llevar",
+          "product_family_count": "5",
+          "avg_order_value": "164.98181672529742"
+        },
+        {
+          "customer_id": "CENTC",
+          "company_name": "Centro comercial Moctezuma",
+          "product_family_count": "2",
+          "avg_order_value": "50.39999961853027"
+        },
+        {
+          "customer_id": "COMMI",
+          "company_name": "Com\u00e9rcio Mineiro",
+          "product_family_count": "6",
+          "avg_order_value": "423.41666560702856"
+        },
+        {
+          "customer_id": "CONSH",
+          "company_name": "Consolidated Holdings",
+          "product_family_count": "6",
+          "avg_order_value": "245.58571270533972"
+        },
+        {
+          "customer_id": "DRACD",
+          "company_name": "Drachenblut Delikatessen",
+          "product_family_count": "5",
+          "avg_order_value": "418.1344413757324"
+        },
+        {
+          "customer_id": "DUMON",
+          "company_name": "Du monde entier",
+          "product_family_count": "6",
+          "avg_order_value": "179.54444313049316"
+        },
+        {
+          "customer_id": "FAMIA",
+          "company_name": "Familia Arquibaldo",
+          "product_family_count": "6",
+          "avg_order_value": "241.6205837222145"
+        },
+        {
+          "customer_id": "FRANR",
+          "company_name": "France restauration",
+          "product_family_count": "5",
+          "avg_order_value": "528.6933339436849"
+        },
+        {
+          "customer_id": "FRANS",
+          "company_name": "Franchi S.p.A.",
+          "product_family_count": "5",
+          "avg_order_value": "154.56999979019164"
+        },
+        {
+          "customer_id": "FURIB",
+          "company_name": "Furia Bacalhau e Frutos do Mar",
+          "product_family_count": "7",
+          "avg_order_value": "401.7139063187036"
+        },
+        {
+          "customer_id": "GALED",
+          "company_name": "Galer\u00eda del gastr\u00f3nomo",
+          "product_family_count": "5",
+          "avg_order_value": "104.5874993801117"
+        },
+        {
+          "customer_id": "GODOS",
+          "company_name": "Godos Cocina T\u00edpica",
+          "product_family_count": "8",
+          "avg_order_value": "545.0647597512746"
+        },
+        {
+          "customer_id": "GOURL",
+          "company_name": "Gourmet Lanchonetes",
+          "product_family_count": "7",
+          "avg_order_value": "494.9491165034911"
+        },
+        {
+          "customer_id": "GROSR",
+          "company_name": "GROSELLA-Restaurante",
+          "product_family_count": "4",
+          "avg_order_value": "372.17499923706055"
+        }
+      ],
+      "rows": [
+        {
+          "customer_id": "ALFKI",
+          "company_name": "Alfreds Futterkiste",
+          "product_family_count": "5",
+          "avg_order_value": "388.45454632084477"
+        },
+        {
+          "customer_id": "ANATR",
+          "company_name": "Ana Trujillo Emparedados y helados",
+          "product_family_count": "6",
+          "avg_order_value": "140.2949990272522"
+        },
+        {
+          "customer_id": "ANTON",
+          "company_name": "Antonio Moreno Taquer\u00eda",
+          "product_family_count": "7",
+          "avg_order_value": "468.26516222267344"
+        },
+        {
+          "customer_id": "AROUT",
+          "company_name": "Around the Horn",
+          "product_family_count": "7",
+          "avg_order_value": "557.9437489136743"
+        },
+        {
+          "customer_id": "BLAUS",
+          "company_name": "Blauer See Delikatessen",
+          "product_family_count": "8",
+          "avg_order_value": "269.98333263397217"
+        },
+        {
+          "customer_id": "BSBEV",
+          "company_name": "B's Beverages",
+          "product_family_count": "7",
+          "avg_order_value": "320.52105210956773"
+        },
+        {
+          "customer_id": "CACTU",
+          "company_name": "Cactus Comidas para llevar",
+          "product_family_count": "5",
+          "avg_order_value": "164.98181672529742"
+        },
+        {
+          "customer_id": "CENTC",
+          "company_name": "Centro comercial Moctezuma",
+          "product_family_count": "2",
+          "avg_order_value": "50.39999961853027"
+        },
+        {
+          "customer_id": "COMMI",
+          "company_name": "Com\u00e9rcio Mineiro",
+          "product_family_count": "6",
+          "avg_order_value": "423.41666560702856"
+        },
+        {
+          "customer_id": "CONSH",
+          "company_name": "Consolidated Holdings",
+          "product_family_count": "6",
+          "avg_order_value": "245.58571270533972"
+        },
+        {
+          "customer_id": "DRACD",
+          "company_name": "Drachenblut Delikatessen",
+          "product_family_count": "5",
+          "avg_order_value": "418.1344413757324"
+        },
+        {
+          "customer_id": "DUMON",
+          "company_name": "Du monde entier",
+          "product_family_count": "6",
+          "avg_order_value": "179.54444313049316"
+        },
+        {
+          "customer_id": "FAMIA",
+          "company_name": "Familia Arquibaldo",
+          "product_family_count": "6",
+          "avg_order_value": "241.6205837222145"
+        },
+        {
+          "customer_id": "FRANR",
+          "company_name": "France restauration",
+          "product_family_count": "5",
+          "avg_order_value": "528.6933339436849"
+        },
+        {
+          "customer_id": "FRANS",
+          "company_name": "Franchi S.p.A.",
+          "product_family_count": "5",
+          "avg_order_value": "154.56999979019164"
+        },
+        {
+          "customer_id": "FURIB",
+          "company_name": "Furia Bacalhau e Frutos do Mar",
+          "product_family_count": "7",
+          "avg_order_value": "401.7139063187036"
+        },
+        {
+          "customer_id": "GALED",
+          "company_name": "Galer\u00eda del gastr\u00f3nomo",
+          "product_family_count": "5",
+          "avg_order_value": "104.5874993801117"
+        },
+        {
+          "customer_id": "GODOS",
+          "company_name": "Godos Cocina T\u00edpica",
+          "product_family_count": "8",
+          "avg_order_value": "545.0647597512746"
+        },
+        {
+          "customer_id": "GOURL",
+          "company_name": "Gourmet Lanchonetes",
+          "product_family_count": "7",
+          "avg_order_value": "494.9491165034911"
+        },
+        {
+          "customer_id": "GROSR",
+          "company_name": "GROSELLA-Restaurante",
+          "product_family_count": "4",
+          "avg_order_value": "372.17499923706055"
+        }
+      ],
+      "row_count": 54,
+      "columns": [
+        "customer_id",
+        "company_name",
+        "product_family_count",
+        "avg_order_value"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details",
+        "CustomerOrderValues",
+        "public.orders",
+        "public.order_details",
+        "public.products",
+        "AverageOrderValue",
+        "ProductFamilyCount",
+        "public.customers",
+        "AverageOrderValue"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details",
+      "CustomerOrderValues",
+      "public.products",
+      "AverageOrderValue",
+      "ProductFamilyCount",
+      "public.customers"
+    ],
+    "row_count": 54,
+    "result_preview": [
+      {
+        "customer_id": "ALFKI",
+        "company_name": "Alfreds Futterkiste",
+        "product_family_count": "5",
+        "avg_order_value": "388.45454632084477"
+      },
+      {
+        "customer_id": "ANATR",
+        "company_name": "Ana Trujillo Emparedados y helados",
+        "product_family_count": "6",
+        "avg_order_value": "140.2949990272522"
+      },
+      {
+        "customer_id": "ANTON",
+        "company_name": "Antonio Moreno Taquer\u00eda",
+        "product_family_count": "7",
+        "avg_order_value": "468.26516222267344"
+      },
+      {
+        "customer_id": "AROUT",
+        "company_name": "Around the Horn",
+        "product_family_count": "7",
+        "avg_order_value": "557.9437489136743"
+      },
+      {
+        "customer_id": "BLAUS",
+        "company_name": "Blauer See Delikatessen",
+        "product_family_count": "8",
+        "avg_order_value": "269.98333263397217"
+      },
+      {
+        "customer_id": "BSBEV",
+        "company_name": "B's Beverages",
+        "product_family_count": "7",
+        "avg_order_value": "320.52105210956773"
+      },
+      {
+        "customer_id": "CACTU",
+        "company_name": "Cactus Comidas para llevar",
+        "product_family_count": "5",
+        "avg_order_value": "164.98181672529742"
+      },
+      {
+        "customer_id": "CENTC",
+        "company_name": "Centro comercial Moctezuma",
+        "product_family_count": "2",
+        "avg_order_value": "50.39999961853027"
+      },
+      {
+        "customer_id": "COMMI",
+        "company_name": "Com\u00e9rcio Mineiro",
+        "product_family_count": "6",
+        "avg_order_value": "423.41666560702856"
+      },
+      {
+        "customer_id": "CONSH",
+        "company_name": "Consolidated Holdings",
+        "product_family_count": "6",
+        "avg_order_value": "245.58571270533972"
+      },
+      {
+        "customer_id": "DRACD",
+        "company_name": "Drachenblut Delikatessen",
+        "product_family_count": "5",
+        "avg_order_value": "418.1344413757324"
+      },
+      {
+        "customer_id": "DUMON",
+        "company_name": "Du monde entier",
+        "product_family_count": "6",
+        "avg_order_value": "179.54444313049316"
+      },
+      {
+        "customer_id": "FAMIA",
+        "company_name": "Familia Arquibaldo",
+        "product_family_count": "6",
+        "avg_order_value": "241.6205837222145"
+      },
+      {
+        "customer_id": "FRANR",
+        "company_name": "France restauration",
+        "product_family_count": "5",
+        "avg_order_value": "528.6933339436849"
+      },
+      {
+        "customer_id": "FRANS",
+        "company_name": "Franchi S.p.A.",
+        "product_family_count": "5",
+        "avg_order_value": "154.56999979019164"
+      },
+      {
+        "customer_id": "FURIB",
+        "company_name": "Furia Bacalhau e Frutos do Mar",
+        "product_family_count": "7",
+        "avg_order_value": "401.7139063187036"
+      },
+      {
+        "customer_id": "GALED",
+        "company_name": "Galer\u00eda del gastr\u00f3nomo",
+        "product_family_count": "5",
+        "avg_order_value": "104.5874993801117"
+      },
+      {
+        "customer_id": "GODOS",
+        "company_name": "Godos Cocina T\u00edpica",
+        "product_family_count": "8",
+        "avg_order_value": "545.0647597512746"
+      },
+      {
+        "customer_id": "GOURL",
+        "company_name": "Gourmet Lanchonetes",
+        "product_family_count": "7",
+        "avg_order_value": "494.9491165034911"
+      },
+      {
+        "customer_id": "GROSR",
+        "company_name": "GROSELLA-Restaurante",
+        "product_family_count": "4",
+        "avg_order_value": "372.17499923706055"
+      }
+    ]
+  },
+  "HX15": {
+    "query_id": "HX15",
+    "question": "Bei welchen Versanddienstleistern haeufen sich verspaetete Lieferungen besonders bei hochrabattierten Auftraegen?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 8239,
+    "error": null,
+    "final_response_text": "Die Suche nach Tabellen f\u00fcr \"Lieferungen Versp\u00e4tungen\" und \"Auftr\u00e4ge Rabatte\" hat keine direkten Treffer ergeben, die alle Aspekte abdecken. Die Tabelle \"suppliers\" wurde erneut gefunden, aber sie enth\u00e4lt keine Informationen zu Lieferungen oder Auftr\u00e4gen.\n\nUm die Frage zu beantworten, ben\u00f6tige ich Informationen \u00fcber:\n1. Versanddienstleister (m\u00f6glicherweise in einer Lieferanten- oder Versandtabelle)\n2. Lieferungen und deren Versp\u00e4tungen\n3. Auftr\u00e4ge und deren Rabattinformationen\n\nEs scheint, dass die Datenbank m\u00f6glicherweise nicht die spezifischen Informationen enth\u00e4lt, die f\u00fcr diese Analyse erforderlich sind, oder dass die relevanten Tabellen anders benannt sind. Wenn du spezifische Tabellennamen oder weitere Details hast, die ich verwenden kann, lass es mich bitte wissen. Alternativ kann ich versuchen, nach allgemeinen Tabellen zu suchen, die m\u00f6glicherweise relevante Informationen enthalten.",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  }
+}

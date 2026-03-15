@@ -1,0 +1,170 @@
+{
+  "instructions": {
+    "labels": [
+      "CORRECT",
+      "PARTIAL",
+      "INCORRECT"
+    ],
+    "reason_codes": [
+      "MISSING_DISCOUNT_FACTOR",
+      "COUNT_NOT_DISTINCT",
+      "WRONG_AGGREGATION_GRAIN",
+      "MISSING_REQUIRED_TABLE",
+      "JOIN_PATH_VIOLATION",
+      "MISSING_TIME_GROUPING",
+      "TOP_K_NOT_APPLIED"
+    ]
+  },
+  "per_query": [
+    {
+      "query_id": "NW1",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": true,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW10",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW2",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW3",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW4",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": true,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW5",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": false,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW6",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": true,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW7",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW8",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": true,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    },
+    {
+      "query_id": "NW9",
+      "label": null,
+      "reason_codes": [],
+      "reviewer_notes": "",
+      "auto_summary": {
+        "required_tables_ok": true,
+        "strict_equal": false,
+        "same_cols_set_equal": false,
+        "positional_set_equal": false,
+        "common_cols_set_equal": null,
+        "candidate_sql_exec_error": null,
+        "reference_sql_exec_error": null
+      }
+    }
+  ]
+}

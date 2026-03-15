@@ -1,0 +1,596 @@
+{
+  "eval/datasets/cockpit_partner_queries_v1.jsonl": {
+    "count": 9,
+    "rows": [
+      {
+        "id": "CP1",
+        "question": "Wann müssen wir neues Ø56 Material bestellen?",
+        "source": "CockpitMitTabellen.docx",
+        "notes": "Hängt ab von aktuellem Lagerbestand (Rohmaterial, Halbfertigprodukte), Bestellungen und Wiederbeschaffungszeit."
+      },
+      {
+        "id": "CP2",
+        "question": "Wann haben wir Bestellung XY geliefert?",
+        "source": "CockpitMitTabellen.docx",
+        "notes": "Lieferauskunft zu einer konkreten Bestellung (XY als Platzhalter)."
+      },
+      {
+        "id": "CP3",
+        "question": "Wie viele Teile wurden in den Morgenstunden 04.00-07.00 Uhr gefertigt? Mehr oder weniger als von 08.00-11.00? (Zeiterfassung / ERP)",
+        "source": "CockpitMitTabellen.docx",
+        "notes": "Zeitfenstervergleich der Fertigungsmenge."
+      },
+      {
+        "id": "CP4",
+        "question": "Halten sich alle an die vorgeschriebenen Anwesenheits- und Pausenzeiten?",
+        "source": "CockpitMitTabellen.docx",
+        "notes": "Compliance-Frage aus Zeiterfassung."
+      },
+      {
+        "id": "CP5",
+        "question": "Was hat MA XY heute Morgen gemacht? (Startstempel Zeiterfassung / Rückmeldungen ERP)",
+        "source": "CockpitMitTabellen.docx",
+        "notes": "Mitarbeiterdetail (XY als Platzhalter), Querbezug Zeit und ERP."
+      },
+      {
+        "id": "CP6",
+        "question": "Wurde Material XY schon angeliefert? (Lagerbuchung ERP)",
+        "source": "CockpitMitTabellen.docx",
+        "notes": "Wareneingang/Lagerbuchung zu Material XY (Platzhalter)."
+      },
+      {
+        "id": "CP7",
+        "question": "Korrelieren nicht erfüllte Wartungspunkte mit Wartungskosten? (ZP / ReWe)",
+        "source": "CockpitMitTabellen.docx",
+        "notes": "Korrelationsfrage über ERP plus externes Wartungsobjekt."
+      },
+      {
+        "id": "CP8",
+        "question": "Verhältnis Vorgabe zu Ist (keine Felder!) pro Artikel pro Mitarbeiter? (ERP)",
+        "source": "CockpitMitTabellen.docx",
+        "notes": "Soll-Ist-Vergleich pro Artikel und Mitarbeiter."
+      },
+      {
+        "id": "CP9",
+        "question": "Abweichungen Start Zeiterfassung zu Start BDE (Zeit/ERP)",
+        "source": "CockpitMitTabellen.docx",
+        "notes": "Abgleich Startzeiten zwischen Zeiterfassung und BDE."
+      }
+    ]
+  },
+  "eval/datasets/northwind_queries_ambiguous_v1.jsonl": {
+    "count": 10,
+    "rows": [
+      {
+        "id": "NW1",
+        "question": "What products are most urgently at risk of stock-outs right now?"
+      },
+      {
+        "id": "NW2",
+        "question": "Which product categories actually generate the most revenue once discounts are considered?"
+      },
+      {
+        "id": "NW3",
+        "question": "Which customers order unusually often, and roughly how much business do they represent for us?"
+      },
+      {
+        "id": "NW4",
+        "question": "Which shipping providers are causing delay issues, and what is their shipment volume?"
+      },
+      {
+        "id": "NW5",
+        "question": "Which employees drive the most sales revenue after discounts?"
+      },
+      {
+        "id": "NW6",
+        "question": "What are our top-selling products by quantity?"
+      },
+      {
+        "id": "NW7",
+        "question": "Which suppliers tend to appear together in the same customer orders most often?"
+      },
+      {
+        "id": "NW8",
+        "question": "How does average order value differ across customer countries?"
+      },
+      {
+        "id": "NW9",
+        "question": "How many orders are still unshipped, and what are they worth after discounts?"
+      },
+      {
+        "id": "NW10",
+        "question": "How has revenue trended month by month after discounts?"
+      }
+    ]
+  },
+  "eval/datasets/northwind_queries_nonlexical_v1.jsonl": {
+    "count": 20,
+    "rows": [
+      {
+        "id": "NL1",
+        "question": "Which items are bringing in the most money overall after markdowns are applied?",
+        "source_query_id": "NW1"
+      },
+      {
+        "id": "NL2",
+        "question": "Which buyers contribute the largest discounted spend?",
+        "source_query_id": "NW3"
+      },
+      {
+        "id": "NL3",
+        "question": "Which delivery companies tend to be the slowest on average?",
+        "source_query_id": "NW4"
+      },
+      {
+        "id": "NL4",
+        "question": "Which item families are most affected by markdowns?",
+        "source_query_id": "NW6"
+      },
+      {
+        "id": "NL5",
+        "question": "Where are average basket values highest by buyer location?",
+        "source_query_id": "NW8"
+      },
+      {
+        "id": "NL6",
+        "question": "How does discounted income evolve month by month?",
+        "source_query_id": "NW10"
+      },
+      {
+        "id": "NL7",
+        "question": "Which upstream partners generate the most discounted turnover through their goods?",
+        "source_query_id": "NW11"
+      },
+      {
+        "id": "NL8",
+        "question": "For each freight carrier, how late are shipments on average and how often are they late?",
+        "source_query_id": "NW13"
+      },
+      {
+        "id": "NL9",
+        "question": "Which staff members serve the broadest buyer base?",
+        "source_query_id": "NW16"
+      },
+      {
+        "id": "NL10",
+        "question": "Which accounts have never transacted?",
+        "source_query_id": "NW17"
+      },
+      {
+        "id": "NL11",
+        "question": "Across months, how many transactions were created and how many missed the promised ship date?",
+        "source_query_id": "NW18"
+      },
+      {
+        "id": "NL12",
+        "question": "Which offerings most frequently receive high markdown rates?",
+        "source_query_id": "NW20"
+      },
+      {
+        "id": "NL13",
+        "question": "Which geographic areas are associated with the highest income through staff territory assignment?",
+        "source_query_id": "NW23"
+      },
+      {
+        "id": "NL14",
+        "question": "Who buys often but with relatively small ticket sizes?",
+        "source_query_id": "NW24"
+      },
+      {
+        "id": "NL15",
+        "question": "Which pairs of offerings are commonly bought together across different product families?",
+        "source_query_id": "NW27"
+      },
+      {
+        "id": "NL16",
+        "question": "Which vendors have offerings that never got sold?",
+        "source_query_id": "NW30"
+      },
+      {
+        "id": "NL17",
+        "question": "Which audience segments produce the most discounted turnover?",
+        "source_query_id": "NW32"
+      },
+      {
+        "id": "NL18",
+        "question": "Which team members most often sell into destination countries different from their own?",
+        "source_query_id": "NW33"
+      },
+      {
+        "id": "NL19",
+        "question": "Within each offering family, who is the leading contributor by revenue share?",
+        "source_query_id": "NW37"
+      },
+      {
+        "id": "NL20",
+        "question": "In which months is logistics cost highest relative to earned turnover?",
+        "source_query_id": "NW39"
+      }
+    ]
+  },
+  "eval/datasets/northwind_queries_crosslingual_hard_v1.jsonl": {
+    "count": 12,
+    "rows": [
+      {
+        "id": "CL1",
+        "question": "Welche Lieferanten erzielen den höchsten Umsatz nach Rabatten über ihre Artikel?",
+        "source_query_id": "NW11"
+      },
+      {
+        "id": "CL2",
+        "question": "Welche Kundenländer bringen den größten Gesamtumsatz nach Abzügen?",
+        "source_query_id": "NW12"
+      },
+      {
+        "id": "CL3",
+        "question": "Bei welchen Versanddienstleistern sind Sendungen im Schnitt am häufigsten verspätet?",
+        "source_query_id": "NW13"
+      },
+      {
+        "id": "CL4",
+        "question": "Welche Mitarbeitenden betreuen die meisten unterschiedlichen Kundenkonten?",
+        "source_query_id": "NW16"
+      },
+      {
+        "id": "CL5",
+        "question": "Welche Kundenkonten haben bislang keinerlei Bestellung ausgelöst?",
+        "source_query_id": "NW17"
+      },
+      {
+        "id": "CL6",
+        "question": "Wie entwickeln sich pro Monat erfasste Aufträge und verspätete Auslieferungen?",
+        "source_query_id": "NW18"
+      },
+      {
+        "id": "CL7",
+        "question": "Welche Regionen sind über Gebietszuordnungen mit dem höchsten Umsatz verbunden?",
+        "source_query_id": "NW23"
+      },
+      {
+        "id": "CL8",
+        "question": "Welche Kunden bestellen häufig, aber mit eher kleinem Warenkorbwert?",
+        "source_query_id": "NW24"
+      },
+      {
+        "id": "CL9",
+        "question": "Bei welchen Lieferanten gibt es Produkte ohne jeglichen Verkauf?",
+        "source_query_id": "NW30"
+      },
+      {
+        "id": "CL10",
+        "question": "Welche Kundensegmente erzeugen den höchsten Erlös nach Rabatt?",
+        "source_query_id": "NW32"
+      },
+      {
+        "id": "CL11",
+        "question": "Welche Mitarbeitenden verkaufen häufig in andere Zielländer als ihr Heimatland?",
+        "source_query_id": "NW33"
+      },
+      {
+        "id": "CL12",
+        "question": "In welchen Monaten ist Fracht im Verhältnis zum Umsatz am teuersten?",
+        "source_query_id": "NW39"
+      }
+    ]
+  },
+  "eval/datasets/northwind_queries_complex_hard_v1.jsonl": {
+    "count": 15,
+    "rows": [
+      {
+        "id": "HX1",
+        "question": "Welche Kundenkonten haben ihren Monatsumsatz vom ersten zum letzten aktiven Monat am staerksten gesteigert (mindestens 5 Bestellungen insgesamt)?",
+        "complexity": "temporal_delta+cohort+aggregation"
+      },
+      {
+        "id": "HX2",
+        "question": "Welche Regionen erzielen hohen Umsatz, obwohl ihre Auftragszahl unter dem Median liegt?",
+        "complexity": "median_threshold+multi_hop_join"
+      },
+      {
+        "id": "HX3",
+        "question": "Bei welchen Versanddienstleistern ist der Anteil stark verspaeteter Sendungen (mehr als 3 Tage) am groessten?",
+        "complexity": "conditional_ratio+time_diff"
+      },
+      {
+        "id": "HX4",
+        "question": "In welchen Produktkategorien kommt mindestens 60 Prozent des rabattierten Umsatzes von nur einem Lieferanten?",
+        "complexity": "window_share+dominance"
+      },
+      {
+        "id": "HX5",
+        "question": "Welche Kunden haben ueberdurchschnittliche Rabattquote, aber unterdurchschnittlichen Nettoumsatz pro Bestellung?",
+        "complexity": "double_global_baseline+customer_stats"
+      },
+      {
+        "id": "HX6",
+        "question": "Welche Mitarbeitenden haben viele grenzueberschreitende Auftraege, aber unterdurchschnittlichen Umsatz je Auftrag?",
+        "complexity": "cross_border+ratio+global_baseline"
+      },
+      {
+        "id": "HX7",
+        "question": "Welche Produktpaare aus unterschiedlichen Kategorien werden ueberproportional oft gemeinsam gekauft (Lift gegenueber Unabhaengigkeit)?",
+        "complexity": "association_rules+pairwise+lift"
+      },
+      {
+        "id": "HX8",
+        "question": "In welchen Monaten stieg die Frachtkostenquote gegenueber dem Vormonat am staerksten?",
+        "complexity": "window_lag+ratio_delta"
+      },
+      {
+        "id": "HX9",
+        "question": "Welche Lieferanten haben viele Produkte, aber einen niedrigen Anteil verkaufter Produkte?",
+        "complexity": "coverage_ratio+anti_join"
+      },
+      {
+        "id": "HX10",
+        "question": "Welche Kundensegmente haben hohen Umsatz, aber geringe Wiederkaufrate (Bestellungen pro Kunde)?",
+        "complexity": "segment_join+ratio"
+      },
+      {
+        "id": "HX11",
+        "question": "Welche Laender kombinieren hohen Umsatz mit langer durchschnittlicher Lieferdauer?",
+        "complexity": "tradeoff_metrics+time_diff"
+      },
+      {
+        "id": "HX12",
+        "question": "Welche Kategorien haben nach Rabatt die hoechste Umsatzvolatilitaet zwischen Monaten?",
+        "complexity": "time_series+stddev"
+      },
+      {
+        "id": "HX13",
+        "question": "Welche Mitarbeitenden dominieren einzelne Regionen stark (Anteil groesser als 50 Prozent des Regionalumsatzes)?",
+        "complexity": "window_share+region_split"
+      },
+      {
+        "id": "HX14",
+        "question": "Welche Kunden bestellen haeufig verschiedene Produktfamilien, aber mit unterdurchschnittlichem Warenkorbwert?",
+        "complexity": "diversity+frequency+basket_value"
+      },
+      {
+        "id": "HX15",
+        "question": "Bei welchen Versanddienstleistern haeufen sich verspaetete Lieferungen besonders bei hochrabattierten Auftraegen?",
+        "complexity": "conditional_late_rate+discount_segment"
+      }
+    ]
+  },
+  "eval/datasets/northwind_queries_scout_gain_segment_v1.jsonl": {
+    "count": 3,
+    "rows": [
+      {
+        "id": "CL2",
+        "question": "Welche Kundenländer bringen den größten Gesamtumsatz nach Abzügen?",
+        "source_query_id": "NW12"
+      },
+      {
+        "id": "CL6",
+        "question": "Wie entwickeln sich pro Monat erfasste Aufträge und verspätete Auslieferungen?",
+        "source_query_id": "NW18"
+      },
+      {
+        "id": "CL10",
+        "question": "Welche Kundensegmente erzeugen den höchsten Erlös nach Rabatt?",
+        "source_query_id": "NW32"
+      }
+    ]
+  },
+  "eval/datasets/northwind_queries_scout_limit_probe_v2.jsonl": {
+    "count": 18,
+    "rows": [
+      {
+        "id": "P_CL2_L1",
+        "question": "Zeige den Umsatz nach Rabatt pro Kundenland.",
+        "intent": "CL2",
+        "level": "L1",
+        "abstraction": "direct_lexical"
+      },
+      {
+        "id": "P_CL2_L2",
+        "question": "Welche Kundenlaender liefern den groessten rabattbereinigten Umsatz?",
+        "intent": "CL2",
+        "level": "L2",
+        "abstraction": "direct_synonym"
+      },
+      {
+        "id": "P_CL2_L3",
+        "question": "Aus welchen Absatzmaerkten stammt der hoechste Nettoerloes nach Nachlaessen?",
+        "intent": "CL2",
+        "level": "L3",
+        "abstraction": "business_paraphrase"
+      },
+      {
+        "id": "P_CL2_L4",
+        "question": "Welche geographischen Zielmaerkte tragen am meisten zum bereinigten Verkaufsertrag bei?",
+        "intent": "CL2",
+        "level": "L4",
+        "abstraction": "implicit_entity"
+      },
+      {
+        "id": "P_CL2_L5",
+        "question": "In welchen Vertriebsraeumen entsteht der groesste Beitrag zum Nettoverkauf nach Preiszugestaendnissen?",
+        "intent": "CL2",
+        "level": "L5",
+        "abstraction": "implicit_jargon"
+      },
+      {
+        "id": "P_CL2_L6",
+        "question": "Welche Absatzraeume finanzieren den hoechsten Anteil am nachlass-bereinigten Erloes?",
+        "intent": "CL2",
+        "level": "L6",
+        "abstraction": "high_indirection"
+      },
+      {
+        "id": "P_CL6_L1",
+        "question": "Zeige pro Monat die Anzahl der Auftraege und der verspaeteten Auslieferungen.",
+        "intent": "CL6",
+        "level": "L1",
+        "abstraction": "direct_lexical"
+      },
+      {
+        "id": "P_CL6_L2",
+        "question": "Wie entwickeln sich monatlich Auftragseingaenge und Lieferverzoegerungen?",
+        "intent": "CL6",
+        "level": "L2",
+        "abstraction": "direct_synonym"
+      },
+      {
+        "id": "P_CL6_L3",
+        "question": "Wie verhalten sich Nachfrage und Lieferverzug im Monatsverlauf?",
+        "intent": "CL6",
+        "level": "L3",
+        "abstraction": "business_paraphrase"
+      },
+      {
+        "id": "P_CL6_L4",
+        "question": "Wie laufen Intake und Ueberfaelligkeit der Zustellung im monatlichen Takt zusammen?",
+        "intent": "CL6",
+        "level": "L4",
+        "abstraction": "implicit_entity"
+      },
+      {
+        "id": "P_CL6_L5",
+        "question": "Welche Monatsreihe zeigt gleichzeitig Auftragsfluss und verspaetete Zustellquote?",
+        "intent": "CL6",
+        "level": "L5",
+        "abstraction": "implicit_jargon"
+      },
+      {
+        "id": "P_CL6_L6",
+        "question": "In welcher zeitlichen Entwicklung koppeln sich Bestellaufkommen und Verzug in der Auslieferung?",
+        "intent": "CL6",
+        "level": "L6",
+        "abstraction": "high_indirection"
+      },
+      {
+        "id": "P_CL10_L1",
+        "question": "Zeige den Umsatz nach Rabatt je Kundensegment.",
+        "intent": "CL10",
+        "level": "L1",
+        "abstraction": "direct_lexical"
+      },
+      {
+        "id": "P_CL10_L2",
+        "question": "Welche Kundensegmente erzeugen den hoechsten Erloes nach Rabatt?",
+        "intent": "CL10",
+        "level": "L2",
+        "abstraction": "direct_synonym"
+      },
+      {
+        "id": "P_CL10_L3",
+        "question": "Welche Abnehmergruppen sind die wichtigsten Ertragsbringer nach Nachlaessen?",
+        "intent": "CL10",
+        "level": "L3",
+        "abstraction": "business_paraphrase"
+      },
+      {
+        "id": "P_CL10_L4",
+        "question": "Welche Profilgruppen im Kundenstamm monetarisieren am staerksten nach Preiszugestaendnissen?",
+        "intent": "CL10",
+        "level": "L4",
+        "abstraction": "implicit_entity"
+      },
+      {
+        "id": "P_CL10_L5",
+        "question": "Welche Portfoliotypen auf Kundenseite liefern den groessten Beitrag zum bereinigten Umsatz?",
+        "intent": "CL10",
+        "level": "L5",
+        "abstraction": "implicit_jargon"
+      },
+      {
+        "id": "P_CL10_L6",
+        "question": "Welche Kundencluster tragen am meisten zum Nettoertrag nach Zugestaendnissen bei?",
+        "intent": "CL10",
+        "level": "L6",
+        "abstraction": "high_indirection"
+      }
+    ]
+  },
+  "eval/datasets/northwind_queries_underspecified_v1.jsonl": {
+    "count": 12,
+    "rows": [
+      {
+        "id": "US_CL2_U1",
+        "question": "Woher kommt unser Nettoumsatz?",
+        "intent": "CL2",
+        "level": "U1",
+        "abstraction": "underspecified"
+      },
+      {
+        "id": "US_CL2_U2",
+        "question": "Welche Märkte tragen am meisten zum Erlös bei?",
+        "intent": "CL2",
+        "level": "U2",
+        "abstraction": "underspecified"
+      },
+      {
+        "id": "US_CL2_U3",
+        "question": "Wo verdienen wir nach Rabatten am meisten Geld?",
+        "intent": "CL2",
+        "level": "U3",
+        "abstraction": "underspecified"
+      },
+      {
+        "id": "US_CL3_U1",
+        "question": "Welcher Zusteller ist im Schnitt am unpünktlichsten?",
+        "intent": "CL3",
+        "level": "U1",
+        "abstraction": "underspecified"
+      },
+      {
+        "id": "US_CL3_U2",
+        "question": "Über wen kommt es am häufigsten zu Verzögerungen?",
+        "intent": "CL3",
+        "level": "U2",
+        "abstraction": "underspecified"
+      },
+      {
+        "id": "US_CL3_U3",
+        "question": "Bei welchem Versandkanal ist die Terminlage am schwächsten?",
+        "intent": "CL3",
+        "level": "U3",
+        "abstraction": "underspecified"
+      },
+      {
+        "id": "US_CL6_U1",
+        "question": "Wie läuft es monatlich mit Aufträgen und Pünktlichkeit?",
+        "intent": "CL6",
+        "level": "U1",
+        "abstraction": "underspecified"
+      },
+      {
+        "id": "US_CL6_U2",
+        "question": "Wie entwickeln sich Nachfrage und Verspätungen über die Zeit?",
+        "intent": "CL6",
+        "level": "U2",
+        "abstraction": "underspecified"
+      },
+      {
+        "id": "US_CL6_U3",
+        "question": "Zeig den Monatsverlauf von Volumen und Lieferproblemen.",
+        "intent": "CL6",
+        "level": "U3",
+        "abstraction": "underspecified"
+      },
+      {
+        "id": "US_CL10_U1",
+        "question": "Welche Kundengruppen bringen den meisten Nettoerlös?",
+        "intent": "CL10",
+        "level": "U1",
+        "abstraction": "underspecified"
+      },
+      {
+        "id": "US_CL10_U2",
+        "question": "Wer sind unsere wertvollsten Segmente nach Rabatten?",
+        "intent": "CL10",
+        "level": "U2",
+        "abstraction": "underspecified"
+      },
+      {
+        "id": "US_CL10_U3",
+        "question": "Welche Zielgruppen liefern den größten Beitrag zum Umsatz nach Abzügen?",
+        "intent": "CL10",
+        "level": "U3",
+        "abstraction": "underspecified"
+      }
+    ]
+  }
+}

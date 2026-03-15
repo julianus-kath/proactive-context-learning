@@ -1,0 +1,252 @@
+{
+  "generated_at_utc": "2026-03-02T14:11:40.137470+00:00",
+  "dataset": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/datasets/northwind_queries_scout_limit_ladder_v1.jsonl",
+  "pairs": [
+    {
+      "on": "20260302_135751_scout_limit_ladder_v1_process_query_scout_on_r1",
+      "off": "20260302_135320_scout_limit_ladder_v1_process_query_scout_off_aligned_r1_recover",
+      "cmp": "20260302_140002_process_query_ab_scout_limit_ladder_v1_on_vs_off_aligned_r1"
+    },
+    {
+      "on": "20260302_140029_scout_limit_ladder_v1_process_query_scout_on_r2",
+      "off": "20260302_140259_scout_limit_ladder_v1_process_query_scout_off_aligned_r2",
+      "cmp": "20260302_140511_process_query_ab_scout_limit_ladder_v1_on_vs_off_aligned_r2"
+    },
+    {
+      "on": "20260302_140859_scout_limit_ladder_v1_process_query_scout_on_r3",
+      "off": "20260302_140659_scout_limit_ladder_v1_process_query_scout_off_aligned_r3",
+      "cmp": "20260302_141110_process_query_ab_scout_limit_ladder_v1_on_vs_off_aligned_r3"
+    }
+  ],
+  "tiers": {
+    "T1": {
+      "n": 9,
+      "on_req": 3,
+      "off_req": 6,
+      "on_strict": 0,
+      "off_strict": 4,
+      "on_sql": 7,
+      "off_sql": 8,
+      "on_success": 9,
+      "off_success": 9,
+      "delta_req_rate": -0.3333333333333333,
+      "delta_sql_rate": -0.1111111111111111,
+      "delta_strict_rate": -0.4444444444444444,
+      "coverage_on": 0.5555555555555556,
+      "coverage_off": 0.7777777777777778,
+      "coverage_delta": -0.2222222222222222
+    },
+    "T2": {
+      "n": 9,
+      "on_req": 2,
+      "off_req": 0,
+      "on_strict": 1,
+      "off_strict": 0,
+      "on_sql": 8,
+      "off_sql": 4,
+      "on_success": 9,
+      "off_success": 9,
+      "delta_req_rate": 0.2222222222222222,
+      "delta_sql_rate": 0.4444444444444444,
+      "delta_strict_rate": 0.1111111111111111,
+      "coverage_on": 0.5555555555555556,
+      "coverage_off": 0.2222222222222222,
+      "coverage_delta": 0.33333333333333337
+    },
+    "T3": {
+      "n": 9,
+      "on_req": 2,
+      "off_req": 4,
+      "on_strict": 2,
+      "off_strict": 3,
+      "on_sql": 5,
+      "off_sql": 5,
+      "on_success": 9,
+      "off_success": 9,
+      "delta_req_rate": -0.2222222222222222,
+      "delta_sql_rate": 0.0,
+      "delta_strict_rate": -0.1111111111111111,
+      "coverage_on": 0.3888888888888889,
+      "coverage_off": 0.5,
+      "coverage_delta": -0.1111111111111111
+    },
+    "T4": {
+      "n": 9,
+      "on_req": 0,
+      "off_req": 0,
+      "on_strict": 0,
+      "off_strict": 0,
+      "on_sql": 4,
+      "off_sql": 2,
+      "on_success": 9,
+      "off_success": 9,
+      "delta_req_rate": 0.0,
+      "delta_sql_rate": 0.2222222222222222,
+      "delta_strict_rate": 0.0,
+      "coverage_on": 0.2222222222222222,
+      "coverage_off": 0.1111111111111111,
+      "coverage_delta": 0.1111111111111111
+    },
+    "T5": {
+      "n": 9,
+      "on_req": 1,
+      "off_req": 0,
+      "on_strict": 0,
+      "off_strict": 0,
+      "on_sql": 7,
+      "off_sql": 6,
+      "on_success": 9,
+      "off_success": 9,
+      "delta_req_rate": 0.1111111111111111,
+      "delta_sql_rate": 0.1111111111111111,
+      "delta_strict_rate": 0.0,
+      "coverage_on": 0.4444444444444444,
+      "coverage_off": 0.3333333333333333,
+      "coverage_delta": 0.1111111111111111
+    }
+  },
+  "by_source": {
+    "CL2": {
+      "T1": {
+        "n": 3,
+        "on_req": 0,
+        "off_req": 2,
+        "on_sql": 3,
+        "off_sql": 3,
+        "on_strict": 0,
+        "off_strict": 2
+      },
+      "T2": {
+        "n": 3,
+        "on_req": 0,
+        "off_req": 0,
+        "on_sql": 3,
+        "off_sql": 3,
+        "on_strict": 0,
+        "off_strict": 0
+      },
+      "T3": {
+        "n": 3,
+        "on_req": 0,
+        "off_req": 0,
+        "on_sql": 3,
+        "off_sql": 1,
+        "on_strict": 0,
+        "off_strict": 0
+      },
+      "T4": {
+        "n": 3,
+        "on_req": 0,
+        "off_req": 0,
+        "on_sql": 3,
+        "off_sql": 2,
+        "on_strict": 0,
+        "off_strict": 0
+      },
+      "T5": {
+        "n": 3,
+        "on_req": 0,
+        "off_req": 0,
+        "on_sql": 3,
+        "off_sql": 3,
+        "on_strict": 0,
+        "off_strict": 0
+      }
+    },
+    "CL6": {
+      "T1": {
+        "n": 3,
+        "on_req": 3,
+        "off_req": 3,
+        "on_sql": 3,
+        "off_sql": 3,
+        "on_strict": 0,
+        "off_strict": 0
+      },
+      "T2": {
+        "n": 3,
+        "on_req": 2,
+        "off_req": 0,
+        "on_sql": 2,
+        "off_sql": 0,
+        "on_strict": 0,
+        "off_strict": 0
+      },
+      "T3": {
+        "n": 3,
+        "on_req": 0,
+        "off_req": 1,
+        "on_sql": 0,
+        "off_sql": 1,
+        "on_strict": 0,
+        "off_strict": 0
+      },
+      "T4": {
+        "n": 3,
+        "on_req": 0,
+        "off_req": 0,
+        "on_sql": 0,
+        "off_sql": 0,
+        "on_strict": 0,
+        "off_strict": 0
+      },
+      "T5": {
+        "n": 3,
+        "on_req": 1,
+        "off_req": 0,
+        "on_sql": 1,
+        "off_sql": 0,
+        "on_strict": 0,
+        "off_strict": 0
+      }
+    },
+    "CL10": {
+      "T1": {
+        "n": 3,
+        "on_req": 0,
+        "off_req": 1,
+        "on_sql": 1,
+        "off_sql": 2,
+        "on_strict": 0,
+        "off_strict": 2
+      },
+      "T2": {
+        "n": 3,
+        "on_req": 0,
+        "off_req": 0,
+        "on_sql": 3,
+        "off_sql": 1,
+        "on_strict": 1,
+        "off_strict": 0
+      },
+      "T3": {
+        "n": 3,
+        "on_req": 2,
+        "off_req": 3,
+        "on_sql": 2,
+        "off_sql": 3,
+        "on_strict": 2,
+        "off_strict": 3
+      },
+      "T4": {
+        "n": 3,
+        "on_req": 0,
+        "off_req": 0,
+        "on_sql": 1,
+        "off_sql": 0,
+        "on_strict": 0,
+        "off_strict": 0
+      },
+      "T5": {
+        "n": 3,
+        "on_req": 0,
+        "off_req": 0,
+        "on_sql": 3,
+        "off_sql": 3,
+        "on_strict": 0,
+        "off_strict": 0
+      }
+    }
+  },
+  "limit_boundary": "starts at T2 but unstable across later tiers"
+}

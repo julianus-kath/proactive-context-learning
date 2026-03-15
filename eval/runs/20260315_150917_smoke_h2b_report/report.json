@@ -1,0 +1,268 @@
+{
+  "generated_at_utc": "2026-03-15T15:09:17.862824Z",
+  "experiment": {
+    "endpoints": [
+      "http://localhost:5001"
+    ],
+    "datasets": [
+      "eval/datasets/northwind_queries_underspecified_v1.jsonl"
+    ],
+    "modes": [
+      "scout_on"
+    ],
+    "scoring_logic": "required-table grounding with surfaced precedence final_sql > ranked > discovery"
+  },
+  "label_normalization_summary": {
+    "source": "eval/runs/20260315_150849_smoke_label_normalization/label_normalization.json",
+    "exact": 9,
+    "alias_prefix_normalized": 4,
+    "manual_confirmed": 0,
+    "unresolved": 0
+  },
+  "aggregate_table": [
+    {
+      "mode": "scout_on",
+      "number_of_queries": 12,
+      "mean_required_table_recall": 0.24444444444444444,
+      "queries_with_all_required_tables_surfaced": 1,
+      "sql_present_count": 5,
+      "sql_execution_success_count": 5,
+      "median_latency_ms": 9871.5,
+      "policy_violations": 0
+    }
+  ],
+  "per_query_by_mode": {
+    "scout_on": [
+      {
+        "query_id": "US_CL10_U1",
+        "required_tables": [
+          "customer_demographics",
+          "customer_customer_demo",
+          "customers",
+          "orders",
+          "order_details"
+        ],
+        "surfaced_tables": [
+          "customer_customer_demo",
+          "customer_demographics",
+          "customers",
+          "orders",
+          "order_details"
+        ],
+        "required_table_recall": 1.0,
+        "required_tables_ok": true,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 9907,
+        "notes": [
+          "missing_traces=discovery,ranked"
+        ]
+      },
+      {
+        "query_id": "US_CL10_U2",
+        "required_tables": [
+          "customer_demographics",
+          "customer_customer_demo",
+          "customers",
+          "orders",
+          "order_details"
+        ],
+        "surfaced_tables": [
+          "customer_customer_demo",
+          "customer_demographics",
+          "orders"
+        ],
+        "required_table_recall": 0.6,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 10441,
+        "notes": [
+          "missing_required=customers,order_details",
+          "missing_traces=discovery,ranked"
+        ]
+      },
+      {
+        "query_id": "US_CL10_U3",
+        "required_tables": [
+          "customer_demographics",
+          "customer_customer_demo",
+          "customers",
+          "orders",
+          "order_details"
+        ],
+        "surfaced_tables": [],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": false,
+        "sql_execution_success": null,
+        "latency_ms": 6047,
+        "notes": [
+          "missing_required=customer_demographics,customer_customer_demo,customers,orders,order_details",
+          "missing_traces=discovery,ranked"
+        ]
+      },
+      {
+        "query_id": "US_CL2_U1",
+        "required_tables": [
+          "customers",
+          "orders",
+          "order_details"
+        ],
+        "surfaced_tables": [
+          "order_details"
+        ],
+        "required_table_recall": 0.3333333333333333,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 20312,
+        "notes": [
+          "missing_required=customers,orders",
+          "missing_traces=discovery,ranked"
+        ]
+      },
+      {
+        "query_id": "US_CL2_U2",
+        "required_tables": [
+          "customers",
+          "orders",
+          "order_details"
+        ],
+        "surfaced_tables": [
+          "orders",
+          "order_details"
+        ],
+        "required_table_recall": 0.6666666666666666,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 7951,
+        "notes": [
+          "missing_required=customers",
+          "missing_traces=discovery,ranked"
+        ]
+      },
+      {
+        "query_id": "US_CL2_U3",
+        "required_tables": [
+          "customers",
+          "orders",
+          "order_details"
+        ],
+        "surfaced_tables": [
+          "order_details"
+        ],
+        "required_table_recall": 0.3333333333333333,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 13328,
+        "notes": [
+          "missing_required=customers,orders",
+          "missing_traces=discovery,ranked"
+        ]
+      },
+      {
+        "query_id": "US_CL3_U1",
+        "required_tables": [
+          "orders",
+          "shippers"
+        ],
+        "surfaced_tables": [],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": false,
+        "sql_execution_success": null,
+        "latency_ms": 7789,
+        "notes": [
+          "missing_required=orders,shippers",
+          "missing_traces=discovery,ranked"
+        ]
+      },
+      {
+        "query_id": "US_CL3_U2",
+        "required_tables": [
+          "orders",
+          "shippers"
+        ],
+        "surfaced_tables": [],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": false,
+        "sql_execution_success": null,
+        "latency_ms": 14839,
+        "notes": [
+          "missing_required=orders,shippers",
+          "missing_traces=discovery,ranked"
+        ]
+      },
+      {
+        "query_id": "US_CL3_U3",
+        "required_tables": [
+          "orders",
+          "shippers"
+        ],
+        "surfaced_tables": [],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": false,
+        "sql_execution_success": null,
+        "latency_ms": 9836,
+        "notes": [
+          "missing_required=orders,shippers",
+          "missing_traces=discovery,ranked"
+        ]
+      },
+      {
+        "query_id": "US_CL6_U1",
+        "required_tables": [
+          "orders"
+        ],
+        "surfaced_tables": [],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": false,
+        "sql_execution_success": null,
+        "latency_ms": 8765,
+        "notes": [
+          "missing_required=orders",
+          "missing_traces=discovery,ranked"
+        ]
+      },
+      {
+        "query_id": "US_CL6_U2",
+        "required_tables": [
+          "orders"
+        ],
+        "surfaced_tables": [],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": false,
+        "sql_execution_success": null,
+        "latency_ms": 5775,
+        "notes": [
+          "missing_required=orders",
+          "missing_traces=discovery,ranked"
+        ]
+      },
+      {
+        "query_id": "US_CL6_U3",
+        "required_tables": [
+          "orders"
+        ],
+        "surfaced_tables": [],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": false,
+        "sql_execution_success": null,
+        "latency_ms": 13837,
+        "notes": [
+          "missing_required=orders",
+          "missing_traces=discovery,ranked"
+        ]
+      }
+    ]
+  },
+  "interpretation": "Primary signal: required-table grounding under full `/process_query` pipeline. Best mean required-table recall in this run set: `scout_on`."
+}

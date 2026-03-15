@@ -1,0 +1,359 @@
+{
+  "Q1": {
+    "query_id": "Q1",
+    "question": "Wann m\u00fcssen wir neues \u00d856 Material nachbestellen, basierend auf aktuellem Lagerbestand (Rohmaterial + Halbfertigprodukte), offenen Kundenauftr\u00e4gen und Wiederbeschaffungszeit?",
+    "status": "success",
+    "final_answer_text": "Die Abfrage hat keine Ergebnisse f\u00fcr den aktuellen Bestand oder den offenen Bedarf an \u00d856 Material geliefert. Dies k\u00f6nnte darauf hindeuten, dass entweder keine Best\u00e4nde oder Auftr\u00e4ge f\u00fcr dieses Material in der Datenbank vorhanden sind, oder dass die Artikelnummer m\u00f6glicherweise anders gespeichert ist.\n\nUm sicherzustellen, dass wir die korrekten Daten abfragen, k\u00f6nnten wir die Artikelnummern in der Datenbank \u00fcberpr\u00fcfen oder alternative Bezeichnungen f\u00fcr das Material verwenden. Wenn du weitere Informationen oder eine andere Artikelnummer hast, lass es mich wissen, damit ich die Abfrage entsprechend anpassen kann.",
+    "sql_generated": [
+      "-- Schritt 1: Aktueller Bestand an \u00d856 Material\nSELECT SUM(lb.Bestand) AS AktuellerBestand\nFROM dbo.KHKLagerplatzbestaende lb\nWHERE lb.Artikelnummer = '\u00d856'\n\nUNION ALL\n\n-- Schritt 2: Aktueller Bestand an Halbfertigprodukten \u00d856\nSELECT SUM(hf.AktuellerBestandHE) AS AktuellerBestand\nFROM dbo.tKHKPpsHalbfertigeErzeugnisse hf\nWHERE hf.Artikelnummer = '\u00d856'\n\nUNION ALL\n\n-- Schritt 3: Offener Bedarf (Kundenauftr\u00e4ge) f\u00fcr \u00d856\nSELECT SUM(la.Bestellt - la.GGGeliefert) AS OffenerBedarf\nFROM dbo.tKHKCheflisteLieferbareAuftraege la\nWHERE la.Artikelnummer = '\u00d856'"
+    ],
+    "sql_executed": [
+      "-- Schritt 1: Aktueller Bestand an \u00d856 Material\nSELECT SUM(lb.Bestand) AS AktuellerBestand\nFROM dbo.KHKLagerplatzbestaende lb\nWHERE lb.Artikelnummer = '\u00d856'\n\nUNION ALL\n\n-- Schritt 2: Aktueller Bestand an Halbfertigprodukten \u00d856\nSELECT SUM(hf.AktuellerBestandHE) AS AktuellerBestand\nFROM dbo.tKHKPpsHalbfertigeErzeugnisse hf\nWHERE hf.Artikelnummer = '\u00d856'\n\nUNION ALL\n\n-- Schritt 3: Offener Bedarf (Kundenauftr\u00e4ge) f\u00fcr \u00d856\nSELECT SUM(la.Bestellt - la.GGGeliefert) AS OffenerBedarf\nFROM dbo.tKHKCheflisteLieferbareAuftraege la\nWHERE la.Artikelnummer = '\u00d856'"
+    ],
+    "tables_used": [
+      "dbo.KHKLagerplatzbestaende",
+      "dbo.tKHKPpsHalbfertigeErzeugnisse",
+      "dbo.tKHKCheflisteLieferbareAuftraege"
+    ],
+    "row_count": 3,
+    "latency_ms_total": 18563,
+    "retries": 0,
+    "result_preview": [
+      {
+        "AktuellerBestand": "None"
+      },
+      {
+        "AktuellerBestand": "None"
+      },
+      {
+        "AktuellerBestand": "None"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "Q2": {
+    "query_id": "Q2",
+    "question": "Wann wurde die Bestellung 2020-10144 geliefert (Lieferdatum + Status), und gab es Teillieferungen?",
+    "status": "success",
+    "final_answer_text": "Es wurden keine Daten f\u00fcr die Bestellung mit der Nummer 2020-10144 in der Tabelle `KHKPpsFfBestellmengen` gefunden. Dies k\u00f6nnte bedeuten, dass die Bestellung entweder nicht existiert oder dass die Daten in einer anderen Tabelle gespeichert sind. \n\nFalls du weitere Informationen ben\u00f6tigst oder eine andere Bestellung \u00fcberpr\u00fcfen m\u00f6chtest, lass es mich wissen!",
+    "sql_generated": [
+      "SELECT BelIdBestellung, Liefermenge, Bestellmenge, Timestamp FROM dbo.KHKPpsFfBestellmengen WHERE BelIdBestellung = 202010144"
+    ],
+    "sql_executed": [
+      "SELECT BelIdBestellung, Liefermenge, Bestellmenge, Timestamp FROM dbo.KHKPpsFfBestellmengen WHERE BelIdBestellung = 202010144"
+    ],
+    "tables_used": [
+      "dbo.KHKPpsFfBestellmengen"
+    ],
+    "row_count": 0,
+    "latency_ms_total": 7347,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "Q3": {
+    "query_id": "Q3",
+    "question": "Wie viele Teile wurden in den Morgenstunden 04:00\u201307:00 produziert im Vergleich zu 08:00\u201311:00 (letzte 14 Tage)?",
+    "status": "success",
+    "final_answer_text": "In den letzten 14 Tagen wurden in den Morgenstunden von 04:00 bis 07:00 insgesamt 972 Teile produziert, w\u00e4hrend von 08:00 bis 11:00 insgesamt 1911 Teile produziert wurden.",
+    "sql_generated": [
+      "SELECT \n    SUM(CASE WHEN DATEPART(hour, DatumZeitStart) BETWEEN 4 AND 7 THEN Menge ELSE 0 END) AS Fruehschicht_0407,\n    SUM(CASE WHEN DATEPART(hour, DatumZeitStart) BETWEEN 8 AND 11 THEN Menge ELSE 0 END) AS Vormittag_0811\nFROM dbo.KHKPpsRueckmeldungen\nWHERE DatumZeitStart >= DATEADD(day, -14, GETDATE())"
+    ],
+    "sql_executed": [
+      "SELECT \n    SUM(CASE WHEN DATEPART(hour, DatumZeitStart) BETWEEN 4 AND 7 THEN Menge ELSE 0 END) AS Fruehschicht_0407,\n    SUM(CASE WHEN DATEPART(hour, DatumZeitStart) BETWEEN 8 AND 11 THEN Menge ELSE 0 END) AS Vormittag_0811\nFROM dbo.KHKPpsRueckmeldungen\nWHERE DatumZeitStart >= DATEADD(day, -14, GETDATE())"
+    ],
+    "tables_used": [
+      "dbo.KHKPpsRueckmeldungen"
+    ],
+    "row_count": 1,
+    "latency_ms_total": 10471,
+    "retries": 0,
+    "result_preview": [
+      {
+        "Fruehschicht_0407": "972.0",
+        "Vormittag_0811": "1911.0"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "Q4": {
+    "query_id": "Q4",
+    "question": "Halten sich alle Mitarbeitenden an die vorgeschriebenen Anwesenheits- und Pausenzeiten (letzte 30 Tage) \u2013 und wer sind die gr\u00f6ssten Ausreisser?",
+    "status": "success",
+    "final_answer_text": "In den letzten 30 Tagen gab es zwei Mitarbeitende, die die gr\u00f6\u00dften Ausrei\u00dfer bei den Anwesenheitszeiten waren. Beide hatten jeweils einen Versto\u00df mit einer \u00dcberschreitung von 1440 Minuten (24 Stunden) im Durchschnitt. Dies deutet auf einen m\u00f6glichen Fehler in der Zeiterfassung hin, da eine so lange \u00dcberschreitung ungew\u00f6hnlich ist.",
+    "sql_generated": [
+      "SELECT TOP 5\n    mb.ConnID AS Mitarbeiternummer,\n    COUNT(*) AS AnzahlVerstoesse,\n    SUM(DATEDIFF(minute, mb.DatumStart, mb.DatumEnde)) AS GesamtUeberzugMinuten,\n    AVG(DATEDIFF(minute, mb.DatumStart, mb.DatumEnde)) AS DurchschnittMinuten\nFROM dbo.tKHKPpsMitarbeiterBuchungen mb\nWHERE mb.DatumStart >= DATEADD(day, -30, GETDATE())\n  AND mb.DatumEnde > mb.DatumStart  -- Nur \u00dcberschreitungen\nGROUP BY mb.ConnID\nORDER BY GesamtUeberzugMinuten DESC"
+    ],
+    "sql_executed": [
+      "SELECT TOP 5\n    mb.ConnID AS Mitarbeiternummer,\n    COUNT(*) AS AnzahlVerstoesse,\n    SUM(DATEDIFF(minute, mb.DatumStart, mb.DatumEnde)) AS GesamtUeberzugMinuten,\n    AVG(DATEDIFF(minute, mb.DatumStart, mb.DatumEnde)) AS DurchschnittMinuten\nFROM dbo.tKHKPpsMitarbeiterBuchungen mb\nWHERE mb.DatumStart >= DATEADD(day, -30, GETDATE())\n  AND mb.DatumEnde > mb.DatumStart  -- Nur \u00dcberschreitungen\nGROUP BY mb.ConnID\nORDER BY GesamtUeberzugMinuten DESC"
+    ],
+    "tables_used": [
+      "dbo.tKHKPpsMitarbeiterBuchungen"
+    ],
+    "row_count": 2,
+    "latency_ms_total": 18580,
+    "retries": 0,
+    "result_preview": [
+      {
+        "Mitarbeiternummer": "35",
+        "AnzahlVerstoesse": "1",
+        "GesamtUeberzugMinuten": "1440",
+        "DurchschnittMinuten": "1440"
+      },
+      {
+        "Mitarbeiternummer": "2",
+        "AnzahlVerstoesse": "1",
+        "GesamtUeberzugMinuten": "1440",
+        "DurchschnittMinuten": "1440"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "Q5": {
+    "query_id": "Q5",
+    "question": "Was hat der Mitarbeitende [MITARBEITER] heute Morgen gemacht (04:00\u201311:00)? Bitte nach T\u00e4tigkeit/Auftrag gruppieren (Zeiterfassung + ERP-R\u00fcckmeldungen).",
+    "status": "success",
+    "final_answer_text": "Es wurden keine Aktivit\u00e4ten f\u00fcr den Mitarbeiter [MITARBEITER] heute Morgen (04:00\u201311:00) in der Datenbank gefunden. M\u00f6glicherweise hat der Mitarbeiter in diesem Zeitraum keine Buchungen vorgenommen oder es gibt einen Fehler bei der Eingabe des Platzhalters [MITARBEITER]. Bitte \u00fcberpr\u00fcfe die Eingabe oder den Zeitraum, um sicherzustellen, dass die Daten korrekt sind.",
+    "sql_generated": [
+      "SELECT Auftrag, Matchcode, SUM(DATEDIFF(minute, DatumStart, DatumEnde)) AS DauerMinuten\nFROM dbo.tKHKPpsMitarbeiterBuchungen\nWHERE Matchcode = '[MITARBEITER]'\n  AND CAST(DatumStart AS DATE) = '2026-01-11'\n  AND DATEPART(hour, DatumStart) BETWEEN 4 AND 11\nGROUP BY Auftrag, Matchcode\nORDER BY DauerMinuten DESC;"
+    ],
+    "sql_executed": [
+      "SELECT Auftrag, Matchcode, SUM(DATEDIFF(minute, DatumStart, DatumEnde)) AS DauerMinuten\nFROM dbo.tKHKPpsMitarbeiterBuchungen\nWHERE Matchcode = '[MITARBEITER]'\n  AND CAST(DatumStart AS DATE) = '2026-01-11'\n  AND DATEPART(hour, DatumStart) BETWEEN 4 AND 11\nGROUP BY Auftrag, Matchcode\nORDER BY DauerMinuten DESC;"
+    ],
+    "tables_used": [
+      "dbo.tKHKPpsMitarbeiterBuchungen"
+    ],
+    "row_count": 0,
+    "latency_ms_total": 6411,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "Q6": {
+    "query_id": "Q6",
+    "question": "Wurde Material [MATERIAL] bereits angeliefert und im Lager gebucht (Wareneingang)? Falls nein: was ist der aktuelle Status der zugeh\u00f6rigen Bestellung/Lieferung?",
+    "status": "success",
+    "final_answer_text": "Es wurden keine Ergebnisse zur\u00fcckgegeben. Das bedeutet, dass das Material mit der angegebenen Artikelnummer [MATERIAL] weder im Lager gebucht wurde noch eine offene Bestellung in der Datenbank existiert. Bitte \u00fcberpr\u00fcfe die Artikelnummer oder stelle sicher, dass die Daten korrekt in der Datenbank erfasst sind.",
+    "sql_generated": [
+      "-- Check if the material has been received and booked in the warehouse\nSELECT Artikelnummer, LetzteBewegung, CAST(NULL AS varchar) AS Status\nFROM dbo.KHKArtikelLagerbewegungen\nWHERE Artikelnummer = '[MATERIAL]'\n\nUNION ALL\n\n-- If not received, check the status of the associated order/delivery\nSELECT Artikelnummer, NULL AS LetzteBewegung, 'Bestellung offen' AS Status\nFROM dbo.KHKArtikelLieferant\nWHERE Artikelnummer = '[MATERIAL]'\n  AND NOT EXISTS (\n      SELECT 1 FROM dbo.KHKArtikelLagerbewegungen\n      WHERE Artikelnummer = '[MATERIAL]'\n  )"
+    ],
+    "sql_executed": [
+      "-- Check if the material has been received and booked in the warehouse\nSELECT Artikelnummer, LetzteBewegung, CAST(NULL AS varchar) AS Status\nFROM dbo.KHKArtikelLagerbewegungen\nWHERE Artikelnummer = '[MATERIAL]'\n\nUNION ALL\n\n-- If not received, check the status of the associated order/delivery\nSELECT Artikelnummer, NULL AS LetzteBewegung, 'Bestellung offen' AS Status\nFROM dbo.KHKArtikelLieferant\nWHERE Artikelnummer = '[MATERIAL]'\n  AND NOT EXISTS (\n      SELECT 1 FROM dbo.KHKArtikelLagerbewegungen\n      WHERE Artikelnummer = '[MATERIAL]'\n  )"
+    ],
+    "tables_used": [
+      "dbo.KHKArtikelLagerbewegungen",
+      "dbo.KHKArtikelLieferant"
+    ],
+    "row_count": 0,
+    "latency_ms_total": 13989,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "Q7": {
+    "query_id": "Q7",
+    "question": "Korrelieren nicht erf\u00fcllte Wartungspunkte mit h\u00f6heren Wartungskosten (letzte 12 Monate)? Bitte mit Kennzahl/Trend und kurzer Interpretation.",
+    "status": "success",
+    "final_answer_text": "Die Abfrage ergab keine Daten f\u00fcr nicht erf\u00fcllte Wartungspunkte oder Wartungskosten in den letzten 12 Monaten. Dies k\u00f6nnte darauf hindeuten, dass entweder keine Wartungspunkte in diesem Zeitraum nicht erf\u00fcllt wurden oder dass die Datenbank keine entsprechenden Eintr\u00e4ge enth\u00e4lt.\n\nFalls du weitere Informationen ben\u00f6tigst oder die Abfrage angepasst werden soll, lass es mich wissen!",
+    "sql_generated": [
+      "SELECT \n    SUM(CASE WHEN WartungsintervallStd IS NULL THEN Wartungskosten ELSE 0 END) AS KostenNichtErfuellteWartung,\n    SUM(Wartungskosten) AS GesamteWartungskosten,\n    SUM(CASE WHEN WartungsintervallStd IS NULL THEN Wartungskosten ELSE 0 END) * 100.0 / SUM(Wartungskosten) AS ProzentNichtErfuellteWartung\nFROM dbo.KHKPpsWerkzeuge\nWHERE Timestamp >= DATEADD(year, -1, GETDATE())"
+    ],
+    "sql_executed": [
+      "SELECT \n    SUM(CASE WHEN WartungsintervallStd IS NULL THEN Wartungskosten ELSE 0 END) AS KostenNichtErfuellteWartung,\n    SUM(Wartungskosten) AS GesamteWartungskosten,\n    SUM(CASE WHEN WartungsintervallStd IS NULL THEN Wartungskosten ELSE 0 END) * 100.0 / SUM(Wartungskosten) AS ProzentNichtErfuellteWartung\nFROM dbo.KHKPpsWerkzeuge\nWHERE Timestamp >= DATEADD(year, -1, GETDATE())"
+    ],
+    "tables_used": [
+      "dbo.KHKPpsWerkzeuge"
+    ],
+    "row_count": 1,
+    "latency_ms_total": 14034,
+    "retries": 0,
+    "result_preview": [
+      {
+        "KostenNichtErfuellteWartung": "None",
+        "GesamteWartungskosten": "None",
+        "ProzentNichtErfuellteWartung": "None"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "Q8": {
+    "query_id": "Q8",
+    "question": "Wie ist das Verh\u00e4ltnis Vorgabe zu Ist pro Artikel und Mitarbeitendem (letzter Monat) \u2013 wo sind die gr\u00f6ssten Abweichungen?",
+    "status": "success",
+    "final_answer_text": "Die Analyse der Abweichungen zwischen Vorgabe und Ist f\u00fcr den letzten Monat zeigt, dass der Mitarbeiter mit dem Matchcode \"\u00fcberdrehen\" die gr\u00f6\u00dfte Abweichung aufweist. Hier sind die Details:\n\n- **Soll-Gesamtzeit**: 212,064\n- **Ist-Gesamtzeit**: 17,560\n- **Abweichung**: -194,504\n- **Abweichung in Prozent**: -91.7%\n\nDiese Werte deuten auf eine erhebliche Untererf\u00fcllung der Vorgabezeiten hin.",
+    "sql_generated": [
+      "SELECT TOP 10\n    Matchcode AS Mitarbeiter,\n    SUM(VorgabeZeit) AS Soll_Gesamt,\n    SUM(FertigungMenge) AS Ist_Gesamt,\n    SUM(FertigungMenge) - SUM(VorgabeZeit) AS Abweichung,\n    CASE WHEN SUM(VorgabeZeit) > 0\n         THEN ROUND((SUM(FertigungMenge) - SUM(VorgabeZeit)) * 100.0 / SUM(VorgabeZeit), 1)\n         ELSE 0 END AS Abweichung_Prozent\nFROM dbo.tKHKPpsMitarbeiterBuchungen\nWHERE DatumStart >= DATEADD(month, -1, GETDATE())\nGROUP BY Matchcode\nORDER BY ABS(SUM(FertigungMenge) - SUM(VorgabeZeit)) DESC"
+    ],
+    "sql_executed": [
+      "SELECT TOP 10\n    Matchcode AS Mitarbeiter,\n    SUM(VorgabeZeit) AS Soll_Gesamt,\n    SUM(FertigungMenge) AS Ist_Gesamt,\n    SUM(FertigungMenge) - SUM(VorgabeZeit) AS Abweichung,\n    CASE WHEN SUM(VorgabeZeit) > 0\n         THEN ROUND((SUM(FertigungMenge) - SUM(VorgabeZeit)) * 100.0 / SUM(VorgabeZeit), 1)\n         ELSE 0 END AS Abweichung_Prozent\nFROM dbo.tKHKPpsMitarbeiterBuchungen\nWHERE DatumStart >= DATEADD(month, -1, GETDATE())\nGROUP BY Matchcode\nORDER BY ABS(SUM(FertigungMenge) - SUM(VorgabeZeit)) DESC"
+    ],
+    "tables_used": [
+      "dbo.tKHKPpsMitarbeiterBuchungen"
+    ],
+    "row_count": 1,
+    "latency_ms_total": 19086,
+    "retries": 0,
+    "result_preview": [
+      {
+        "Mitarbeiter": "\u00fcberdrehen",
+        "Soll_Gesamt": "212064.0",
+        "Ist_Gesamt": "17560.0",
+        "Abweichung": "-194504.0",
+        "Abweichung_Prozent": "-91.7"
+      }
+    ],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "Q9": {
+    "query_id": "Q9",
+    "question": "Gibt es systematische Abweichungen zwischen Start Zeiterfassung und Start BDE (Zeit/ERP) \u2013 pro Mitarbeitendem und als Gesamttendenz (letzte 30 Tage)?",
+    "status": "success",
+    "final_answer_text": "Es wurden keine systematischen Abweichungen zwischen dem Start der Zeiterfassung und dem Start der BDE f\u00fcr die letzten 30 Tage gefunden, die die festgelegte Schwelle \u00fcberschreiten. Dies deutet darauf hin, dass es keine signifikanten Unterschiede in den erfassten Startzeiten gibt. Wenn du weitere Analysen ben\u00f6tigst oder die Schwelle anpassen m\u00f6chtest, lass es mich wissen!",
+    "sql_generated": [
+      "SELECT z.Mitarbeiternummer, AVG(DATEDIFF(minute, z.ZeitVon, b.ZeitVon)) AS DurchschnittAbweichungMinuten, COUNT(*) AS AnzahlVergleiche\nFROM dbo.KHKProjekteZeiterfassung z\nJOIN dbo.KHKMitarbeiter m ON z.Mitarbeiternummer = m.Nummer\nJOIN dbo.KHKProjekteZeiterfassung b ON z.Mitarbeiternummer = b.Mitarbeiternummer\nWHERE z.Datum >= DATEADD(day, -30, GETDATE())\nGROUP BY z.Mitarbeiternummer\nHAVING ABS(AVG(DATEDIFF(minute, z.ZeitVon, b.ZeitVon))) > 5\nORDER BY ABS(AVG(DATEDIFF(minute, z.ZeitVon, b.ZeitVon))) DESC"
+    ],
+    "sql_executed": [
+      "SELECT z.Mitarbeiternummer, AVG(DATEDIFF(minute, z.ZeitVon, b.ZeitVon)) AS DurchschnittAbweichungMinuten, COUNT(*) AS AnzahlVergleiche\nFROM dbo.KHKProjekteZeiterfassung z\nJOIN dbo.KHKMitarbeiter m ON z.Mitarbeiternummer = m.Nummer\nJOIN dbo.KHKProjekteZeiterfassung b ON z.Mitarbeiternummer = b.Mitarbeiternummer\nWHERE z.Datum >= DATEADD(day, -30, GETDATE())\nGROUP BY z.Mitarbeiternummer\nHAVING ABS(AVG(DATEDIFF(minute, z.ZeitVon, b.ZeitVon))) > 5\nORDER BY ABS(AVG(DATEDIFF(minute, z.ZeitVon, b.ZeitVon))) DESC"
+    ],
+    "tables_used": [
+      "dbo.KHKProjekteZeiterfassung",
+      "dbo.KHKMitarbeiter"
+    ],
+    "row_count": 0,
+    "latency_ms_total": 13792,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  },
+  "Q10": {
+    "query_id": "Q10",
+    "question": "Welche 5 Artikel verursachen aktuell die gr\u00f6ssten operativen Probleme (z.B. h\u00e4ufige Abweichungen, Nacharbeit, versp\u00e4tete Lieferungen) in den letzten 8 Wochen?",
+    "status": "success",
+    "final_answer_text": "Es scheint, dass es weiterhin Probleme mit den Spaltennamen gibt. Ich werde die Abfrage anpassen, um die korrekten Spaltennamen zu verwenden, die ich aus den Schema-Informationen erhalten habe.\n\nIch werde die Abfrage so anpassen, dass sie die korrekten Spaltennamen verwendet und die Probleme in den letzten 8 Wochen identifiziert.\nEs tut mir leid, aber es scheint, dass ich die korrekten Spaltennamen nicht ermitteln kann, um die Abfrage erfolgreich auszuf\u00fchren. Die bisherigen Versuche, die Spaltennamen zu korrigieren, waren nicht erfolgreich.\n\nFalls du spezifische Informationen zu den Spaltennamen oder den Tabellen hast, die verwendet werden sollen, lass es mich bitte wissen, damit ich die Abfrage entsprechend anpassen kann. Alternativ kannst du mir weitere Details zu den operativen Problemen geben, die du analysieren m\u00f6chtest, damit ich die Abfrage entsprechend anpassen kann.",
+    "sql_generated": [
+      "SELECT TOP 5 \n    COALESCE(r.RueckmeldungID, l.Artikelnummer) AS Artikelnummer, \n    COALESCE(r.AusschussAnzahl, 0) AS AusschussAnzahl, \n    COALESCE(l.VerspaetungenAnzahl, 0) AS VerspaetungenAnzahl, \n    COALESCE(r.AusschussAnzahl, 0) + COALESCE(l.VerspaetungenAnzahl, 0) AS GesamtProbleme\nFROM (\n    SELECT RueckmeldungID AS Artikelnummer, COUNT(*) AS AusschussAnzahl \n    FROM dbo.KHKPpsRueckmeldungenChargen \n    WHERE Timestamp >= DATEADD(week, -8, GETDATE()) \n    GROUP BY RueckmeldungID\n) r\nFULL OUTER JOIN (\n    SELECT Artikelnummer, COUNT(*) AS VerspaetungenAnzahl \n    FROM dbo.tKHKCheflisteLieferbareAuftraege \n    WHERE Liefertermin > GETDATE() AND Liefertermin <= DATEADD(week, -8, GETDATE())\n    GROUP BY Artikelnummer\n) l ON r.RueckmeldungID = l.Artikelnummer\nORDER BY GesamtProbleme DESC"
+    ],
+    "sql_executed": [
+      "SELECT TOP 5 \n    COALESCE(r.RueckmeldungID, l.Artikelnummer) AS Artikelnummer, \n    COALESCE(r.AusschussAnzahl, 0) AS AusschussAnzahl, \n    COALESCE(l.VerspaetungenAnzahl, 0) AS VerspaetungenAnzahl, \n    COALESCE(r.AusschussAnzahl, 0) + COALESCE(l.VerspaetungenAnzahl, 0) AS GesamtProbleme\nFROM (\n    SELECT RueckmeldungID AS Artikelnummer, COUNT(*) AS AusschussAnzahl \n    FROM dbo.KHKPpsRueckmeldungenChargen \n    WHERE Timestamp >= DATEADD(week, -8, GETDATE()) \n    GROUP BY RueckmeldungID\n) r\nFULL OUTER JOIN (\n    SELECT Artikelnummer, COUNT(*) AS VerspaetungenAnzahl \n    FROM dbo.tKHKCheflisteLieferbareAuftraege \n    WHERE Liefertermin > GETDATE() AND Liefertermin <= DATEADD(week, -8, GETDATE())\n    GROUP BY Artikelnummer\n) l ON r.RueckmeldungID = l.Artikelnummer\nORDER BY GesamtProbleme DESC"
+    ],
+    "tables_used": [
+      "dbo.KHKPpsRueckmeldungenChargen",
+      "dbo.tKHKCheflisteLieferbareAuftraege"
+    ],
+    "row_count": 0,
+    "latency_ms_total": 41613,
+    "retries": 0,
+    "result_preview": [],
+    "error_info": null,
+    "discovery_log": null,
+    "semantic_status": null,
+    "semantic_failure_reasons": [],
+    "semantic_retry_count": null,
+    "semantic_retry_action": null,
+    "contract_id": null,
+    "llm_usage": null,
+    "node_entry_counts": null,
+    "loop_events": null,
+    "total_llm_calls": null,
+    "total_graph_cycles": null
+  }
+}

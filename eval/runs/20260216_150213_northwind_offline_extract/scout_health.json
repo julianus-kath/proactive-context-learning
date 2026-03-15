@@ -1,0 +1,10 @@
+{
+  "status": "offline_file_audit",
+  "timestamp": "2026-02-16T14:02:13.062156Z",
+  "components": {
+    "source": "exported_files",
+    "discovered_catalog_file": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/mcp_server/cache/scout_catalog.json",
+    "ground_truth_catalog_file": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/mcp_server/cache/catalog_postgres.json",
+    "scout_index_file": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/mcp_server/cache/scout_index.json"
+  }
+}

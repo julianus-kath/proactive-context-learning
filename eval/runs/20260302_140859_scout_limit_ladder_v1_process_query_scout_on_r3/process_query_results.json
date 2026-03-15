@@ -1,0 +1,1830 @@
+{
+  "LT1_CL2": {
+    "query_id": "LT1_CL2",
+    "question": "Zeige den gesamten Umsatz nach Rabatt pro Kundenland, absteigend nach Umsatz.",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4188,
+    "error": null,
+    "final_response_text": "Hier ist der gesamte Umsatz nach Rabatt pro Kundenland, absteigend sortiert:\n\n1. **USA**: CHF 245'584.61\n2. **Deutschland**: CHF 230'284.63\n3. **\u00d6sterreich**: CHF 128'003.84\n4. **Brasilien**: CHF 106'925.78\n5. **Frankreich**: CHF 81'358.32\n\nWeitere L\u00e4nder folgen in der Liste. Wenn du mehr Details ben\u00f6tigst, lass es mich wissen!",
+    "sql_query": "SELECT o.ship_country, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY o.ship_country\nORDER BY total_revenue DESC;",
+    "exec_result": {
+      "data": [
+        {
+          "ship_country": "USA",
+          "total_revenue": "245584.61030220677"
+        },
+        {
+          "ship_country": "Germany",
+          "total_revenue": "230284.63325421108"
+        },
+        {
+          "ship_country": "Austria",
+          "total_revenue": "128003.8381586512"
+        },
+        {
+          "ship_country": "Brazil",
+          "total_revenue": "106925.7764042853"
+        },
+        {
+          "ship_country": "France",
+          "total_revenue": "81358.322529562"
+        },
+        {
+          "ship_country": "UK",
+          "total_revenue": "58971.309912234916"
+        },
+        {
+          "ship_country": "Venezuela",
+          "total_revenue": "56810.628758941646"
+        },
+        {
+          "ship_country": "Sweden",
+          "total_revenue": "54495.13992099263"
+        },
+        {
+          "ship_country": "Canada",
+          "total_revenue": "50196.29010077998"
+        },
+        {
+          "ship_country": "Ireland",
+          "total_revenue": "49979.90508149549"
+        },
+        {
+          "ship_country": "Belgium",
+          "total_revenue": "33824.85528823436"
+        },
+        {
+          "ship_country": "Denmark",
+          "total_revenue": "32661.02250821233"
+        },
+        {
+          "ship_country": "Switzerland",
+          "total_revenue": "31692.658973727506"
+        },
+        {
+          "ship_country": "Mexico",
+          "total_revenue": "23582.077471868546"
+        },
+        {
+          "ship_country": "Finland",
+          "total_revenue": "18810.052568769308"
+        },
+        {
+          "ship_country": "Spain",
+          "total_revenue": "17983.199986996653"
+        },
+        {
+          "ship_country": "Italy",
+          "total_revenue": "15770.154917843716"
+        },
+        {
+          "ship_country": "Portugal",
+          "total_revenue": "11472.362512157111"
+        },
+        {
+          "ship_country": "Argentina",
+          "total_revenue": "8119.099990844727"
+        },
+        {
+          "ship_country": "Norway",
+          "total_revenue": "5735.1500153541565"
+        }
+      ],
+      "rows": [
+        {
+          "ship_country": "USA",
+          "total_revenue": "245584.61030220677"
+        },
+        {
+          "ship_country": "Germany",
+          "total_revenue": "230284.63325421108"
+        },
+        {
+          "ship_country": "Austria",
+          "total_revenue": "128003.8381586512"
+        },
+        {
+          "ship_country": "Brazil",
+          "total_revenue": "106925.7764042853"
+        },
+        {
+          "ship_country": "France",
+          "total_revenue": "81358.322529562"
+        },
+        {
+          "ship_country": "UK",
+          "total_revenue": "58971.309912234916"
+        },
+        {
+          "ship_country": "Venezuela",
+          "total_revenue": "56810.628758941646"
+        },
+        {
+          "ship_country": "Sweden",
+          "total_revenue": "54495.13992099263"
+        },
+        {
+          "ship_country": "Canada",
+          "total_revenue": "50196.29010077998"
+        },
+        {
+          "ship_country": "Ireland",
+          "total_revenue": "49979.90508149549"
+        },
+        {
+          "ship_country": "Belgium",
+          "total_revenue": "33824.85528823436"
+        },
+        {
+          "ship_country": "Denmark",
+          "total_revenue": "32661.02250821233"
+        },
+        {
+          "ship_country": "Switzerland",
+          "total_revenue": "31692.658973727506"
+        },
+        {
+          "ship_country": "Mexico",
+          "total_revenue": "23582.077471868546"
+        },
+        {
+          "ship_country": "Finland",
+          "total_revenue": "18810.052568769308"
+        },
+        {
+          "ship_country": "Spain",
+          "total_revenue": "17983.199986996653"
+        },
+        {
+          "ship_country": "Italy",
+          "total_revenue": "15770.154917843716"
+        },
+        {
+          "ship_country": "Portugal",
+          "total_revenue": "11472.362512157111"
+        },
+        {
+          "ship_country": "Argentina",
+          "total_revenue": "8119.099990844727"
+        },
+        {
+          "ship_country": "Norway",
+          "total_revenue": "5735.1500153541565"
+        }
+      ],
+      "row_count": 21,
+      "columns": [
+        "ship_country",
+        "total_revenue"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 21,
+    "result_preview": [
+      {
+        "ship_country": "USA",
+        "total_revenue": "245584.61030220677"
+      },
+      {
+        "ship_country": "Germany",
+        "total_revenue": "230284.63325421108"
+      },
+      {
+        "ship_country": "Austria",
+        "total_revenue": "128003.8381586512"
+      },
+      {
+        "ship_country": "Brazil",
+        "total_revenue": "106925.7764042853"
+      },
+      {
+        "ship_country": "France",
+        "total_revenue": "81358.322529562"
+      },
+      {
+        "ship_country": "UK",
+        "total_revenue": "58971.309912234916"
+      },
+      {
+        "ship_country": "Venezuela",
+        "total_revenue": "56810.628758941646"
+      },
+      {
+        "ship_country": "Sweden",
+        "total_revenue": "54495.13992099263"
+      },
+      {
+        "ship_country": "Canada",
+        "total_revenue": "50196.29010077998"
+      },
+      {
+        "ship_country": "Ireland",
+        "total_revenue": "49979.90508149549"
+      },
+      {
+        "ship_country": "Belgium",
+        "total_revenue": "33824.85528823436"
+      },
+      {
+        "ship_country": "Denmark",
+        "total_revenue": "32661.02250821233"
+      },
+      {
+        "ship_country": "Switzerland",
+        "total_revenue": "31692.658973727506"
+      },
+      {
+        "ship_country": "Mexico",
+        "total_revenue": "23582.077471868546"
+      },
+      {
+        "ship_country": "Finland",
+        "total_revenue": "18810.052568769308"
+      },
+      {
+        "ship_country": "Spain",
+        "total_revenue": "17983.199986996653"
+      },
+      {
+        "ship_country": "Italy",
+        "total_revenue": "15770.154917843716"
+      },
+      {
+        "ship_country": "Portugal",
+        "total_revenue": "11472.362512157111"
+      },
+      {
+        "ship_country": "Argentina",
+        "total_revenue": "8119.099990844727"
+      },
+      {
+        "ship_country": "Norway",
+        "total_revenue": "5735.1500153541565"
+      }
+    ]
+  },
+  "LT1_CL6": {
+    "query_id": "LT1_CL6",
+    "question": "Zeige pro Monat die Anzahl der Auftraege und der verspaeteten Auslieferungen.",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4550,
+    "error": null,
+    "final_response_text": "Hier sind die monatlichen Daten zu den Auftr\u00e4gen und den versp\u00e4teten Auslieferungen:\n\n- **Juli 1996**: 22 Auftr\u00e4ge, 1 versp\u00e4tete Lieferung\n- **August 1996**: 25 Auftr\u00e4ge, 2 versp\u00e4tete Lieferungen\n- **September 1996**: 23 Auftr\u00e4ge, 2 versp\u00e4tete Lieferungen\n- **Oktober 1996**: 26 Auftr\u00e4ge, 1 versp\u00e4tete Lieferung\n- **November 1996**: 25 Auftr\u00e4ge, 0 versp\u00e4tete Lieferungen\n- **Dezember 1996**: 31 Auftr\u00e4ge, 1 versp\u00e4tete Lieferung\n\nDiese Daten zeigen die Anzahl der Auftr\u00e4ge und wie viele davon versp\u00e4tet geliefert wurden. Wenn du weitere Monate ben\u00f6tigst, lass es mich wissen!",
+    "sql_query": "SELECT \n    DATE_TRUNC('month', order_date) AS month, \n    COUNT(order_id) AS total_orders,\n    SUM(CASE WHEN shipped_date > required_date THEN 1 ELSE 0 END) AS late_deliveries\nFROM \n    public.orders\nGROUP BY \n    month\nORDER BY \n    month;",
+    "exec_result": {
+      "data": [
+        {
+          "month": "1996-07-01T00:00:00+00:00",
+          "total_orders": "22",
+          "late_deliveries": "1"
+        },
+        {
+          "month": "1996-08-01T00:00:00+00:00",
+          "total_orders": "25",
+          "late_deliveries": "2"
+        },
+        {
+          "month": "1996-09-01T00:00:00+00:00",
+          "total_orders": "23",
+          "late_deliveries": "2"
+        },
+        {
+          "month": "1996-10-01T00:00:00+00:00",
+          "total_orders": "26",
+          "late_deliveries": "1"
+        },
+        {
+          "month": "1996-11-01T00:00:00+00:00",
+          "total_orders": "25",
+          "late_deliveries": "0"
+        },
+        {
+          "month": "1996-12-01T00:00:00+00:00",
+          "total_orders": "31",
+          "late_deliveries": "1"
+        },
+        {
+          "month": "1997-01-01T00:00:00+00:00",
+          "total_orders": "33",
+          "late_deliveries": "2"
+        },
+        {
+          "month": "1997-02-01T00:00:00+00:00",
+          "total_orders": "29",
+          "late_deliveries": "2"
+        },
+        {
+          "month": "1997-03-01T00:00:00+00:00",
+          "total_orders": "30",
+          "late_deliveries": "1"
+        },
+        {
+          "month": "1997-04-01T00:00:00+00:00",
+          "total_orders": "31",
+          "late_deliveries": "1"
+        },
+        {
+          "month": "1997-05-01T00:00:00+00:00",
+          "total_orders": "32",
+          "late_deliveries": "2"
+        },
+        {
+          "month": "1997-06-01T00:00:00+00:00",
+          "total_orders": "30",
+          "late_deliveries": "1"
+        },
+        {
+          "month": "1997-07-01T00:00:00+00:00",
+          "total_orders": "33",
+          "late_deliveries": "2"
+        },
+        {
+          "month": "1997-08-01T00:00:00+00:00",
+          "total_orders": "33",
+          "late_deliveries": "0"
+        },
+        {
+          "month": "1997-09-01T00:00:00+00:00",
+          "total_orders": "37",
+          "late_deliveries": "3"
+        },
+        {
+          "month": "1997-10-01T00:00:00+00:00",
+          "total_orders": "38",
+          "late_deliveries": "2"
+        },
+        {
+          "month": "1997-11-01T00:00:00+00:00",
+          "total_orders": "34",
+          "late_deliveries": "3"
+        },
+        {
+          "month": "1997-12-01T00:00:00+00:00",
+          "total_orders": "48",
+          "late_deliveries": "3"
+        },
+        {
+          "month": "1998-01-01T00:00:00+00:00",
+          "total_orders": "55",
+          "late_deliveries": "4"
+        },
+        {
+          "month": "1998-02-01T00:00:00+00:00",
+          "total_orders": "54",
+          "late_deliveries": "0"
+        }
+      ],
+      "rows": [
+        {
+          "month": "1996-07-01T00:00:00+00:00",
+          "total_orders": "22",
+          "late_deliveries": "1"
+        },
+        {
+          "month": "1996-08-01T00:00:00+00:00",
+          "total_orders": "25",
+          "late_deliveries": "2"
+        },
+        {
+          "month": "1996-09-01T00:00:00+00:00",
+          "total_orders": "23",
+          "late_deliveries": "2"
+        },
+        {
+          "month": "1996-10-01T00:00:00+00:00",
+          "total_orders": "26",
+          "late_deliveries": "1"
+        },
+        {
+          "month": "1996-11-01T00:00:00+00:00",
+          "total_orders": "25",
+          "late_deliveries": "0"
+        },
+        {
+          "month": "1996-12-01T00:00:00+00:00",
+          "total_orders": "31",
+          "late_deliveries": "1"
+        },
+        {
+          "month": "1997-01-01T00:00:00+00:00",
+          "total_orders": "33",
+          "late_deliveries": "2"
+        },
+        {
+          "month": "1997-02-01T00:00:00+00:00",
+          "total_orders": "29",
+          "late_deliveries": "2"
+        },
+        {
+          "month": "1997-03-01T00:00:00+00:00",
+          "total_orders": "30",
+          "late_deliveries": "1"
+        },
+        {
+          "month": "1997-04-01T00:00:00+00:00",
+          "total_orders": "31",
+          "late_deliveries": "1"
+        },
+        {
+          "month": "1997-05-01T00:00:00+00:00",
+          "total_orders": "32",
+          "late_deliveries": "2"
+        },
+        {
+          "month": "1997-06-01T00:00:00+00:00",
+          "total_orders": "30",
+          "late_deliveries": "1"
+        },
+        {
+          "month": "1997-07-01T00:00:00+00:00",
+          "total_orders": "33",
+          "late_deliveries": "2"
+        },
+        {
+          "month": "1997-08-01T00:00:00+00:00",
+          "total_orders": "33",
+          "late_deliveries": "0"
+        },
+        {
+          "month": "1997-09-01T00:00:00+00:00",
+          "total_orders": "37",
+          "late_deliveries": "3"
+        },
+        {
+          "month": "1997-10-01T00:00:00+00:00",
+          "total_orders": "38",
+          "late_deliveries": "2"
+        },
+        {
+          "month": "1997-11-01T00:00:00+00:00",
+          "total_orders": "34",
+          "late_deliveries": "3"
+        },
+        {
+          "month": "1997-12-01T00:00:00+00:00",
+          "total_orders": "48",
+          "late_deliveries": "3"
+        },
+        {
+          "month": "1998-01-01T00:00:00+00:00",
+          "total_orders": "55",
+          "late_deliveries": "4"
+        },
+        {
+          "month": "1998-02-01T00:00:00+00:00",
+          "total_orders": "54",
+          "late_deliveries": "0"
+        }
+      ],
+      "row_count": 23,
+      "columns": [
+        "month",
+        "total_orders",
+        "late_deliveries"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders"
+      ]
+    },
+    "tables_used": [
+      "public.orders"
+    ],
+    "row_count": 23,
+    "result_preview": [
+      {
+        "month": "1996-07-01T00:00:00+00:00",
+        "total_orders": "22",
+        "late_deliveries": "1"
+      },
+      {
+        "month": "1996-08-01T00:00:00+00:00",
+        "total_orders": "25",
+        "late_deliveries": "2"
+      },
+      {
+        "month": "1996-09-01T00:00:00+00:00",
+        "total_orders": "23",
+        "late_deliveries": "2"
+      },
+      {
+        "month": "1996-10-01T00:00:00+00:00",
+        "total_orders": "26",
+        "late_deliveries": "1"
+      },
+      {
+        "month": "1996-11-01T00:00:00+00:00",
+        "total_orders": "25",
+        "late_deliveries": "0"
+      },
+      {
+        "month": "1996-12-01T00:00:00+00:00",
+        "total_orders": "31",
+        "late_deliveries": "1"
+      },
+      {
+        "month": "1997-01-01T00:00:00+00:00",
+        "total_orders": "33",
+        "late_deliveries": "2"
+      },
+      {
+        "month": "1997-02-01T00:00:00+00:00",
+        "total_orders": "29",
+        "late_deliveries": "2"
+      },
+      {
+        "month": "1997-03-01T00:00:00+00:00",
+        "total_orders": "30",
+        "late_deliveries": "1"
+      },
+      {
+        "month": "1997-04-01T00:00:00+00:00",
+        "total_orders": "31",
+        "late_deliveries": "1"
+      },
+      {
+        "month": "1997-05-01T00:00:00+00:00",
+        "total_orders": "32",
+        "late_deliveries": "2"
+      },
+      {
+        "month": "1997-06-01T00:00:00+00:00",
+        "total_orders": "30",
+        "late_deliveries": "1"
+      },
+      {
+        "month": "1997-07-01T00:00:00+00:00",
+        "total_orders": "33",
+        "late_deliveries": "2"
+      },
+      {
+        "month": "1997-08-01T00:00:00+00:00",
+        "total_orders": "33",
+        "late_deliveries": "0"
+      },
+      {
+        "month": "1997-09-01T00:00:00+00:00",
+        "total_orders": "37",
+        "late_deliveries": "3"
+      },
+      {
+        "month": "1997-10-01T00:00:00+00:00",
+        "total_orders": "38",
+        "late_deliveries": "2"
+      },
+      {
+        "month": "1997-11-01T00:00:00+00:00",
+        "total_orders": "34",
+        "late_deliveries": "3"
+      },
+      {
+        "month": "1997-12-01T00:00:00+00:00",
+        "total_orders": "48",
+        "late_deliveries": "3"
+      },
+      {
+        "month": "1998-01-01T00:00:00+00:00",
+        "total_orders": "55",
+        "late_deliveries": "4"
+      },
+      {
+        "month": "1998-02-01T00:00:00+00:00",
+        "total_orders": "54",
+        "late_deliveries": "0"
+      }
+    ]
+  },
+  "LT1_CL10": {
+    "query_id": "LT1_CL10",
+    "question": "Zeige den Umsatz nach Rabatt je Kundensegment.",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 8763,
+    "error": null,
+    "final_response_text": "Hier sind die Ums\u00e4tze nach Rabatt f\u00fcr einige Kunden:\n\n- **QUICK-Stop**: Umsatz von 110'277.31 mit einem Rabatt von 5.95\n- **Ernst Handel**: Umsatz von 104'874.98 mit einem Rabatt von 6.95\n- **Save-a-lot Markets**: Umsatz von 104'361.95 mit einem Rabatt von 9.60\n- **Rattlesnake Canyon Grocery**: Umsatz von 51'097.80 mit einem Rabatt von 2.49\n- **Hungry Owl All-Night Grocers**: Umsatz von 49'979.91 mit einem Rabatt von 6.25\n\nDiese Liste zeigt die Top-Kunden nach Umsatz. Wenn du spezifische Informationen zu Kundensegmenten hast, k\u00f6nnen wir die Analyse weiter verfeinern.",
+    "sql_query": "SELECT c.company_name, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue, SUM(od.discount) AS total_discount\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nJOIN public.customers c ON o.customer_id = c.customer_id\nGROUP BY c.company_name\nORDER BY total_revenue DESC;",
+    "exec_result": {
+      "data": [
+        {
+          "company_name": "QUICK-Stop",
+          "total_revenue": "110277.30503039382",
+          "total_discount": "5.94999885559082"
+        },
+        {
+          "company_name": "Ernst Handel",
+          "total_revenue": "104874.97814367746",
+          "total_discount": "6.950002193450928"
+        },
+        {
+          "company_name": "Save-a-lot Markets",
+          "total_revenue": "104361.94954039395",
+          "total_discount": "9.59999942779541"
+        },
+        {
+          "company_name": "Rattlesnake Canyon Grocery",
+          "total_revenue": "51097.80082826822",
+          "total_discount": "2.489999532699585"
+        },
+        {
+          "company_name": "Hungry Owl All-Night Grocers",
+          "total_revenue": "49979.90508149549",
+          "total_discount": "6.25"
+        },
+        {
+          "company_name": "Hanari Carnes",
+          "total_revenue": "32841.369948457475",
+          "total_discount": "2.1500000953674316"
+        },
+        {
+          "company_name": "K\u00f6niglich Essen",
+          "total_revenue": "30908.383872538416",
+          "total_discount": "1.5499999523162842"
+        },
+        {
+          "company_name": "Folk och f\u00e4 HB",
+          "total_revenue": "29567.562490026656",
+          "total_discount": "3.8500001430511475"
+        },
+        {
+          "company_name": "M\u00e8re Paillarde",
+          "total_revenue": "28872.19015611842",
+          "total_discount": "1.8499997854232788"
+        },
+        {
+          "company_name": "White Clover Markets",
+          "total_revenue": "27363.604900210797",
+          "total_discount": "2.750000238418579"
+        },
+        {
+          "company_name": "Frankenversand",
+          "total_revenue": "26656.559403990017",
+          "total_discount": "3.1499998569488525"
+        },
+        {
+          "company_name": "Queen Cozinha",
+          "total_revenue": "25717.497604973578",
+          "total_discount": "3.6000001430511475"
+        },
+        {
+          "company_name": "Berglunds snabbk\u00f6p",
+          "total_revenue": "24927.577430965972",
+          "total_discount": "2.999999761581421"
+        },
+        {
+          "company_name": "Supr\u00eames d\u00e9lices",
+          "total_revenue": "24088.780281318428",
+          "total_discount": "1.149999976158142"
+        },
+        {
+          "company_name": "Piccolo und mehr",
+          "total_revenue": "23128.86001497373",
+          "total_discount": "1.6500000953674316"
+        },
+        {
+          "company_name": "HILARION-Abastos",
+          "total_revenue": "22768.76392572349",
+          "total_discount": "1.5"
+        },
+        {
+          "company_name": "Bon app'",
+          "total_revenue": "21963.252461684533",
+          "total_discount": "3.1999995708465576"
+        },
+        {
+          "company_name": "Bottom-Dollar Markets",
+          "total_revenue": "20801.59995229095",
+          "total_discount": "2.9499998092651367"
+        },
+        {
+          "company_name": "Richter Supermarkt",
+          "total_revenue": "19343.778920320852",
+          "total_discount": "1.25"
+        },
+        {
+          "company_name": "Lehmanns Marktstand",
+          "total_revenue": "19261.409954871837",
+          "total_discount": "3.750000476837158"
+        }
+      ],
+      "rows": [
+        {
+          "company_name": "QUICK-Stop",
+          "total_revenue": "110277.30503039382",
+          "total_discount": "5.94999885559082"
+        },
+        {
+          "company_name": "Ernst Handel",
+          "total_revenue": "104874.97814367746",
+          "total_discount": "6.950002193450928"
+        },
+        {
+          "company_name": "Save-a-lot Markets",
+          "total_revenue": "104361.94954039395",
+          "total_discount": "9.59999942779541"
+        },
+        {
+          "company_name": "Rattlesnake Canyon Grocery",
+          "total_revenue": "51097.80082826822",
+          "total_discount": "2.489999532699585"
+        },
+        {
+          "company_name": "Hungry Owl All-Night Grocers",
+          "total_revenue": "49979.90508149549",
+          "total_discount": "6.25"
+        },
+        {
+          "company_name": "Hanari Carnes",
+          "total_revenue": "32841.369948457475",
+          "total_discount": "2.1500000953674316"
+        },
+        {
+          "company_name": "K\u00f6niglich Essen",
+          "total_revenue": "30908.383872538416",
+          "total_discount": "1.5499999523162842"
+        },
+        {
+          "company_name": "Folk och f\u00e4 HB",
+          "total_revenue": "29567.562490026656",
+          "total_discount": "3.8500001430511475"
+        },
+        {
+          "company_name": "M\u00e8re Paillarde",
+          "total_revenue": "28872.19015611842",
+          "total_discount": "1.8499997854232788"
+        },
+        {
+          "company_name": "White Clover Markets",
+          "total_revenue": "27363.604900210797",
+          "total_discount": "2.750000238418579"
+        },
+        {
+          "company_name": "Frankenversand",
+          "total_revenue": "26656.559403990017",
+          "total_discount": "3.1499998569488525"
+        },
+        {
+          "company_name": "Queen Cozinha",
+          "total_revenue": "25717.497604973578",
+          "total_discount": "3.6000001430511475"
+        },
+        {
+          "company_name": "Berglunds snabbk\u00f6p",
+          "total_revenue": "24927.577430965972",
+          "total_discount": "2.999999761581421"
+        },
+        {
+          "company_name": "Supr\u00eames d\u00e9lices",
+          "total_revenue": "24088.780281318428",
+          "total_discount": "1.149999976158142"
+        },
+        {
+          "company_name": "Piccolo und mehr",
+          "total_revenue": "23128.86001497373",
+          "total_discount": "1.6500000953674316"
+        },
+        {
+          "company_name": "HILARION-Abastos",
+          "total_revenue": "22768.76392572349",
+          "total_discount": "1.5"
+        },
+        {
+          "company_name": "Bon app'",
+          "total_revenue": "21963.252461684533",
+          "total_discount": "3.1999995708465576"
+        },
+        {
+          "company_name": "Bottom-Dollar Markets",
+          "total_revenue": "20801.59995229095",
+          "total_discount": "2.9499998092651367"
+        },
+        {
+          "company_name": "Richter Supermarkt",
+          "total_revenue": "19343.778920320852",
+          "total_discount": "1.25"
+        },
+        {
+          "company_name": "Lehmanns Marktstand",
+          "total_revenue": "19261.409954871837",
+          "total_discount": "3.750000476837158"
+        }
+      ],
+      "row_count": 89,
+      "columns": [
+        "company_name",
+        "total_revenue",
+        "total_discount"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details",
+        "public.customers"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details",
+      "public.customers"
+    ],
+    "row_count": 89,
+    "result_preview": [
+      {
+        "company_name": "QUICK-Stop",
+        "total_revenue": "110277.30503039382",
+        "total_discount": "5.94999885559082"
+      },
+      {
+        "company_name": "Ernst Handel",
+        "total_revenue": "104874.97814367746",
+        "total_discount": "6.950002193450928"
+      },
+      {
+        "company_name": "Save-a-lot Markets",
+        "total_revenue": "104361.94954039395",
+        "total_discount": "9.59999942779541"
+      },
+      {
+        "company_name": "Rattlesnake Canyon Grocery",
+        "total_revenue": "51097.80082826822",
+        "total_discount": "2.489999532699585"
+      },
+      {
+        "company_name": "Hungry Owl All-Night Grocers",
+        "total_revenue": "49979.90508149549",
+        "total_discount": "6.25"
+      },
+      {
+        "company_name": "Hanari Carnes",
+        "total_revenue": "32841.369948457475",
+        "total_discount": "2.1500000953674316"
+      },
+      {
+        "company_name": "K\u00f6niglich Essen",
+        "total_revenue": "30908.383872538416",
+        "total_discount": "1.5499999523162842"
+      },
+      {
+        "company_name": "Folk och f\u00e4 HB",
+        "total_revenue": "29567.562490026656",
+        "total_discount": "3.8500001430511475"
+      },
+      {
+        "company_name": "M\u00e8re Paillarde",
+        "total_revenue": "28872.19015611842",
+        "total_discount": "1.8499997854232788"
+      },
+      {
+        "company_name": "White Clover Markets",
+        "total_revenue": "27363.604900210797",
+        "total_discount": "2.750000238418579"
+      },
+      {
+        "company_name": "Frankenversand",
+        "total_revenue": "26656.559403990017",
+        "total_discount": "3.1499998569488525"
+      },
+      {
+        "company_name": "Queen Cozinha",
+        "total_revenue": "25717.497604973578",
+        "total_discount": "3.6000001430511475"
+      },
+      {
+        "company_name": "Berglunds snabbk\u00f6p",
+        "total_revenue": "24927.577430965972",
+        "total_discount": "2.999999761581421"
+      },
+      {
+        "company_name": "Supr\u00eames d\u00e9lices",
+        "total_revenue": "24088.780281318428",
+        "total_discount": "1.149999976158142"
+      },
+      {
+        "company_name": "Piccolo und mehr",
+        "total_revenue": "23128.86001497373",
+        "total_discount": "1.6500000953674316"
+      },
+      {
+        "company_name": "HILARION-Abastos",
+        "total_revenue": "22768.76392572349",
+        "total_discount": "1.5"
+      },
+      {
+        "company_name": "Bon app'",
+        "total_revenue": "21963.252461684533",
+        "total_discount": "3.1999995708465576"
+      },
+      {
+        "company_name": "Bottom-Dollar Markets",
+        "total_revenue": "20801.59995229095",
+        "total_discount": "2.9499998092651367"
+      },
+      {
+        "company_name": "Richter Supermarkt",
+        "total_revenue": "19343.778920320852",
+        "total_discount": "1.25"
+      },
+      {
+        "company_name": "Lehmanns Marktstand",
+        "total_revenue": "19261.409954871837",
+        "total_discount": "3.750000476837158"
+      }
+    ]
+  },
+  "LT2_CL2": {
+    "query_id": "LT2_CL2",
+    "question": "Welche Kundenlaender bringen den groessten rabattbereinigten Umsatz?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4602,
+    "error": null,
+    "final_response_text": "Die f\u00fcnf L\u00e4nder mit dem gr\u00f6\u00dften rabattbereinigten Umsatz sind:\n\n1. USA mit einem Umsatz von 245,585\n2. Deutschland mit einem Umsatz von 230,285\n3. \u00d6sterreich mit einem Umsatz von 128,004\n4. Brasilien mit einem Umsatz von 106,926\n5. Frankreich mit einem Umsatz von 81,358\n\nDiese Werte sind in der jeweiligen W\u00e4hrungseinheit der Datenbank angegeben.",
+    "sql_query": "SELECT o.ship_country, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS rabattbereinigter_umsatz\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY o.ship_country\nORDER BY rabattbereinigter_umsatz DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "ship_country": "USA",
+          "rabattbereinigter_umsatz": "245584.61030220677"
+        },
+        {
+          "ship_country": "Germany",
+          "rabattbereinigter_umsatz": "230284.63325421108"
+        },
+        {
+          "ship_country": "Austria",
+          "rabattbereinigter_umsatz": "128003.8381586512"
+        },
+        {
+          "ship_country": "Brazil",
+          "rabattbereinigter_umsatz": "106925.7764042853"
+        },
+        {
+          "ship_country": "France",
+          "rabattbereinigter_umsatz": "81358.322529562"
+        }
+      ],
+      "rows": [
+        {
+          "ship_country": "USA",
+          "rabattbereinigter_umsatz": "245584.61030220677"
+        },
+        {
+          "ship_country": "Germany",
+          "rabattbereinigter_umsatz": "230284.63325421108"
+        },
+        {
+          "ship_country": "Austria",
+          "rabattbereinigter_umsatz": "128003.8381586512"
+        },
+        {
+          "ship_country": "Brazil",
+          "rabattbereinigter_umsatz": "106925.7764042853"
+        },
+        {
+          "ship_country": "France",
+          "rabattbereinigter_umsatz": "81358.322529562"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "ship_country",
+        "rabattbereinigter_umsatz"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "ship_country": "USA",
+        "rabattbereinigter_umsatz": "245584.61030220677"
+      },
+      {
+        "ship_country": "Germany",
+        "rabattbereinigter_umsatz": "230284.63325421108"
+      },
+      {
+        "ship_country": "Austria",
+        "rabattbereinigter_umsatz": "128003.8381586512"
+      },
+      {
+        "ship_country": "Brazil",
+        "rabattbereinigter_umsatz": "106925.7764042853"
+      },
+      {
+        "ship_country": "France",
+        "rabattbereinigter_umsatz": "81358.322529562"
+      }
+    ]
+  },
+  "LT2_CL6": {
+    "query_id": "LT2_CL6",
+    "question": "Wie entwickelt sich monatlich das Auftragsvolumen im Vergleich zu verspaeteten Zustellungen?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 19712,
+    "error": null,
+    "final_response_text": "Hier sind die monatlichen Daten zum Auftragsvolumen und den versp\u00e4teten Zustellungen:\n\n- Im Juli 1996 gab es 22 Auftr\u00e4ge, davon war 1 versp\u00e4tet.\n- Im August 1996 gab es 25 Auftr\u00e4ge, davon waren 2 versp\u00e4tet.\n- Im September 1996 gab es 23 Auftr\u00e4ge, davon waren 2 versp\u00e4tet.\n- Im Oktober 1996 gab es 26 Auftr\u00e4ge, davon war 1 versp\u00e4tet.\n- Im November 1996 gab es 25 Auftr\u00e4ge, keine versp\u00e4teten Zustellungen.\n\nDiese Daten zeigen, dass das Auftragsvolumen im Laufe der Zeit tendenziell gestiegen ist, w\u00e4hrend die Anzahl der versp\u00e4teten Zustellungen relativ konstant blieb. Wenn du weitere Details oder einen bestimmten Zeitraum ben\u00f6tigst, lass es mich wissen!",
+    "sql_query": "SELECT \n    DATE_TRUNC('month', order_date) AS monat, \n    COUNT(order_id) AS auftragsvolumen, \n    SUM(CASE WHEN shipped_date > required_date THEN 1 ELSE 0 END) AS verspaetete_zustellungen\nFROM \n    public.orders\nGROUP BY \n    monat\nORDER BY \n    monat;",
+    "exec_result": {
+      "data": [
+        {
+          "monat": "1996-07-01T00:00:00+00:00",
+          "auftragsvolumen": "22",
+          "verspaetete_zustellungen": "1"
+        },
+        {
+          "monat": "1996-08-01T00:00:00+00:00",
+          "auftragsvolumen": "25",
+          "verspaetete_zustellungen": "2"
+        },
+        {
+          "monat": "1996-09-01T00:00:00+00:00",
+          "auftragsvolumen": "23",
+          "verspaetete_zustellungen": "2"
+        },
+        {
+          "monat": "1996-10-01T00:00:00+00:00",
+          "auftragsvolumen": "26",
+          "verspaetete_zustellungen": "1"
+        },
+        {
+          "monat": "1996-11-01T00:00:00+00:00",
+          "auftragsvolumen": "25",
+          "verspaetete_zustellungen": "0"
+        },
+        {
+          "monat": "1996-12-01T00:00:00+00:00",
+          "auftragsvolumen": "31",
+          "verspaetete_zustellungen": "1"
+        },
+        {
+          "monat": "1997-01-01T00:00:00+00:00",
+          "auftragsvolumen": "33",
+          "verspaetete_zustellungen": "2"
+        },
+        {
+          "monat": "1997-02-01T00:00:00+00:00",
+          "auftragsvolumen": "29",
+          "verspaetete_zustellungen": "2"
+        },
+        {
+          "monat": "1997-03-01T00:00:00+00:00",
+          "auftragsvolumen": "30",
+          "verspaetete_zustellungen": "1"
+        },
+        {
+          "monat": "1997-04-01T00:00:00+00:00",
+          "auftragsvolumen": "31",
+          "verspaetete_zustellungen": "1"
+        },
+        {
+          "monat": "1997-05-01T00:00:00+00:00",
+          "auftragsvolumen": "32",
+          "verspaetete_zustellungen": "2"
+        },
+        {
+          "monat": "1997-06-01T00:00:00+00:00",
+          "auftragsvolumen": "30",
+          "verspaetete_zustellungen": "1"
+        },
+        {
+          "monat": "1997-07-01T00:00:00+00:00",
+          "auftragsvolumen": "33",
+          "verspaetete_zustellungen": "2"
+        },
+        {
+          "monat": "1997-08-01T00:00:00+00:00",
+          "auftragsvolumen": "33",
+          "verspaetete_zustellungen": "0"
+        },
+        {
+          "monat": "1997-09-01T00:00:00+00:00",
+          "auftragsvolumen": "37",
+          "verspaetete_zustellungen": "3"
+        },
+        {
+          "monat": "1997-10-01T00:00:00+00:00",
+          "auftragsvolumen": "38",
+          "verspaetete_zustellungen": "2"
+        },
+        {
+          "monat": "1997-11-01T00:00:00+00:00",
+          "auftragsvolumen": "34",
+          "verspaetete_zustellungen": "3"
+        },
+        {
+          "monat": "1997-12-01T00:00:00+00:00",
+          "auftragsvolumen": "48",
+          "verspaetete_zustellungen": "3"
+        },
+        {
+          "monat": "1998-01-01T00:00:00+00:00",
+          "auftragsvolumen": "55",
+          "verspaetete_zustellungen": "4"
+        },
+        {
+          "monat": "1998-02-01T00:00:00+00:00",
+          "auftragsvolumen": "54",
+          "verspaetete_zustellungen": "0"
+        }
+      ],
+      "rows": [
+        {
+          "monat": "1996-07-01T00:00:00+00:00",
+          "auftragsvolumen": "22",
+          "verspaetete_zustellungen": "1"
+        },
+        {
+          "monat": "1996-08-01T00:00:00+00:00",
+          "auftragsvolumen": "25",
+          "verspaetete_zustellungen": "2"
+        },
+        {
+          "monat": "1996-09-01T00:00:00+00:00",
+          "auftragsvolumen": "23",
+          "verspaetete_zustellungen": "2"
+        },
+        {
+          "monat": "1996-10-01T00:00:00+00:00",
+          "auftragsvolumen": "26",
+          "verspaetete_zustellungen": "1"
+        },
+        {
+          "monat": "1996-11-01T00:00:00+00:00",
+          "auftragsvolumen": "25",
+          "verspaetete_zustellungen": "0"
+        },
+        {
+          "monat": "1996-12-01T00:00:00+00:00",
+          "auftragsvolumen": "31",
+          "verspaetete_zustellungen": "1"
+        },
+        {
+          "monat": "1997-01-01T00:00:00+00:00",
+          "auftragsvolumen": "33",
+          "verspaetete_zustellungen": "2"
+        },
+        {
+          "monat": "1997-02-01T00:00:00+00:00",
+          "auftragsvolumen": "29",
+          "verspaetete_zustellungen": "2"
+        },
+        {
+          "monat": "1997-03-01T00:00:00+00:00",
+          "auftragsvolumen": "30",
+          "verspaetete_zustellungen": "1"
+        },
+        {
+          "monat": "1997-04-01T00:00:00+00:00",
+          "auftragsvolumen": "31",
+          "verspaetete_zustellungen": "1"
+        },
+        {
+          "monat": "1997-05-01T00:00:00+00:00",
+          "auftragsvolumen": "32",
+          "verspaetete_zustellungen": "2"
+        },
+        {
+          "monat": "1997-06-01T00:00:00+00:00",
+          "auftragsvolumen": "30",
+          "verspaetete_zustellungen": "1"
+        },
+        {
+          "monat": "1997-07-01T00:00:00+00:00",
+          "auftragsvolumen": "33",
+          "verspaetete_zustellungen": "2"
+        },
+        {
+          "monat": "1997-08-01T00:00:00+00:00",
+          "auftragsvolumen": "33",
+          "verspaetete_zustellungen": "0"
+        },
+        {
+          "monat": "1997-09-01T00:00:00+00:00",
+          "auftragsvolumen": "37",
+          "verspaetete_zustellungen": "3"
+        },
+        {
+          "monat": "1997-10-01T00:00:00+00:00",
+          "auftragsvolumen": "38",
+          "verspaetete_zustellungen": "2"
+        },
+        {
+          "monat": "1997-11-01T00:00:00+00:00",
+          "auftragsvolumen": "34",
+          "verspaetete_zustellungen": "3"
+        },
+        {
+          "monat": "1997-12-01T00:00:00+00:00",
+          "auftragsvolumen": "48",
+          "verspaetete_zustellungen": "3"
+        },
+        {
+          "monat": "1998-01-01T00:00:00+00:00",
+          "auftragsvolumen": "55",
+          "verspaetete_zustellungen": "4"
+        },
+        {
+          "monat": "1998-02-01T00:00:00+00:00",
+          "auftragsvolumen": "54",
+          "verspaetete_zustellungen": "0"
+        }
+      ],
+      "row_count": 23,
+      "columns": [
+        "monat",
+        "auftragsvolumen",
+        "verspaetete_zustellungen"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders"
+      ]
+    },
+    "tables_used": [
+      "public.orders"
+    ],
+    "row_count": 23,
+    "result_preview": [
+      {
+        "monat": "1996-07-01T00:00:00+00:00",
+        "auftragsvolumen": "22",
+        "verspaetete_zustellungen": "1"
+      },
+      {
+        "monat": "1996-08-01T00:00:00+00:00",
+        "auftragsvolumen": "25",
+        "verspaetete_zustellungen": "2"
+      },
+      {
+        "monat": "1996-09-01T00:00:00+00:00",
+        "auftragsvolumen": "23",
+        "verspaetete_zustellungen": "2"
+      },
+      {
+        "monat": "1996-10-01T00:00:00+00:00",
+        "auftragsvolumen": "26",
+        "verspaetete_zustellungen": "1"
+      },
+      {
+        "monat": "1996-11-01T00:00:00+00:00",
+        "auftragsvolumen": "25",
+        "verspaetete_zustellungen": "0"
+      },
+      {
+        "monat": "1996-12-01T00:00:00+00:00",
+        "auftragsvolumen": "31",
+        "verspaetete_zustellungen": "1"
+      },
+      {
+        "monat": "1997-01-01T00:00:00+00:00",
+        "auftragsvolumen": "33",
+        "verspaetete_zustellungen": "2"
+      },
+      {
+        "monat": "1997-02-01T00:00:00+00:00",
+        "auftragsvolumen": "29",
+        "verspaetete_zustellungen": "2"
+      },
+      {
+        "monat": "1997-03-01T00:00:00+00:00",
+        "auftragsvolumen": "30",
+        "verspaetete_zustellungen": "1"
+      },
+      {
+        "monat": "1997-04-01T00:00:00+00:00",
+        "auftragsvolumen": "31",
+        "verspaetete_zustellungen": "1"
+      },
+      {
+        "monat": "1997-05-01T00:00:00+00:00",
+        "auftragsvolumen": "32",
+        "verspaetete_zustellungen": "2"
+      },
+      {
+        "monat": "1997-06-01T00:00:00+00:00",
+        "auftragsvolumen": "30",
+        "verspaetete_zustellungen": "1"
+      },
+      {
+        "monat": "1997-07-01T00:00:00+00:00",
+        "auftragsvolumen": "33",
+        "verspaetete_zustellungen": "2"
+      },
+      {
+        "monat": "1997-08-01T00:00:00+00:00",
+        "auftragsvolumen": "33",
+        "verspaetete_zustellungen": "0"
+      },
+      {
+        "monat": "1997-09-01T00:00:00+00:00",
+        "auftragsvolumen": "37",
+        "verspaetete_zustellungen": "3"
+      },
+      {
+        "monat": "1997-10-01T00:00:00+00:00",
+        "auftragsvolumen": "38",
+        "verspaetete_zustellungen": "2"
+      },
+      {
+        "monat": "1997-11-01T00:00:00+00:00",
+        "auftragsvolumen": "34",
+        "verspaetete_zustellungen": "3"
+      },
+      {
+        "monat": "1997-12-01T00:00:00+00:00",
+        "auftragsvolumen": "48",
+        "verspaetete_zustellungen": "3"
+      },
+      {
+        "monat": "1998-01-01T00:00:00+00:00",
+        "auftragsvolumen": "55",
+        "verspaetete_zustellungen": "4"
+      },
+      {
+        "monat": "1998-02-01T00:00:00+00:00",
+        "auftragsvolumen": "54",
+        "verspaetete_zustellungen": "0"
+      }
+    ]
+  },
+  "LT2_CL10": {
+    "query_id": "LT2_CL10",
+    "question": "Welche Kundensegmente erzeugen den hoechsten Erloes nach Nachlaessen?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 19841,
+    "error": null,
+    "final_response_text": "Es scheint, dass es keine Daten gibt, die den Kundensegmenten in der aktuellen Datenbank zugeordnet sind, oder dass die Zuordnung zwischen den Kundensegmenten und den Bestellungen nicht vorhanden ist. \n\nFalls du spezifische Informationen zu Kundensegmenten oder eine andere Art der Analyse ben\u00f6tigst, lass es mich wissen, damit ich dir weiterhelfen kann.",
+    "sql_query": "SELECT cd.customer_desc AS customer_segment, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS net_revenue\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nJOIN public.customer_customer_demo ccd ON o.customer_id = ccd.customer_id\nJOIN public.customer_demographics cd ON ccd.customer_type_id = cd.customer_type_id\nGROUP BY cd.customer_desc\nORDER BY net_revenue DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": 0,
+      "columns": [],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details",
+        "public.customer_customer_demo",
+        "public.customer_demographics"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details",
+      "public.customer_customer_demo",
+      "public.customer_demographics"
+    ],
+    "row_count": 0,
+    "result_preview": []
+  },
+  "LT3_CL2": {
+    "query_id": "LT3_CL2",
+    "question": "Aus welchen Absatzmaerkten stammt der groesste Nettoerloes nach Preisnachlaessen?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 5403,
+    "error": null,
+    "final_response_text": "Der gr\u00f6\u00dfte Nettoerl\u00f6s nach Preisnachl\u00e4ssen stammt aus dem Absatzmarkt USA mit einem Betrag von etwa 245'585.",
+    "sql_query": "SELECT o.ship_country AS Absatzmarkt, \n       SUM(od.unit_price * od.quantity * (1 - od.discount)) AS Nettoerl\u00f6s\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY o.ship_country\nORDER BY Nettoerl\u00f6s DESC\nLIMIT 1;",
+    "exec_result": {
+      "data": [
+        {
+          "absatzmarkt": "USA",
+          "nettoerl\u00f6s": "245584.61030220677"
+        }
+      ],
+      "rows": [
+        {
+          "absatzmarkt": "USA",
+          "nettoerl\u00f6s": "245584.61030220677"
+        }
+      ],
+      "row_count": 1,
+      "columns": [
+        "absatzmarkt",
+        "nettoerl\u00f6s"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 1,
+    "result_preview": [
+      {
+        "absatzmarkt": "USA",
+        "nettoerl\u00f6s": "245584.61030220677"
+      }
+    ]
+  },
+  "LT3_CL6": {
+    "query_id": "LT3_CL6",
+    "question": "Wie verhalten sich Nachfrage und Lieferverzug im Monatsverlauf?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 2685,
+    "error": null,
+    "final_response_text": "Es scheint, dass die Datenbank keine direkten Tabellen oder Spalten enth\u00e4lt, die spezifisch auf \"Nachfrage\" und \"Lieferverzug\" im Monatsverlauf abzielen. Die einzige gefundene Tabelle, \"suppliers\", ist nicht relevant f\u00fcr diese Analyse.\n\nUm die Nachfrage und den Lieferverzug im Monatsverlauf zu analysieren, ben\u00f6tigen wir typischerweise Daten zu Bestellungen, Lieferungen und eventuell Lagerbest\u00e4nden. Wenn du spezifische Tabellen oder Datenquellen kennst, die diese Informationen enthalten k\u00f6nnten, lass es mich wissen, damit ich gezielt danach suchen kann. Alternativ kannst du mir weitere Details geben, um die Suche zu verfeinern.",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "LT3_CL10": {
+    "query_id": "LT3_CL10",
+    "question": "Welche Abnehmergruppen sind die wichtigsten Ertragsbringer nach Rabatt?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4635,
+    "error": null,
+    "final_response_text": "Um die wichtigsten Ertragsbringer unter den Abnehmergruppen nach Rabatt zu identifizieren, k\u00f6nnen wir die Tabellen `customer_customer_demo`, `customer_demographics`, `customers` und `orders` verwenden. Diese Tabellen enthalten Informationen \u00fcber Kunden, deren Demografie und Bestellungen. Allerdings fehlen uns noch spezifische Spalten f\u00fcr Ertrag und Rabatt. \n\nIch werde nun eine Abfrage erstellen, die die Kunden nach ihrem Ertrag gruppiert, basierend auf den verf\u00fcgbaren Daten. Falls du spezifische Spalten f\u00fcr Ertrag und Rabatt kennst, lass es mich wissen, damit ich die Abfrage entsprechend anpassen kann.",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "LT4_CL2": {
+    "query_id": "LT4_CL2",
+    "question": "Welche geographischen Zielmaerkte liefern den groessten Beitrag zum bereinigten Verkaufsertrag?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4612,
+    "error": null,
+    "final_response_text": "Die geographischen Zielm\u00e4rkte, die den gr\u00f6\u00dften Beitrag zum bereinigten Verkaufsertrag leisten, sind:\n\n1. USA mit einem bereinigten Verkaufsertrag von 245'585\n2. Deutschland mit 230'285\n3. \u00d6sterreich mit 128'004\n4. Brasilien mit 106'926\n5. Frankreich mit 81'358\n\nDiese Werte sind in der jeweiligen W\u00e4hrungseinheit der Datenbank angegeben.",
+    "sql_query": "SELECT ship_country, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS bereinigter_verkaufsertrag\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY ship_country\nORDER BY bereinigter_verkaufsertrag DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "ship_country": "USA",
+          "bereinigter_verkaufsertrag": "245584.61030220677"
+        },
+        {
+          "ship_country": "Germany",
+          "bereinigter_verkaufsertrag": "230284.63325421108"
+        },
+        {
+          "ship_country": "Austria",
+          "bereinigter_verkaufsertrag": "128003.8381586512"
+        },
+        {
+          "ship_country": "Brazil",
+          "bereinigter_verkaufsertrag": "106925.7764042853"
+        },
+        {
+          "ship_country": "France",
+          "bereinigter_verkaufsertrag": "81358.322529562"
+        }
+      ],
+      "rows": [
+        {
+          "ship_country": "USA",
+          "bereinigter_verkaufsertrag": "245584.61030220677"
+        },
+        {
+          "ship_country": "Germany",
+          "bereinigter_verkaufsertrag": "230284.63325421108"
+        },
+        {
+          "ship_country": "Austria",
+          "bereinigter_verkaufsertrag": "128003.8381586512"
+        },
+        {
+          "ship_country": "Brazil",
+          "bereinigter_verkaufsertrag": "106925.7764042853"
+        },
+        {
+          "ship_country": "France",
+          "bereinigter_verkaufsertrag": "81358.322529562"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "ship_country",
+        "bereinigter_verkaufsertrag"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "ship_country": "USA",
+        "bereinigter_verkaufsertrag": "245584.61030220677"
+      },
+      {
+        "ship_country": "Germany",
+        "bereinigter_verkaufsertrag": "230284.63325421108"
+      },
+      {
+        "ship_country": "Austria",
+        "bereinigter_verkaufsertrag": "128003.8381586512"
+      },
+      {
+        "ship_country": "Brazil",
+        "bereinigter_verkaufsertrag": "106925.7764042853"
+      },
+      {
+        "ship_country": "France",
+        "bereinigter_verkaufsertrag": "81358.322529562"
+      }
+    ]
+  },
+  "LT4_CL6": {
+    "query_id": "LT4_CL6",
+    "question": "Wie laufen Intake und Lieferueberfaelligkeit im monatlichen Takt zusammen?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 2914,
+    "error": null,
+    "final_response_text": "Es scheint, dass es keine direkten Tabellen oder Spalten gibt, die spezifisch f\u00fcr \"Intake\" und \"Liefer\u00fcberf\u00e4lligkeit\" im monatlichen Takt in der Datenbank vorhanden sind. Die Tabelle \"suppliers\" wurde als am relevantesten identifiziert, aber sie enth\u00e4lt keine spezifischen Informationen zu diesen Themen.\n\nUm die Frage zu beantworten, k\u00f6nnte es hilfreich sein, die Begriffe \"Intake\" und \"Liefer\u00fcberf\u00e4lligkeit\" genauer zu definieren oder alternative Begriffe zu verwenden, die in der Datenbank m\u00f6glicherweise besser vertreten sind. Wenn du spezifische Informationen zu Lieferungen oder Bestellungen suchst, k\u00f6nnten Begriffe wie \"Bestellung\", \"Lieferung\" oder \"Versp\u00e4tung\" n\u00fctzlich sein. Lass mich wissen, wenn du weitere Details oder alternative Begriffe hast, die ich verwenden kann, um die relevanten Daten zu finden.",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "LT4_CL10": {
+    "query_id": "LT4_CL10",
+    "question": "Welche Profilgruppen im Kundenstamm monetarisieren am staerksten nach Preiszugestaendnissen?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4822,
+    "error": null,
+    "final_response_text": "Es scheint, dass die Datenbank keine spezifische Tabelle f\u00fcr \"Profilgruppen\" im Kundenstamm enth\u00e4lt. Die relevanten Tabellen f\u00fcr Umsatz und Preiszugest\u00e4ndnisse sind jedoch `public.orders` und `public.order_details`. Diese enthalten Informationen zu Bestellungen, Preisen und Rabatten.\n\nUm die Profilgruppen zu analysieren, k\u00f6nnten wir annehmen, dass diese Informationen in einer anderen Tabelle gespeichert sind, die nicht direkt in den Suchergebnissen auftaucht. Falls du spezifische Informationen zu Profilgruppen hast oder diese in einer anderen Tabelle vermutest, lass es mich wissen, damit ich gezielt danach suchen kann. Alternativ k\u00f6nnen wir die vorhandenen Daten nutzen, um die Umsatzst\u00e4rke nach Preiszugest\u00e4ndnissen zu analysieren.",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "LT5_CL2": {
+    "query_id": "LT5_CL2",
+    "question": "Welche Absatzraeume finanzieren den groessten Nettoanteil unserer Verkaeufe?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4881,
+    "error": null,
+    "final_response_text": "Die f\u00fcnf Absatzr\u00e4ume, die den gr\u00f6\u00dften Nettoanteil unserer Verk\u00e4ufe finanzieren, sind:\n\n1. **Unbekannte Region** (keine spezifische Region angegeben) mit einem Umsatz von etwa 736'759.\n2. **ID** mit einem Umsatz von etwa 104'362.\n3. **SP** mit einem Umsatz von etwa 54'969.\n4. **RJ** mit einem Umsatz von etwa 51'957.\n5. **NM** mit einem Umsatz von etwa 51'098.\n\nDie Region \"None\" weist den h\u00f6chsten Umsatz auf, was darauf hindeutet, dass einige Bestellungen keine spezifische Region zugeordnet haben.",
+    "sql_query": "SELECT o.ship_region, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_sales\nFROM public.orders o\nJOIN public.order_details od ON o.order_id = od.order_id\nGROUP BY o.ship_region\nORDER BY total_sales DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "ship_region": "None",
+          "total_sales": "736758.8780467946"
+        },
+        {
+          "ship_region": "ID",
+          "total_sales": "104361.94954039395"
+        },
+        {
+          "ship_region": "SP",
+          "total_sales": "54968.79650302888"
+        },
+        {
+          "ship_region": "RJ",
+          "total_sales": "51956.97990125642"
+        },
+        {
+          "ship_region": "NM",
+          "total_sales": "51097.80082826822"
+        }
+      ],
+      "rows": [
+        {
+          "ship_region": "None",
+          "total_sales": "736758.8780467946"
+        },
+        {
+          "ship_region": "ID",
+          "total_sales": "104361.94954039395"
+        },
+        {
+          "ship_region": "SP",
+          "total_sales": "54968.79650302888"
+        },
+        {
+          "ship_region": "RJ",
+          "total_sales": "51956.97990125642"
+        },
+        {
+          "ship_region": "NM",
+          "total_sales": "51097.80082826822"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "ship_region",
+        "total_sales"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.orders",
+        "public.order_details"
+      ]
+    },
+    "tables_used": [
+      "public.orders",
+      "public.order_details"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "ship_region": "None",
+        "total_sales": "736758.8780467946"
+      },
+      {
+        "ship_region": "ID",
+        "total_sales": "104361.94954039395"
+      },
+      {
+        "ship_region": "SP",
+        "total_sales": "54968.79650302888"
+      },
+      {
+        "ship_region": "RJ",
+        "total_sales": "51956.97990125642"
+      },
+      {
+        "ship_region": "NM",
+        "total_sales": "51097.80082826822"
+      }
+    ]
+  },
+  "LT5_CL6": {
+    "query_id": "LT5_CL6",
+    "question": "Zeige die Zeitreihe, in der Nachfragefluss und Ueberfaelligkeit der Zustellung gemeinsam sichtbar werden.",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 3338,
+    "error": null,
+    "final_response_text": "Es scheint, dass es keine direkten Tabellen in der Datenbank gibt, die spezifisch den Nachfragefluss und die \u00dcberf\u00e4lligkeit der Zustellung abdecken. Die einzige gefundene Tabelle, \"us_states\", ist nicht relevant f\u00fcr diese Anfrage.\n\nUm die gew\u00fcnschte Zeitreihe zu erstellen, k\u00f6nnten wir nach alternativen Begriffen oder verwandten Konzepten suchen, die m\u00f6glicherweise in der Datenbank vorhanden sind. M\u00f6glicherweise sind \"Bestellungen\", \"Lieferungen\" oder \"Versp\u00e4tungen\" relevant. M\u00f6chtest du, dass ich nach diesen Begriffen suche?",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": []
+  },
+  "LT5_CL10": {
+    "query_id": "LT5_CL10",
+    "question": "Welche Typen im Kundenportfolio tragen nach verrechneten Preiszugestaendnissen den hoechsten Umsatz?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4809,
+    "error": null,
+    "final_response_text": "Die f\u00fcnf Produkte mit dem h\u00f6chsten Umsatz nach verrechneten Preiszugest\u00e4ndnissen sind:\n\n1. Produkt ID 38 mit einem Umsatz von CHF 141'396.74\n2. Produkt ID 29 mit einem Umsatz von CHF 80'368.67\n3. Produkt ID 59 mit einem Umsatz von CHF 71'155.70\n4. Produkt ID 62 mit einem Umsatz von CHF 47'234.97\n5. Produkt ID 60 mit einem Umsatz von CHF 46'825.48",
+    "sql_query": "SELECT p.product_id, SUM(od.unit_price * od.quantity * (1 - od.discount)) AS total_revenue\nFROM public.order_details od\nJOIN public.orders o ON od.order_id = o.order_id\nJOIN public.products p ON od.product_id = p.product_id\nGROUP BY p.product_id\nORDER BY total_revenue DESC\nLIMIT 5;",
+    "exec_result": {
+      "data": [
+        {
+          "product_id": "38",
+          "total_revenue": "141396.7356273254"
+        },
+        {
+          "product_id": "29",
+          "total_revenue": "80368.6724385033"
+        },
+        {
+          "product_id": "59",
+          "total_revenue": "71155.69990943"
+        },
+        {
+          "product_id": "62",
+          "total_revenue": "47234.969978504174"
+        },
+        {
+          "product_id": "60",
+          "total_revenue": "46825.48029542655"
+        }
+      ],
+      "rows": [
+        {
+          "product_id": "38",
+          "total_revenue": "141396.7356273254"
+        },
+        {
+          "product_id": "29",
+          "total_revenue": "80368.6724385033"
+        },
+        {
+          "product_id": "59",
+          "total_revenue": "71155.69990943"
+        },
+        {
+          "product_id": "62",
+          "total_revenue": "47234.969978504174"
+        },
+        {
+          "product_id": "60",
+          "total_revenue": "46825.48029542655"
+        }
+      ],
+      "row_count": 5,
+      "columns": [
+        "product_id",
+        "total_revenue"
+      ],
+      "ok": true,
+      "tables_used": [
+        "public.order_details",
+        "public.orders",
+        "public.products"
+      ]
+    },
+    "tables_used": [
+      "public.order_details",
+      "public.orders",
+      "public.products"
+    ],
+    "row_count": 5,
+    "result_preview": [
+      {
+        "product_id": "38",
+        "total_revenue": "141396.7356273254"
+      },
+      {
+        "product_id": "29",
+        "total_revenue": "80368.6724385033"
+      },
+      {
+        "product_id": "59",
+        "total_revenue": "71155.69990943"
+      },
+      {
+        "product_id": "62",
+        "total_revenue": "47234.969978504174"
+      },
+      {
+        "product_id": "60",
+        "total_revenue": "46825.48029542655"
+      }
+    ]
+  }
+}

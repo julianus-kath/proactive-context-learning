@@ -1,0 +1,434 @@
+{
+  "summary": {
+    "total_queries": 10,
+    "successful": 7,
+    "failed": 3,
+    "success_rate": "70.0%"
+  },
+  "queries": [
+    {
+      "query_id": "Q1",
+      "question": "Wann m\u00fcssen wir neues \u00d856 Material nachbestellen, basierend auf aktuellem Lagerbestand (Rohmaterial + Halbfertigprodukte), offenen Kundenauftr\u00e4gen und Wiederbeschaffungszeit?",
+      "status": "success",
+      "latency_ms": 49552,
+      "sql_query": "SELECT v.Artikelnummer, v.Lagerbestand, v.Wiederbeschaffungszeit, \n       COALESCE(SUM(l.Bestand), 0) AS GesamtLagerbestand, \n       COALESCE(SUM(a.Bestellt), 0) AS OffeneBestellungen\nFROM dbo.KHKArtikelVarianten v\nLEFT JOIN dbo.KHKLagerplatzbestaende l ON v.Artikelnummer = l.Artikelnummer\nLEFT JOIN dbo.tKHKCheflisteLieferbareAuftraege a ON v.Artikelnummer = a.Artikelnummer\nWHERE v.Artikelnummer = '\u00d856'\nGROUP BY v.Artikelnummer, v.Lagerbestand, v.Wiederbeschaffungszeit;",
+      "tables_used": [
+        "dbo.KHKArtikelVarianten",
+        "dbo.KHKLagerplatzbestaende",
+        "dbo.tKHKCheflisteLieferbareAuftraege"
+      ],
+      "final_answer": "Es wurden keine Daten f\u00fcr das Material mit der Artikelnummer '\u00d856' gefunden. Dies k\u00f6nnte bedeuten, dass entweder kein solches Material in der Datenbank existiert oder dass es derzeit keine Lagerbest\u00e4nde oder offenen Bestellungen f\u00fcr dieses Material gibt.\n\nUm sicherzustellen, dass wir die richtigen Informationen haben, k\u00f6nnten wir:\n- \u00dcberpr\u00fcfen, ob die Artikelnummer korrekt ist.\n- Sicherstellen, dass das Material tats\u00e4chlich in den relevanten Tabellen vorhanden ist.\n\nFalls du weitere Informationen oder eine andere Artikelnummer hast, lass es mich bitte wissen, damit ich weiterhelfen kann.",
+      "row_count": 0,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": []
+    },
+    {
+      "query_id": "Q2",
+      "question": "Wann wurde die Bestellung [BESTELLNUMMER] geliefert (Lieferdatum + Status), und gab es Teillieferungen?",
+      "status": "failed",
+      "latency_ms": 31048,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": "Ich habe die relevanten Tabellen und ihre Spalteninformationen erhalten. Hier sind die wichtigsten Details:\n\n1. **dbo.KHKPpsFfBestellmengen**:\n   - Spalten: `BelIdBestellung`, `BelPosIdBestellung`, `Liefermenge`, `Bestellmenge`\n\n2. **dbo.KHKPpsFfBeistellPos**:\n   - Spalten: `Bestellnummer`, `BelId`, `BelPosId`, `Menge`\n\n3. **dbo.vewBSOffeneVKLieferungenReferenz**:\n   - Spalten: `Liefertermin`, `Artikelnummer`, `OffeneMenge`\n\n4. **dbo.KHKArtikelLieferant**:\n   - Spalten: `Bestellnummer`, `Lieferant`, `Artikelnummer`\n\n5. **dbo.BSCrmStatusProtokoll**:\n   - Spalten: `Datum`, `StufeAlt`, `StufeNeu`\n\n6. **dbo.KHKVKBelege**:\n   - Spalten: `BelID`, `Belegstatus`, `Liefertermin`, `Belegdatum`\n\nMit diesen Informationen kann ich eine Abfrage erstellen, um das Lieferdatum, den Status und die Information \u00fcber Teillieferungen f\u00fcr eine bestimmte Bestellnummer zu ermitteln. Bitte teile mir die spezifische Bestellnummer mit, damit ich die Abfrage entsprechend anpassen kann.",
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "failure_reasons": [
+        "missing_sql",
+        "missing_tables",
+        "missing_results"
+      ]
+    },
+    {
+      "query_id": "Q3",
+      "question": "Wie viele Teile wurden in den Morgenstunden 04:00\u201307:00 produziert im Vergleich zu 08:00\u201311:00 (letzte 14 Tage)?",
+      "status": "success",
+      "latency_ms": 36539,
+      "sql_query": "SELECT \n    SUM(CASE WHEN DATEPART(HOUR, Iststarttermin) BETWEEN 4 AND 7 THEN Istmenge ELSE 0 END) AS Menge_04_07,\n    SUM(CASE WHEN DATEPART(HOUR, Iststarttermin) BETWEEN 8 AND 11 THEN Istmenge ELSE 0 END) AS Menge_08_11\nFROM \n    dbo.KHKPpsFaBelegePositionen\nWHERE \n    Iststarttermin >= DATEADD(DAY, -14, GETDATE())",
+      "tables_used": [
+        "dbo.KHKPpsFaBelegePositionen"
+      ],
+      "final_answer": "In den letzten 14 Tagen wurden in den Morgenstunden von 04:00 bis 07:00 insgesamt 33 Teile produziert, w\u00e4hrend in den Stunden von 08:00 bis 11:00 insgesamt 436 Teile produziert wurden.",
+      "row_count": 1,
+      "result_preview": [
+        {
+          "Menge_04_07": "33.0",
+          "Menge_08_11": "436.0"
+        }
+      ],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": []
+    },
+    {
+      "query_id": "Q4",
+      "question": "Halten sich alle Mitarbeitenden an die vorgeschriebenen Anwesenheits- und Pausenzeiten (letzte 30 Tage) \u2013 und wer sind die gr\u00f6ssten Ausreisser?",
+      "status": "success",
+      "latency_ms": 32277,
+      "sql_query": "SELECT TOP 10 z.Mitarbeiternummer, z.Datum, z.ZeitVon, z.ZeitBis, \n       DATEDIFF(hour, z.ZeitVon, z.ZeitBis) AS Arbeitsstunden\nFROM dbo.KHKProjekteZeiterfassung z\nWHERE z.Datum >= DATEADD(day, -30, GETDATE())\nORDER BY Arbeitsstunden DESC;",
+      "tables_used": [
+        "dbo.KHKProjekteZeiterfassung"
+      ],
+      "final_answer": "Die Abfrage hat keine Ergebnisse zur\u00fcckgegeben. Das k\u00f6nnte darauf hindeuten, dass es in den letzten 30 Tagen keine erfassten Arbeitszeiten in der Tabelle \"KHKProjekteZeiterfassung\" gibt. \n\nM\u00f6glicherweise gibt es keine Daten f\u00fcr den angegebenen Zeitraum, oder die Tabelle wird nicht aktiv f\u00fcr die Zeiterfassung genutzt. \n\nFalls du weitere Informationen ben\u00f6tigst oder eine andere Analyse w\u00fcnschst, lass es mich bitte wissen!",
+      "row_count": 0,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": []
+    },
+    {
+      "query_id": "Q5",
+      "question": "Was hat der Mitarbeitende [MITARBEITER] heute Morgen gemacht (04:00\u201311:00)? Bitte nach T\u00e4tigkeit/Auftrag gruppieren (Zeiterfassung + ERP-R\u00fcckmeldungen).",
+      "status": "failed",
+      "latency_ms": 14311,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": "Es scheint ein technisches Problem beim Abrufen der Spalteninformationen zu geben. Ich kann derzeit keine genauen Spaltennamen f\u00fcr die relevanten Tabellen erhalten, um die Abfrage zu erstellen.\n\nUm die Aktivit\u00e4ten des Mitarbeiters heute Morgen zu ermitteln, ben\u00f6tige ich Zugriff auf die Spalteninformationen der Tabellen, die Zeiterfassungs- und R\u00fcckmeldungsdaten enthalten. Sobald das Problem behoben ist, kann ich die Abfrage f\u00fcr Sie ausf\u00fchren.\n\nFalls Sie weitere Fragen haben oder eine andere Anfrage stellen m\u00f6chten, lassen Sie es mich bitte wissen!",
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "failure_reasons": [
+        "missing_sql",
+        "missing_tables",
+        "missing_results"
+      ]
+    },
+    {
+      "query_id": "Q6",
+      "question": "Wurde Material [MATERIAL] bereits angeliefert und im Lager gebucht (Wareneingang)? Falls nein: was ist der aktuelle Status der zugeh\u00f6rigen Bestellung/Lieferung?",
+      "status": "success",
+      "latency_ms": 17809,
+      "sql_query": "SELECT b.BelIDFa, b.Bestellmenge, b.Liefermenge, b.Bestellpreis FROM dbo.KHKPpsFfBestellmengen b WHERE b.Artikelnummer = '[MATERIAL]'",
+      "tables_used": [
+        "dbo.KHKPpsFfBestellmengen"
+      ],
+      "final_answer": "Das Material [MATERIAL] wurde noch nicht angeliefert und im Lager gebucht (Wareneingang). Zudem gibt es keine aktuellen Informationen zur zugeh\u00f6rigen Bestellung oder Lieferung in der Datenbank. Es scheint, dass entweder das Material nicht bestellt wurde oder die Daten dazu nicht in der verf\u00fcgbaren Datenbank enthalten sind.",
+      "row_count": 0,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": []
+    },
+    {
+      "query_id": "Q7",
+      "question": "Korrelieren nicht erf\u00fcllte Wartungspunkte mit h\u00f6heren Wartungskosten (letzte 12 Monate)? Bitte mit Kennzahl/Trend und kurzer Interpretation.",
+      "status": "success",
+      "latency_ms": 27139,
+      "sql_query": "SELECT AVG(Wartungskosten) AS durchschnittliche_wartungskosten, COUNT(*) AS anzahl_nicht_erf\u00fcllte_wartungspunkte\nFROM dbo.KHKPpsWerkzeuge\nWHERE Timestamp >= DATEADD(month, -12, GETDATE()) AND Wartungskosten IS NOT NULL\nGROUP BY Werkzeugnummer\nORDER BY durchschnittliche_wartungskosten DESC;",
+      "tables_used": [
+        "dbo.KHKPpsWerkzeuge"
+      ],
+      "final_answer": "Die Abfrage hat keine Ergebnisse zur\u00fcckgegeben. Dies k\u00f6nnte darauf hindeuten, dass es in den letzten 12 Monaten keine Eintr\u00e4ge in der Tabelle `dbo.KHKPpsWerkzeuge` gibt, die sowohl Wartungskosten als auch nicht erf\u00fcllte Wartungspunkte aufweisen.\n\n**Interpretation:**\n- Es gibt m\u00f6glicherweise keine Daten oder keine nicht erf\u00fcllten Wartungspunkte mit zugeh\u00f6rigen Wartungskosten in den letzten 12 Monaten.\n- Alternativ k\u00f6nnten die Daten in einer anderen Tabelle oder unter anderen Bedingungen gespeichert sein.\n\nFalls weitere Analysen oder spezifische Daten ben\u00f6tigt werden, k\u00f6nnte es hilfreich sein, die Datenbankstruktur weiter zu untersuchen oder zus\u00e4tzliche Informationen zu den Wartungsprozessen zu erhalten.",
+      "row_count": 0,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": []
+    },
+    {
+      "query_id": "Q8",
+      "question": "Wie ist das Verh\u00e4ltnis Vorgabe zu Ist pro Artikel und Mitarbeitendem (letzter Monat) \u2013 wo sind die gr\u00f6ssten Abweichungen?",
+      "status": "success",
+      "latency_ms": 36070,
+      "sql_query": "SELECT TOP 10 m.Nummer, m.Vorname, m.Nachname, b.Auftrag, \n       SUM(b.VorgabeZeit) AS GesamtVorgabeZeit, \n       SUM(DATEDIFF(SECOND, b.DatumStart, b.DatumEnde) / 3600.0) AS GesamtIstZeit, \n       SUM(DATEDIFF(SECOND, b.DatumStart, b.DatumEnde) / 3600.0) - SUM(b.VorgabeZeit) AS Abweichung\nFROM dbo.tKHKPpsMitarbeiterBuchungen b\nJOIN dbo.KHKMitarbeiter m ON b.Mandant = m.Mandant\nWHERE b.DatumStart >= DATEADD(MONTH, -1, DATEADD(DAY, 1-DAY(GETDATE()), CAST(GETDATE() AS DATE)))\n  AND b.DatumStart < DATEADD(DAY, 1-DAY(GETDATE()), CAST(GETDATE() AS DATE))\nGROUP BY m.Nummer, m.Vorname, m.Nachname, b.Auftrag\nORDER BY Abweichung DESC;",
+      "tables_used": [
+        "dbo.tKHKPpsMitarbeiterBuchungen",
+        "dbo.KHKMitarbeiter"
+      ],
+      "final_answer": "Hier sind die gr\u00f6\u00dften Abweichungen im Verh\u00e4ltnis von Vorgabe zu Ist pro Artikel und Mitarbeitendem f\u00fcr den letzten Monat:\n\n- Alle aufgef\u00fchrten Mitarbeiter haben eine Vorgabezeit von 3360 Stunden f\u00fcr den Auftrag \"F25 1.4301 gedreht\", jedoch wurde keine Ist-Zeit erfasst, was zu einer Abweichung von -3360 Stunden f\u00fchrt.\n\nDies deutet darauf hin, dass entweder die Ist-Zeit nicht korrekt erfasst wurde oder es ein Problem bei der Datenerfassung gibt. Es w\u00e4re sinnvoll, die Erfassungsmethoden zu \u00fcberpr\u00fcfen, um sicherzustellen, dass die Ist-Zeiten korrekt aufgezeichnet werden.",
+      "row_count": 10,
+      "result_preview": [
+        {
+          "Nummer": "M00002",
+          "Vorname": "Florian",
+          "Nachname": "Diener",
+          "Auftrag": "F25 1.4301 gedreht",
+          "GesamtVorgabeZeit": "3360.0",
+          "GesamtIstZeit": "0.0",
+          "Abweichung": "-3360.0"
+        },
+        {
+          "Nummer": "M00001",
+          "Vorname": "Oliver",
+          "Nachname": "Diener",
+          "Auftrag": "F25 1.4301 gedreht",
+          "GesamtVorgabeZeit": "3360.0",
+          "GesamtIstZeit": "0.0",
+          "Abweichung": "-3360.0"
+        },
+        {
+          "Nummer": "M00003",
+          "Vorname": "Jean Marc",
+          "Nachname": "Ott",
+          "Auftrag": "F25 1.4301 gedreht",
+          "GesamtVorgabeZeit": "3360.0",
+          "GesamtIstZeit": "0.0",
+          "Abweichung": "-3360.0"
+        },
+        {
+          "Nummer": "M00004",
+          "Vorname": "Eigenmann",
+          "Nachname": "Maurice",
+          "Auftrag": "F25 1.4301 gedreht",
+          "GesamtVorgabeZeit": "3360.0",
+          "GesamtIstZeit": "0.0",
+          "Abweichung": "-3360.0"
+        },
+        {
+          "Nummer": "M00005",
+          "Vorname": "Iwan",
+          "Nachname": "Schweizer",
+          "Auftrag": "F25 1.4301 gedreht",
+          "GesamtVorgabeZeit": "3360.0",
+          "GesamtIstZeit": "0.0",
+          "Abweichung": "-3360.0"
+        }
+      ],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": []
+    },
+    {
+      "query_id": "Q9",
+      "question": "Gibt es systematische Abweichungen zwischen Start Zeiterfassung und Start BDE (Zeit/ERP) \u2013 pro Mitarbeitendem und als Gesamttendenz (letzte 30 Tage)?",
+      "status": "success",
+      "latency_ms": 27639,
+      "sql_query": "SELECT z.Mitarbeiternummer, \n       AVG(DATEDIFF(MINUTE, z.ZeitVon, b.DatumZeitStart)) AS durchschnittliche_abweichung_minuten\nFROM dbo.KHKProjekteZeiterfassung z\nJOIN dbo.KHKPpsBdeStempel b ON z.Mitarbeiternummer = b.Mitarbeiternummer\nWHERE z.Datum >= DATEADD(DAY, -30, GETDATE())\n  AND b.DatumZeitStart >= DATEADD(DAY, -30, GETDATE())\nGROUP BY z.Mitarbeiternummer\nORDER BY durchschnittliche_abweichung_minuten DESC;",
+      "tables_used": [
+        "dbo.KHKProjekteZeiterfassung",
+        "dbo.KHKPpsBdeStempel"
+      ],
+      "final_answer": "Die Abfrage wurde erfolgreich ausgef\u00fchrt, aber es wurden keine Ergebnisse zur\u00fcckgegeben. Dies k\u00f6nnte darauf hindeuten, dass es in den letzten 30 Tagen keine relevanten Daten f\u00fcr die Zeiterfassung und BDE-Erfassung gibt, die miteinander verglichen werden k\u00f6nnen.\n\nFalls du spezifische Daten oder einen anderen Zeitraum analysieren m\u00f6chtest, lass es mich bitte wissen, damit ich die Abfrage entsprechend anpassen kann.",
+      "row_count": 0,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": []
+    },
+    {
+      "query_id": "Q10",
+      "question": "Welche 5 Artikel verursachen aktuell die gr\u00f6ssten operativen Probleme (z.B. h\u00e4ufige Abweichungen, Nacharbeit, versp\u00e4tete Lieferungen) in den letzten 8 Wochen?",
+      "status": "failed",
+      "latency_ms": 12706,
+      "sql_query": null,
+      "tables_used": [],
+      "final_answer": "Ich habe mehrere relevante Tabellen gefunden, die Informationen zu Artikeln und m\u00f6glichen operativen Problemen enthalten k\u00f6nnten:\n\n1. **Artikelbezogene Tabellen**:\n   - `dbo.KHKArtikel`: Enth\u00e4lt allgemeine Informationen zu Artikeln.\n   - `dbo.KHKArtikelLagerbewegungen`: Enth\u00e4lt Informationen zu Lagerbewegungen von Artikeln.\n\n2. **Abweichungen und Nacharbeit**:\n   - `dbo.tKHKPpsMitarbeiterBuchungen`: K\u00f6nnte Informationen zu Nacharbeiten enthalten.\n   - `dbo.KHKLagerplatzbuchungen`: Enth\u00e4lt Informationen zu Lagerplatzbuchungen, die Abweichungen aufzeigen k\u00f6nnten.\n\n3. **Lieferungen**:\n   - `dbo.vewBSOffeneVKLieferungenReferenz`: Enth\u00e4lt Informationen zu offenen Lieferungen.\n   - `dbo.KHKArtikelLieferant`: Enth\u00e4lt Informationen zu Lieferanten und k\u00f6nnte versp\u00e4tete Lieferungen aufzeigen.\n\nMit diesen Tabellen k\u00f6nnen wir verschiedene Aspekte der operativen Probleme untersuchen, wie z.B. h\u00e4ufige Abweichungen, Nacharbeit und versp\u00e4tete Lieferungen. M\u00f6chtest du, dass ich eine spezifische Abfrage f\u00fcr einen dieser Aspekte erstelle?",
+      "row_count": null,
+      "result_preview": [],
+      "agent_execution": {
+        "llm_calls": {
+          "total": null,
+          "by_stage": {
+            "intent": 0,
+            "discovery": 0,
+            "join": 0,
+            "repair": 0,
+            "answer": 0
+          }
+        },
+        "node_executions": {
+          "discovery": 0,
+          "join": 0
+        },
+        "loop_suppressions": {
+          "same_tables_suppressed": 0,
+          "same_sql_suppressed": 0
+        },
+        "graph_cycles": null
+      },
+      "semantic_status": null,
+      "semantic_failure_reasons": [],
+      "failure_reasons": [
+        "missing_sql",
+        "missing_tables",
+        "missing_results"
+      ]
+    }
+  ]
+}

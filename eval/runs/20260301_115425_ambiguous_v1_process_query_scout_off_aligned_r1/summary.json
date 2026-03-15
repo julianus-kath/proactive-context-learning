@@ -1,0 +1,28 @@
+{
+  "run_id": "20260301_115425_ambiguous_v1_process_query_scout_off_aligned_r1",
+  "run_name": "ambiguous_v1_process_query_scout_off_aligned_r1",
+  "mode_label": "scout_off_aligned",
+  "total_queries": 10,
+  "successes": 10,
+  "failures": 0,
+  "success_rate": 100.0,
+  "avg_latency_ms": 3764.7,
+  "p95_latency_ms": 6910.0,
+  "scout_mode_start": {
+    "active": false,
+    "backend": "SchemaCatalog",
+    "status": "healthy",
+    "catalog_valid": true,
+    "off_control_mode": "aligned_table_ranker",
+    "meaning": "Scout mode INACTIVE: MCP discovery backend is SchemaCatalog with aligned TableRanker baseline."
+  },
+  "scout_mode_end": {
+    "active": false,
+    "backend": "SchemaCatalog",
+    "status": "healthy",
+    "catalog_valid": true,
+    "off_control_mode": "aligned_table_ranker",
+    "meaning": "Scout mode INACTIVE: MCP discovery backend is SchemaCatalog with aligned TableRanker baseline."
+  },
+  "results_dir": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/eval/runs/20260301_115425_ambiguous_v1_process_query_scout_off_aligned_r1"
+}

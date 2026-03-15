@@ -1,0 +1,986 @@
+{
+  "generated_at_utc": "2026-03-02T08:04:13.008738+00:00",
+  "invalid_runs_excluded": [
+    "20260302_074648_complex_hard_v1_process_query_scout_off_aligned_r4",
+    "20260302_074810_complex_hard_v1_process_query_scout_on_r5",
+    "20260302_074916_complex_hard_v1_process_query_scout_off_aligned_r5"
+  ],
+  "sets": {
+    "crosslingual_hard_v1": {
+      "dataset_path": "eval/datasets/northwind_queries_crosslingual_hard_v1.jsonl",
+      "pair_count": 5,
+      "pairs": [
+        {
+          "pair_id": "20260301_132255_process_query_ab_crosslingual_hard_v1_on_vs_off_aligned_r1",
+          "on_run_id": "20260301_131827_crosslingual_hard_v1_process_query_scout_on_r1",
+          "off_run_id": "20260301_131954_crosslingual_hard_v1_process_query_scout_off_aligned_r1",
+          "on_backend": "ScoutRunner",
+          "off_backend": "SchemaCatalog",
+          "metrics": {
+            "success_rate_pct": {
+              "on": 100.0,
+              "off": 100.0,
+              "delta_on_minus_off": 0.0
+            },
+            "avg_latency_ms": {
+              "on": 4599.8,
+              "off": 4315.2,
+              "delta_on_minus_off": 284.60000000000036
+            },
+            "p95_latency_ms": {
+              "on": 8719.0,
+              "off": 6399.0,
+              "delta_on_minus_off": 2320.0
+            },
+            "expert_strict_equal_count": {
+              "on": 2,
+              "off": 1,
+              "delta_on_minus_off": 1
+            },
+            "expert_same_cols_set_equal_count": {
+              "on": 2,
+              "off": 1,
+              "delta_on_minus_off": 1
+            },
+            "expert_positional_set_equal_count": {
+              "on": 2,
+              "off": 1,
+              "delta_on_minus_off": 1
+            },
+            "expert_common_cols_set_equal_count": {
+              "on": 1,
+              "off": 1,
+              "delta_on_minus_off": 0
+            },
+            "expert_required_tables_ok_count": {
+              "on": 7,
+              "off": 6,
+              "delta_on_minus_off": 1
+            }
+          },
+          "on_expert_summary": {
+            "total": 12,
+            "strict_equal_count": 2,
+            "same_cols_set_equal_count": 2,
+            "positional_set_equal_count": 2,
+            "common_cols_set_equal_count": 1,
+            "required_tables_ok_count": 7,
+            "sql_exec_errors_count": 2
+          },
+          "off_expert_summary": {
+            "total": 12,
+            "strict_equal_count": 1,
+            "same_cols_set_equal_count": 1,
+            "positional_set_equal_count": 1,
+            "common_cols_set_equal_count": 1,
+            "required_tables_ok_count": 6,
+            "sql_exec_errors_count": 3
+          },
+          "on_sql_present_count": 10,
+          "off_sql_present_count": 9
+        },
+        {
+          "pair_id": "20260301_132557_process_query_ab_crosslingual_hard_v1_on_vs_off_aligned_r2",
+          "on_run_id": "20260301_132329_crosslingual_hard_v1_process_query_scout_on_r2",
+          "off_run_id": "20260301_132455_crosslingual_hard_v1_process_query_scout_off_aligned_r2",
+          "on_backend": "ScoutRunner",
+          "off_backend": "SchemaCatalog",
+          "metrics": {
+            "success_rate_pct": {
+              "on": 100.0,
+              "off": 100.0,
+              "delta_on_minus_off": 0.0
+            },
+            "avg_latency_ms": {
+              "on": 4668.3,
+              "off": 4361.8,
+              "delta_on_minus_off": 306.5
+            },
+            "p95_latency_ms": {
+              "on": 7029.0,
+              "off": 7066.0,
+              "delta_on_minus_off": -37.0
+            },
+            "expert_strict_equal_count": {
+              "on": 1,
+              "off": 1,
+              "delta_on_minus_off": 0
+            },
+            "expert_same_cols_set_equal_count": {
+              "on": 1,
+              "off": 1,
+              "delta_on_minus_off": 0
+            },
+            "expert_positional_set_equal_count": {
+              "on": 1,
+              "off": 1,
+              "delta_on_minus_off": 0
+            },
+            "expert_common_cols_set_equal_count": {
+              "on": 1,
+              "off": 1,
+              "delta_on_minus_off": 0
+            },
+            "expert_required_tables_ok_count": {
+              "on": 5,
+              "off": 5,
+              "delta_on_minus_off": 0
+            }
+          },
+          "on_expert_summary": {
+            "total": 12,
+            "strict_equal_count": 1,
+            "same_cols_set_equal_count": 1,
+            "positional_set_equal_count": 1,
+            "common_cols_set_equal_count": 1,
+            "required_tables_ok_count": 5,
+            "sql_exec_errors_count": 3
+          },
+          "off_expert_summary": {
+            "total": 12,
+            "strict_equal_count": 1,
+            "same_cols_set_equal_count": 1,
+            "positional_set_equal_count": 1,
+            "common_cols_set_equal_count": 1,
+            "required_tables_ok_count": 5,
+            "sql_exec_errors_count": 4
+          },
+          "on_sql_present_count": 9,
+          "off_sql_present_count": 8
+        },
+        {
+          "pair_id": "20260301_133013_process_query_ab_crosslingual_hard_v1_on_vs_off_aligned_r3",
+          "on_run_id": "20260301_132643_crosslingual_hard_v1_process_query_scout_on_r3",
+          "off_run_id": "20260301_132904_crosslingual_hard_v1_process_query_scout_off_aligned_r3",
+          "on_backend": "ScoutRunner",
+          "off_backend": "SchemaCatalog",
+          "metrics": {
+            "success_rate_pct": {
+              "on": 100.0,
+              "off": 100.0,
+              "delta_on_minus_off": 0.0
+            },
+            "avg_latency_ms": {
+              "on": 4919.2,
+              "off": 4968.9,
+              "delta_on_minus_off": -49.69999999999982
+            },
+            "p95_latency_ms": {
+              "on": 10326.0,
+              "off": 8903.0,
+              "delta_on_minus_off": 1423.0
+            },
+            "expert_strict_equal_count": {
+              "on": 2,
+              "off": 1,
+              "delta_on_minus_off": 1
+            },
+            "expert_same_cols_set_equal_count": {
+              "on": 2,
+              "off": 1,
+              "delta_on_minus_off": 1
+            },
+            "expert_positional_set_equal_count": {
+              "on": 2,
+              "off": 1,
+              "delta_on_minus_off": 1
+            },
+            "expert_common_cols_set_equal_count": {
+              "on": 1,
+              "off": 1,
+              "delta_on_minus_off": 0
+            },
+            "expert_required_tables_ok_count": {
+              "on": 7,
+              "off": 7,
+              "delta_on_minus_off": 0
+            }
+          },
+          "on_expert_summary": {
+            "total": 12,
+            "strict_equal_count": 2,
+            "same_cols_set_equal_count": 2,
+            "positional_set_equal_count": 2,
+            "common_cols_set_equal_count": 1,
+            "required_tables_ok_count": 7,
+            "sql_exec_errors_count": 2
+          },
+          "off_expert_summary": {
+            "total": 12,
+            "strict_equal_count": 1,
+            "same_cols_set_equal_count": 1,
+            "positional_set_equal_count": 1,
+            "common_cols_set_equal_count": 1,
+            "required_tables_ok_count": 7,
+            "sql_exec_errors_count": 3
+          },
+          "on_sql_present_count": 10,
+          "off_sql_present_count": 9
+        },
+        {
+          "pair_id": "20260302_080208_process_query_ab_crosslingual_hard_v1_on_vs_off_aligned_r4",
+          "on_run_id": "20260302_071150_crosslingual_hard_v1_process_query_scout_on_r4",
+          "off_run_id": "20260302_071346_crosslingual_hard_v1_process_query_scout_off_aligned_r4",
+          "on_backend": "ScoutRunner",
+          "off_backend": "SchemaCatalog",
+          "metrics": {
+            "success_rate_pct": {
+              "on": 100.0,
+              "off": 100.0,
+              "delta_on_minus_off": 0.0
+            },
+            "avg_latency_ms": {
+              "on": 7309.6,
+              "off": 5497.4,
+              "delta_on_minus_off": 1812.2000000000007
+            },
+            "p95_latency_ms": {
+              "on": 14187.0,
+              "off": 8722.0,
+              "delta_on_minus_off": 5465.0
+            },
+            "expert_strict_equal_count": {
+              "on": 1,
+              "off": 2,
+              "delta_on_minus_off": -1
+            },
+            "expert_same_cols_set_equal_count": {
+              "on": 1,
+              "off": 2,
+              "delta_on_minus_off": -1
+            },
+            "expert_positional_set_equal_count": {
+              "on": 1,
+              "off": 2,
+              "delta_on_minus_off": -1
+            },
+            "expert_common_cols_set_equal_count": {
+              "on": 1,
+              "off": 1,
+              "delta_on_minus_off": 0
+            },
+            "expert_required_tables_ok_count": {
+              "on": 5,
+              "off": 5,
+              "delta_on_minus_off": 0
+            }
+          },
+          "on_expert_summary": {
+            "total": 12,
+            "strict_equal_count": 1,
+            "same_cols_set_equal_count": 1,
+            "positional_set_equal_count": 1,
+            "common_cols_set_equal_count": 1,
+            "required_tables_ok_count": 5,
+            "sql_exec_errors_count": 3
+          },
+          "off_expert_summary": {
+            "total": 12,
+            "strict_equal_count": 2,
+            "same_cols_set_equal_count": 2,
+            "positional_set_equal_count": 2,
+            "common_cols_set_equal_count": 1,
+            "required_tables_ok_count": 5,
+            "sql_exec_errors_count": 3
+          },
+          "on_sql_present_count": 9,
+          "off_sql_present_count": 9
+        },
+        {
+          "pair_id": "20260302_080208_process_query_ab_crosslingual_hard_v1_on_vs_off_aligned_r5",
+          "on_run_id": "20260302_071600_crosslingual_hard_v1_process_query_scout_on_r5",
+          "off_run_id": "20260302_071708_crosslingual_hard_v1_process_query_scout_off_aligned_r5",
+          "on_backend": "ScoutRunner",
+          "off_backend": "SchemaCatalog",
+          "metrics": {
+            "success_rate_pct": {
+              "on": 100.0,
+              "off": 100.0,
+              "delta_on_minus_off": 0.0
+            },
+            "avg_latency_ms": {
+              "on": 5482.8,
+              "off": 5482.2,
+              "delta_on_minus_off": 0.6000000000003638
+            },
+            "p95_latency_ms": {
+              "on": 8408.0,
+              "off": 7409.0,
+              "delta_on_minus_off": 999.0
+            },
+            "expert_strict_equal_count": {
+              "on": 2,
+              "off": 1,
+              "delta_on_minus_off": 1
+            },
+            "expert_same_cols_set_equal_count": {
+              "on": 2,
+              "off": 1,
+              "delta_on_minus_off": 1
+            },
+            "expert_positional_set_equal_count": {
+              "on": 2,
+              "off": 1,
+              "delta_on_minus_off": 1
+            },
+            "expert_common_cols_set_equal_count": {
+              "on": 1,
+              "off": 1,
+              "delta_on_minus_off": 0
+            },
+            "expert_required_tables_ok_count": {
+              "on": 8,
+              "off": 5,
+              "delta_on_minus_off": 3
+            }
+          },
+          "on_expert_summary": {
+            "total": 12,
+            "strict_equal_count": 2,
+            "same_cols_set_equal_count": 2,
+            "positional_set_equal_count": 2,
+            "common_cols_set_equal_count": 1,
+            "required_tables_ok_count": 8,
+            "sql_exec_errors_count": 2
+          },
+          "off_expert_summary": {
+            "total": 12,
+            "strict_equal_count": 1,
+            "same_cols_set_equal_count": 1,
+            "positional_set_equal_count": 1,
+            "common_cols_set_equal_count": 1,
+            "required_tables_ok_count": 5,
+            "sql_exec_errors_count": 4
+          },
+          "on_sql_present_count": 10,
+          "off_sql_present_count": 8
+        }
+      ],
+      "aggregate": {
+        "success_rate_pct_on_mean": 100.0,
+        "success_rate_pct_off_mean": 100.0,
+        "success_rate_pct_delta_on_minus_off_mean": 0.0,
+        "avg_latency_ms_on_mean": 5395.9400000000005,
+        "avg_latency_ms_off_mean": 4925.1,
+        "avg_latency_ms_delta_on_minus_off_mean": 470.8400000000003,
+        "p95_latency_ms_on_mean": 9733.8,
+        "p95_latency_ms_off_mean": 7699.8,
+        "p95_latency_ms_delta_on_minus_off_mean": 2034.0,
+        "expert_strict_equal_count_on_mean": 1.6,
+        "expert_strict_equal_count_off_mean": 1.2,
+        "expert_strict_equal_count_delta_on_minus_off_mean": 0.4,
+        "expert_required_tables_ok_count_on_mean": 6.4,
+        "expert_required_tables_ok_count_off_mean": 5.6,
+        "expert_required_tables_ok_count_delta_on_minus_off_mean": 0.8,
+        "expert_strict_equal_rate_on_mean": 0.13333333333333333,
+        "expert_strict_equal_rate_off_mean": 0.09999999999999999,
+        "expert_positional_rate_on_mean": 0.13333333333333333,
+        "expert_positional_rate_off_mean": 0.09999999999999999,
+        "expert_required_tables_ok_rate_on_mean": 0.5333333333333333,
+        "expert_required_tables_ok_rate_off_mean": 0.4666666666666667
+      },
+      "query_level": {
+        "top_on_advantage": [
+          {
+            "query_id": "CL2",
+            "question": "Welche Kundenl\u00e4nder bringen den gr\u00f6\u00dften Gesamtumsatz nach Abz\u00fcgen?",
+            "delta_required_tables_ok_on_minus_off": 2,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_required_tables_ok": 4,
+            "off_required_tables_ok": 2,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          },
+          {
+            "query_id": "CL6",
+            "question": "Wie entwickeln sich pro Monat erfasste Auftr\u00e4ge und versp\u00e4tete Auslieferungen?",
+            "delta_required_tables_ok_on_minus_off": 2,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_required_tables_ok": 4,
+            "off_required_tables_ok": 2,
+            "on_sql_missing": 1,
+            "off_sql_missing": 3,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          },
+          {
+            "query_id": "CL10",
+            "question": "Welche Kundensegmente erzeugen den h\u00f6chsten Erl\u00f6s nach Rabatt?",
+            "delta_required_tables_ok_on_minus_off": 1,
+            "delta_strict_equal_on_minus_off": 2,
+            "on_strict_true": 3,
+            "on_required_tables_ok": 2,
+            "off_sql_missing": 4,
+            "on_sql_missing": 2,
+            "off_strict_true": 1,
+            "off_required_tables_ok": 1
+          },
+          {
+            "query_id": "CL1",
+            "question": "Welche Lieferanten erzielen den h\u00f6chsten Umsatz nach Rabatten \u00fcber ihre Artikel?",
+            "delta_required_tables_ok_on_minus_off": 0,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_required_tables_ok": 5,
+            "off_required_tables_ok": 5,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          },
+          {
+            "query_id": "CL11",
+            "question": "Welche Mitarbeitenden verkaufen h\u00e4ufig in andere Ziell\u00e4nder als ihr Heimatland?",
+            "delta_required_tables_ok_on_minus_off": 0,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_sql_missing": 4,
+            "off_sql_missing": 5,
+            "on_required_tables_ok": 0,
+            "off_required_tables_ok": 0,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          }
+        ],
+        "top_off_advantage": [
+          {
+            "query_id": "CL8",
+            "question": "Welche Kunden bestellen h\u00e4ufig, aber mit eher kleinem Warenkorbwert?",
+            "delta_required_tables_ok_on_minus_off": -1,
+            "delta_strict_equal_on_minus_off": 0,
+            "off_required_tables_ok": 3,
+            "on_required_tables_ok": 2,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          },
+          {
+            "query_id": "CL1",
+            "question": "Welche Lieferanten erzielen den h\u00f6chsten Umsatz nach Rabatten \u00fcber ihre Artikel?",
+            "delta_required_tables_ok_on_minus_off": 0,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_required_tables_ok": 5,
+            "off_required_tables_ok": 5,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          },
+          {
+            "query_id": "CL11",
+            "question": "Welche Mitarbeitenden verkaufen h\u00e4ufig in andere Ziell\u00e4nder als ihr Heimatland?",
+            "delta_required_tables_ok_on_minus_off": 0,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_sql_missing": 4,
+            "off_sql_missing": 5,
+            "on_required_tables_ok": 0,
+            "off_required_tables_ok": 0,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          },
+          {
+            "query_id": "CL12",
+            "question": "In welchen Monaten ist Fracht im Verh\u00e4ltnis zum Umsatz am teuersten?",
+            "delta_required_tables_ok_on_minus_off": 0,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_required_tables_ok": 5,
+            "off_required_tables_ok": 5,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          },
+          {
+            "query_id": "CL3",
+            "question": "Bei welchen Versanddienstleistern sind Sendungen im Schnitt am h\u00e4ufigsten versp\u00e4tet?",
+            "delta_required_tables_ok_on_minus_off": 0,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_sql_missing": 5,
+            "off_sql_missing": 5,
+            "on_required_tables_ok": 0,
+            "off_required_tables_ok": 0,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          }
+        ]
+      }
+    },
+    "complex_hard_v1": {
+      "dataset_path": "eval/datasets/northwind_queries_complex_hard_v1.jsonl",
+      "pair_count": 5,
+      "pairs": [
+        {
+          "pair_id": "20260301_151717_process_query_ab_complex_hard_v1_on_vs_off_aligned_r1",
+          "on_run_id": "20260301_151227_complex_hard_v1_process_query_scout_on_r1",
+          "off_run_id": "20260301_151456_complex_hard_v1_process_query_scout_off_aligned_r1",
+          "on_backend": "ScoutRunner",
+          "off_backend": "SchemaCatalog",
+          "metrics": {
+            "success_rate_pct": {
+              "on": 100.0,
+              "off": 100.0,
+              "delta_on_minus_off": 0.0
+            },
+            "avg_latency_ms": {
+              "on": 8121.7,
+              "off": 8354.5,
+              "delta_on_minus_off": -232.80000000000018
+            },
+            "p95_latency_ms": {
+              "on": 18454.0,
+              "off": 16174.0,
+              "delta_on_minus_off": 2280.0
+            },
+            "expert_strict_equal_count": {
+              "on": 2,
+              "off": 2,
+              "delta_on_minus_off": 0
+            },
+            "expert_same_cols_set_equal_count": {
+              "on": 2,
+              "off": 2,
+              "delta_on_minus_off": 0
+            },
+            "expert_positional_set_equal_count": {
+              "on": 2,
+              "off": 2,
+              "delta_on_minus_off": 0
+            },
+            "expert_common_cols_set_equal_count": {
+              "on": 0,
+              "off": 0,
+              "delta_on_minus_off": 0
+            },
+            "expert_required_tables_ok_count": {
+              "on": 5,
+              "off": 7,
+              "delta_on_minus_off": -2
+            }
+          },
+          "on_expert_summary": {
+            "total": 15,
+            "strict_equal_count": 2,
+            "same_cols_set_equal_count": 2,
+            "positional_set_equal_count": 2,
+            "common_cols_set_equal_count": 0,
+            "required_tables_ok_count": 5,
+            "sql_exec_errors_count": 3
+          },
+          "off_expert_summary": {
+            "total": 15,
+            "strict_equal_count": 2,
+            "same_cols_set_equal_count": 2,
+            "positional_set_equal_count": 2,
+            "common_cols_set_equal_count": 0,
+            "required_tables_ok_count": 7,
+            "sql_exec_errors_count": 3
+          },
+          "on_sql_present_count": 12,
+          "off_sql_present_count": 12
+        },
+        {
+          "pair_id": "20260301_152212_process_query_ab_complex_hard_v1_on_vs_off_aligned_r2",
+          "on_run_id": "20260301_151800_complex_hard_v1_process_query_scout_on_r2",
+          "off_run_id": "20260301_152002_complex_hard_v1_process_query_scout_off_aligned_r2",
+          "on_backend": "ScoutRunner",
+          "off_backend": "SchemaCatalog",
+          "metrics": {
+            "success_rate_pct": {
+              "on": 100.0,
+              "off": 100.0,
+              "delta_on_minus_off": 0.0
+            },
+            "avg_latency_ms": {
+              "on": 6087.3,
+              "off": 7590.4,
+              "delta_on_minus_off": -1503.0999999999995
+            },
+            "p95_latency_ms": {
+              "on": 9854.0,
+              "off": 13274.0,
+              "delta_on_minus_off": -3420.0
+            },
+            "expert_strict_equal_count": {
+              "on": 2,
+              "off": 2,
+              "delta_on_minus_off": 0
+            },
+            "expert_same_cols_set_equal_count": {
+              "on": 2,
+              "off": 2,
+              "delta_on_minus_off": 0
+            },
+            "expert_positional_set_equal_count": {
+              "on": 2,
+              "off": 2,
+              "delta_on_minus_off": 0
+            },
+            "expert_common_cols_set_equal_count": {
+              "on": 0,
+              "off": 0,
+              "delta_on_minus_off": 0
+            },
+            "expert_required_tables_ok_count": {
+              "on": 5,
+              "off": 5,
+              "delta_on_minus_off": 0
+            }
+          },
+          "on_expert_summary": {
+            "total": 15,
+            "strict_equal_count": 2,
+            "same_cols_set_equal_count": 2,
+            "positional_set_equal_count": 2,
+            "common_cols_set_equal_count": 0,
+            "required_tables_ok_count": 5,
+            "sql_exec_errors_count": 3
+          },
+          "off_expert_summary": {
+            "total": 15,
+            "strict_equal_count": 2,
+            "same_cols_set_equal_count": 2,
+            "positional_set_equal_count": 2,
+            "common_cols_set_equal_count": 0,
+            "required_tables_ok_count": 5,
+            "sql_exec_errors_count": 3
+          },
+          "on_sql_present_count": 12,
+          "off_sql_present_count": 12
+        },
+        {
+          "pair_id": "20260302_075022_process_query_ab_complex_hard_v1_on_vs_off_aligned_r3_recover",
+          "on_run_id": "20260302_072425_complex_hard_v1_process_query_scout_on_r3",
+          "off_run_id": "20260302_073947_complex_hard_v1_process_query_scout_off_aligned_r3_recover",
+          "on_backend": "ScoutRunner",
+          "off_backend": "SchemaCatalog",
+          "metrics": {
+            "success_rate_pct": {
+              "on": 100.0,
+              "off": 100.0,
+              "delta_on_minus_off": 0.0
+            },
+            "avg_latency_ms": {
+              "on": 8801.2,
+              "off": 10653.7,
+              "delta_on_minus_off": -1852.5
+            },
+            "p95_latency_ms": {
+              "on": 19810.0,
+              "off": 21304.0,
+              "delta_on_minus_off": -1494.0
+            },
+            "expert_strict_equal_count": {
+              "on": 2,
+              "off": 2,
+              "delta_on_minus_off": 0
+            },
+            "expert_same_cols_set_equal_count": {
+              "on": 2,
+              "off": 2,
+              "delta_on_minus_off": 0
+            },
+            "expert_positional_set_equal_count": {
+              "on": 2,
+              "off": 2,
+              "delta_on_minus_off": 0
+            },
+            "expert_common_cols_set_equal_count": {
+              "on": 0,
+              "off": 0,
+              "delta_on_minus_off": 0
+            },
+            "expert_required_tables_ok_count": {
+              "on": 5,
+              "off": 7,
+              "delta_on_minus_off": -2
+            }
+          },
+          "on_expert_summary": {
+            "total": 15,
+            "strict_equal_count": 2,
+            "same_cols_set_equal_count": 2,
+            "positional_set_equal_count": 2,
+            "common_cols_set_equal_count": 0,
+            "required_tables_ok_count": 5,
+            "sql_exec_errors_count": 3
+          },
+          "off_expert_summary": {
+            "total": 15,
+            "strict_equal_count": 2,
+            "same_cols_set_equal_count": 2,
+            "positional_set_equal_count": 2,
+            "common_cols_set_equal_count": 0,
+            "required_tables_ok_count": 7,
+            "sql_exec_errors_count": 3
+          },
+          "on_sql_present_count": 12,
+          "off_sql_present_count": 12
+        },
+        {
+          "pair_id": "20260302_080050_process_query_ab_complex_hard_v1_on_vs_off_aligned_r4_recover2",
+          "on_run_id": "20260302_074307_complex_hard_v1_process_query_scout_on_r4",
+          "off_run_id": "20260302_075221_complex_hard_v1_process_query_scout_off_aligned_r4_recover2",
+          "on_backend": "ScoutRunner",
+          "off_backend": "SchemaCatalog",
+          "metrics": {
+            "success_rate_pct": {
+              "on": 100.0,
+              "off": 100.0,
+              "delta_on_minus_off": 0.0
+            },
+            "avg_latency_ms": {
+              "on": 7749.1,
+              "off": 7635.1,
+              "delta_on_minus_off": 114.0
+            },
+            "p95_latency_ms": {
+              "on": 17394.0,
+              "off": 15460.0,
+              "delta_on_minus_off": 1934.0
+            },
+            "expert_strict_equal_count": {
+              "on": 2,
+              "off": 2,
+              "delta_on_minus_off": 0
+            },
+            "expert_same_cols_set_equal_count": {
+              "on": 2,
+              "off": 2,
+              "delta_on_minus_off": 0
+            },
+            "expert_positional_set_equal_count": {
+              "on": 2,
+              "off": 2,
+              "delta_on_minus_off": 0
+            },
+            "expert_common_cols_set_equal_count": {
+              "on": 0,
+              "off": 0,
+              "delta_on_minus_off": 0
+            },
+            "expert_required_tables_ok_count": {
+              "on": 6,
+              "off": 6,
+              "delta_on_minus_off": 0
+            }
+          },
+          "on_expert_summary": {
+            "total": 15,
+            "strict_equal_count": 2,
+            "same_cols_set_equal_count": 2,
+            "positional_set_equal_count": 2,
+            "common_cols_set_equal_count": 0,
+            "required_tables_ok_count": 6,
+            "sql_exec_errors_count": 3
+          },
+          "off_expert_summary": {
+            "total": 15,
+            "strict_equal_count": 2,
+            "same_cols_set_equal_count": 2,
+            "positional_set_equal_count": 2,
+            "common_cols_set_equal_count": 0,
+            "required_tables_ok_count": 6,
+            "sql_exec_errors_count": 3
+          },
+          "on_sql_present_count": 12,
+          "off_sql_present_count": 12
+        },
+        {
+          "pair_id": "20260302_080050_process_query_ab_complex_hard_v1_on_vs_off_aligned_r5_recover2",
+          "on_run_id": "20260302_075448_complex_hard_v1_process_query_scout_on_r5_recover2",
+          "off_run_id": "20260302_075712_complex_hard_v1_process_query_scout_off_aligned_r5_recover2",
+          "on_backend": "ScoutRunner",
+          "off_backend": "SchemaCatalog",
+          "metrics": {
+            "success_rate_pct": {
+              "on": 100.0,
+              "off": 93.33,
+              "delta_on_minus_off": 6.670000000000002
+            },
+            "avg_latency_ms": {
+              "on": 7466.7,
+              "off": 12570.0,
+              "delta_on_minus_off": -5103.3
+            },
+            "p95_latency_ms": {
+              "on": 19679.0,
+              "off": 72001.0,
+              "delta_on_minus_off": -52322.0
+            },
+            "expert_strict_equal_count": {
+              "on": 2,
+              "off": 2,
+              "delta_on_minus_off": 0
+            },
+            "expert_same_cols_set_equal_count": {
+              "on": 2,
+              "off": 2,
+              "delta_on_minus_off": 0
+            },
+            "expert_positional_set_equal_count": {
+              "on": 2,
+              "off": 2,
+              "delta_on_minus_off": 0
+            },
+            "expert_common_cols_set_equal_count": {
+              "on": 0,
+              "off": 0,
+              "delta_on_minus_off": 0
+            },
+            "expert_required_tables_ok_count": {
+              "on": 7,
+              "off": 5,
+              "delta_on_minus_off": 2
+            }
+          },
+          "on_expert_summary": {
+            "total": 15,
+            "strict_equal_count": 2,
+            "same_cols_set_equal_count": 2,
+            "positional_set_equal_count": 2,
+            "common_cols_set_equal_count": 0,
+            "required_tables_ok_count": 7,
+            "sql_exec_errors_count": 3
+          },
+          "off_expert_summary": {
+            "total": 15,
+            "strict_equal_count": 2,
+            "same_cols_set_equal_count": 2,
+            "positional_set_equal_count": 2,
+            "common_cols_set_equal_count": 0,
+            "required_tables_ok_count": 5,
+            "sql_exec_errors_count": 4
+          },
+          "on_sql_present_count": 12,
+          "off_sql_present_count": 11
+        }
+      ],
+      "aggregate": {
+        "success_rate_pct_on_mean": 100.0,
+        "success_rate_pct_off_mean": 98.666,
+        "success_rate_pct_delta_on_minus_off_mean": 1.3340000000000003,
+        "avg_latency_ms_on_mean": 7645.2,
+        "avg_latency_ms_off_mean": 9360.74,
+        "avg_latency_ms_delta_on_minus_off_mean": -1715.5400000000002,
+        "p95_latency_ms_on_mean": 17038.2,
+        "p95_latency_ms_off_mean": 27642.6,
+        "p95_latency_ms_delta_on_minus_off_mean": -10604.4,
+        "expert_strict_equal_count_on_mean": 2.0,
+        "expert_strict_equal_count_off_mean": 2.0,
+        "expert_strict_equal_count_delta_on_minus_off_mean": 0.0,
+        "expert_required_tables_ok_count_on_mean": 5.6,
+        "expert_required_tables_ok_count_off_mean": 6.0,
+        "expert_required_tables_ok_count_delta_on_minus_off_mean": -0.4,
+        "expert_strict_equal_rate_on_mean": 0.13333333333333333,
+        "expert_strict_equal_rate_off_mean": 0.13333333333333333,
+        "expert_positional_rate_on_mean": 0.13333333333333333,
+        "expert_positional_rate_off_mean": 0.13333333333333333,
+        "expert_required_tables_ok_rate_on_mean": 0.37333333333333335,
+        "expert_required_tables_ok_rate_off_mean": 0.39999999999999997
+      },
+      "query_level": {
+        "top_on_advantage": [
+          {
+            "query_id": "HX10",
+            "question": "Welche Kundensegmente haben hohen Umsatz, aber geringe Wiederkaufrate (Bestellungen pro Kunde)?",
+            "delta_required_tables_ok_on_minus_off": 0,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_strict_true": 5,
+            "off_strict_true": 5,
+            "on_required_tables_ok": 5,
+            "off_required_tables_ok": 5
+          },
+          {
+            "query_id": "HX12",
+            "question": "Welche Kategorien haben nach Rabatt die hoechste Umsatzvolatilitaet zwischen Monaten?",
+            "delta_required_tables_ok_on_minus_off": 0,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_required_tables_ok": 5,
+            "off_required_tables_ok": 5,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          },
+          {
+            "query_id": "HX14",
+            "question": "Welche Kunden bestellen haeufig verschiedene Produktfamilien, aber mit unterdurchschnittlichem Warenkorbwert?",
+            "delta_required_tables_ok_on_minus_off": 0,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_required_tables_ok": 5,
+            "off_required_tables_ok": 5,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          },
+          {
+            "query_id": "HX15",
+            "question": "Bei welchen Versanddienstleistern haeufen sich verspaetete Lieferungen besonders bei hochrabattierten Auftraegen?",
+            "delta_required_tables_ok_on_minus_off": 0,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_sql_missing": 5,
+            "off_sql_missing": 5,
+            "on_required_tables_ok": 0,
+            "off_required_tables_ok": 0,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          },
+          {
+            "query_id": "HX3",
+            "question": "Bei welchen Versanddienstleistern ist der Anteil stark verspaeteter Sendungen (mehr als 3 Tage) am groessten?",
+            "delta_required_tables_ok_on_minus_off": 0,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_sql_missing": 5,
+            "off_sql_missing": 5,
+            "on_required_tables_ok": 0,
+            "off_required_tables_ok": 0,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          }
+        ],
+        "top_off_advantage": [
+          {
+            "query_id": "HX1",
+            "question": "Welche Kundenkonten haben ihren Monatsumsatz vom ersten zum letzten aktiven Monat am staerksten gesteigert (mindestens 5 Bestellungen insgesamt)?",
+            "delta_required_tables_ok_on_minus_off": -1,
+            "delta_strict_equal_on_minus_off": 0,
+            "off_required_tables_ok": 3,
+            "on_required_tables_ok": 2,
+            "off_fail": 1,
+            "off_sql_missing": 1,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          },
+          {
+            "query_id": "HX6",
+            "question": "Welche Mitarbeitenden haben viele grenzueberschreitende Auftraege, aber unterdurchschnittlichen Umsatz je Auftrag?",
+            "delta_required_tables_ok_on_minus_off": -1,
+            "delta_strict_equal_on_minus_off": 0,
+            "off_required_tables_ok": 2,
+            "on_required_tables_ok": 1,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          },
+          {
+            "query_id": "HX10",
+            "question": "Welche Kundensegmente haben hohen Umsatz, aber geringe Wiederkaufrate (Bestellungen pro Kunde)?",
+            "delta_required_tables_ok_on_minus_off": 0,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_strict_true": 5,
+            "off_strict_true": 5,
+            "on_required_tables_ok": 5,
+            "off_required_tables_ok": 5
+          },
+          {
+            "query_id": "HX12",
+            "question": "Welche Kategorien haben nach Rabatt die hoechste Umsatzvolatilitaet zwischen Monaten?",
+            "delta_required_tables_ok_on_minus_off": 0,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_required_tables_ok": 5,
+            "off_required_tables_ok": 5,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          },
+          {
+            "query_id": "HX14",
+            "question": "Welche Kunden bestellen haeufig verschiedene Produktfamilien, aber mit unterdurchschnittlichem Warenkorbwert?",
+            "delta_required_tables_ok_on_minus_off": 0,
+            "delta_strict_equal_on_minus_off": 0,
+            "on_required_tables_ok": 5,
+            "off_required_tables_ok": 5,
+            "on_strict_true": 0,
+            "off_strict_true": 0
+          }
+        ]
+      }
+    }
+  }
+}
