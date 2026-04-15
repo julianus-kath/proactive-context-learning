@@ -210,7 +210,15 @@ class ScoutRunner:
         """
         Start the Scout Runner background tasks.
 
-        This is non-blocking - starts background catalog building if needed.
+        This is non-blocking. Behaviour at startup:
+          1. If the catalog is missing or expired, a build is scheduled as a
+             background task. The server remains responsive while it runs.
+          2. A follow-up prewarm task is scheduled which waits for the build
+             (if any) and then runs SDG enrichment over the catalog, so the
+             first real query does not pay the enrichment cost.
+
+        When SCOUT_DESCRIPTIONS_ENABLED is false, the enrichment step is a
+        no-op pass that stamps description="" on every table and returns.
         """
         if self._running:
             logger.warning("ScoutRunner already running")
@@ -228,6 +236,12 @@ class ScoutRunner:
             self._build_task = asyncio.create_task(self._build_catalog_async())
         else:
             logger.info("✅ Catalog is fresh, no build needed")
+
+        # Prewarm SDG enrichment at startup. Awaits the build task if one was
+        # just scheduled; otherwise fires immediately against the existing
+        # catalog. Runs off the event loop because enrichment is synchronous
+        # and, for large catalogs with a real LLM generator, can take minutes.
+        asyncio.create_task(self._prewarm_catalog_and_enrichment())
 
     async def stop(self) -> None:
         """
@@ -364,6 +378,52 @@ class ScoutRunner:
         return PostgresCatalogBuilder(self.db_adapter)
 
 
+
+    async def _prewarm_catalog_and_enrichment(self) -> None:
+        """
+        Startup-time prewarm: wait for any in-progress build, then run SDG
+        enrichment over the catalog so the first real query doesn't pay the
+        cost.
+
+        Safe to call even when:
+          - no build is in progress (falls through to immediate enrichment);
+          - no catalog exists yet (logs and returns);
+          - descriptions are disabled (NullDescriptionGenerator is a cheap
+            pass that stamps description="" on every table);
+          - enrichment throws (we log and swallow — prewarm failure must not
+            take down the MCP server).
+        """
+        try:
+            if self._build_task is not None and not self._build_task.done():
+                logger.info("🔥 Prewarm: waiting for catalog build to finish...")
+                try:
+                    await self._build_task
+                except Exception as exc:
+                    # _build_catalog_async already logs its own failure; we
+                    # just note that the prewarm is giving up.
+                    logger.warning("🔥 Prewarm: build task raised %s, skipping enrichment", exc)
+                    return
+
+            if not self.store.is_valid():
+                logger.warning("🔥 Prewarm: no valid catalog available, skipping enrichment")
+                return
+
+            gen_enabled = bool(getattr(self._description_generator, "enabled", False))
+            logger.info(
+                "🔥 Prewarm: triggering SDG enrichment (descriptions=%s)",
+                "on" if gen_enabled else "off",
+            )
+
+            # get_catalog() is synchronous and, with a real LLM generator,
+            # can block for a long time. Run it in the executor so the event
+            # loop stays responsive for health checks and concurrent requests.
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(self._executor, self.get_catalog)
+            logger.info("🔥 Prewarm: enrichment complete, first query will be warm")
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("🔥 Prewarm: unexpected failure: %s", exc)
 
     def get_catalog(self) -> Optional[Dict[str, Any]]:
         """
