@@ -24,23 +24,59 @@ EVAL_DIR = Path(__file__).resolve().parent
 RUNS_DIR = EVAL_DIR / "runs"
 
 MODE_SPECS: Dict[str, Dict[str, Optional[str]]] = {
+    # Legacy modes kept for backwards compatibility with earlier runs.
     "scout_on": {
         "SCOUT_DISABLE": "false",
         "SCOUT_OFF_CONTROL_MODE": None,
+        "SCOUT_DESCRIPTIONS_ENABLED": None,
+        "SCOUT_DESCRIPTIONS_RANKING": None,
         "expected_backend": "ScoutRunner",
         "expected_off_control_mode": None,
     },
     "scout_off_aligned": {
         "SCOUT_DISABLE": "true",
         "SCOUT_OFF_CONTROL_MODE": "aligned_table_ranker",
+        "SCOUT_DESCRIPTIONS_ENABLED": None,
+        "SCOUT_DESCRIPTIONS_RANKING": None,
         "expected_backend": "SchemaCatalog",
         "expected_off_control_mode": "aligned_table_ranker",
     },
     "scout_off_legacy": {
         "SCOUT_DISABLE": "true",
         "SCOUT_OFF_CONTROL_MODE": "legacy_lexical_schema_linking",
+        "SCOUT_DESCRIPTIONS_ENABLED": None,
+        "SCOUT_DESCRIPTIONS_RANKING": None,
         "expected_backend": "SchemaCatalog",
         "expected_off_control_mode": "legacy_lexical_schema_linking",
+    },
+    # Current three-condition design: isolates where SDG helps.
+    #   scout_structural      — no descriptions anywhere (baseline).
+    #   scout_enriched        — descriptions in the agent payload only.
+    #   scout_enriched_ranked — descriptions in payload AND in TableRanker.
+    # All three run Scout Mode; only the SDG-related env vars differ.
+    "scout_structural": {
+        "SCOUT_DISABLE": "false",
+        "SCOUT_OFF_CONTROL_MODE": None,
+        "SCOUT_DESCRIPTIONS_ENABLED": "false",
+        "SCOUT_DESCRIPTIONS_RANKING": "false",
+        "expected_backend": "ScoutRunner",
+        "expected_off_control_mode": None,
+    },
+    "scout_enriched": {
+        "SCOUT_DISABLE": "false",
+        "SCOUT_OFF_CONTROL_MODE": None,
+        "SCOUT_DESCRIPTIONS_ENABLED": "true",
+        "SCOUT_DESCRIPTIONS_RANKING": "false",
+        "expected_backend": "ScoutRunner",
+        "expected_off_control_mode": None,
+    },
+    "scout_enriched_ranked": {
+        "SCOUT_DISABLE": "false",
+        "SCOUT_OFF_CONTROL_MODE": None,
+        "SCOUT_DESCRIPTIONS_ENABLED": "true",
+        "SCOUT_DESCRIPTIONS_RANKING": "true",
+        "expected_backend": "ScoutRunner",
+        "expected_off_control_mode": None,
     },
 }
 
@@ -696,6 +732,15 @@ def main() -> None:
                 mode_env.pop("SCOUT_OFF_CONTROL_MODE", None)
             else:
                 mode_env["SCOUT_OFF_CONTROL_MODE"] = str(MODE_SPECS[mode]["SCOUT_OFF_CONTROL_MODE"])
+
+            # SDG toggles: None means "leave existing env untouched" (legacy
+            # modes). A string value pins the condition explicitly.
+            desc_toggle = MODE_SPECS[mode].get("SCOUT_DESCRIPTIONS_ENABLED")
+            if desc_toggle is not None:
+                mode_env["SCOUT_DESCRIPTIONS_ENABLED"] = str(desc_toggle)
+            rank_toggle = MODE_SPECS[mode].get("SCOUT_DESCRIPTIONS_RANKING")
+            if rank_toggle is not None:
+                mode_env["SCOUT_DESCRIPTIONS_RANKING"] = str(rank_toggle)
 
             mode_local_log_dir = root_dir / f"mode_{mode}_r{replicate}"
             mode_local_log_dir.mkdir(parents=True, exist_ok=True)
