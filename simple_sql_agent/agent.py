@@ -166,7 +166,7 @@ class SQLAgentGraph:
         model_name: str = "gpt-4o",
         temperature: float = 0.0,
         concepts_path: Optional[str] = None,
-        max_iterations: int = 15,
+        max_iterations: int = 25,
     ):
         """
         Initialize the SQL agent.
@@ -175,7 +175,7 @@ class SQLAgentGraph:
             model_name: OpenAI model to use
             temperature: LLM temperature (0 = deterministic)
             concepts_path: Path to concepts.json for domain knowledge
-            max_iterations: Max LLM calls per query (default: 15)
+            max_iterations: Max LLM calls per query (default: 25)
         """
         self.model_name = model_name
         self.temperature = temperature
@@ -421,7 +421,7 @@ def create_sql_agent(
     model_name: str = "gpt-4o",
     temperature: float = 0.0,
     concepts_path: Optional[str] = None,
-    max_iterations: int = 15,
+    max_iterations: int = 25,
 ) -> SQLAgentGraph:
     """
     Create a new SQL agent instance.
@@ -430,7 +430,7 @@ def create_sql_agent(
         model_name: OpenAI model to use (default: gpt-4o)
         temperature: LLM temperature (default: 0.0 for deterministic)
         concepts_path: Path to concepts.json (optional, uses default)
-        max_iterations: Max LLM calls per query (default: 15)
+        max_iterations: Max LLM calls per query (default: 25)
 
     Returns:
         SQLAgentGraph instance

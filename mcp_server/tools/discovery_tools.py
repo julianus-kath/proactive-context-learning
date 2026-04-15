@@ -796,7 +796,9 @@ class DiscoveryTools:
                 "primary_keys": table.get("primary_keys", []),
                 "foreign_keys": fk_list,  # Already properly serialized from catalog, augmented with referenced_full_name
                 "top_columns": table.get("top_columns", []),  # Already a list of strings
-                "neighbors": table.get("neighbors", [])  # Already a list of strings
+                "neighbors": table.get("neighbors", []),  # Already a list of strings
+                # SDG v2: business-level description; empty string when disabled.
+                "description": table.get("description", "") or "",
             }
 
             # Enrich with role_hints, time_col_candidates, and measure_suggestions (catalog-derived only)

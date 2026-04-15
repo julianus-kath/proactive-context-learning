@@ -597,6 +597,9 @@ def _rank_entities_with_table_ranker(
                 "reasons": ranked.reasons or [],
                 "columns": ranked.columns or [],
                 "matched_columns": ranked.matched_columns or [],
+                # SDG v2: flows through only when SCOUT_DESCRIPTIONS_ENABLED=true,
+                # otherwise the ranker receives an empty string from the catalog.
+                "description": getattr(ranked, "description", "") or "",
             }
         )
 
@@ -605,6 +608,18 @@ def _rank_entities_with_table_ranker(
     page = max(1, min(page, total_pages))
     start_idx = (page - 1) * page_size
     page_results = all_results[start_idx:start_idx + page_size]
+
+    # SDG trace: show how many tables in the page carry non-empty descriptions
+    # so we can confirm from the logs that SDG content is reaching the agent.
+    non_empty = sum(1 for r in page_results if (r.get("description") or "").strip())
+    if page_results:
+        sample = page_results[0]
+        sample_desc = (sample.get("description") or "")[:80].replace("\n", " ")
+        logger.info(
+            "🔤 SDG search_tables: query=%r returned=%d with_description=%d/%d sample[%s]=%r",
+            query[:80], total_items, non_empty, len(page_results),
+            sample.get("full_name"), sample_desc,
+        )
 
     return {
         "ok": True,
