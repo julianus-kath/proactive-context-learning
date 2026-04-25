@@ -1,4 +1,8 @@
-# ADR 0003: PostgreSQL Migration and Enhanced Data Generation
+# ADR-0003: PostgreSQL Migration and Enhanced Data Generation
+**Status**: Accepted
+**Date**: 2025-08-04
+**Author**: Julianus Kath
+
 
 ## Status
 

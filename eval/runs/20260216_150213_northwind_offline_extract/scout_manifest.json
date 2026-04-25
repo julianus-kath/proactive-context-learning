@@ -1,9 +1,0 @@
-{
-  "run_id": "20260216_150213_northwind_offline_extract",
-  "run_name": "northwind_offline_extract",
-  "timestamp": "2026-02-16T14:02:13.062163Z",
-  "mode": "offline_export_audit",
-  "discovered_catalog_file": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/mcp_server/cache/scout_catalog.json",
-  "ground_truth_catalog_file": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/mcp_server/cache/catalog_postgres.json",
-  "scout_index_file": "/Users/juli/Desktop/Studies/Master/Year 2/Semester 2/Master Thesis/code/mcp_server/cache/scout_index.json"
-}

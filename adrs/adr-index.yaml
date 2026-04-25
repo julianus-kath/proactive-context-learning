@@ -216,3 +216,15 @@ adrs:
     status: Accepted
     date: 2026-01-18
     author: "Julianus Kath"
+  - id: ADR-0035
+    file: 0035-sdg-semantic-description-generator.md
+    title: "Semantic Description Generator (SDG) for Scout Catalog"
+    status: Accepted
+    date: 2026-04-19
+    author: "Julianus Kath"
+  - id: ADR-0036
+    file: 0036-ablation-axis-pivot-sdg.md
+    title: "Ablation Axis Pivot — from Scout ON/OFF to SDG Description Enrichment"
+    status: Accepted
+    date: 2026-04-19
+    author: "Julianus Kath"

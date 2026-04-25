@@ -109,7 +109,7 @@ async def startup_event():
             logger.error("❌ Database initialization timed out - check VPN/network connectivity")
             raise RuntimeError("Database connection timeout - VPN may not be active")
         
-        # Phase 1: Initialize Scout Runner when enabled.
+        # Initialize Scout Runner when enabled.
         global scout_runner
         scout_runner = None  # Initialize as None
 
@@ -130,7 +130,7 @@ async def startup_event():
                 logger.warning(f"⚠️ Scout Runner initialization failed (non-blocking): {scout_error}")
                 # Don't raise - Scout Mode is optional and shouldn't block startup
 
-            # Legacy fallback only for MSSQL if the consolidated runner is unavailable.
+            # MSSQL fallback path if the consolidated Scout Runner is unavailable.
             if db_manager.dialect == "mssql" and (not scout_runner or not scout_runner.is_ready()):
                 try:
                     cache_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache')
@@ -138,11 +138,11 @@ async def startup_event():
                         run_scout_mode(db_manager, cache_dir=cache_dir),
                         timeout=30
                     )
-                    logger.info(f"🔍 Legacy Scout Mode Report: {scout_report}")
+                    logger.info(f"🔍 Scout Mode (MSSQL fallback) report: {scout_report}")
                 except asyncio.TimeoutError:
-                    logger.warning("⚠️ Legacy Scout Mode startup job timed out (non-blocking)")
+                    logger.warning("⚠️ Scout Mode MSSQL fallback startup job timed out (non-blocking)")
                 except Exception as scout_error:
-                    logger.warning(f"⚠️ Legacy Scout Mode startup job failed (non-blocking): {scout_error}")
+                    logger.warning(f"⚠️ Scout Mode MSSQL fallback startup job failed (non-blocking): {scout_error}")
         
     except Exception as e:
         logger.error(f"❌ Failed to initialize MCP Database Server: {e}")
@@ -160,9 +160,9 @@ async def shutdown_event():
 @app.get("/health")
 async def health_check():
     """
-    Phase 1: Comprehensive health check with Scout Mode metrics.
+    Comprehensive health check with Scout Mode metrics.
 
-    Returns comprehensive health status including:
+    Returns health status including:
     - Database connectivity
     - Scout catalog status and metrics
     - Build statistics and performance

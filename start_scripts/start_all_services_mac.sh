@@ -513,8 +513,8 @@ fi
 
 echo ""
 
-# Start Simple SQL Agent (Replaces complex multi-agent LangGraph system)
-echo -e "${YELLOW}🔧 Starting Simple SQL Agent (Port 5001) - ReAct Text-to-SQL Engine...${NC}"
+# Start the SQL Agent
+echo -e "${YELLOW}🔧 Starting SQL Agent (Port 5001) - ReAct Text-to-SQL Engine...${NC}"
 cd "$PROJECT_ROOT"
 
 # Verify simple_sql_agent exists

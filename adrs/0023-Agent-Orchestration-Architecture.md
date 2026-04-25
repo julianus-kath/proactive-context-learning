@@ -1,7 +1,11 @@
 # ADR-0023: Agent Orchestration Architecture for Proactive Context Learning
+**Status**: Accepted
+**Date**: 2025-11-03
+**Author**: Julianus Kath
+
 
 ## Status
-Accepted
+Accepted — **Superseded by [ADR-0030](0030-simple-sql-agent-architecture.md)** (the five-agent orchestration described here was retired for a single ReAct agent with four tools; see [`README.md`](README.md)).
 
 ## Context
 

@@ -3,7 +3,7 @@
     "dataset": "cockpit_partner_queries_v1",
     "source_document": "/Users/juli/Downloads/CockpitMitTabellen.docx",
     "created_at_utc": "2026-03-10T00:00:00Z",
-    "description": "Table-level relevance labels provided by practical partner (Damian).",
+    "description": "Table-level relevance labels provided by the Luisi & Diener IT administrator (practice partner; anonymized as P2 in thesis materials).",
     "verification_status": "partner_mapped_pending_expert_review"
   },
   "labels": [

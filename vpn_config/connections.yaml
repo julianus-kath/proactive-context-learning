@@ -1,11 +1,21 @@
+# Database connection definitions for the Windows MCP-server proxy.
+#
+# This file is only needed for the Windows/VPN production path where the MCP
+# server runs on a Windows machine bridging the Luisi & Diener ERP over VPN.
+# For the default Docker Compose demo (see root run.sh), this file is NOT
+# consulted — the bundled Postgres container handles the connection.
+#
+# Copy this file to `connections.local.yaml` (gitignored) and fill in real
+# values. The entries below are placeholders.
+
 connections:
   corp_sql_erp:
     type: mssql
     driver: "ODBC Driver 17 for SQL Server"
-    host: "192.168.200.16"  # Your SQL Server IP
+    host: "<YOUR_MSSQL_HOST_IP>"
     port: 1433
-    database: "OLLuisiDiener"  # or your target database
-    user: "SimonM"  # Your SQL Server username
-    password: "%Si!Mon!Ma1"  # Replace with your actual password
+    database: "<YOUR_DATABASE_NAME>"
+    user: "<YOUR_SQL_USER>"
+    password: "${SQLSERVER_PASSWORD}"   # Read from env — never commit passwords
     encrypt: true
     trust_server_certificate: true

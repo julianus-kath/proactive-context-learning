@@ -1,8 +1,8 @@
 # ADR-0011: ERP Proxy Integration Architecture
 
 **Status**: Accepted  
-**Date**: 2024-12-19  
-**Authors**: System Architecture Team  
+**Date**: 2025-10-06
+**Author**: System Architecture Team  
 **Reviewers**: Technical Lead  
 
 ## Context

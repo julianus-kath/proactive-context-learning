@@ -1,8 +1,8 @@
 # ADR-0018: Multi-Agent Orchestration Architecture
 
-**Status**: Accepted  
-**Date**: 2025-01-25  
-**Authors**: Multi-Agent System Design Team  
+**Status**: Accepted — **Superseded by [ADR-0030](0030-simple-sql-agent-architecture.md)** (multi-agent orchestration retired for the single ReAct agent; see [`README.md`](README.md))  
+**Date**: 2025-10-27
+**Author**: Multi-Agent System Design Team  
 **Context**: Phase 8+ - Specialized Agent Decomposition for Complex Query Processing  
 **Supersedes**: None (Complements ADR-0016, ADR-0017)  
 **Related**: ADR-0012 (MCP-Only), ADR-0014 (Scout), ADR-0015 (Semantic Ranking)

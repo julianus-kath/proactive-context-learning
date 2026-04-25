@@ -1,0 +1,56 @@
+{
+  "mode": "scout_structural",
+  "n_queries": 10,
+  "mean_recall": 0.6667,
+  "sql_generation_rate": 0.7,
+  "perfect_recall_count": 6,
+  "zero_recall_count": 3,
+  "errors": 1,
+  "per_category": {
+    "crosslingual": {
+      "n": 2,
+      "mean_recall": 1.0
+    },
+    "complex": {
+      "n": 2,
+      "mean_recall": 0.0
+    },
+    "lexical_breakpoint": {
+      "n": 1,
+      "mean_recall": 0.6667
+    },
+    "paraphrase": {
+      "n": 2,
+      "mean_recall": 1.0
+    },
+    "direct": {
+      "n": 2,
+      "mean_recall": 1.0
+    },
+    "underspecified": {
+      "n": 1,
+      "mean_recall": 0.0
+    }
+  },
+  "per_language": {
+    "de": {
+      "n": 6,
+      "mean_recall": 0.4445
+    },
+    "en": {
+      "n": 4,
+      "mean_recall": 1.0
+    }
+  },
+  "env_snapshot": {
+    "SCOUT_DISABLE": "false",
+    "SCOUT_DESCRIPTIONS_ENABLED": "false",
+    "SCOUT_DESCRIPTIONS_MODEL": null,
+    "SCOUT_DESCRIPTIONS_DATABASE_TYPE": null,
+    "SCOUT_DESCRIPTIONS_CACHE_PATH": null,
+    "DB_DIALECT": "postgres",
+    "DB_NAME": null,
+    "DB_HOST": null,
+    "DB_PORT": null
+  }
+}

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Multi-Agent Data Fusion System - Service Startup Script
+# ERP Natural Language Query Assistant - Service Startup Script
 # This script starts all required services for the ERP chatbot system
 
 set -e  # Exit on any error
@@ -20,7 +20,7 @@ cd "$PROJECT_ROOT"
 LOG_DIR="$PROJECT_ROOT/logs"
 mkdir -p "$LOG_DIR"
 
-echo -e "${BLUE}🚀 Multi-Agent Data Fusion System Startup${NC}"
+echo -e "${BLUE}🚀 ERP Natural Language Query Assistant Startup${NC}"
 echo -e "${BLUE}===========================================${NC}"
 
 # Function to check if a port is in use

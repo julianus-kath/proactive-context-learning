@@ -1,4 +1,8 @@
 # ADR-0007: MCP Database Server Implementation
+**Status**: Accepted
+**Date**: 2025-09-01
+**Author**: Julianus Kath
+
 
 ## Status
 **ACCEPTED** - Implemented and tested successfully

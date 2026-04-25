@@ -578,7 +578,7 @@ class DiscoveryTools:
                         return sorted(block, key=lambda r: ((r.get('estimated_rows') or 0) > 0, r.get('relevance_score', 0.0)), reverse=True)
                     results = rank_block(non_archive_sales) + rank_block(non_address_rest) + rank_block(address_only)
             except Exception as ranking_error:
-                logger.warning(f"Phase 2 ranking failed, falling back to basic search: {ranking_error}")
+                logger.warning(f"Semantic ranking failed, falling back to basic search: {ranking_error}")
                 
                 # Fallback: Basic catalog search (for edge cases)
                 matching_tables = catalog.search_tables(query)

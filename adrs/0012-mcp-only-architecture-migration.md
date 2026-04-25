@@ -1,8 +1,8 @@
 # ADR-0012: MCP-Only Architecture Migration
 
 **Status**: Accepted  
-**Date**: 2025-01-15  
-**Authors**: System Architecture Team  
+**Date**: 2025-10-06
+**Author**: System Architecture Team  
 **Reviewers**: Technical Lead  
 **Supersedes**: ADR-0010 (Partial), ADR-0007 (Extended)
 

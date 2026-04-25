@@ -1,0 +1,25 @@
+{
+  "mode": "scout_on",
+  "backend_verified": "ScoutRunner",
+  "total_queries": 40,
+  "mean_recall": 0.7825,
+  "sql_rate": 0.85,
+  "per_category": {
+    "direct": {
+      "n": 10,
+      "mean_recall": 1.0
+    },
+    "paraphrase": {
+      "n": 10,
+      "mean_recall": 0.9333
+    },
+    "crosslingual": {
+      "n": 12,
+      "mean_recall": 0.5806
+    },
+    "complex": {
+      "n": 8,
+      "mean_recall": 0.625
+    }
+  }
+}

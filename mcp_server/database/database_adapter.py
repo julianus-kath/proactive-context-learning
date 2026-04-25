@@ -103,8 +103,8 @@ class DatabaseAdapter:
                 raise RuntimeError(f"{self.dialect} connection test failed")
             logger.info(f"✅ {self.dialect.upper()} connection verified")
             
-            # Phase 3: Initialize catalog with warmup
-            logger.info("🔄 Initializing Phase 3 catalog...")
+            # Initialize schema catalog with warmup
+            logger.info("🔄 Initializing schema catalog...")
             cache_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache')
             self.catalog = SchemaCatalog(
                 connector=self.connector,
@@ -114,7 +114,7 @@ class DatabaseAdapter:
                 auto_warmup=False
             )
             await self.catalog.warmup()
-            logger.info(f"✅ Phase 3 catalog initialized: {self.catalog.get_metrics()['table_count']} tables")
+            logger.info(f"✅ Schema catalog initialized: {self.catalog.get_metrics()['table_count']} tables")
             
         except Exception as e:
             logger.error(f"❌ {self.dialect.upper()} connection failed: {e}")

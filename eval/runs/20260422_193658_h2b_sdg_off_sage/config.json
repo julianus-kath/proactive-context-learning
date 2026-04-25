@@ -1,0 +1,22 @@
+{
+  "experiment": "retrieval_only_ablation",
+  "dataset": "cockpit",
+  "n_queries": 9,
+  "query_ids": [
+    "CP1",
+    "CP2",
+    "CP3",
+    "CP4",
+    "CP5",
+    "CP6",
+    "CP7",
+    "CP8",
+    "CP9"
+  ],
+  "top_k": 10,
+  "modes": [
+    "sdg_off"
+  ],
+  "restart_server": false,
+  "timestamp_utc": "2026-04-22T17:36:58.095953+00:00"
+}

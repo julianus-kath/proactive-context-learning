@@ -1,8 +1,12 @@
-# ADR 0002: Synthetic Data Results and Database Access
+# ADR-0002: Synthetic Data Results and Database Access
+**Status**: Accepted
+**Date**: 2025-04-16
+**Author**: Julianus Kath
+
 
 ## Status
 
-Accepted
+Accepted — **Superseded by [ADR-0012](0012-mcp-only-architecture-migration.md) and [ADR-0013](0013-production-database-optimization-vpn-connectivity.md)** alongside ADR-0001, when the synthetic data path was retired in favour of the real Sage ERP via VPN. See [`README.md`](README.md) for the full narrative.
 
 ## Context
 

@@ -64,10 +64,10 @@ connections:
   corp_sql_erp:
     type: mssql
     driver: "ODBC Driver 18 for SQL Server"
-    host: "192.168.200.16"
+    host: "<YOUR_MSSQL_HOST_IP>"
     port: 1433
     database: "master"
-    user: "SimonM"
+    user: "<YOUR_SQL_USER>"
     password: "${SQLSERVER_PASSWORD}"
     encrypt: true
     trust_server_certificate: true
@@ -205,10 +205,10 @@ Returns diagnostic information about available drivers and connection configurat
   "connections": {
     "corp_sql_erp": {
       "type": "mssql",
-      "host": "192.168.200.16",
+      "host": "<YOUR_MSSQL_HOST_IP>",
       "port": 1433,
       "database": "master",
-      "user": "SimonM",
+      "user": "<YOUR_SQL_USER>",
       "password": "*****"
     }
   },

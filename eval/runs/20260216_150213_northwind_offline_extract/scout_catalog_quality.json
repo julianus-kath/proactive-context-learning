@@ -1,9 +1,0 @@
-{
-  "total_tables": 14,
-  "tables_with_columns_pct": 100.0,
-  "tables_with_row_estimates_pct": 100.0,
-  "tables_with_fk_metadata_pct": 100.0,
-  "tables_missing_columns": [],
-  "tables_missing_row_estimates": [],
-  "tables_missing_fk_metadata": []
-}

@@ -1,7 +1,7 @@
 # ADR-0019: Multi-Agent Orchestration System Resurrection (Phase 8)
 
-**Status**: ACCEPTED & IMPLEMENTED  
-**Date**: 2025-01-15  
+**Status**: ACCEPTED & IMPLEMENTED — **Superseded by [ADR-0030](0030-simple-sql-agent-architecture.md)** (the resurrected multi-agent system was later collapsed into a single ReAct agent; see [`README.md`](README.md))  
+**Date**: 2025-11-02
 **Author**: Zencoder  
 **Related ADRs**: ADR-0018 (Multi-Agent Architecture), ADR-0016 (Phase 7 Architecture)
 

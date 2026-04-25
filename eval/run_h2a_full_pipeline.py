@@ -50,6 +50,42 @@ def compute_recall(retrieved: set, required: set) -> float:
     return len(hits) / len(required_norm)
 
 
+def load_contracts(contracts_path, label_overrides_path=None):
+    """Load H2a ground-truth contracts as {query_id: [required_tables]}.
+
+    Supported on-disk JSON formats:
+      - List:             [{"query_id": str, "required_tables": [str, ...]}, ...]
+      - Dict-with-labels: {"labels": [{"query_id": ..., "required_tables": [...]}]}
+      - Map:              {"query_id": [str, ...], ...}
+
+    If label_overrides_path points to an existing file, its
+    {"overrides": [{"partner_label": ..., "live_catalog_name": ...}, ...]}
+    entries are applied to each required_tables list (Cockpit partner labels
+    → live catalog names).
+    """
+    with open(contracts_path) as f:
+        contracts_data = json.load(f)
+
+    if isinstance(contracts_data, list):
+        contracts = {c["query_id"]: c["required_tables"] for c in contracts_data}
+    elif isinstance(contracts_data, dict) and "labels" in contracts_data:
+        contracts = {c["query_id"]: c["required_tables"] for c in contracts_data["labels"]}
+    else:
+        contracts = dict(contracts_data)
+
+    if label_overrides_path and Path(label_overrides_path).exists():
+        with open(label_overrides_path) as f:
+            overrides_doc = json.load(f)
+        override_map = {
+            e["partner_label"]: e["live_catalog_name"]
+            for e in overrides_doc.get("overrides", [])
+        }
+        for qid in contracts:
+            contracts[qid] = [override_map.get(t, t) for t in contracts[qid]]
+
+    return contracts
+
+
 async def run_single_query(agent, question: str, query_id: str, category: str = "", language: str = "") -> dict:
     """Run a single query through the agent and capture results."""
     start = time.time()
@@ -116,25 +152,8 @@ async def main():
                 q = json.loads(line)
                 queries[q["id"]] = q
 
-    # Load contracts/ground truth
-    with open(args.contracts) as f:
-        contracts_data = json.load(f)
-
-    # Handle both list format and dict-with-labels format
-    if isinstance(contracts_data, list):
-        contracts = {c["query_id"]: c["required_tables"] for c in contracts_data}
-    elif isinstance(contracts_data, dict) and "labels" in contracts_data:
-        contracts = {c["query_id"]: c["required_tables"] for c in contracts_data["labels"]}
-    else:
-        contracts = contracts_data
-
-    # Apply label overrides if provided
-    if args.label_overrides and Path(args.label_overrides).exists():
-        with open(args.label_overrides) as f:
-            overrides_doc = json.load(f)
-        override_map = {e["partner_label"]: e["live_catalog_name"] for e in overrides_doc.get("overrides", [])}
-        for qid in contracts:
-            contracts[qid] = [override_map.get(t, t) for t in contracts[qid]]
+    # Load contracts/ground truth (with optional Cockpit label overrides)
+    contracts = load_contracts(args.contracts, args.label_overrides)
 
     # Set environment for mode
     os.environ["MCP_SERVER_URL"] = args.mcp_url

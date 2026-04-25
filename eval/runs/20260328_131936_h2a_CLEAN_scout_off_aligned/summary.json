@@ -1,0 +1,25 @@
+{
+  "mode": "scout_off_aligned",
+  "backend_verified": "SchemaCatalog",
+  "total_queries": 40,
+  "mean_recall": 0.8117,
+  "sql_rate": 0.9,
+  "per_category": {
+    "direct": {
+      "n": 10,
+      "mean_recall": 1.0
+    },
+    "paraphrase": {
+      "n": 10,
+      "mean_recall": 0.8833
+    },
+    "crosslingual": {
+      "n": 12,
+      "mean_recall": 0.7472
+    },
+    "complex": {
+      "n": 8,
+      "mean_recall": 0.5833
+    }
+  }
+}

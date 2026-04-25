@@ -1,7 +1,9 @@
-# ADR 0032: Generic Table Search Ranking Fixes
+# ADR-0032: Generic Table Search Ranking Fixes
+**Author**: Julianus Kath
 
-**Date:** 2026-01-18
-**Status:** ACCEPTED
+
+**Date**: 2026-01-18
+**Status**: ACCEPTED
 **Context:** Bug fix for Scout Mode table search
 
 ## Problem

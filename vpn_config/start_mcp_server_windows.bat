@@ -4,12 +4,11 @@ setlocal EnableExtensions EnableDelayedExpansion
 echo.
 echo ================================================
 echo   MCP Server Startup (Windows/VPN)
-echo   Phase 7: Multi-Agent Orchestrator Ready
+echo   Scout Catalog + MSSQL Tooling
 echo ================================================
 echo.
 echo System Architecture:
-echo   [macOS LangGraph + Multi-Agent Orchestrator]
-echo   [4 Specialized Agents ^| Discovery ^| Join/SQL ^| Exec ^| Answer]
+echo   [SQL Agent (macOS/Linux) ^| LangGraph ReAct]
 echo   ════════════════════════════════════════
 echo   [MCP Server (Windows/VPN) ^| Scout Catalog]
 echo   ════════════════════════════════════════
@@ -176,7 +175,7 @@ echo     ✅ Table Ranking (business vs archive tables)
 echo     ✅ Customer/Product Master Table Priority
 echo     ✅ Fuzzy Matching (German compound words)
 echo     ✅ Safe Query Execution (timeouts, limits)
-echo     ✅ Multi-Agent Ready (macOS LangGraph integration)
+echo     ✅ SQL Agent ready (macOS LangGraph ReAct integration)
 echo.
 echo   (Ctrl+C to stop)
 echo ================================================

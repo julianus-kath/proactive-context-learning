@@ -1,9 +1,0 @@
-{"id":"CP1","question":"Wann müssen wir neues Ø56 Material bestellen?","source":"CockpitMitTabellen.docx","notes":"Hängt ab von aktuellem Lagerbestand (Rohmaterial, Halbfertigprodukte), Bestellungen und Wiederbeschaffungszeit."}
-{"id":"CP2","question":"Wann haben wir Bestellung XY geliefert?","source":"CockpitMitTabellen.docx","notes":"Lieferauskunft zu einer konkreten Bestellung (XY als Platzhalter)."}
-{"id":"CP3","question":"Wie viele Teile wurden in den Morgenstunden 04.00-07.00 Uhr gefertigt? Mehr oder weniger als von 08.00-11.00? (Zeiterfassung / ERP)","source":"CockpitMitTabellen.docx","notes":"Zeitfenstervergleich der Fertigungsmenge."}
-{"id":"CP4","question":"Halten sich alle an die vorgeschriebenen Anwesenheits- und Pausenzeiten?","source":"CockpitMitTabellen.docx","notes":"Compliance-Frage aus Zeiterfassung."}
-{"id":"CP5","question":"Was hat MA XY heute Morgen gemacht? (Startstempel Zeiterfassung / Rückmeldungen ERP)","source":"CockpitMitTabellen.docx","notes":"Mitarbeiterdetail (XY als Platzhalter), Querbezug Zeit und ERP."}
-{"id":"CP6","question":"Wurde Material XY schon angeliefert? (Lagerbuchung ERP)","source":"CockpitMitTabellen.docx","notes":"Wareneingang/Lagerbuchung zu Material XY (Platzhalter)."}
-{"id":"CP7","question":"Korrelieren nicht erfüllte Wartungspunkte mit Wartungskosten? (ZP / ReWe)","source":"CockpitMitTabellen.docx","notes":"Korrelationsfrage über ERP plus externes Wartungsobjekt."}
-{"id":"CP8","question":"Verhältnis Vorgabe zu Ist (keine Felder!) pro Artikel pro Mitarbeiter? (ERP)","source":"CockpitMitTabellen.docx","notes":"Soll-Ist-Vergleich pro Artikel und Mitarbeiter."}
-{"id":"CP9","question":"Abweichungen Start Zeiterfassung zu Start BDE (Zeit/ERP)","source":"CockpitMitTabellen.docx","notes":"Abgleich Startzeiten zwischen Zeiterfassung und BDE."}

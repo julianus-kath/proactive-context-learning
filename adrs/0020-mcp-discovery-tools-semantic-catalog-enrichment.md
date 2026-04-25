@@ -1,8 +1,8 @@
 # ADR-0020: MCP Discovery Tools for Semantic Catalog Enrichment
 
-**Date:** October 2025  
-**Status:** ACCEPTED  
-**Authors:** Architecture & Query Planning Team  
+**Date**: 2025-11-02
+**Status**: ACCEPTED  
+**Author**: Architecture & Query Planning Team  
 **Context:** Phase 9 Enhancement to Scout Mode  
 **Supersedes:** ADR-0014 (Extends), ADR-0015 (Complements)  
 **Related:** ADR-0012 (MCP-only architecture), ADR-0016 (Phase 7+ architecture)
