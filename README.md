@@ -30,15 +30,16 @@ This repository accompanies the master's thesis *"Proactive Context Learning for
 
 | | |
 |---|---|
-| **Author** | Julianus Kath |
-| **Matriculation** | `<MATRICULATION_NUMBER>` |
+| **Author** | Julianus Elias Flavio Kath |
+| **Email** | [julianus.kath@student.unisg.ch](mailto:julianus.kath@student.unisg.ch) |
+| **Matriculation** | 23-607-203 |
 | **Programme** | MSc Business Innovation, University of St. Gallen |
 | **Supervisor** | Prof. Dr. Simon Mayer |
 | **Year** | 2026 |
 
 **Production target.** The thesis's primary case study is a Sage-family **MSSQL** ERP at Luisi & Diener — schema-opaque German table names, 900+ tables, human-in-the-loop querying. That deployment runs against a VPN-tunnelled Windows MCP server; see [Running on MSSQL](#running-on-mssql-production-path).
 
-**This release ships preconfigured for Northwind (PostgreSQL)** — the controlled benchmark used in the thesis — so a reviewer can clone and run without any database setup. A live instance of this exact configuration is available at **[thesis.julianuskath.com](https://thesis.julianuskath.com)**.
+**This release ships preconfigured for Northwind (PostgreSQL)** — the controlled benchmark used in the thesis — so a reviewer can clone and run without any database setup. A live instance of this exact configuration is available at **[thesis.julianuskath.com](https://thesis.julianuskath.com)** — for the access password, please contact [julianus.kath@student.unisg.ch](mailto:julianus.kath@student.unisg.ch).
 
 ---
 
