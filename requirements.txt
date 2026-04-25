@@ -1,6 +1,6 @@
 # =============================================================================
-# COMPREHENSIVE REQUIREMENTS FILE FOR MASTER THESIS PROJECT
-# Multi-Agent System for Data Fusion Across Heterogeneous Data Sources
+# Master Thesis — Proactive Context Learning for LLM-Based ERP Database Querying
+# Single ReAct agent + MCP server + Scout Mode catalog. PostgreSQL and MSSQL.
 # =============================================================================
 
 # =============================================================================

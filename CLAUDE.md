@@ -23,8 +23,8 @@ User → chatbot_ui (3000) → simple_sql_agent (5001) → mcp_server (8000) →
 - `simple_sql_agent/service.py` — FastAPI agent service (port 5001)
 - `mcp_server/server/app.py` — MCP database server (port 8000)
 - `chatbot_ui/web_app.py` — Web interface (port 3000)
-- `start_scripts/start_all_services_mac.sh` — Full startup (macOS)
-- `start_scripts/start_all_services.sh` — Full startup (Linux)
+- `start_scripts/start_all_services_mac.sh` — Native dev startup (macOS / Linux with venv)
+- `docker-compose.yml` + `run.sh` — Docker stack (recommended)
 
 ### Critical Files (by impact)
 - `mcp_server/tools/__init__.py` (111K) — All database tools, Scout routing, table ranking, query validation. This is the workhorse.
