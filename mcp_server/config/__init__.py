@@ -28,7 +28,7 @@ class MCPServerConfig:
     # PostgreSQL configuration (dev mode)
     postgres_host: str = os.getenv("POSTGRES_HOST", "localhost")
     postgres_port: int = int(os.getenv("POSTGRES_PORT", "5432"))
-    postgres_database: str = os.getenv("POSTGRES_DATABASE", "synthetic_erp_data")
+    postgres_database: str = os.getenv("POSTGRES_DATABASE", "northwind")
     postgres_user: str = os.getenv("POSTGRES_USER", "postgres")
     postgres_password: str = os.getenv("POSTGRES_PASSWORD", "")
     # Default schema name for PostgreSQL (used for lightweight MSSQL→Postgres translation)
@@ -44,7 +44,7 @@ class MCPServerConfig:
     # Legacy database configuration (for backward compatibility)
     db_host: str = os.getenv("DB_HOST", "localhost")
     db_port: int = int(os.getenv("DB_PORT", "5432"))
-    db_name: str = os.getenv("DB_NAME", "synthetic_erp_data")
+    db_name: str = os.getenv("DB_NAME", "northwind")
     db_user: str = os.getenv("DB_USER", "postgres")
     db_password: str = os.getenv("DB_PASSWORD", "postgres")
     
