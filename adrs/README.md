@@ -113,3 +113,25 @@ As the system matured, a first evaluation framework was scaffolded.
 ## ADR format
 
 New ADRs should follow [`ADR_TEMPLATE.md`](ADR_TEMPLATE.md). The linter at [`../scripts/adr_lint.sh`](../scripts/adr_lint.sh) validates format on new files. Older ADRs (Phases 1–6) use a mix of earlier formats; they fail the current linter but are preserved as written for historical accuracy. Retrofitting them is non-trivial and has no grading upside.
+
+### Required header for new ADRs
+
+Every new ADR must start with:
+
+```md
+# ADR-XXXX: Title
+
+**Status**: Accepted
+**Date**: YYYY-MM-DD
+**Author**: Julianus Kath
+```
+
+Optional metadata lines may follow (for example `**Related**`, `**Supersedes**`, `**Context**`, `**Reviewers**`).
+
+### Validation
+
+```bash
+scripts/adr_lint.sh
+```
+
+The linter checks header structure, required metadata, ISO date format, first-commit date alignment, and obvious secret leaks.

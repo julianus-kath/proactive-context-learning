@@ -244,6 +244,18 @@ The thesis's primary case study is a Sage-family MSSQL ERP reachable only throug
 
 Full Windows/VPN setup is documented in [vpn_config/README.md](vpn_config/README.md). The Railway production deployment is in [deploy/railway/](deploy/railway/).
 
+### Deployment (Railway, Northwind Demo)
+
+For production-style deployment with Northwind/Postgres on Railway, use the runbook:
+
+- [deploy/railway/README.md](deploy/railway/README.md)
+
+Railway Dockerfiles:
+
+- `deploy/railway/Dockerfile.web-ui`
+- `deploy/railway/Dockerfile.sql-agent`
+- `deploy/railway/Dockerfile.mcp-server`
+
 ---
 
 ## API Reference

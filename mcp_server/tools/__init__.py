@@ -37,11 +37,28 @@ def _get_scout_runner(db_manager):
         ScoutRunner instance or None if not available
     """
     global _scout_runner
+    scout_disabled = False
+    if db_manager is not None:
+        scout_disabled = bool(getattr(db_manager, "scout_disabled", False))
+    if not scout_disabled:
+        scout_disabled = (os.getenv("SCOUT_DISABLE", "false").lower() == "true")
+    if scout_disabled:
+        # Hard-disable Scout in tool paths for clean SchemaCatalog-only ablations.
+        _scout_runner = None
+        return None
+
+    # Prefer the runner initialized at server startup to keep health + tools consistent.
+    shared_runner = getattr(db_manager, "scout_runner", None)
+    if shared_runner is not None:
+        _scout_runner = shared_runner
+        return _scout_runner
+
     if _scout_runner is None:
         try:
             from mcp_server.scout.runner import ScoutRunner
             from mcp_server.server.health import set_scout_runner
             _scout_runner = ScoutRunner(db_adapter=db_manager)
+            setattr(db_manager, "scout_runner", _scout_runner)
             set_scout_runner(_scout_runner)
             logger.info("✅ Scout Runner initialized for catalog access")
         except Exception as e:
