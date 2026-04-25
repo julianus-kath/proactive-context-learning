@@ -419,17 +419,18 @@ async def stream_conversation(request: Request):
 
 
 if __name__ == "__main__":
+    web_ui_port = int(os.getenv("WEB_UI_PORT", os.getenv("PORT", "3000")))
     print("Starting ERP Chatbot Web UI...")
-    print("Make sure the following are running:")
-    print("   - LangGraph Service (http://localhost:5001)")
-    print("   - MCP Server (http://localhost:8000)")
-    print("   - PostgreSQL database")
+    print("Make sure the following are reachable:")
+    print(f"   - SQL Agent ({LANGGRAPH_URL})")
+    print(f"   - MCP Server (configured server-side via MCP_SERVER_URL)")
+    print(f"   - Database  (configured server-side via DB_DIALECT/POSTGRES_*/MSSQL_*)")
     if SITE_PASSWORD:
         print("   - Authentication: ENABLED (SITE_PASSWORD set)")
     else:
         print("   - Authentication: DISABLED (SITE_PASSWORD not set)")
     print()
-    print("Web UI will be available at: http://localhost:3000")
+    print(f"Web UI will be available at: http://localhost:{web_ui_port}")
     print()
 
     uvicorn.run(

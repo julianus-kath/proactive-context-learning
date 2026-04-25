@@ -23,6 +23,15 @@ if ! docker compose version >/dev/null 2>&1; then
     exit 1
 fi
 
+# The CLI works even when the daemon isn't running; probe for a live daemon.
+if ! docker info >/dev/null 2>&1; then
+    echo "[error] Docker is installed but the daemon is not running."
+    echo "        Start Docker Desktop (or 'sudo systemctl start docker' on Linux)"
+    echo "        and re-run this script. On macOS, wait for the whale icon"
+    echo "        in the menu bar to be steady before retrying."
+    exit 1
+fi
+
 if [ ! -f .env ]; then
     if [ -f .env.example ]; then
         echo "[info]  No .env file found. Copying .env.example → .env"
@@ -42,7 +51,10 @@ set -a
 source .env
 set +a
 
-if [ -z "${OPENAI_API_KEY:-}" ] || [[ "$OPENAI_API_KEY" == "sk-..." ]] || [[ "$OPENAI_API_KEY" == sk-proj-REDACTED* ]]; then
+if [ -z "${OPENAI_API_KEY:-}" ] \
+   || [[ "$OPENAI_API_KEY" == "sk-..." ]] \
+   || [[ "$OPENAI_API_KEY" == sk-proj-REDACTED* ]] \
+   || [[ "$OPENAI_API_KEY" == sk-REPLACE* ]]; then
     echo "[error] OPENAI_API_KEY is not set (or is still the placeholder) in .env."
     echo "        Edit .env and add your OpenAI key, then re-run."
     exit 1

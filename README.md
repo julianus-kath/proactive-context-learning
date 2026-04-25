@@ -223,6 +223,20 @@ For active development on Mac with a local venv:
 
 Starts SQL Agent (5001), Web UI (3000), and optionally a local MCP server on 8000. See [start_scripts/](start_scripts/) for details.
 
+### Connecting your own Postgres (or splitting MCP onto a remote host)
+
+The default stack bundles a Postgres container seeded with Northwind so a reviewer can run the system without any external setup. Two common variations are pre-written in [`docker-compose.override.yml.example`](docker-compose.override.yml.example) — copy it to `docker-compose.override.yml` (git-ignored), uncomment the scenario you want, edit the values:
+
+- **Scenario A** — point `mcp_server` at your own existing Postgres on the network.
+- **Scenario B** — change ports if `3000`/`5001`/`8000`/`55432` clash with something on your machine. (Pure env, no override needed: set `WEB_UI_PORT`, `SQL_AGENT_PORT`, `MCP_PORT`, `POSTGRES_PORT` in `.env`.)
+- **Scenario C** — run the MCP server on a **different host** entirely (e.g. behind a VPN, on a Windows machine, or on Railway), and have the local stack only run the agent + UI. This is exactly the production deployment for the Sage ERP — see [Running on MSSQL](#running-on-mssql-production-path).
+
+The `mcp_server` container binds to `0.0.0.0` and authenticates inbound requests with `MCP_API_KEY`, so it can serve traffic from any host. The `sql_agent` reaches it via `MCP_SERVER_URL` and the `web_ui` reaches the agent via `LANGGRAPH_URL` — every URL is env-driven, no hard-coded hosts.
+
+### Northwind seed source
+
+`data/northwind.sql` is the seed dump used to populate the bundled Postgres container. It comes from [pthom/northwind_psql](https://github.com/pthom/northwind_psql), the standard PostgreSQL port of Microsoft's Northwind sample database (14 tables: customers, orders, products, employees, suppliers, etc.). To rebuild or inspect the seed independently, clone that repo and follow its instructions; the resulting `northwind.sql` is drop-in compatible.
+
 ### Running on MSSQL (production path)
 
 The thesis's primary case study is a Sage-family MSSQL ERP reachable only through a VPN. To run the system against a real MSSQL instance:
