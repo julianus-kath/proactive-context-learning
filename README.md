@@ -89,37 +89,75 @@ Stop the stack with `docker compose down`. See [.env.example](.env.example) for 
 
 ### System Overview
 
+Four services. Every link between them is an HTTP boundary that can be a network hop on a different host — proven by the production deployment, where the MCP server lives behind a VPN on a different machine than the SQL Agent.
+
 ```mermaid
 flowchart TB
-    subgraph Client["🖥️ Client Layer"]
+    subgraph Client["🖥️ Client (any host)"]
         UI[Web UI<br/>Port 3000]
     end
 
-    subgraph Agent["🤖 Agent Layer"]
-        SA[SQL Agent<br/>Port 5001]
-        LG[LangGraph<br/>ReAct Agent]
+    subgraph AgentHost["🤖 Agent host"]
+        SA[SQL Agent<br/>Port 5001<br/><i>LangGraph ReAct</i>]
     end
 
-    subgraph MCP["🔌 MCP Layer"]
-        MS[MCP Server<br/>Port 8000]
-        SC[Scout Catalog<br/>Table Metadata + SDG]
+    subgraph MCPHost["🔌 MCP host (network boundary)"]
+        MS[MCP Server<br/>Port 8000<br/><i>JSON-RPC + auth</i>]
+        SC[Scout Catalog<br/>Table metadata + SDG]
     end
 
-    subgraph Data["💾 Data Layer"]
-        DB[(PostgreSQL or MSSQL<br/>ERP Database)]
+    subgraph DataHost["💾 Database host"]
+        DB[(PostgreSQL or MSSQL<br/>ERP database)]
     end
 
-    UI -->|HTTP/JSON| SA
-    SA --> LG
-    LG -->|Tool Calls| MS
+    UI -->|HTTP / SSE<br/>LANGGRAPH_URL| SA
+    SA -->|JSON-RPC<br/>MCP_SERVER_URL + MCP_API_KEY| MS
     MS --> SC
-    MS -->|SQL Queries| DB
+    MS -->|SQL<br/>POSTGRES_* / MSSQL_*| DB
 
     style Client fill:#e1f5fe
-    style Agent fill:#fff3e0
-    style MCP fill:#f3e5f5
-    style Data fill:#e8f5e9
+    style AgentHost fill:#fff3e0
+    style MCPHost fill:#f3e5f5
+    style DataHost fill:#e8f5e9
 ```
+
+Three URLs configure the topology end-to-end: `LANGGRAPH_URL` (UI → Agent), `MCP_SERVER_URL` (Agent → MCP), and the `POSTGRES_*` / `MSSQL_*` block (MCP → DB). No service knows about any other except via these env vars; collapse them all to localhost for a single-host deployment, or split them across hosts for a VPN-tunnelled production.
+
+### Deployment topologies
+
+The same image set supports three configurations. All three are tested.
+
+```mermaid
+flowchart LR
+    subgraph A["A — One-host (default Docker stack)"]
+        direction TB
+        A1[UI] --> A2[Agent] --> A3[MCP] --> A4[(Postgres)]
+    end
+
+    subgraph B["B — Split-host (cross-network)"]
+        direction TB
+        B1[UI] --> B2[Agent]
+        B2 -.HTTP across hosts.-> B3[MCP]
+        B3 --> B4[(Database)]
+    end
+
+    subgraph C["C — Production (Railway + VPN)"]
+        direction TB
+        C1[UI<br/><i>public</i>] --> C2[Agent<br/><i>private</i>]
+        C2 -.Railway internal.-> C3[MCP<br/><i>private</i>]
+        C3 -.VPN.-> C4[(Sage MSSQL<br/>at L&D)]
+    end
+
+    style A fill:#e8f5e9
+    style B fill:#fff3e0
+    style C fill:#f3e5f5
+```
+
+- **A** — `./run.sh` boots the whole stack on one machine. Bundled Postgres + Northwind, ~2 min cold start. The default for examiners.
+- **B** — Set `MCP_SERVER_URL=http://<other-host>:8000` on the Agent. The MCP server's `MCP_API_KEY` authenticates inbound traffic; nothing else needs to change. Use this when the database is on a separate machine, behind a firewall, or behind a VPN.
+- **C** — The four services run as separate Railway services with private internal DNS; only the Web UI is publicly exposed at `thesis.julianuskath.com`. The MCP service connects through a VPN to the Sage MSSQL ERP at Luisi & Diener. See [`deploy/railway/README.md`](deploy/railway/README.md) for the runbook.
+
+For local variations of B (custom Postgres, port overrides, remote MCP), see [`docker-compose.override.yml.example`](docker-compose.override.yml.example).
 
 ### Query Processing Flow
 
@@ -156,27 +194,30 @@ sequenceDiagram
 
 ### Scout Mode
 
+The agent calls five MCP tools. Three are direct catalog reads (`list_tables`, `get_schema`, `get_column_index`), one runs the generated SQL (`execute_query`), and one is the proactive entry point (`discover_tables`) that drives Scout's semantic ranking before the agent commits to a table set. Scout's catalog is populated at MCP startup and refreshed on a TTL; the agent never waits on a fresh build during a query.
+
 ```mermaid
 flowchart LR
-    subgraph Tools["🔧 Agent Tools"]
-        T1[discover_tables]
+    subgraph Tools["🔧 MCP tools (called by the agent)"]
+        T1[discover_tables<br/><i>proactive ranking</i>]
         T2[list_tables]
         T3[get_schema]
         T4[get_column_index]
         T5[execute_query]
     end
 
-    subgraph Scout["🔍 Scout Mode"]
-        S1[Semantic Search]
-        S2[CamelCase Parser]
-        S3[Fuzzy Matching]
-        S4[SDG Descriptions]
+    subgraph Scout["🔍 Scout ranker"]
+        S1[Semantic search]
+        S2[CamelCase / German<br/>compound parser]
+        S3[Fuzzy match]
+        S4[SDG description<br/>token coverage]
     end
 
-    subgraph Cache["📦 Catalog Cache"]
-        C1[Table Metadata]
-        C2[Column Types]
-        C3[Row Counts]
+    subgraph Cache["📦 Catalog cache"]
+        C1[Table metadata]
+        C2[Column types]
+        C3[Row counts]
+        C4[FK graph]
     end
 
     T1 --> S1
@@ -187,7 +228,9 @@ flowchart LR
     T2 --> C1
     T3 --> C2
     T3 --> C3
+    T3 --> C4
     T4 --> C2
+    T5 -.>|bounded SELECT| C1
 
     style Tools fill:#fff3e0
     style Scout fill:#e8f5e9
