@@ -1,0 +1,69 @@
+{
+  "per_condition": {
+    "scout_structural": {
+      "label_distribution": {
+        "CORRECT": 10,
+        "PARTIAL": 3,
+        "INCORRECT": 7,
+        "ERROR": 0
+      },
+      "acceptable_answer_rate": 0.65,
+      "per_category": {
+        "paraphrase": {
+          "CORRECT": 1,
+          "PARTIAL": 3,
+          "INCORRECT": 6,
+          "ERROR": 0
+        },
+        "direct": {
+          "CORRECT": 9,
+          "PARTIAL": 0,
+          "INCORRECT": 1,
+          "ERROR": 0
+        }
+      },
+      "per_language": {
+        "de": {
+          "CORRECT": 10,
+          "PARTIAL": 3,
+          "INCORRECT": 7,
+          "ERROR": 0
+        }
+      }
+    },
+    "scout_enriched_ranked": {
+      "label_distribution": {
+        "CORRECT": 10,
+        "PARTIAL": 4,
+        "INCORRECT": 6,
+        "ERROR": 0
+      },
+      "acceptable_answer_rate": 0.7,
+      "per_category": {
+        "paraphrase": {
+          "CORRECT": 0,
+          "PARTIAL": 4,
+          "INCORRECT": 6,
+          "ERROR": 0
+        },
+        "direct": {
+          "CORRECT": 10,
+          "PARTIAL": 0,
+          "INCORRECT": 0,
+          "ERROR": 0
+        }
+      },
+      "per_language": {
+        "de": {
+          "CORRECT": 10,
+          "PARTIAL": 4,
+          "INCORRECT": 6,
+          "ERROR": 0
+        }
+      }
+    }
+  },
+  "comparison": {
+    "delta_acceptable_rate_on_minus_off": 0.05
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "run_id": "20260216_145042_ld_prod_offline_extract",
+  "run_name": "ld_prod_offline_extract",
+  "timestamp": "2026-02-16T13:50:42.306699Z",
+  "mode": "offline_export_audit",
+  "discovered_catalog_file": "/Users/juli/Downloads/scout_catalog.json",
+  "ground_truth_catalog_file": "/Users/juli/Downloads/catalog_mssql (1).json",
+  "scout_index_file": "/Users/juli/Downloads/scout_index.json"
+}

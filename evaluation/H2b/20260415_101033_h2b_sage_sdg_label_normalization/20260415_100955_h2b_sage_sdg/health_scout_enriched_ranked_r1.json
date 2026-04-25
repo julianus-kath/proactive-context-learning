@@ -1,0 +1,33 @@
+{
+  "mcp": {
+    "status": "healthy",
+    "timestamp": "2026-04-15T10:12:16.899784",
+    "version": "1.0",
+    "components": {
+      "database": {
+        "status": "healthy",
+        "connectivity": true,
+        "dialect": "mssql"
+      },
+      "scout_catalog": {
+        "status": "healthy",
+        "catalog_exists": true,
+        "catalog_valid": true,
+        "catalog_age_hours": 3.6691350955555557,
+        "catalog_ttl_hours": 168,
+        "build_in_progress": false,
+        "build_count": 0,
+        "last_build_duration": 0.0,
+        "last_build_time": null,
+        "compressed_size_mb": 0.13,
+        "compression_ratio": 0.043052150168616146,
+        "backend": "ScoutRunner"
+      }
+    }
+  },
+  "agent": {
+    "status": "healthy",
+    "mcp_healthy": true,
+    "agent_ready": true
+  }
+}

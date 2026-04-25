@@ -2,15 +2,21 @@
 .venv/
 venv/
 env/
+
+# Environment files — never commit real secrets
 .env
-.env.local
-.env.*.local
+.env.*
 !.env.example
+!**/.env.example
+
 # Specific project directories
 .zencoder/
+.claude/
 logs/
 tmp/
-data/
+# data/ — tracked selectively: northwind.sql and concepts.json are committed,
+# generated artefacts (catalog/, caches) are ignored via the rules below.
+data/catalog/
 output/
 results/
 reports/

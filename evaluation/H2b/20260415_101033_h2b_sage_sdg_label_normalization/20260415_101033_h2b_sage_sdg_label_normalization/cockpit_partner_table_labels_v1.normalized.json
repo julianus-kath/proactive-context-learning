@@ -1,0 +1,519 @@
+{
+  "meta": {
+    "dataset": "cockpit_partner_queries_v1",
+    "source_document": "/Users/juli/Downloads/CockpitMitTabellen.docx",
+    "created_at_utc": "2026-03-10T00:00:00Z",
+    "description": "Table-level relevance labels provided by practical partner (Damian).",
+    "verification_status": "partner_mapped_pending_expert_review",
+    "generated_at_utc": "2026-04-15T10:10:33.105926Z",
+    "normalization_source": "C:\\Users\\unisg\\Desktop\\pcl_julianus\\proactive-context-learning\\eval\\runs\\20260415_101033_h2b_sage_sdg_label_normalization\\label_normalization.json",
+    "scoring_policy": "resolved_only_primary_recall",
+    "unresolved_labels_explicit": true
+  },
+  "labels": [
+    {
+      "query_id": "CP1",
+      "question": null,
+      "required_tables_original": [
+        "dbo.KHKArtikel",
+        "dbo.KHKArtikelLieferanten",
+        "dbo.KHKArtikelVarianten"
+      ],
+      "required_table_entries": [
+        {
+          "original_partner_label": "dbo.KHKArtikel",
+          "normalized_partner_label": "khkartikel",
+          "matched_live_table": "dbo.KHKArtikel",
+          "match_type": "exact",
+          "candidate_matches": [
+            "dbo.KHKArtikel"
+          ],
+          "note": ""
+        },
+        {
+          "original_partner_label": "dbo.KHKArtikelLieferanten",
+          "normalized_partner_label": "khkartikellieferanten",
+          "matched_live_table": "dbo.KHKArtikelLieferant",
+          "match_type": "alias_prefix_normalized",
+          "candidate_matches": [
+            "dbo.KHKArtikel",
+            "dbo.KHKArtikelLieferant",
+            "dbo.KHKArtikelLieferantPreise",
+            "dbo.KHKArtikelLieferantRabatte",
+            "dbo.KHKArtikelVarianten",
+            "dbo.KHKStatEKLieferanten",
+            "dbo.KHKArtikelPlanung",
+            "dbo.KHKArtikelKunden"
+          ],
+          "note": ""
+        },
+        {
+          "original_partner_label": "dbo.KHKArtikelVarianten",
+          "normalized_partner_label": "khkartikelvarianten",
+          "matched_live_table": "dbo.KHKArtikelVarianten",
+          "match_type": "exact",
+          "candidate_matches": [
+            "dbo.KHKArtikelVarianten"
+          ],
+          "note": ""
+        }
+      ],
+      "required_tables": [
+        "dbo.KHKArtikel",
+        "dbo.KHKArtikelLieferant",
+        "dbo.KHKArtikelVarianten"
+      ],
+      "required_tables_resolved": [
+        "dbo.KHKArtikel",
+        "dbo.KHKArtikelLieferant",
+        "dbo.KHKArtikelVarianten"
+      ],
+      "unresolved_required_labels": [],
+      "required_columns": [],
+      "external_required_sources": [],
+      "notes": "Material-Reorder Frage; Tabellen laut Partnerdokument."
+    },
+    {
+      "query_id": "CP2",
+      "question": null,
+      "required_tables_original": [
+        "dbo.KHKVKBelege",
+        "dbo.KHKBelegePositionen"
+      ],
+      "required_table_entries": [
+        {
+          "original_partner_label": "dbo.KHKVKBelege",
+          "normalized_partner_label": "khkvkbelege",
+          "matched_live_table": "dbo.KHKVKBelege",
+          "match_type": "exact",
+          "candidate_matches": [
+            "dbo.KHKVKBelege"
+          ],
+          "note": ""
+        },
+        {
+          "original_partner_label": "dbo.KHKBelegePositionen",
+          "normalized_partner_label": "khkbelegepositionen",
+          "matched_live_table": "dbo.KHKVKBelegePositionen",
+          "match_type": "alias_prefix_normalized",
+          "candidate_matches": [
+            "dbo.KHKVKBelegePositionen",
+            "dbo.KHKPJBelegePositionen",
+            "dbo.KHKIVBelegePositionen",
+            "dbo.KHKEKBelegePositionen",
+            "dbo.KHKPpsFaBelegePositionen",
+            "dbo.KHKVKBelegePositionenLager",
+            "dbo.KHKPpsFaBelegeAGPositionen",
+            "dbo.KHKPJBelegePositionenLager"
+          ],
+          "note": ""
+        }
+      ],
+      "required_tables": [
+        "dbo.KHKVKBelege",
+        "dbo.KHKVKBelegePositionen"
+      ],
+      "required_tables_resolved": [
+        "dbo.KHKVKBelege",
+        "dbo.KHKVKBelegePositionen"
+      ],
+      "unresolved_required_labels": [],
+      "required_columns": [],
+      "external_required_sources": [],
+      "notes": "Lieferstatus zu Bestellung XY."
+    },
+    {
+      "query_id": "CP3",
+      "question": null,
+      "required_tables_original": [
+        "dbo.KHKPpsBelege",
+        "dbo.KHKPppsBelegeAGPositionen",
+        "dbo.KHKPpsStempel"
+      ],
+      "required_table_entries": [
+        {
+          "original_partner_label": "dbo.KHKPpsBelege",
+          "normalized_partner_label": "khkppsbelege",
+          "matched_live_table": "dbo.KHKPpsFaBelege",
+          "match_type": "alias_prefix_normalized",
+          "candidate_matches": [
+            "dbo.KHKPpsFaBelege",
+            "dbo.KHKPJBelege",
+            "dbo.tKHKPpsBdeFaBelege",
+            "dbo.KHKVKBelege",
+            "dbo.KHKIVBelege",
+            "dbo.KHKEKBelege",
+            "dbo.tKHKPpsPrintFaBelege",
+            "dbo.KHKPpsWerkzeuge"
+          ],
+          "note": ""
+        },
+        {
+          "original_partner_label": "dbo.KHKPppsBelegeAGPositionen",
+          "normalized_partner_label": "khkpppsbelegeagpositionen",
+          "matched_live_table": "dbo.KHKPpsFaBelegeAGPositionen",
+          "match_type": "alias_prefix_normalized",
+          "candidate_matches": [
+            "dbo.KHKPpsFaBelegeAGPositionen",
+            "dbo.tKHKPpsFaBelegeAGPositionen",
+            "dbo.KHKPpsFaBelegePositionen",
+            "dbo.KHKPJBelegePositionen",
+            "dbo.KHKVKBelegePositionen",
+            "dbo.KHKIVBelegePositionen",
+            "dbo.KHKEKBelegePositionen",
+            "dbo.KHKPJBelegePositionenLager"
+          ],
+          "note": ""
+        },
+        {
+          "original_partner_label": "dbo.KHKPpsStempel",
+          "normalized_partner_label": "khkppsstempel",
+          "matched_live_table": "dbo.KHKPpsBdeStempel",
+          "match_type": "alias_prefix_normalized",
+          "candidate_matches": [
+            "dbo.KHKPpsBdeStempel",
+            "dbo.KHKPpsBdeStempelLp",
+            "dbo.KHKPpsBdeStempelSplit",
+            "dbo.KHKPpsBdeStempelBackup",
+            "dbo.KHKPpsDispostapel"
+          ],
+          "note": ""
+        }
+      ],
+      "required_tables": [
+        "dbo.KHKPpsFaBelege",
+        "dbo.KHKPpsFaBelegeAGPositionen",
+        "dbo.KHKPpsBdeStempel"
+      ],
+      "required_tables_resolved": [
+        "dbo.KHKPpsFaBelege",
+        "dbo.KHKPpsFaBelegeAGPositionen",
+        "dbo.KHKPpsBdeStempel"
+      ],
+      "unresolved_required_labels": [],
+      "required_columns": [],
+      "external_required_sources": [],
+      "notes": "Vergleich Fertigung in zwei Zeitfenstern."
+    },
+    {
+      "query_id": "CP4",
+      "question": null,
+      "required_tables_original": [
+        "dbo.OsemzizZEBuchungen"
+      ],
+      "required_table_entries": [
+        {
+          "original_partner_label": "dbo.OsemzizZEBuchungen",
+          "normalized_partner_label": "osemzizzebuchungen",
+          "matched_live_table": "dbo.OsemzizZEBuchungen",
+          "match_type": "exact",
+          "candidate_matches": [
+            "dbo.OsemzizZEBuchungen"
+          ],
+          "note": ""
+        }
+      ],
+      "required_tables": [
+        "dbo.OsemzizZEBuchungen"
+      ],
+      "required_tables_resolved": [
+        "dbo.OsemzizZEBuchungen"
+      ],
+      "unresolved_required_labels": [],
+      "required_columns": [],
+      "external_required_sources": [],
+      "notes": "Anwesenheits-/Pausen-Compliance."
+    },
+    {
+      "query_id": "CP5",
+      "question": null,
+      "required_tables_original": [
+        "dbo.OsemzizZEBuchungen",
+        "dbo.KHKPpsStempel"
+      ],
+      "required_table_entries": [
+        {
+          "original_partner_label": "dbo.OsemzizZEBuchungen",
+          "normalized_partner_label": "osemzizzebuchungen",
+          "matched_live_table": "dbo.OsemzizZEBuchungen",
+          "match_type": "exact",
+          "candidate_matches": [
+            "dbo.OsemzizZEBuchungen"
+          ],
+          "note": ""
+        },
+        {
+          "original_partner_label": "dbo.KHKPpsStempel",
+          "normalized_partner_label": "khkppsstempel",
+          "matched_live_table": "dbo.KHKPpsBdeStempel",
+          "match_type": "alias_prefix_normalized",
+          "candidate_matches": [
+            "dbo.KHKPpsBdeStempel",
+            "dbo.KHKPpsBdeStempelLp",
+            "dbo.KHKPpsBdeStempelSplit",
+            "dbo.KHKPpsBdeStempelBackup",
+            "dbo.KHKPpsDispostapel"
+          ],
+          "note": ""
+        }
+      ],
+      "required_tables": [
+        "dbo.OsemzizZEBuchungen",
+        "dbo.KHKPpsBdeStempel"
+      ],
+      "required_tables_resolved": [
+        "dbo.OsemzizZEBuchungen",
+        "dbo.KHKPpsBdeStempel"
+      ],
+      "unresolved_required_labels": [],
+      "required_columns": [],
+      "external_required_sources": [],
+      "notes": "Mitarbeiteraktivitäten am Morgen."
+    },
+    {
+      "query_id": "CP6",
+      "question": null,
+      "required_tables_original": [
+        "dbo.KHKEKBelege",
+        "dbo.KHKEKBelegePositionen",
+        "dbo.KHKEKBelegePositionenLager"
+      ],
+      "required_table_entries": [
+        {
+          "original_partner_label": "dbo.KHKEKBelege",
+          "normalized_partner_label": "khkekbelege",
+          "matched_live_table": "dbo.KHKEKBelege",
+          "match_type": "exact",
+          "candidate_matches": [
+            "dbo.KHKEKBelege"
+          ],
+          "note": ""
+        },
+        {
+          "original_partner_label": "dbo.KHKEKBelegePositionen",
+          "normalized_partner_label": "khkekbelegepositionen",
+          "matched_live_table": "dbo.KHKEKBelegePositionen",
+          "match_type": "exact",
+          "candidate_matches": [
+            "dbo.KHKEKBelegePositionen"
+          ],
+          "note": ""
+        },
+        {
+          "original_partner_label": "dbo.KHKEKBelegePositionenLager",
+          "normalized_partner_label": "khkekbelegepositionenlager",
+          "matched_live_table": "dbo.KHKEKBelegePositionenLager",
+          "match_type": "exact",
+          "candidate_matches": [
+            "dbo.KHKEKBelegePositionenLager"
+          ],
+          "note": ""
+        }
+      ],
+      "required_tables": [
+        "dbo.KHKEKBelege",
+        "dbo.KHKEKBelegePositionen",
+        "dbo.KHKEKBelegePositionenLager"
+      ],
+      "required_tables_resolved": [
+        "dbo.KHKEKBelege",
+        "dbo.KHKEKBelegePositionen",
+        "dbo.KHKEKBelegePositionenLager"
+      ],
+      "unresolved_required_labels": [],
+      "required_columns": [],
+      "external_required_sources": [],
+      "notes": "Wareneingang/Lagerbuchung für Material."
+    },
+    {
+      "query_id": "CP7",
+      "question": null,
+      "required_tables_original": [
+        "KHKBuchungserfassung"
+      ],
+      "required_table_entries": [
+        {
+          "original_partner_label": "KHKBuchungserfassung",
+          "normalized_partner_label": "khkbuchungserfassung",
+          "matched_live_table": "dbo.KHKBuchungserfassung",
+          "match_type": "exact",
+          "candidate_matches": [
+            "dbo.KHKBuchungserfassung"
+          ],
+          "note": ""
+        }
+      ],
+      "required_tables": [
+        "dbo.KHKBuchungserfassung"
+      ],
+      "required_tables_resolved": [
+        "dbo.KHKBuchungserfassung"
+      ],
+      "unresolved_required_labels": [],
+      "required_columns": [],
+      "external_required_sources": [
+        "NewZP_Plus64.accde/WartungsTermine"
+      ],
+      "notes": "Eine relevante Quelle liegt außerhalb des SQL-Servers."
+    },
+    {
+      "query_id": "CP8",
+      "question": null,
+      "required_tables_original": [
+        "dbo.KHKPpsBelege",
+        "dbo.KHKPppsBelegeAGPositionen",
+        "dbo.KHKPpsStempel"
+      ],
+      "required_table_entries": [
+        {
+          "original_partner_label": "dbo.KHKPpsBelege",
+          "normalized_partner_label": "khkppsbelege",
+          "matched_live_table": "dbo.KHKPpsFaBelege",
+          "match_type": "alias_prefix_normalized",
+          "candidate_matches": [
+            "dbo.KHKPpsFaBelege",
+            "dbo.KHKPJBelege",
+            "dbo.tKHKPpsBdeFaBelege",
+            "dbo.KHKVKBelege",
+            "dbo.KHKIVBelege",
+            "dbo.KHKEKBelege",
+            "dbo.tKHKPpsPrintFaBelege",
+            "dbo.KHKPpsWerkzeuge"
+          ],
+          "note": ""
+        },
+        {
+          "original_partner_label": "dbo.KHKPppsBelegeAGPositionen",
+          "normalized_partner_label": "khkpppsbelegeagpositionen",
+          "matched_live_table": "dbo.KHKPpsFaBelegeAGPositionen",
+          "match_type": "alias_prefix_normalized",
+          "candidate_matches": [
+            "dbo.KHKPpsFaBelegeAGPositionen",
+            "dbo.tKHKPpsFaBelegeAGPositionen",
+            "dbo.KHKPpsFaBelegePositionen",
+            "dbo.KHKPJBelegePositionen",
+            "dbo.KHKVKBelegePositionen",
+            "dbo.KHKIVBelegePositionen",
+            "dbo.KHKEKBelegePositionen",
+            "dbo.KHKPJBelegePositionenLager"
+          ],
+          "note": ""
+        },
+        {
+          "original_partner_label": "dbo.KHKPpsStempel",
+          "normalized_partner_label": "khkppsstempel",
+          "matched_live_table": "dbo.KHKPpsBdeStempel",
+          "match_type": "alias_prefix_normalized",
+          "candidate_matches": [
+            "dbo.KHKPpsBdeStempel",
+            "dbo.KHKPpsBdeStempelLp",
+            "dbo.KHKPpsBdeStempelSplit",
+            "dbo.KHKPpsBdeStempelBackup",
+            "dbo.KHKPpsDispostapel"
+          ],
+          "note": ""
+        }
+      ],
+      "required_tables": [
+        "dbo.KHKPpsFaBelege",
+        "dbo.KHKPpsFaBelegeAGPositionen",
+        "dbo.KHKPpsBdeStempel"
+      ],
+      "required_tables_resolved": [
+        "dbo.KHKPpsFaBelege",
+        "dbo.KHKPpsFaBelegeAGPositionen",
+        "dbo.KHKPpsBdeStempel"
+      ],
+      "unresolved_required_labels": [],
+      "required_columns": [],
+      "external_required_sources": [],
+      "notes": "Soll-Ist je Artikel und Mitarbeiter."
+    },
+    {
+      "query_id": "CP9",
+      "question": null,
+      "required_tables_original": [
+        "dbo.OsemzizZEBuchungen",
+        "dbo.KHKPpsStempel",
+        "dbo.KHKPpsBelege",
+        "dbo.KHKPppsBelegeAGPositionen"
+      ],
+      "required_table_entries": [
+        {
+          "original_partner_label": "dbo.OsemzizZEBuchungen",
+          "normalized_partner_label": "osemzizzebuchungen",
+          "matched_live_table": "dbo.OsemzizZEBuchungen",
+          "match_type": "exact",
+          "candidate_matches": [
+            "dbo.OsemzizZEBuchungen"
+          ],
+          "note": ""
+        },
+        {
+          "original_partner_label": "dbo.KHKPpsStempel",
+          "normalized_partner_label": "khkppsstempel",
+          "matched_live_table": "dbo.KHKPpsBdeStempel",
+          "match_type": "alias_prefix_normalized",
+          "candidate_matches": [
+            "dbo.KHKPpsBdeStempel",
+            "dbo.KHKPpsBdeStempelLp",
+            "dbo.KHKPpsBdeStempelSplit",
+            "dbo.KHKPpsBdeStempelBackup",
+            "dbo.KHKPpsDispostapel"
+          ],
+          "note": ""
+        },
+        {
+          "original_partner_label": "dbo.KHKPpsBelege",
+          "normalized_partner_label": "khkppsbelege",
+          "matched_live_table": "dbo.KHKPpsFaBelege",
+          "match_type": "alias_prefix_normalized",
+          "candidate_matches": [
+            "dbo.KHKPpsFaBelege",
+            "dbo.KHKPJBelege",
+            "dbo.tKHKPpsBdeFaBelege",
+            "dbo.KHKVKBelege",
+            "dbo.KHKIVBelege",
+            "dbo.KHKEKBelege",
+            "dbo.tKHKPpsPrintFaBelege",
+            "dbo.KHKPpsWerkzeuge"
+          ],
+          "note": ""
+        },
+        {
+          "original_partner_label": "dbo.KHKPppsBelegeAGPositionen",
+          "normalized_partner_label": "khkpppsbelegeagpositionen",
+          "matched_live_table": "dbo.KHKPpsFaBelegeAGPositionen",
+          "match_type": "alias_prefix_normalized",
+          "candidate_matches": [
+            "dbo.KHKPpsFaBelegeAGPositionen",
+            "dbo.tKHKPpsFaBelegeAGPositionen",
+            "dbo.KHKPpsFaBelegePositionen",
+            "dbo.KHKPJBelegePositionen",
+            "dbo.KHKVKBelegePositionen",
+            "dbo.KHKIVBelegePositionen",
+            "dbo.KHKEKBelegePositionen",
+            "dbo.KHKPJBelegePositionenLager"
+          ],
+          "note": ""
+        }
+      ],
+      "required_tables": [
+        "dbo.OsemzizZEBuchungen",
+        "dbo.KHKPpsBdeStempel",
+        "dbo.KHKPpsFaBelege",
+        "dbo.KHKPpsFaBelegeAGPositionen"
+      ],
+      "required_tables_resolved": [
+        "dbo.OsemzizZEBuchungen",
+        "dbo.KHKPpsBdeStempel",
+        "dbo.KHKPpsFaBelege",
+        "dbo.KHKPpsFaBelegeAGPositionen"
+      ],
+      "unresolved_required_labels": [],
+      "required_columns": [],
+      "external_required_sources": [],
+      "notes": "Doppelnennung von KHKPpsStempel im Quelldokument dedupliziert."
+    }
+  ]
+}

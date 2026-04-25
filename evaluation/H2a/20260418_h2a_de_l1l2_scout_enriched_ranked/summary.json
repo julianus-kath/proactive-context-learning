@@ -1,0 +1,37 @@
+{
+  "mode": "scout_enriched_ranked",
+  "n_queries": 20,
+  "mean_recall": 0.8417,
+  "sql_generation_rate": 0.9,
+  "perfect_recall_count": 15,
+  "zero_recall_count": 2,
+  "errors": 0,
+  "per_category": {
+    "paraphrase": {
+      "n": 10,
+      "mean_recall": 0.7167
+    },
+    "direct": {
+      "n": 10,
+      "mean_recall": 0.9667
+    }
+  },
+  "per_language": {
+    "de": {
+      "n": 20,
+      "mean_recall": 0.8417
+    }
+  },
+  "env_snapshot": {
+    "SCOUT_DISABLE": "false",
+    "SCOUT_DESCRIPTIONS_ENABLED": null,
+    "SCOUT_DESCRIPTIONS_RANKING": null,
+    "SCOUT_DESCRIPTIONS_MODEL": null,
+    "SCOUT_DESCRIPTIONS_DATABASE_TYPE": null,
+    "SCOUT_DESCRIPTIONS_CACHE_PATH": null,
+    "DB_DIALECT": "postgres",
+    "DB_NAME": null,
+    "DB_HOST": null,
+    "DB_PORT": null
+  }
+}
