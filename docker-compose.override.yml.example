@@ -1,0 +1,56 @@
+# ============================================================================
+# docker-compose.override.yml.example
+# ============================================================================
+# Drop-in template for connecting the stack to your own database or splitting
+# the MCP server onto a different host. Copy this file to
+# `docker-compose.override.yml` (which is git-ignored) and edit the values you
+# need. Docker Compose merges it on top of the base `docker-compose.yml`
+# automatically.
+#
+# Three common scenarios are pre-written below. Uncomment ONE block.
+# ============================================================================
+
+services:
+
+  # --------------------------------------------------------------------------
+  # Scenario A — point the MCP server at your own external Postgres
+  # --------------------------------------------------------------------------
+  # Removes the bundled `postgres` container and tells `mcp_server` to talk to
+  # a Postgres instance you already run somewhere on your network.
+  #
+  # mcp_server:
+  #   environment:
+  #     POSTGRES_HOST: 192.168.1.50         # or host.docker.internal on Mac
+  #     POSTGRES_PORT: "5432"
+  #     POSTGRES_DATABASE: my_db
+  #     POSTGRES_USER: my_user
+  #     POSTGRES_PASSWORD: my_password
+  #     POSTGRES_SCHEMA: public
+  #   depends_on: !reset []                  # un-link from bundled postgres
+  # postgres:
+  #   profiles: [disabled]                   # don't start the bundled DB
+
+  # --------------------------------------------------------------------------
+  # Scenario B — change ports if 3000 / 5001 / 8000 / 55432 are already in use
+  # --------------------------------------------------------------------------
+  # Set these in your `.env` file instead — no override needed:
+  #   WEB_UI_PORT=3001
+  #   SQL_AGENT_PORT=5101
+  #   MCP_PORT=8001
+  #   POSTGRES_PORT=55433
+
+  # --------------------------------------------------------------------------
+  # Scenario C — run the MCP server on a different machine (e.g. VPN host)
+  # --------------------------------------------------------------------------
+  # Locally only run the agent + UI; point them at an MCP server elsewhere.
+  # Useful when the database lives behind a VPN and only the MCP host can
+  # reach it (this is exactly the production deployment for the Sage ERP).
+  #
+  # sql_agent:
+  #   environment:
+  #     MCP_SERVER_URL: https://mcp.your-internal-host.example   # remote MCP
+  #     MCP_API_KEY: ${MCP_API_KEY}                              # must match
+  # mcp_server:
+  #   profiles: [disabled]                   # don't start a local MCP
+  # postgres:
+  #   profiles: [disabled]                   # don't start a local DB

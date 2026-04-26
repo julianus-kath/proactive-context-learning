@@ -1,0 +1,10 @@
+{"id": "NW1", "question": "Return the 5 products that need reordering (units_in_stock < reorder_level), sorted by the largest shortage first. Return exactly: product_id, product_name, units_in_stock, reorder_level.", "category": "direct", "language": "en"}
+{"id": "NW2", "question": "For each product category, calculate total revenue after discounts as SUM(unit_price * quantity * (1 - discount)). Return all categories with category_name and total_revenue, sorted by total_revenue descending.", "category": "direct", "language": "en"}
+{"id": "NL1", "question": "Which offerings look most likely to run short soon based on current stock versus replenishment threshold?", "category": "paraphrase", "language": "en"}
+{"id": "NL2", "question": "Which buyers place very frequent orders and represent the highest gross order value overall?", "category": "paraphrase", "language": "en"}
+{"id": "CL1", "question": "Welche Lieferanten erzielen den h\u00f6chsten Umsatz nach Rabatten \u00fcber ihre Artikel?", "category": "crosslingual", "language": "de"}
+{"id": "CL2", "question": "Welche Kundenl\u00e4nder bringen den gr\u00f6\u00dften Gesamtumsatz nach Abz\u00fcgen?", "category": "crosslingual", "language": "de"}
+{"id": "HX1", "question": "Welche Kundenkonten haben ihren Monatsumsatz vom ersten zum letzten aktiven Monat am staerksten gesteigert (mindestens 5 Bestellungen insgesamt)?", "category": "complex", "language": "de"}
+{"id": "HX3", "question": "Bei welchen Versanddienstleistern ist der Anteil stark verspaeteter Sendungen (mehr als 3 Tage) am groessten?", "category": "complex", "language": "de"}
+{"id": "US_CL2_U1", "question": "Woher kommt unser Nettoumsatz?", "intent": "CL2", "level": "U1", "abstraction": "underspecified", "category": "underspecified", "language": "de"}
+{"id": "LB_CL2_LX1", "question": "Zeige den rabattbereinigten Umsatz pro Kundenland.", "intent": "CL2", "level": "LX1", "abstraction": "direct", "category": "lexical_breakpoint", "language": "de"}

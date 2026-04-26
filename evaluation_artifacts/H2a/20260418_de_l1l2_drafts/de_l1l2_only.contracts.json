@@ -1,0 +1,208 @@
+[
+  {
+    "query_id": "NW_DE_01",
+    "required_tables": [
+      "products"
+    ],
+    "category": "direct",
+    "language": "de",
+    "mirrors": "NW1"
+  },
+  {
+    "query_id": "NW_DE_02",
+    "required_tables": [
+      "categories",
+      "products",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "de",
+    "mirrors": "NW2"
+  },
+  {
+    "query_id": "NW_DE_03",
+    "required_tables": [
+      "customers",
+      "orders",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "de",
+    "mirrors": "NW3"
+  },
+  {
+    "query_id": "NW_DE_04",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "direct",
+    "language": "de",
+    "mirrors": "NW4"
+  },
+  {
+    "query_id": "NW_DE_05",
+    "required_tables": [
+      "employees",
+      "orders",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "de",
+    "mirrors": "NW5"
+  },
+  {
+    "query_id": "NW_DE_06",
+    "required_tables": [
+      "products",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "de",
+    "mirrors": "NW6"
+  },
+  {
+    "query_id": "NW_DE_07",
+    "required_tables": [
+      "suppliers",
+      "products",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "de",
+    "mirrors": "NW7"
+  },
+  {
+    "query_id": "NW_DE_08",
+    "required_tables": [
+      "customers",
+      "orders",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "de",
+    "mirrors": "NW8"
+  },
+  {
+    "query_id": "NW_DE_09",
+    "required_tables": [
+      "orders",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "de",
+    "mirrors": "NW9"
+  },
+  {
+    "query_id": "NW_DE_10",
+    "required_tables": [
+      "orders",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "de",
+    "mirrors": "NW10"
+  },
+  {
+    "query_id": "NL_DE_01",
+    "required_tables": [
+      "products"
+    ],
+    "category": "paraphrase",
+    "language": "de",
+    "mirrors": "NL1"
+  },
+  {
+    "query_id": "NL_DE_02",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "paraphrase",
+    "language": "de",
+    "mirrors": "NL2"
+  },
+  {
+    "query_id": "NL_DE_03",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "paraphrase",
+    "language": "de",
+    "mirrors": "NL3"
+  },
+  {
+    "query_id": "NL_DE_04",
+    "required_tables": [
+      "order_details",
+      "products"
+    ],
+    "category": "paraphrase",
+    "language": "de",
+    "mirrors": "NL4"
+  },
+  {
+    "query_id": "NL_DE_05",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "paraphrase",
+    "language": "de",
+    "mirrors": "NL5"
+  },
+  {
+    "query_id": "NL_DE_06",
+    "required_tables": [
+      "order_details",
+      "orders"
+    ],
+    "category": "paraphrase",
+    "language": "de",
+    "mirrors": "NL6"
+  },
+  {
+    "query_id": "NL_DE_07",
+    "required_tables": [
+      "order_details",
+      "products",
+      "suppliers"
+    ],
+    "category": "paraphrase",
+    "language": "de",
+    "mirrors": "NL7"
+  },
+  {
+    "query_id": "NL_DE_08",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "paraphrase",
+    "language": "de",
+    "mirrors": "NL8"
+  },
+  {
+    "query_id": "NL_DE_09",
+    "required_tables": [
+      "employees",
+      "orders"
+    ],
+    "category": "paraphrase",
+    "language": "de",
+    "mirrors": "NL9"
+  },
+  {
+    "query_id": "NL_DE_10",
+    "required_tables": [
+      "customers",
+      "orders"
+    ],
+    "category": "paraphrase",
+    "language": "de",
+    "mirrors": "NL10"
+  }
+]

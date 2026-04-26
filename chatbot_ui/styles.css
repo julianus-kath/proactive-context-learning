@@ -84,8 +84,6 @@ body {
     --radius-xl: 24px;
     --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.45);
     --shadow-strong: 0 24px 60px rgba(15, 23, 42, 0.85);
-    --footer-height: 114px;
-    --footer-gap: 16px;
 }
 
 /* Dark Theme Overrides */
@@ -114,177 +112,7 @@ body.theme-dark {
     width: 100%;
     max-width: 1360px;
     margin: 0 auto;
-    height: calc(100vh - 64px - var(--footer-height) - var(--footer-gap)); /* fixed layout height; reserves space for footer */
-}
-
-/* Footer */
-.app-footer {
-    width: 100%;
-    max-width: 1360px;
-    height: var(--footer-height);
-    margin-top: var(--footer-gap);
-    border-radius: 24px;
-    border: 1px solid rgba(248, 248, 248, 0.28);
-    background: rgba(4, 34, 63, 0.22);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
-    overflow: hidden;
-}
-
-.footer-content {
-    height: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1.25rem;
-    padding: 0.75rem 1.35rem;
-}
-
-.footer-left {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.footer-profile {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-    min-width: 0;
-}
-
-.footer-profile-photo {
-    width: 58px;
-    height: 58px;
-    border-radius: 50%;
-    border: 1px solid rgba(248, 248, 248, 0.3);
-    object-fit: cover;
-    flex-shrink: 0;
-}
-
-.footer-profile-details {
-    min-width: 0;
-}
-
-.footer-name {
-    color: var(--ci-white);
-    font-size: 0.95rem;
-    font-weight: 600;
-}
-
-.footer-title {
-    color: rgba(248, 248, 248, 0.86);
-    font-size: 0.76rem;
-    margin-top: 0.1rem;
-    white-space: nowrap;
-}
-
-.footer-contact-row {
-    margin-top: 0.3rem;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.73rem;
-}
-
-.footer-email {
-    color: rgba(248, 248, 248, 0.95);
-    text-decoration: none;
-}
-
-.footer-email:hover,
-.footer-email:focus-visible {
-    text-decoration: underline;
-}
-
-.footer-divider {
-    color: rgba(248, 248, 248, 0.68);
-}
-
-.footer-socials {
-    margin-top: 0.35rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.footer-social-link {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    border: 1px solid rgba(248, 248, 248, 0.35);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--ci-white);
-    background-color: rgba(248, 248, 248, 0.08);
-    transition: background-color 0.15s ease-out, transform 0.15s ease-out;
-}
-
-.footer-social-link:hover,
-.footer-social-link:focus-visible {
-    background-color: rgba(248, 248, 248, 0.2);
-    transform: translateY(-1px);
-}
-
-.footer-social-link .icon {
-    width: 16px;
-    height: 16px;
-    display: block;
-}
-
-.footer-extra-space {
-    flex: 1;
-    min-width: 180px;
-    max-width: 330px;
-    padding: 0.7rem 0.85rem;
-    border-radius: 12px;
-    border: 1px dashed rgba(248, 248, 248, 0.38);
-    background: rgba(248, 248, 248, 0.06);
-    color: rgba(248, 248, 248, 0.72);
-    font-size: 0.74rem;
-    letter-spacing: 0.02em;
-}
-
-.footer-powered-by {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 0.4rem;
-    margin-left: auto;
-    flex-shrink: 0;
-}
-
-.powered-by-label {
-    font-family: "Acumin Pro", "Acumin Variable Concept", "Avenir Next", "Inter", sans-serif;
-    font-size: 0.66rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(248, 248, 248, 0.82);
-}
-
-.footer-corpin-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-end;
-    text-decoration: none;
-}
-
-.footer-corpin-logo {
-    width: 148px;
-    max-width: 100%;
-    height: auto;
-    display: block;
-}
-
-body.theme-dark .app-footer {
-    background: rgba(20, 26, 33, 0.45);
-    border-color: rgba(248, 248, 248, 0.2);
+    height: calc(100vh - 64px); /* fixed layout height */
 }
 
 /* Sidebar - Left Column */
@@ -1290,9 +1118,8 @@ body.theme-dark .db-tag.connected {
 
 .thinking-step {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
+    flex-direction: column;
+    gap: 0.4rem;
     padding: 0.35rem 0;
     border-bottom: 1px solid var(--darker-grey-4);
     opacity: 0;
@@ -1309,6 +1136,14 @@ body.theme-dark .db-tag.connected {
     transform: translateX(0);
 }
 
+/* Top row of a step: label on the left, timestamp on the right */
+.step-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
 .step-text {
     flex: 1;
     font-size: 0.75rem;
@@ -1319,6 +1154,39 @@ body.theme-dark .db-tag.connected {
     font-size: 0.75rem;
     color: var(--darker-grey-3);
     flex-shrink: 0;
+}
+
+/* Detail block beneath a step (e.g. the full SQL query or the list of tables).
+   Renders preformatted so newlines and indentation are preserved, wraps long
+   lines so nothing overflows the container. */
+.step-detail {
+    margin: 0;
+    padding: 0.6rem 0.75rem;
+    background-color: rgba(15, 23, 42, 0.04);
+    border: 1px solid var(--darker-grey-4);
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--primary-dark);
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.step-detail code {
+    font: inherit;
+    background: transparent;
+    padding: 0;
+    color: inherit;
+}
+
+body.theme-dark .step-detail {
+    background-color: rgba(255, 255, 255, 0.04);
+    border-color: var(--obsidian-shadow-s2);
+    color: var(--ci-white);
 }
 
 /* Dark theme for thinking container */
@@ -1366,6 +1234,136 @@ body.theme-dark .thinking-container.completed .thinking-header {
 }
 
 
+/* Anchor-based action buttons (GitHub, author link) should look identical to button siblings. */
+a.icon-button,
+.action-link {
+    text-decoration: none;
+}
+
+/* Mobile sidebar toggle (burger) — only shown on narrow screens, hidden on desktop.
+   Use !important to defend against any theme or utility rule that sets `display`
+   on buttons (e.g. .icon-button { display: inline-flex }) and wins on source order. */
+.sidebar-toggle {
+    display: none !important;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+}
+
+/* Backdrop shown behind the sidebar on mobile when it's open. */
+.sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(2px);
+    z-index: 40;
+    opacity: 0;
+    transition: opacity 0.25s ease-out;
+}
+
+body.sidebar-open .sidebar-backdrop {
+    display: block;
+    opacity: 1;
+}
+
+/* Login page styles — rendered for unauthenticated users only. */
+.login-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px;
+    overflow: auto;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--light-background);
+    color: var(--primary-dark);
+    border-radius: 24px;
+    padding: 40px 32px;
+    box-shadow: var(--shadow-strong);
+    text-align: center;
+}
+
+.login-logo {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 16px;
+}
+
+.login-card h1 {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+}
+
+.login-subtitle {
+    color: var(--darker-grey-2);
+    margin-bottom: 24px;
+    font-size: 0.95rem;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.login-form input[type="password"] {
+    padding: 12px 14px;
+    border: 1px solid var(--darker-grey-4);
+    border-radius: 10px;
+    font-size: 1rem;
+    background: var(--white);
+    color: var(--primary-dark);
+}
+
+.login-form input[type="password"]:focus {
+    outline: 2px solid var(--primary-accent);
+    outline-offset: 2px;
+    border-color: var(--primary-accent);
+}
+
+.login-submit {
+    padding: 12px 16px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.login-error {
+    background: rgba(255, 68, 68, 0.1);
+    color: var(--error);
+    border: 1px solid rgba(255, 68, 68, 0.3);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+    text-align: left;
+}
+
+.login-footnote {
+    margin-top: 20px;
+    color: var(--darker-grey-2);
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     body {
@@ -1374,34 +1372,64 @@ body.theme-dark .thinking-container.completed .thinking-header {
         padding: 20px 16px;
     }
 
+    /* Single-column layout: main chat is always visible; sidebar slides in from the left. */
     .app-container {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        min-height: 0;
-        height: auto;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "main"
+            "input";
+        gap: 16px;
+        height: calc(100vh - 32px);
     }
 
+    /* Off-canvas sidebar: fixed on the left, translated off-screen until the user opens it. */
     .sidebar {
-        width: 100%;
-        height: auto;
-        max-height: 40vh;
-        border-right: none;
-        border-bottom: 1px solid var(--darker-grey-1);
-        order: 2;
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: min(85vw, 320px);
+        height: 100vh;
+        border-radius: 0 24px 24px 0;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-out;
+        z-index: 50;
+        box-shadow: var(--shadow-strong);
+    }
+
+    body.sidebar-open .sidebar {
+        transform: translateX(0);
+    }
+
+    /* Disable the subtle hover-scale transform on mobile: it conflicts with the slide-in animation. */
+    .sidebar:hover,
+    .main-chat:hover,
+    .chat-input-wrapper:hover {
+        transform: none;
+    }
+
+    .sidebar-toggle {
+        display: inline-flex !important;
     }
 
     .main-chat {
         flex: 1;
-        order: 1;
-    }
-
-    .chat-input-container {
-        order: 3;
     }
 
     .chat-header {
-        padding: 1rem;
+        padding: 0.75rem 1rem;
+        gap: 0.5rem;
+    }
+
+    .chat-title h1 {
+        font-size: 1.1rem;
+        line-height: 1.2;
+    }
+
+    .chat-title p {
+        font-size: 0.8rem;
     }
 
     .chat-messages {
@@ -1409,10 +1437,7 @@ body.theme-dark .thinking-container.completed .thinking-header {
     }
 
     .chat-input-container {
-        padding: 1rem;
-        position: sticky;
-        bottom: 0;
-        z-index: 5;
+        padding: 0.75rem 1rem;
     }
 
     .message-content {
@@ -1439,43 +1464,22 @@ body.theme-dark .thinking-container.completed .thinking-header {
     .btn-primary, .btn-secondary {
         width: 100%;
     }
-
-    .app-footer {
-        height: auto;
-    }
-
-    .footer-content {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 1rem;
-    }
-
-    .footer-left {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .footer-extra-space {
-        width: 100%;
-        max-width: none;
-        min-width: 0;
-    }
-
-    .footer-powered-by {
-        align-items: flex-end;
-        width: 100%;
-    }
 }
 
 @media (max-width: 480px) {
-    .chat-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
+    /* On very narrow screens, hide the descriptive subtitle and compress actions so the
+       burger + title + action icons all fit on a single row. */
+    .chat-title p {
+        display: none;
     }
 
     .chat-actions {
-        align-self: flex-end;
+        gap: 0.25rem;
+    }
+
+    .chat-actions .action-btn {
+        width: 36px;
+        height: 36px;
     }
 
     .input-footer {
@@ -1494,23 +1498,6 @@ body.theme-dark .thinking-container.completed .thinking-header {
 
     .sidebar-footer {
         padding: 0.5rem;
-    }
-
-    .footer-profile-photo {
-        width: 50px;
-        height: 50px;
-    }
-
-    .footer-title {
-        white-space: normal;
-    }
-
-    .footer-contact-row {
-        gap: 0.25rem;
-    }
-
-    .footer-corpin-logo {
-        width: 126px;
     }
 }
 

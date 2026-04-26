@@ -1,6 +1,7 @@
 # Add view ranking functionality to the existing table_ranker.py
 
 import logging
+import os
 from dataclasses import dataclass
 from typing import Dict, Any, List, Optional
 from functools import lru_cache
@@ -20,6 +21,11 @@ class RankedTable:
     fk_count: Optional[int] = None
     columns: Optional[List[str]] = None  # Column names for SQL generation
     matched_columns: Optional[List[str]] = None  # Columns that matched query entities
+    # SDG v2: business-level description populated at catalog load time when
+    # SCOUT_DESCRIPTIONS_ENABLED=true. Empty string otherwise. Whether it
+    # contributes to ranking is controlled by SCOUT_DESCRIPTIONS_RANKING; the
+    # field always flows through to the LLM via the MCP response regardless.
+    description: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -32,7 +38,8 @@ class RankedTable:
             "column_count": self.column_count,
             "fk_count": self.fk_count,
             "columns": self.columns,
-            "matched_columns": self.matched_columns
+            "matched_columns": self.matched_columns,
+            "description": self.description,
         }
 
 class TableRanker:
@@ -42,15 +49,30 @@ class TableRanker:
     Implements multi-dimensional scoring as described in ADR-0015.
     """
 
-    def __init__(self):
-        """Initialize the table ranker with default weights."""
+    def __init__(self, use_description_scoring: Optional[bool] = None):
+        """Initialize the table ranker with default weights.
+
+        Args:
+            use_description_scoring: If True, table descriptions (SDG v2)
+                contribute to ranking via token-coverage matching against the
+                query entities. If None (default), reads the kill-switch env
+                var SCOUT_DESCRIPTIONS_RANKING. Default OFF preserves the
+                pre-SDG-v2 behavior so ablations can isolate the effect.
+        """
         self.weights = {
             'entity_match': 1.0,
             'fuzzy_match': 0.4,
             'type_compatibility': 0.3,
             'size_bonus': 0.05,
-            'fk_bonus': 0.1
+            'fk_bonus': 0.1,
+            # Conservative weight: ~half of fuzzy_match. Descriptions act as
+            # a tiebreaker / Sage-style rescue signal, not a primary ranker.
+            'description_match': 0.4,
         }
+        if use_description_scoring is None:
+            flag = os.environ.get('SCOUT_DESCRIPTIONS_RANKING', 'false').strip().lower()
+            use_description_scoring = flag in ('true', '1', 'yes', 'on')
+        self.use_description_scoring = use_description_scoring
 
     def rank_tables(
         self,
@@ -72,6 +94,15 @@ class TableRanker:
             List of RankedTable objects sorted by score desc
         """
         ranked_tables = []
+
+        # Preserve the user-provided entities for description scoring. Synonym
+        # expansion below is a structural-matching aid (so an English entity
+        # can match a German column name); descriptions are natural-language
+        # text where synonyms are implicit, and using the expanded list as the
+        # denominator would dilute the coverage ratio unfairly.
+        original_entities: List[str] = [
+            (e or "").strip() for e in (entities or []) if (e or "").strip()
+        ]
 
         # Expand entities with simple EN↔DE synonyms to improve cross-language matching
         synonyms_map = {
@@ -156,6 +187,17 @@ class TableRanker:
                 fk_score = min(fk_count / 5, 1.0)  # Cap at 5 FKs
                 score += fk_score * self.weights['fk_bonus']
                 reasons.append(f"FK connectivity: {fk_score:.2f}")
+
+            # 6. Description match (SDG v2) — gated by SCOUT_DESCRIPTIONS_RANKING.
+            # Token-coverage scoring against the table description so a table
+            # whose business description contains the query vocabulary can be
+            # rescued into the candidate set even when its name is opaque.
+            desc_score = 0.0
+            if self.use_description_scoring:
+                desc_score = self._score_description_match(table, original_entities)
+                if desc_score > 0:
+                    score += desc_score * self.weights['description_match']
+                    reasons.append(f"Description match: {desc_score:.2f}")
 
             # Views-first slight preference
             if t_type == 'view':
@@ -244,11 +286,16 @@ class TableRanker:
             score = min(score, 1.0)
 
             # Only include tables with meaningful semantic relevance
-            # Require at least some semantic match, not just size bonuses
+            # Require at least some semantic match, not just size bonuses.
+            # When description scoring is on, require ≥0.5 coverage (half of
+            # query entities present in description) to qualify on description
+            # alone — below that, descriptions act only as a re-rank tiebreaker
+            # within the existing candidate set.
             has_semantic_match = (
                 entity_score > 0 or
                 column_score > 0 or
-                fuzzy_score >= 0.3  # Require meaningful fuzzy match
+                fuzzy_score >= 0.3 or
+                (self.use_description_scoring and desc_score >= 0.5)
             )
 
             # For query operations, require semantic relevance over pure size
@@ -265,7 +312,8 @@ class TableRanker:
                     column_count=column_count,
                     fk_count=fk_count,
                     columns=column_names if column_names else None,
-                    matched_columns=matched_cols if matched_cols else None
+                    matched_columns=matched_cols if matched_cols else None,
+                    description=str(table.get("description") or ""),
                 )
                 ranked_tables.append(ranked_table)
 
@@ -378,6 +426,38 @@ class TableRanker:
                         matched_columns.append(col_name)
 
         return min(max_score, 1.0), matched_columns
+
+    def _score_description_match(self, table: Dict[str, Any], entities: List[str]) -> float:
+        """
+        Score a table by token-coverage of query entities against its business
+        description (SDG v2).
+
+        Returns the fraction of query entities (>=3 chars) that appear as a
+        substring in the lowercased description text. Empty description or
+        empty entity list → 0.0. The score is normalized to [0, 1] so it can
+        be combined with self.weights['description_match'] alongside the other
+        signals.
+
+        Substring matching (rather than strict token equality) is intentional:
+        German compounds like "Kundenkundendemo" should match the entity
+        "kunden", and English business terms like "discounted_revenue" should
+        match "revenue". The risk of spurious matches is bounded by the
+        per-entity granularity (one match per entity, capped at 1.0 total) and
+        the conservative weight (0.4).
+        """
+        if not entities:
+            return 0.0
+        desc = (table.get('description') or '').lower()
+        if not desc:
+            return 0.0
+
+        valid = [(e or '').lower().strip() for e in entities]
+        valid = [e for e in valid if len(e) >= 3]
+        if not valid:
+            return 0.0
+
+        matched = sum(1 for e in valid if e in desc)
+        return matched / len(valid)
 
 
     def _score_type_compatibility(self, table: Dict[str, Any], operations: List[str]) -> float:

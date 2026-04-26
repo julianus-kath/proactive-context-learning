@@ -1,4 +1,8 @@
-# ADR 0033: KPI Library for Domain-Specific Calculations
+# ADR-0033: KPI Library for Domain-Specific Calculations
+**Status**: Accepted
+**Date**: 2026-01-18
+**Author**: Julianus Kath
+
 
 ## Status
 Accepted

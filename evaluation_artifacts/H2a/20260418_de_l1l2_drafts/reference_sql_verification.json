@@ -1,0 +1,310 @@
+[
+  {
+    "qid": "NW1",
+    "status": "OK",
+    "rowcount": 5,
+    "cols": [
+      "product_id",
+      "product_name",
+      "units_in_stock",
+      "reorder_level"
+    ],
+    "first_row": [
+      "31",
+      "Gorgonzola Telino",
+      "0",
+      "20"
+    ]
+  },
+  {
+    "qid": "NW2",
+    "status": "OK",
+    "rowcount": 8,
+    "cols": [
+      "category_name",
+      "total_revenue"
+    ],
+    "first_row": [
+      "Beverages",
+      "267868.17978624784"
+    ]
+  },
+  {
+    "qid": "NW3",
+    "status": "OK",
+    "rowcount": 28,
+    "cols": [
+      "customer_id",
+      "company_name",
+      "order_count",
+      "total_order_value"
+    ],
+    "first_row": [
+      "QUICK",
+      "QUICK-Stop",
+      "28",
+      "117483.390147686"
+    ]
+  },
+  {
+    "qid": "NW4",
+    "status": "OK",
+    "rowcount": 3,
+    "cols": [
+      "shipper_id",
+      "company_name",
+      "late_shipments",
+      "total_shipments"
+    ],
+    "first_row": [
+      "1",
+      "Speedy Express",
+      "12",
+      "249"
+    ]
+  },
+  {
+    "qid": "NW5",
+    "status": "OK",
+    "rowcount": 9,
+    "cols": [
+      "employee_id",
+      "first_name",
+      "last_name",
+      "total_revenue"
+    ],
+    "first_row": [
+      "4",
+      "Margaret",
+      "Peacock",
+      "232890.84598203757"
+    ]
+  },
+  {
+    "qid": "NW6",
+    "status": "OK",
+    "rowcount": 5,
+    "cols": [
+      "product_id",
+      "product_name",
+      "quantity_sold"
+    ],
+    "first_row": [
+      "60",
+      "Camembert Pierrot",
+      "1577"
+    ]
+  },
+  {
+    "qid": "NW7",
+    "status": "OK",
+    "rowcount": 10,
+    "cols": [
+      "supplier_1",
+      "supplier_2",
+      "co_order_count"
+    ],
+    "first_row": [
+      "Specialty Biscuits, Ltd.",
+      "Plutzer Lebensmittelgro\u00dfm\u00e4rkte AG",
+      "25"
+    ]
+  },
+  {
+    "qid": "NW8",
+    "status": "OK",
+    "rowcount": 21,
+    "cols": [
+      "country",
+      "avg_order_value"
+    ],
+    "first_row": [
+      "Austria",
+      "3200.09595396628"
+    ]
+  },
+  {
+    "qid": "NW9",
+    "status": "OK",
+    "rowcount": 1,
+    "cols": [
+      "pending_orders",
+      "total_value"
+    ],
+    "first_row": [
+      "21",
+      "25937.430325874306"
+    ]
+  },
+  {
+    "qid": "NW10",
+    "status": "OK",
+    "rowcount": 23,
+    "cols": [
+      "month",
+      "revenue"
+    ],
+    "first_row": [
+      "1996-07-01",
+      "27861.89512966156"
+    ]
+  },
+  {
+    "qid": "NL1",
+    "status": "OK",
+    "rowcount": 18,
+    "cols": [
+      "product_id",
+      "product_name",
+      "units_in_stock",
+      "reorder_level",
+      "shortage"
+    ],
+    "first_row": [
+      "31",
+      "Gorgonzola Telino",
+      "0",
+      "20",
+      "20"
+    ]
+  },
+  {
+    "qid": "NL2",
+    "status": "OK",
+    "rowcount": 89,
+    "cols": [
+      "customer_id",
+      "company_name",
+      "order_count",
+      "total_order_value"
+    ],
+    "first_row": [
+      "QUICK",
+      "QUICK-Stop",
+      "28",
+      "117483.390147686"
+    ]
+  },
+  {
+    "qid": "NL3",
+    "status": "OK",
+    "rowcount": 3,
+    "cols": [
+      "shipper_id",
+      "company_name",
+      "late_shipments",
+      "total_shipments"
+    ],
+    "first_row": [
+      "2",
+      "United Package",
+      "16",
+      "326"
+    ]
+  },
+  {
+    "qid": "NL4",
+    "status": "OK",
+    "rowcount": 77,
+    "cols": [
+      "product_id",
+      "product_name",
+      "units_sold"
+    ],
+    "first_row": [
+      "60",
+      "Camembert Pierrot",
+      "1577"
+    ]
+  },
+  {
+    "qid": "NL5",
+    "status": "OK",
+    "rowcount": 21,
+    "cols": [
+      "country",
+      "avg_order_value"
+    ],
+    "first_row": [
+      "Austria",
+      "3200.09595396628"
+    ]
+  },
+  {
+    "qid": "NL6",
+    "status": "OK",
+    "rowcount": 23,
+    "cols": [
+      "month",
+      "revenue"
+    ],
+    "first_row": [
+      "1996-07-01",
+      "27861.89512966156"
+    ]
+  },
+  {
+    "qid": "NL7",
+    "status": "OK",
+    "rowcount": 29,
+    "cols": [
+      "supplier_id",
+      "company_name",
+      "total_revenue"
+    ],
+    "first_row": [
+      "18",
+      "Aux joyeux eccl\u00e9siastiques",
+      "153691.2755027201"
+    ]
+  },
+  {
+    "qid": "NL8",
+    "status": "OK",
+    "rowcount": 3,
+    "cols": [
+      "shipper_id",
+      "company_name",
+      "avg_late_days",
+      "late_shipments",
+      "shipped_orders"
+    ],
+    "first_row": [
+      "1",
+      "Speedy Express",
+      "8.0833333333333333",
+      "12",
+      "245"
+    ]
+  },
+  {
+    "qid": "NL9",
+    "status": "OK",
+    "rowcount": 9,
+    "cols": [
+      "employee_id",
+      "first_name",
+      "last_name",
+      "customer_count"
+    ],
+    "first_row": [
+      "4",
+      "Margaret",
+      "Peacock",
+      "75"
+    ]
+  },
+  {
+    "qid": "NL10",
+    "status": "OK",
+    "rowcount": 2,
+    "cols": [
+      "customer_id",
+      "company_name"
+    ],
+    "first_row": [
+      "FISSA",
+      "FISSA Fabrica Inter. Salchichas S.A."
+    ]
+  }
+]

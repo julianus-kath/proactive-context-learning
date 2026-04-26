@@ -1,7 +1,7 @@
-# Postman collection for Agent Endpoints
-
-**Date:** 27.12.2025
-**Author:** Julianus Kath
+# ADR-0028: Postman Collection for Agent Endpoints
+**Status**: Accepted
+**Date**: 2025-12-27
+**Author**: Julianus Kath
 
 The HTTP Endpoints on the Agents in the Langgraph system are designed to work together seamlessly. They take a series of inputs, perform various tasks, and return outputs that can be passed along to subsequent endpoints. To make it easier for developers to understand and interact with these endpoints, we've created a comprehensive guide below.
 

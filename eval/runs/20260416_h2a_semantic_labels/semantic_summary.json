@@ -1,0 +1,129 @@
+{
+  "per_condition": {
+    "scout_structural": {
+      "label_distribution": {
+        "CORRECT": 19,
+        "PARTIAL": 8,
+        "INCORRECT": 37,
+        "ERROR": 0
+      },
+      "acceptable_answer_rate": 0.4219,
+      "per_category": {
+        "crosslingual": {
+          "CORRECT": 2,
+          "PARTIAL": 3,
+          "INCORRECT": 7,
+          "ERROR": 0
+        },
+        "complex": {
+          "CORRECT": 1,
+          "PARTIAL": 0,
+          "INCORRECT": 7,
+          "ERROR": 0
+        },
+        "lexical_breakpoint": {
+          "CORRECT": 3,
+          "PARTIAL": 1,
+          "INCORRECT": 8,
+          "ERROR": 0
+        },
+        "paraphrase": {
+          "CORRECT": 2,
+          "PARTIAL": 4,
+          "INCORRECT": 4,
+          "ERROR": 0
+        },
+        "direct": {
+          "CORRECT": 9,
+          "PARTIAL": 0,
+          "INCORRECT": 1,
+          "ERROR": 0
+        },
+        "underspecified": {
+          "CORRECT": 2,
+          "PARTIAL": 0,
+          "INCORRECT": 10,
+          "ERROR": 0
+        }
+      },
+      "per_language": {
+        "de": {
+          "CORRECT": 8,
+          "PARTIAL": 4,
+          "INCORRECT": 32,
+          "ERROR": 0
+        },
+        "en": {
+          "CORRECT": 11,
+          "PARTIAL": 4,
+          "INCORRECT": 5,
+          "ERROR": 0
+        }
+      }
+    },
+    "scout_enriched_ranked": {
+      "label_distribution": {
+        "CORRECT": 24,
+        "PARTIAL": 8,
+        "INCORRECT": 32,
+        "ERROR": 0
+      },
+      "acceptable_answer_rate": 0.5,
+      "per_category": {
+        "crosslingual": {
+          "CORRECT": 4,
+          "PARTIAL": 3,
+          "INCORRECT": 5,
+          "ERROR": 0
+        },
+        "complex": {
+          "CORRECT": 1,
+          "PARTIAL": 0,
+          "INCORRECT": 7,
+          "ERROR": 0
+        },
+        "lexical_breakpoint": {
+          "CORRECT": 5,
+          "PARTIAL": 1,
+          "INCORRECT": 6,
+          "ERROR": 0
+        },
+        "paraphrase": {
+          "CORRECT": 2,
+          "PARTIAL": 4,
+          "INCORRECT": 4,
+          "ERROR": 0
+        },
+        "direct": {
+          "CORRECT": 9,
+          "PARTIAL": 0,
+          "INCORRECT": 1,
+          "ERROR": 0
+        },
+        "underspecified": {
+          "CORRECT": 3,
+          "PARTIAL": 0,
+          "INCORRECT": 9,
+          "ERROR": 0
+        }
+      },
+      "per_language": {
+        "de": {
+          "CORRECT": 13,
+          "PARTIAL": 4,
+          "INCORRECT": 27,
+          "ERROR": 0
+        },
+        "en": {
+          "CORRECT": 11,
+          "PARTIAL": 4,
+          "INCORRECT": 5,
+          "ERROR": 0
+        }
+      }
+    }
+  },
+  "comparison": {
+    "delta_acceptable_rate_on_minus_off": 0.0781
+  }
+}

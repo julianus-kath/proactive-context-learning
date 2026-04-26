@@ -1,0 +1,481 @@
+{
+  "generated_at_utc": "2026-04-15T10:13:37.185750Z",
+  "experiment": {
+    "endpoints": [
+      "http://localhost:5001"
+    ],
+    "datasets": [
+      "C:\\Users\\unisg\\Desktop\\pcl_julianus\\proactive-context-learning\\eval\\datasets\\cockpit_partner_queries_v1.jsonl"
+    ],
+    "modes": [
+      "scout_structural",
+      "scout_enriched_ranked"
+    ],
+    "scoring_logic": "required-table grounding with surfaced precedence final_sql > ranked > discovery"
+  },
+  "label_normalization_summary": {
+    "source": "C:\\Users\\unisg\\Desktop\\pcl_julianus\\proactive-context-learning\\eval\\runs\\20260415_101033_h2b_sage_sdg_label_normalization\\label_normalization.json",
+    "exact": 8,
+    "alias_prefix_normalized": 5,
+    "manual_confirmed": 0,
+    "unresolved": 0
+  },
+  "aggregate_table": [
+    {
+      "mode": "scout_structural",
+      "number_of_queries": 9,
+      "mean_required_table_recall": 0.0,
+      "queries_with_all_required_tables_surfaced": 0,
+      "sql_present_count": 6,
+      "sql_execution_success_count": 6,
+      "median_latency_ms": 7330.0,
+      "policy_violations": 0
+    },
+    {
+      "mode": "scout_enriched_ranked",
+      "number_of_queries": 9,
+      "mean_required_table_recall": 0.0,
+      "queries_with_all_required_tables_surfaced": 0,
+      "sql_present_count": 7,
+      "sql_execution_success_count": 6,
+      "median_latency_ms": 6876.0,
+      "policy_violations": 0
+    }
+  ],
+  "per_query_by_mode": {
+    "scout_structural": [
+      {
+        "query_id": "CP1",
+        "required_tables": [
+          "khkartikel",
+          "khkartikellieferant",
+          "khkartikelvarianten"
+        ],
+        "surfaced_tables": [
+          "khkppsffmaterial",
+          "khkppsffmatbeigestellt",
+          "khkppsffretourenmat",
+          "khkppsgemeinkostensaetze",
+          "khkppsrueckmeldungenfibu",
+          "b"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 7485,
+        "notes": [
+          "missing_required=khkartikel,khkartikellieferant,khkartikelvarianten"
+        ]
+      },
+      {
+        "query_id": "CP2",
+        "required_tables": [
+          "khkvkbelege",
+          "khkvkbelegepositionen"
+        ],
+        "surfaced_tables": [
+          "khkdispostapelpositionen",
+          "khkekbelege",
+          "khkekbelegepositionen",
+          "khkekbelegepositionenchargen",
+          "khkekbelegezuschlaege",
+          "b"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 7330,
+        "notes": [
+          "missing_required=khkvkbelege,khkvkbelegepositionen"
+        ]
+      },
+      {
+        "query_id": "CP3",
+        "required_tables": [
+          "khkppsfabelege",
+          "khkppsfabelegeagpositionen",
+          "khkppsbdestempel"
+        ],
+        "surfaced_tables": [
+          "khkprojektezeiterfassung",
+          "bcspjmprojektevorgaengezeitenreise",
+          "khkmitarbeiter",
+          "khkppsressourcenkopf",
+          "khkprojekte",
+          "b"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 4953,
+        "notes": [
+          "missing_required=khkppsfabelege,khkppsfabelegeagpositionen,khkppsbdestempel"
+        ]
+      },
+      {
+        "query_id": "CP4",
+        "required_tables": [
+          "osemzizzebuchungen"
+        ],
+        "surfaced_tables": [
+          "khkppsbdeap",
+          "khkppsrueckmeldungen",
+          "vwkhkppssammellohnschein",
+          "khkppsbdestempelbackup",
+          "bcspjmprojektevorgaengeleist"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 18207,
+        "notes": [
+          "missing_required=osemzizzebuchungen"
+        ]
+      },
+      {
+        "query_id": "CP5",
+        "required_tables": [
+          "osemzizzebuchungen",
+          "khkppsbdestempel"
+        ],
+        "surfaced_tables": [],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": false,
+        "sql_execution_success": null,
+        "latency_ms": 31210,
+        "notes": [
+          "missing_required=osemzizzebuchungen,khkppsbdestempel"
+        ]
+      },
+      {
+        "query_id": "CP6",
+        "required_tables": [
+          "khkekbelege",
+          "khkekbelegepositionen",
+          "khkekbelegepositionenlager"
+        ],
+        "surfaced_tables": [
+          "khkppsffmaterial",
+          "khkifauftraege",
+          "khklieferschwellen",
+          "khkppsffmatbeigestellt",
+          "khkppsffretourenmat",
+          "b"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 5060,
+        "notes": [
+          "missing_required=khkekbelege,khkekbelegepositionen,khkekbelegepositionenlager"
+        ]
+      },
+      {
+        "query_id": "CP7",
+        "required_tables": [
+          "khkbuchungserfassung"
+        ],
+        "surfaced_tables": [
+          "khkppswerkzeuge",
+          "khkdruckprozessedruckbelege2",
+          "khkppsressourcenagpositionen",
+          "khkdruckbelegekennzeichen",
+          "khkppsfabelegeagpositionen"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 7419,
+        "notes": [
+          "missing_required=khkbuchungserfassung"
+        ]
+      },
+      {
+        "query_id": "CP8",
+        "required_tables": [
+          "khkppsfabelege",
+          "khkppsfabelegeagpositionen",
+          "khkppsbdestempel"
+        ],
+        "surfaced_tables": [
+          "bcspjmartikelobjektverbrauch",
+          "bcspjmartikelobjektzaehler",
+          "bcspjmobjekte",
+          "bcspjmobjekterapport",
+          "bcspjmobjektestapel",
+          "bcspjmartikelobjectconsumption",
+          "bcspjmobjektestacks",
+          "bcspjmadressenkontakt",
+          "bcspjmobjektezubehoer",
+          "bcspjmprojekte",
+          "b"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": false,
+        "sql_execution_success": null,
+        "latency_ms": 5870,
+        "notes": [
+          "missing_required=khkppsfabelege,khkppsfabelegeagpositionen,khkppsbdestempel"
+        ]
+      },
+      {
+        "query_id": "CP9",
+        "required_tables": [
+          "osemzizzebuchungen",
+          "khkppsbdestempel",
+          "khkppsfabelege",
+          "khkppsfabelegeagpositionen"
+        ],
+        "surfaced_tables": [
+          "bsbdegesrm",
+          "bsbdegesrmseriennr",
+          "bsbdestempelgesrm",
+          "bsbdestempelgesrmseriennr",
+          "bscrmkalenderpositionen",
+          "b"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": false,
+        "sql_execution_success": null,
+        "latency_ms": 5906,
+        "notes": [
+          "missing_required=osemzizzebuchungen,khkppsbdestempel,khkppsfabelege,khkppsfabelegeagpositionen"
+        ]
+      }
+    ],
+    "scout_enriched_ranked": [
+      {
+        "query_id": "CP1",
+        "required_tables": [
+          "khkartikel",
+          "khkartikellieferant",
+          "khkartikelvarianten"
+        ],
+        "surfaced_tables": [
+          "khkppsffmaterial",
+          "khkppsffmatbeigestellt",
+          "khkppsffretourenmat",
+          "khkppsgemeinkostensaetze",
+          "khkppsrueckmeldungenfibu",
+          "b"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 6811,
+        "notes": [
+          "missing_required=khkartikel,khkartikellieferant,khkartikelvarianten"
+        ]
+      },
+      {
+        "query_id": "CP2",
+        "required_tables": [
+          "khkvkbelege",
+          "khkvkbelegepositionen"
+        ],
+        "surfaced_tables": [
+          "khkdispostapelpositionen",
+          "khkekbelege",
+          "khkekbelegepositionen",
+          "khkekbelegepositionenchargen",
+          "khkekbelegezuschlaege",
+          "b"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": false,
+        "latency_ms": 7647,
+        "notes": [
+          "missing_required=khkvkbelege,khkvkbelegepositionen"
+        ]
+      },
+      {
+        "query_id": "CP3",
+        "required_tables": [
+          "khkppsfabelege",
+          "khkppsfabelegeagpositionen",
+          "khkppsbdestempel"
+        ],
+        "surfaced_tables": [
+          "bsbdegesrm",
+          "bscrmpositionenzeitstempel",
+          "khkppsressourcenkopf",
+          "vwkhk_ac_bestandsverlauf",
+          "bscrmpositionenvorgaenger",
+          "khkppsffrueckmeldungen",
+          "b",
+          "bcspjmartikelobjektverbrauch",
+          "bcspjmobjektestapelpositionen",
+          "bcspjmvertraegebedingungen",
+          "bcspjmvertraegebedingungenpos",
+          "bcspjmartikelobjectconsumption"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 13208,
+        "notes": [
+          "missing_required=khkppsfabelege,khkppsfabelegeagpositionen,khkppsbdestempel"
+        ]
+      },
+      {
+        "query_id": "CP4",
+        "required_tables": [
+          "osemzizzebuchungen"
+        ],
+        "surfaced_tables": [
+          "khkppsbdeap",
+          "khkppsrueckmeldungen",
+          "vwkhkppssammellohnschein",
+          "khkppsbdestempelbackup",
+          "bcspjmprojektevorgaengeleist"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 7052,
+        "notes": [
+          "missing_required=osemzizzebuchungen"
+        ]
+      },
+      {
+        "query_id": "CP5",
+        "required_tables": [
+          "osemzizzebuchungen",
+          "khkppsbdestempel"
+        ],
+        "surfaced_tables": [
+          "bsbdegesrm",
+          "bcspjmprojektevorgaengezeitenreise",
+          "bsbdestempelgesrm",
+          "bsmykampagnemitarbeiter",
+          "bswinbdema",
+          "b",
+          "bsmycampaignemployees",
+          "khkdruckbelegekennzeichen"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 18260,
+        "notes": [
+          "missing_required=osemzizzebuchungen,khkppsbdestempel"
+        ]
+      },
+      {
+        "query_id": "CP6",
+        "required_tables": [
+          "khkekbelege",
+          "khkekbelegepositionen",
+          "khkekbelegepositionenlager"
+        ],
+        "surfaced_tables": [
+          "khkppsffmaterial",
+          "khkifauftraege",
+          "khklieferschwellen",
+          "khkppsffmatbeigestellt",
+          "khkppsffretourenmat",
+          "b"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 3786,
+        "notes": [
+          "missing_required=khkekbelege,khkekbelegepositionen,khkekbelegepositionenlager"
+        ]
+      },
+      {
+        "query_id": "CP7",
+        "required_tables": [
+          "khkbuchungserfassung"
+        ],
+        "surfaced_tables": [
+          "khkppswerkzeuge",
+          "khkdruckprozessedruckbelege2",
+          "khkppsressourcenagpositionen",
+          "khkdruckbelegekennzeichen",
+          "khkppsfabelegeagpositionen"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": true,
+        "sql_execution_success": true,
+        "latency_ms": 6876,
+        "notes": [
+          "missing_required=khkbuchungserfassung"
+        ]
+      },
+      {
+        "query_id": "CP8",
+        "required_tables": [
+          "khkppsfabelege",
+          "khkppsfabelegeagpositionen",
+          "khkppsbdestempel"
+        ],
+        "surfaced_tables": [
+          "bcspjmartikelobjektverbrauch",
+          "bcspjmartikelobjektzaehler",
+          "bcspjmobjekte",
+          "bcspjmobjekterapport",
+          "bcspjmobjektestapel",
+          "bcspjmartikelobjectconsumption",
+          "bcspjmobjektestacks",
+          "bcspjmadressenkontakt",
+          "bcspjmobjektezubehoer",
+          "bcspjmprojekte",
+          "b"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": false,
+        "sql_execution_success": null,
+        "latency_ms": 5670,
+        "notes": [
+          "missing_required=khkppsfabelege,khkppsfabelegeagpositionen,khkppsbdestempel"
+        ]
+      },
+      {
+        "query_id": "CP9",
+        "required_tables": [
+          "osemzizzebuchungen",
+          "khkppsbdestempel",
+          "khkppsfabelege",
+          "khkppsfabelegeagpositionen"
+        ],
+        "surfaced_tables": [
+          "bsbdegesrm",
+          "bsbdegesrmseriennr",
+          "bsbdestempelgesrm",
+          "bsbdestempelgesrmseriennr",
+          "bscrmkalenderpositionen",
+          "b"
+        ],
+        "required_table_recall": 0.0,
+        "required_tables_ok": false,
+        "sql_present": false,
+        "sql_execution_success": null,
+        "latency_ms": 5074,
+        "notes": [
+          "missing_required=osemzizzebuchungen,khkppsbdestempel,khkppsfabelege,khkppsfabelegeagpositionen"
+        ]
+      }
+    ]
+  },
+  "interpretation": "Primary signal: required-table grounding under full `/process_query` pipeline. Best mean required-table recall in this run set: `scout_structural`."
+}

@@ -1,0 +1,20 @@
+{
+  "dataset": "eval/datasets/northwind_extended_difficulty_v1.jsonl",
+  "contracts": "eval/datasets/northwind_extended_difficulty_v1.contracts.json",
+  "mcp_url": "http://localhost:8000",
+  "mode": "scout_enriched_ranked",
+  "n_queries": 64,
+  "timestamp": "20260414_121824",
+  "env_snapshot": {
+    "SCOUT_DISABLE": "false",
+    "SCOUT_DESCRIPTIONS_ENABLED": "true",
+    "SCOUT_DESCRIPTIONS_RANKING": "true",
+    "SCOUT_DESCRIPTIONS_MODEL": "gpt-4o-mini",
+    "SCOUT_DESCRIPTIONS_DATABASE_TYPE": "northwind",
+    "SCOUT_DESCRIPTIONS_CACHE_PATH": "eval/cache/northwind_descriptions.json",
+    "DB_DIALECT": "postgres",
+    "DB_NAME": null,
+    "DB_HOST": null,
+    "DB_PORT": null
+  }
+}

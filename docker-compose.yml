@@ -1,0 +1,116 @@
+# ============================================================================
+# Thesis demo stack: Postgres + Northwind + MCP + SQL Agent + Web UI
+# ============================================================================
+# The three application services reuse the Dockerfiles that ship the live
+# production deployment (thesis.julianuskath.com on Railway). The only
+# local-specific addition is a seeded Postgres container so a reviewer can
+# clone and run without provisioning a database.
+#
+# Run with:  ./run.sh   (or:  docker compose up --build)
+# Stop with: docker compose down
+# ============================================================================
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: thesis-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: northwind
+    volumes:
+      # On first boot, Postgres runs any *.sql in this directory.
+      - ./data/northwind.sql:/docker-entrypoint-initdb.d/01-northwind.sql:ro
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-55432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d northwind"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  mcp_server:
+    build:
+      context: .
+      dockerfile: deploy/railway/Dockerfile.mcp-server
+    container_name: thesis-mcp-server
+    # Override the Railway CMD so the server also works on local Docker:
+    #   - --host 0.0.0.0 (Railway uses :: for IPv6 dual-stack; local Docker is v4 only)
+    #   - port pinned to 8080 in exec form; avoids ${PORT} being substituted by
+    #     docker-compose at parse time from the user's root .env (where PORT=5001)
+    command: ["uvicorn", "mcp_server.server.app:app", "--host", "0.0.0.0", "--port", "8080"]
+    environment:
+      DB_DIALECT: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DATABASE: northwind
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_SCHEMA: public
+      MCP_API_KEY: ${MCP_API_KEY:-local-dev-mcp-key}
+      SCOUT_DISABLE: "false"
+      # --- SDG (Semantic Description Generator) — primary H2a ablation axis ---
+      # See ADR-0035 (SDG) and ADR-0036 (ablation pivot). All six SDG vars +
+      # the Anthropic key are forwarded so a reviewer can run any of the three
+      # ablation conditions without touching this file.
+      SCOUT_DESCRIPTIONS_ENABLED: ${SCOUT_DESCRIPTIONS_ENABLED:-false}
+      SCOUT_DESCRIPTIONS_RANKING: ${SCOUT_DESCRIPTIONS_RANKING:-false}
+      SCOUT_DESCRIPTIONS_PROVIDER: ${SCOUT_DESCRIPTIONS_PROVIDER:-anthropic}
+      SCOUT_DESCRIPTIONS_MODEL: ${SCOUT_DESCRIPTIONS_MODEL:-claude-sonnet-4-20250514}
+      SCOUT_DESCRIPTIONS_DATABASE_TYPE: ${SCOUT_DESCRIPTIONS_DATABASE_TYPE:-northwind}
+      SCOUT_DESCRIPTIONS_CACHE_PATH: ${SCOUT_DESCRIPTIONS_CACHE_PATH:-data/catalog/sdg_cache.json}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      PORT: "8080"
+      LOG_LEVEL: INFO
+    ports:
+      - "${MCP_PORT:-8000}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+
+  sql_agent:
+    build:
+      context: .
+      dockerfile: deploy/railway/Dockerfile.sql-agent
+    container_name: thesis-sql-agent
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY must be set in .env}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      DB_DIALECT: postgres
+      MCP_SERVER_URL: http://mcp_server:8080
+      MCP_API_KEY: ${MCP_API_KEY:-local-dev-mcp-key}
+      API_KEY: ${API_KEY:-local-dev-api-key}
+      PORT: "8080"
+    ports:
+      - "${SQL_AGENT_PORT:-5001}:8080"
+    depends_on:
+      mcp_server:
+        condition: service_healthy
+
+  web_ui:
+    build:
+      context: .
+      dockerfile: deploy/railway/Dockerfile.web-ui
+    container_name: thesis-web-ui
+    environment:
+      LANGGRAPH_URL: http://sql_agent:8080
+      API_KEY: ${API_KEY:-local-dev-api-key}
+      DB_DIALECT: postgres
+      POSTGRES_DATABASE: northwind
+      PORT: "8080"
+    ports:
+      - "${WEB_UI_PORT:-3000}:8080"
+    depends_on:
+      - sql_agent
+
+volumes:
+  postgres_data:

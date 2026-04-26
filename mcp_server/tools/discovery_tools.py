@@ -578,7 +578,7 @@ class DiscoveryTools:
                         return sorted(block, key=lambda r: ((r.get('estimated_rows') or 0) > 0, r.get('relevance_score', 0.0)), reverse=True)
                     results = rank_block(non_archive_sales) + rank_block(non_address_rest) + rank_block(address_only)
             except Exception as ranking_error:
-                logger.warning(f"Phase 2 ranking failed, falling back to basic search: {ranking_error}")
+                logger.warning(f"Semantic ranking failed, falling back to basic search: {ranking_error}")
                 
                 # Fallback: Basic catalog search (for edge cases)
                 matching_tables = catalog.search_tables(query)
@@ -796,7 +796,9 @@ class DiscoveryTools:
                 "primary_keys": table.get("primary_keys", []),
                 "foreign_keys": fk_list,  # Already properly serialized from catalog, augmented with referenced_full_name
                 "top_columns": table.get("top_columns", []),  # Already a list of strings
-                "neighbors": table.get("neighbors", [])  # Already a list of strings
+                "neighbors": table.get("neighbors", []),  # Already a list of strings
+                # SDG v2: business-level description; empty string when disabled.
+                "description": table.get("description", "") or "",
             }
 
             # Enrich with role_hints, time_col_candidates, and measure_suggestions (catalog-derived only)

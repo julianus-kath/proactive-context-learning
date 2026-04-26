@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "description": "Manual-confirmed label overrides for cockpit partner table normalization. Partner document used slightly different names than the live Sage catalog.",
+    "usage": "Entries map partner labels (as written in cockpit_partner_table_labels_v1.json) to confirmed live catalog table names. Applied once after loading labels.",
+    "generated_at_utc": "2026-03-25T00:00:00Z",
+    "updated_at_utc": "2026-03-26T00:00:00Z",
+    "rationale": "Verification against live Sage catalog (via list_tables MCP endpoint on 2026-03-25) revealed 5 naming mismatches between partner document and live catalog. All are abbreviation/prefix/casing differences, not semantic disagreements."
+  },
+  "overrides": [
+    {
+      "partner_label": "dbo.KHKArtikelLieferanten",
+      "live_catalog_name": "dbo.KHKArtikelLieferant",
+      "reason": "Plural 'Lieferanten' → singular 'Lieferant' in live catalog",
+      "affected_queries": ["CP1"]
+    },
+    {
+      "partner_label": "dbo.KHKBelegePositionen",
+      "live_catalog_name": "dbo.KHKVKBelegePositionen",
+      "reason": "Missing VK (Verkauf) prefix in partner document",
+      "affected_queries": ["CP2"]
+    },
+    {
+      "partner_label": "dbo.KHKPpsBelege",
+      "live_catalog_name": "dbo.KHKPpsFaBelege",
+      "reason": "Missing Fa (Fertigungsauftrag) qualifier. Live catalog uses 'Fa' (not 'FA').",
+      "affected_queries": ["CP3", "CP8", "CP9"]
+    },
+    {
+      "partner_label": "dbo.KHKPppsBelegeAGPositionen",
+      "live_catalog_name": "dbo.KHKPpsFaBelegeAGPositionen",
+      "reason": "Typo 'Ppps' → 'PpsFa' (Fertigungsauftrag qualifier). Live catalog uses 'Fa' (not 'FA').",
+      "affected_queries": ["CP3", "CP8", "CP9"]
+    },
+    {
+      "partner_label": "dbo.KHKPpsStempel",
+      "live_catalog_name": "dbo.KHKPpsBdeStempel",
+      "reason": "Table name abbreviated in partner doc. Actual table includes 'Bde' (Betriebsdatenerfassung) qualifier. No 'KHKPpsStempel' exists in live catalog; confirmed via list_tables.",
+      "affected_queries": ["CP3", "CP5", "CP8", "CP9"]
+    }
+  ]
+}

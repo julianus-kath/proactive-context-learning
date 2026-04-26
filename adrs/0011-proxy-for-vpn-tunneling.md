@@ -1,8 +1,7 @@
-Perfect 👍 Let’s document this as an **Architecture Decision Record (ADR)**. You can drop this into your repo (e.g., `docs/adr/0001-sql-proxy.md`) and commit `proxy.py` alongside it.
-
----
-
-# ADR 0011 – Accessing SQL Server from Mac via Windows Proxy
+# ADR-0011: Accessing SQL Server from Mac via Windows Proxy
+**Status**: Accepted
+**Date**: 2025-09-29
+**Author**: Julianus Kath
 
 ## Context
 

@@ -1,4 +1,8 @@
-# ADR 0032: Few-Shot SQL Patterns for Complex Queries
+# ADR-0032: Few-Shot SQL Patterns for Complex Queries
+**Status**: Accepted
+**Date**: 2026-01-18
+**Author**: Julianus Kath
+
 
 ## Status
 Accepted

@@ -1,0 +1,281 @@
+{
+  "generated_at_utc": "2026-04-15T10:10:09.390087Z",
+  "required_stage_traces": [
+    "discovery",
+    "ranked"
+  ],
+  "short_timeout_s": 5.0,
+  "medium_timeout_s": 20.0,
+  "sample_query": "H2b feasibility ping: list one table relevant to this request.",
+  "endpoints": [
+    {
+      "endpoint": "http://localhost:5001",
+      "health_attempts": [
+        {
+          "success": true,
+          "status_code": 200,
+          "elapsed_ms": 2666,
+          "body_preview": {
+            "status": "healthy",
+            "mcp_healthy": true,
+            "agent_ready": true
+          },
+          "error": null,
+          "auth_variant": "none"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "elapsed_ms": 607,
+          "body_preview": {
+            "status": "healthy",
+            "mcp_healthy": true,
+            "agent_ready": true
+          },
+          "error": null,
+          "auth_variant": "payload_api_key"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "elapsed_ms": 594,
+          "body_preview": {
+            "status": "healthy",
+            "mcp_healthy": true,
+            "agent_ready": true
+          },
+          "error": null,
+          "auth_variant": "x_api_key"
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "elapsed_ms": 604,
+          "body_preview": {
+            "status": "healthy",
+            "mcp_healthy": true,
+            "agent_ready": true
+          },
+          "error": null,
+          "auth_variant": "bearer"
+        }
+      ],
+      "process_query_attempts": [
+        {
+          "success": true,
+          "status_code": 200,
+          "elapsed_ms": 4881,
+          "response": {
+            "final_response": "Eine relevante Tabelle f\u00fcr die Anfrage \"H2b feasibility\" ist die Tabelle **dbo.tKHKPpsFaMachbarkeitsliste**. Diese Tabelle speichert Informationen zu Machbarkeitsanalysen f\u00fcr geplante Auftr\u00e4ge innerhalb des Sage ERP-Systems.",
+            "sql_query": null,
+            "exec_result": {
+              "data": [],
+              "rows": [],
+              "row_count": null,
+              "columns": [],
+              "ok": true,
+              "tables_used": []
+            },
+            "sources": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "relevant_tables": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "ranked_tables": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "discovery_tables": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "discovery_log": [
+              {
+                "query": "H2b feasibility",
+                "tables": [
+                  "dbo.tKHKPpsFaMachbarkeitsliste"
+                ],
+                "table_count": 1
+              }
+            ],
+            "latency_ms": 4879,
+            "success": true
+          },
+          "error": null,
+          "auth_variant": "none",
+          "timeout_s": 5.0
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "elapsed_ms": 3397,
+          "response": {
+            "final_response": "Eine relevante Tabelle f\u00fcr die Anfrage \"H2b feasibility\" ist die Tabelle **dbo.tKHKPpsFaMachbarkeitsliste**. Diese Tabelle speichert Informationen zu Machbarkeitsanalysen f\u00fcr geplante Auftr\u00e4ge innerhalb des Sage ERP-Systems.",
+            "sql_query": null,
+            "exec_result": {
+              "data": [],
+              "rows": [],
+              "row_count": null,
+              "columns": [],
+              "ok": true,
+              "tables_used": []
+            },
+            "sources": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "relevant_tables": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "ranked_tables": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "discovery_tables": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "discovery_log": [
+              {
+                "query": "H2b feasibility",
+                "tables": [
+                  "dbo.tKHKPpsFaMachbarkeitsliste"
+                ],
+                "table_count": 1
+              }
+            ],
+            "latency_ms": 3395,
+            "success": true
+          },
+          "error": null,
+          "auth_variant": "payload_api_key",
+          "timeout_s": 5.0
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "elapsed_ms": 3688,
+          "response": {
+            "final_response": "The table relevant to the \"H2b feasibility\" request is `dbo.tKHKPpsFaMachbarkeitsliste`. This table stores information related to feasibility analyses for planned orders within the Sage ERP system, focusing on production planning and control.",
+            "sql_query": null,
+            "exec_result": {
+              "data": [],
+              "rows": [],
+              "row_count": null,
+              "columns": [],
+              "ok": true,
+              "tables_used": []
+            },
+            "sources": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "relevant_tables": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "ranked_tables": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "discovery_tables": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "discovery_log": [
+              {
+                "query": "H2b feasibility",
+                "tables": [
+                  "dbo.tKHKPpsFaMachbarkeitsliste"
+                ],
+                "table_count": 1
+              }
+            ],
+            "latency_ms": 3686,
+            "success": true
+          },
+          "error": null,
+          "auth_variant": "x_api_key",
+          "timeout_s": 5.0
+        },
+        {
+          "success": true,
+          "status_code": 200,
+          "elapsed_ms": 3589,
+          "response": {
+            "final_response": "Eine relevante Tabelle f\u00fcr die Anfrage \"H2b feasibility\" ist die Tabelle **dbo.tKHKPpsFaMachbarkeitsliste**. Diese Tabelle speichert Informationen zu Machbarkeitsanalysen f\u00fcr geplante Auftr\u00e4ge innerhalb des Sage ERP-Systems.",
+            "sql_query": null,
+            "exec_result": {
+              "data": [],
+              "rows": [],
+              "row_count": null,
+              "columns": [],
+              "ok": true,
+              "tables_used": []
+            },
+            "sources": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "relevant_tables": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "ranked_tables": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "discovery_tables": [
+              "dbo.tKHKPpsFaMachbarkeitsliste"
+            ],
+            "discovery_log": [
+              {
+                "query": "H2b feasibility",
+                "tables": [
+                  "dbo.tKHKPpsFaMachbarkeitsliste"
+                ],
+                "table_count": 1
+              }
+            ],
+            "latency_ms": 3587,
+            "success": true
+          },
+          "error": null,
+          "auth_variant": "bearer",
+          "timeout_s": 5.0
+        }
+      ],
+      "health_success_count": 4,
+      "process_query_success_count": 4,
+      "trace_stage_presence": {
+        "discovery": true,
+        "ranked": true,
+        "final_sql": true
+      },
+      "trace_observed_paths": {
+        "discovery": [
+          "discovery_log",
+          "discovery_tables"
+        ],
+        "ranked": [
+          "sources",
+          "relevant_tables",
+          "ranked_tables"
+        ],
+        "final_sql": [
+          "sql_query",
+          "exec_result.tables_used"
+        ]
+      },
+      "raw_response_keys": [
+        "discovery_log",
+        "discovery_tables",
+        "exec_result",
+        "final_response",
+        "latency_ms",
+        "ranked_tables",
+        "relevant_tables",
+        "sources",
+        "sql_query",
+        "success"
+      ]
+    }
+  ],
+  "verdict": "ready_for_h2b_process_query_grounding",
+  "blocked_reasons": [],
+  "best_trace_stage_presence": {
+    "discovery": true,
+    "ranked": true,
+    "final_sql": true
+  },
+  "missing_required_stages": []
+}

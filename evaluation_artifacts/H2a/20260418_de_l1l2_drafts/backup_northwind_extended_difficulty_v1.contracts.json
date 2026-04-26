@@ -1,0 +1,645 @@
+[
+  {
+    "query_id": "NW1",
+    "required_tables": [
+      "products"
+    ],
+    "category": "direct",
+    "language": "en"
+  },
+  {
+    "query_id": "NW2",
+    "required_tables": [
+      "categories",
+      "products",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "en"
+  },
+  {
+    "query_id": "NW3",
+    "required_tables": [
+      "customers",
+      "orders",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "en"
+  },
+  {
+    "query_id": "NW4",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "direct",
+    "language": "en"
+  },
+  {
+    "query_id": "NW5",
+    "required_tables": [
+      "employees",
+      "orders",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "en"
+  },
+  {
+    "query_id": "NW6",
+    "required_tables": [
+      "products",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "en"
+  },
+  {
+    "query_id": "NW7",
+    "required_tables": [
+      "suppliers",
+      "products",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "en"
+  },
+  {
+    "query_id": "NW8",
+    "required_tables": [
+      "customers",
+      "orders",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "en"
+  },
+  {
+    "query_id": "NW9",
+    "required_tables": [
+      "orders",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "en"
+  },
+  {
+    "query_id": "NW10",
+    "required_tables": [
+      "orders",
+      "order_details"
+    ],
+    "category": "direct",
+    "language": "en"
+  },
+  {
+    "query_id": "NL1",
+    "required_tables": [
+      "products"
+    ],
+    "category": "paraphrase",
+    "language": "en"
+  },
+  {
+    "query_id": "NL2",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "paraphrase",
+    "language": "en"
+  },
+  {
+    "query_id": "NL3",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "paraphrase",
+    "language": "en"
+  },
+  {
+    "query_id": "NL4",
+    "required_tables": [
+      "order_details",
+      "products"
+    ],
+    "category": "paraphrase",
+    "language": "en"
+  },
+  {
+    "query_id": "NL5",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "paraphrase",
+    "language": "en"
+  },
+  {
+    "query_id": "NL6",
+    "required_tables": [
+      "order_details",
+      "orders"
+    ],
+    "category": "paraphrase",
+    "language": "en"
+  },
+  {
+    "query_id": "NL7",
+    "required_tables": [
+      "order_details",
+      "products",
+      "suppliers"
+    ],
+    "category": "paraphrase",
+    "language": "en"
+  },
+  {
+    "query_id": "NL8",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "paraphrase",
+    "language": "en"
+  },
+  {
+    "query_id": "NL9",
+    "required_tables": [
+      "employees",
+      "orders"
+    ],
+    "category": "paraphrase",
+    "language": "en"
+  },
+  {
+    "query_id": "NL10",
+    "required_tables": [
+      "customers",
+      "orders"
+    ],
+    "category": "paraphrase",
+    "language": "en"
+  },
+  {
+    "query_id": "CL1",
+    "required_tables": [
+      "order_details",
+      "products",
+      "suppliers"
+    ],
+    "category": "crosslingual",
+    "language": "de"
+  },
+  {
+    "query_id": "CL2",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "crosslingual",
+    "language": "de"
+  },
+  {
+    "query_id": "CL3",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "crosslingual",
+    "language": "de"
+  },
+  {
+    "query_id": "CL4",
+    "required_tables": [
+      "employees",
+      "orders"
+    ],
+    "category": "crosslingual",
+    "language": "de"
+  },
+  {
+    "query_id": "CL5",
+    "required_tables": [
+      "customers",
+      "orders"
+    ],
+    "category": "crosslingual",
+    "language": "de"
+  },
+  {
+    "query_id": "CL6",
+    "required_tables": [
+      "orders"
+    ],
+    "category": "crosslingual",
+    "language": "de"
+  },
+  {
+    "query_id": "CL7",
+    "required_tables": [
+      "employee_territories",
+      "order_details",
+      "orders",
+      "region",
+      "territories"
+    ],
+    "category": "crosslingual",
+    "language": "de"
+  },
+  {
+    "query_id": "CL8",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "crosslingual",
+    "language": "de"
+  },
+  {
+    "query_id": "CL9",
+    "required_tables": [
+      "order_details",
+      "products",
+      "suppliers"
+    ],
+    "category": "crosslingual",
+    "language": "de"
+  },
+  {
+    "query_id": "CL10",
+    "required_tables": [
+      "customer_customer_demo",
+      "customer_demographics",
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "crosslingual",
+    "language": "de"
+  },
+  {
+    "query_id": "CL11",
+    "required_tables": [
+      "employees",
+      "order_details",
+      "orders"
+    ],
+    "category": "crosslingual",
+    "language": "de"
+  },
+  {
+    "query_id": "CL12",
+    "required_tables": [
+      "order_details",
+      "orders"
+    ],
+    "category": "crosslingual",
+    "language": "de"
+  },
+  {
+    "query_id": "HX1",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "complex",
+    "language": "de"
+  },
+  {
+    "query_id": "HX3",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "complex",
+    "language": "de"
+  },
+  {
+    "query_id": "HX4",
+    "required_tables": [
+      "categories",
+      "order_details",
+      "products",
+      "suppliers"
+    ],
+    "category": "complex",
+    "language": "de"
+  },
+  {
+    "query_id": "HX5",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "complex",
+    "language": "de"
+  },
+  {
+    "query_id": "HX7",
+    "required_tables": [
+      "categories",
+      "order_details",
+      "orders",
+      "products"
+    ],
+    "category": "complex",
+    "language": "de"
+  },
+  {
+    "query_id": "HX8",
+    "required_tables": [
+      "order_details",
+      "orders"
+    ],
+    "category": "complex",
+    "language": "de"
+  },
+  {
+    "query_id": "HX9",
+    "required_tables": [
+      "order_details",
+      "products",
+      "suppliers"
+    ],
+    "category": "complex",
+    "language": "de"
+  },
+  {
+    "query_id": "HX12",
+    "required_tables": [
+      "categories",
+      "order_details",
+      "orders",
+      "products"
+    ],
+    "category": "complex",
+    "language": "de"
+  },
+  {
+    "query_id": "US_CL2_U1",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL2"
+  },
+  {
+    "query_id": "US_CL2_U2",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL2"
+  },
+  {
+    "query_id": "US_CL2_U3",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL2"
+  },
+  {
+    "query_id": "US_CL3_U1",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL3"
+  },
+  {
+    "query_id": "US_CL3_U2",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL3"
+  },
+  {
+    "query_id": "US_CL3_U3",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL3"
+  },
+  {
+    "query_id": "US_CL6_U1",
+    "required_tables": [
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL6"
+  },
+  {
+    "query_id": "US_CL6_U2",
+    "required_tables": [
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL6"
+  },
+  {
+    "query_id": "US_CL6_U3",
+    "required_tables": [
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL6"
+  },
+  {
+    "query_id": "US_CL10_U1",
+    "required_tables": [
+      "customer_customer_demo",
+      "customer_demographics",
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL10"
+  },
+  {
+    "query_id": "US_CL10_U2",
+    "required_tables": [
+      "customer_customer_demo",
+      "customer_demographics",
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL10"
+  },
+  {
+    "query_id": "US_CL10_U3",
+    "required_tables": [
+      "customer_customer_demo",
+      "customer_demographics",
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL10"
+  },
+  {
+    "query_id": "LB_CL2_LX1",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "lexical_breakpoint",
+    "language": "de",
+    "parent_query": "CL2"
+  },
+  {
+    "query_id": "LB_CL2_LX2",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "lexical_breakpoint",
+    "language": "de",
+    "parent_query": "CL2"
+  },
+  {
+    "query_id": "LB_CL2_LX3",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "lexical_breakpoint",
+    "language": "de",
+    "parent_query": "CL2"
+  },
+  {
+    "query_id": "LB_CL3_LX1",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "lexical_breakpoint",
+    "language": "de",
+    "parent_query": "CL3"
+  },
+  {
+    "query_id": "LB_CL3_LX2",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "lexical_breakpoint",
+    "language": "de",
+    "parent_query": "CL3"
+  },
+  {
+    "query_id": "LB_CL3_LX3",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "lexical_breakpoint",
+    "language": "de",
+    "parent_query": "CL3"
+  },
+  {
+    "query_id": "LB_CL6_LX1",
+    "required_tables": [
+      "orders"
+    ],
+    "category": "lexical_breakpoint",
+    "language": "de",
+    "parent_query": "CL6"
+  },
+  {
+    "query_id": "LB_CL6_LX2",
+    "required_tables": [
+      "orders"
+    ],
+    "category": "lexical_breakpoint",
+    "language": "de",
+    "parent_query": "CL6"
+  },
+  {
+    "query_id": "LB_CL6_LX3",
+    "required_tables": [
+      "orders"
+    ],
+    "category": "lexical_breakpoint",
+    "language": "de",
+    "parent_query": "CL6"
+  },
+  {
+    "query_id": "LB_CL10_LX1",
+    "required_tables": [
+      "customer_customer_demo",
+      "customer_demographics",
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "lexical_breakpoint",
+    "language": "de",
+    "parent_query": "CL10"
+  },
+  {
+    "query_id": "LB_CL10_LX2",
+    "required_tables": [
+      "customer_customer_demo",
+      "customer_demographics",
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "lexical_breakpoint",
+    "language": "de",
+    "parent_query": "CL10"
+  },
+  {
+    "query_id": "LB_CL10_LX3",
+    "required_tables": [
+      "customer_customer_demo",
+      "customer_demographics",
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "lexical_breakpoint",
+    "language": "de",
+    "parent_query": "CL10"
+  }
+]

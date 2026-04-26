@@ -1,0 +1,856 @@
+{
+  "CP1": {
+    "query_id": "CP1",
+    "question": "Wann m\u00fcssen wir neues \u00d856 Material bestellen?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 7485,
+    "error": null,
+    "final_response_text": "Es gibt derzeit keine zuk\u00fcnftigen Bestellungen f\u00fcr das Material mit der Artikelnummer \"\u00d856\" in der Datenbank. Dies k\u00f6nnte bedeuten, dass entweder keine aktuellen Bedarfe erfasst sind oder das Material bereits ausreichend vorhanden ist. Es w\u00e4re sinnvoll, den aktuellen Lagerbestand und den durchschnittlichen Verbrauch zu \u00fcberpr\u00fcfen, um den Nachbestellzeitpunkt besser einsch\u00e4tzen zu k\u00f6nnen.",
+    "sql_query": "SELECT Artikelnummer, MengeBedarf, Liefertermin FROM dbo.KHKPpsFfMaterial WHERE Artikelnummer = '\u00d856' AND Liefertermin >= GETDATE() ORDER BY Liefertermin ASC",
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": 0,
+      "columns": [],
+      "ok": true,
+      "tables_used": [
+        "dbo.KHKPpsFfMaterial"
+      ]
+    },
+    "tables_used": [
+      "dbo.KHKPpsFfMatBeigestellt",
+      "dbo.KHKPpsFfMaterial",
+      "dbo.KHKPpsFfRetourenMat",
+      "dbo.KHKPpsGemeinkostensaetze",
+      "dbo.KHKPpsRueckmeldungenFibu",
+      "z.B",
+      "khkppsffmaterial",
+      "khkppsffmatbeigestellt",
+      "khkppsffretourenmat",
+      "khkppsgemeinkostensaetze",
+      "khkppsrueckmeldungenfibu",
+      "b"
+    ],
+    "row_count": 0,
+    "result_preview": [],
+    "raw_response_keys": [
+      "discovery_log",
+      "discovery_tables",
+      "exec_result",
+      "final_response",
+      "latency_ms",
+      "ranked_tables",
+      "relevant_tables",
+      "sources",
+      "sql_query",
+      "success"
+    ],
+    "trace_stage_presence": {
+      "discovery": true,
+      "ranked": true,
+      "final_sql": true
+    },
+    "stage_tables": {
+      "discovery": [
+        "khkppsffmatbeigestellt",
+        "khkppsffmaterial",
+        "khkppsffretourenmat",
+        "khkppsgemeinkostensaetze",
+        "khkppsrueckmeldungenfibu",
+        "b"
+      ],
+      "ranked": [
+        "khkppsffmatbeigestellt",
+        "khkppsffmaterial",
+        "khkppsffretourenmat",
+        "khkppsgemeinkostensaetze",
+        "khkppsrueckmeldungenfibu",
+        "b"
+      ],
+      "final_sql": [
+        "khkppsffmaterial",
+        "dbo.KHKPpsFfMaterial"
+      ]
+    },
+    "trace_extraction_notes": [
+      "discovery path found: discovery_log (6 tables)",
+      "discovery path found: discovery_tables (6 tables)",
+      "ranked path found: sources (6 tables)",
+      "ranked path found: relevant_tables (6 tables)",
+      "ranked path found: ranked_tables (6 tables)",
+      "final_sql path found: exec_result.tables_used (1 tables)",
+      "final_sql exec_result tables inferred (1 tables)"
+    ],
+    "sql_execution_success": true,
+    "policy_violation": false,
+    "policy_violation_detail": null,
+    "error_type": null,
+    "required_stage_traces": [
+      "discovery",
+      "ranked"
+    ],
+    "missing_required_stage_traces": [],
+    "trace_requirements_met": true
+  },
+  "CP2": {
+    "query_id": "CP2",
+    "question": "Wann haben wir Bestellung XY geliefert?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 7330,
+    "error": null,
+    "final_response_text": "Es wurden keine Ergebnisse f\u00fcr die Bestellung XY gefunden. M\u00f6glicherweise ist die Bestellnummer nicht korrekt oder die Bestellung wurde noch nicht geliefert. Bitte \u00fcberpr\u00fcfe die Bestellnummer oder gib mir weitere Details, um die Suche zu verfeinern.",
+    "sql_query": "SELECT Liefertermin FROM dbo.KHKDispostapelPositionen WHERE Bestellnummer = 'XY'",
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": 0,
+      "columns": [],
+      "ok": true,
+      "tables_used": [
+        "dbo.KHKDispostapelPositionen"
+      ]
+    },
+    "tables_used": [
+      "dbo.KHKDispostapelPositionen",
+      "dbo.KHKEKBelege",
+      "dbo.KHKEKBelegePositionen",
+      "dbo.KHKEKBelegePositionenChargen",
+      "dbo.KHKEKBelegeZuschlaege",
+      "z.B",
+      "khkdispostapelpositionen",
+      "khkekbelege",
+      "khkekbelegepositionen",
+      "khkekbelegepositionenchargen",
+      "khkekbelegezuschlaege",
+      "b"
+    ],
+    "row_count": 0,
+    "result_preview": [],
+    "raw_response_keys": [
+      "discovery_log",
+      "discovery_tables",
+      "exec_result",
+      "final_response",
+      "latency_ms",
+      "ranked_tables",
+      "relevant_tables",
+      "sources",
+      "sql_query",
+      "success"
+    ],
+    "trace_stage_presence": {
+      "discovery": true,
+      "ranked": true,
+      "final_sql": true
+    },
+    "stage_tables": {
+      "discovery": [
+        "khkdispostapelpositionen",
+        "khkekbelege",
+        "khkekbelegepositionen",
+        "khkekbelegepositionenchargen",
+        "khkekbelegezuschlaege",
+        "b"
+      ],
+      "ranked": [
+        "khkdispostapelpositionen",
+        "khkekbelege",
+        "khkekbelegepositionen",
+        "khkekbelegepositionenchargen",
+        "khkekbelegezuschlaege",
+        "b"
+      ],
+      "final_sql": [
+        "khkdispostapelpositionen",
+        "dbo.KHKDispostapelPositionen"
+      ]
+    },
+    "trace_extraction_notes": [
+      "discovery path found: discovery_log (6 tables)",
+      "discovery path found: discovery_tables (6 tables)",
+      "ranked path found: sources (6 tables)",
+      "ranked path found: relevant_tables (6 tables)",
+      "ranked path found: ranked_tables (6 tables)",
+      "final_sql path found: exec_result.tables_used (1 tables)",
+      "final_sql exec_result tables inferred (1 tables)"
+    ],
+    "sql_execution_success": true,
+    "policy_violation": false,
+    "policy_violation_detail": null,
+    "error_type": null,
+    "required_stage_traces": [
+      "discovery",
+      "ranked"
+    ],
+    "missing_required_stage_traces": [],
+    "trace_requirements_met": true
+  },
+  "CP3": {
+    "query_id": "CP3",
+    "question": "Wie viele Teile wurden in den Morgenstunden 04.00-07.00 Uhr gefertigt? Mehr oder weniger als von 08.00-11.00? (Zeiterfassung / ERP)",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 4953,
+    "error": null,
+    "final_response_text": "Es scheint, dass in den letzten 14 Tagen keine Teile in den Zeitr\u00e4umen von 04:00-07:00 Uhr oder 08:00-11:00 Uhr gefertigt wurden, da keine Daten f\u00fcr diese Zeitr\u00e4ume vorliegen. Wenn du weitere Informationen ben\u00f6tigst oder einen anderen Zeitraum untersuchen m\u00f6chtest, lass es mich wissen!",
+    "sql_query": "SELECT \n    SUM(CASE WHEN DATEPART(hour, ZeitVon) BETWEEN 4 AND 7 THEN Stunden ELSE 0 END) AS Fruehschicht_0407,\n    SUM(CASE WHEN DATEPART(hour, ZeitVon) BETWEEN 8 AND 11 THEN Stunden ELSE 0 END) AS Vormittag_0811\nFROM dbo.KHKProjekteZeiterfassung\nWHERE Datum >= DATEADD(day, -14, GETDATE())",
+    "exec_result": {
+      "data": [
+        {
+          "Fruehschicht_0407": "None",
+          "Vormittag_0811": "None"
+        }
+      ],
+      "rows": [
+        {
+          "Fruehschicht_0407": "None",
+          "Vormittag_0811": "None"
+        }
+      ],
+      "row_count": 1,
+      "columns": [
+        "Fruehschicht_0407",
+        "Vormittag_0811"
+      ],
+      "ok": true,
+      "tables_used": [
+        "dbo.KHKProjekteZeiterfassung"
+      ]
+    },
+    "tables_used": [
+      "dbo.BCSPjmProjekteVorgaengeZeitenReise",
+      "dbo.KHKMitarbeiter",
+      "dbo.KHKPpsRessourcenkopf",
+      "dbo.KHKProjekte",
+      "dbo.KHKProjekteZeiterfassung",
+      "z.B",
+      "khkprojektezeiterfassung",
+      "bcspjmprojektevorgaengezeitenreise",
+      "khkmitarbeiter",
+      "khkppsressourcenkopf",
+      "khkprojekte",
+      "b"
+    ],
+    "row_count": 1,
+    "result_preview": [
+      {
+        "Fruehschicht_0407": "None",
+        "Vormittag_0811": "None"
+      }
+    ],
+    "raw_response_keys": [
+      "discovery_log",
+      "discovery_tables",
+      "exec_result",
+      "final_response",
+      "latency_ms",
+      "ranked_tables",
+      "relevant_tables",
+      "sources",
+      "sql_query",
+      "success"
+    ],
+    "trace_stage_presence": {
+      "discovery": true,
+      "ranked": true,
+      "final_sql": true
+    },
+    "stage_tables": {
+      "discovery": [
+        "bcspjmprojektevorgaengezeitenreise",
+        "khkmitarbeiter",
+        "khkppsressourcenkopf",
+        "khkprojekte",
+        "khkprojektezeiterfassung",
+        "b"
+      ],
+      "ranked": [
+        "bcspjmprojektevorgaengezeitenreise",
+        "khkmitarbeiter",
+        "khkppsressourcenkopf",
+        "khkprojekte",
+        "khkprojektezeiterfassung",
+        "b"
+      ],
+      "final_sql": [
+        "khkprojektezeiterfassung",
+        "dbo.KHKProjekteZeiterfassung"
+      ]
+    },
+    "trace_extraction_notes": [
+      "discovery path found: discovery_log (6 tables)",
+      "discovery path found: discovery_tables (6 tables)",
+      "ranked path found: sources (6 tables)",
+      "ranked path found: relevant_tables (6 tables)",
+      "ranked path found: ranked_tables (6 tables)",
+      "final_sql path found: exec_result.tables_used (1 tables)",
+      "final_sql exec_result tables inferred (1 tables)"
+    ],
+    "sql_execution_success": true,
+    "policy_violation": false,
+    "policy_violation_detail": null,
+    "error_type": null,
+    "required_stage_traces": [
+      "discovery",
+      "ranked"
+    ],
+    "missing_required_stage_traces": [],
+    "trace_requirements_met": true
+  },
+  "CP4": {
+    "query_id": "CP4",
+    "question": "Halten sich alle an die vorgeschriebenen Anwesenheits- und Pausenzeiten?",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 18207,
+    "error": null,
+    "final_response_text": "In den letzten 30 Tagen gab es insgesamt 220 Buchungen. Dabei wurden keine Verst\u00f6\u00dfe gegen die Pausenzeiten festgestellt, jedoch gab es 30 Verst\u00f6\u00dfe gegen die vorgeschriebenen Anwesenheitszeiten, bei denen die Arbeitszeit 8 Stunden \u00fcberschritt.",
+    "sql_query": "SELECT \n    COUNT(*) AS Gesamt,\n    SUM(CASE WHEN Pause IS NOT NULL AND Pause > 0 THEN 1 ELSE 0 END) AS PausenVerstoesse,\n    SUM(CASE WHEN DatumZeitEnde IS NOT NULL AND DatumZeitStart IS NOT NULL AND DATEDIFF(minute, DatumZeitStart, DatumZeitEnde) > 480 THEN 1 ELSE 0 END) AS AnwesenheitsVerstoesse\nFROM dbo.KHKPpsBdeAp\nWHERE DatumZeitStart >= DATEADD(month, -1, GETDATE())",
+    "exec_result": {
+      "data": [
+        {
+          "Gesamt": "220",
+          "PausenVerstoesse": "0",
+          "AnwesenheitsVerstoesse": "30"
+        }
+      ],
+      "rows": [
+        {
+          "Gesamt": "220",
+          "PausenVerstoesse": "0",
+          "AnwesenheitsVerstoesse": "30"
+        }
+      ],
+      "row_count": 1,
+      "columns": [
+        "Gesamt",
+        "PausenVerstoesse",
+        "AnwesenheitsVerstoesse"
+      ],
+      "ok": true,
+      "tables_used": [
+        "dbo.KHKPpsBdeAp"
+      ]
+    },
+    "tables_used": [
+      "dbo.KHKPpsRueckmeldungen",
+      "dbo.vwKHKPpsSammellohnschein",
+      "dbo.KHKPpsBdeStempelBackup",
+      "dbo.KHKPpsBdeAp",
+      "dbo.BCSPjmProjekteVorgaengeLeist",
+      "khkppsbdeap",
+      "khkppsrueckmeldungen",
+      "vwkhkppssammellohnschein",
+      "khkppsbdestempelbackup",
+      "bcspjmprojektevorgaengeleist"
+    ],
+    "row_count": 1,
+    "result_preview": [
+      {
+        "Gesamt": "220",
+        "PausenVerstoesse": "0",
+        "AnwesenheitsVerstoesse": "30"
+      }
+    ],
+    "raw_response_keys": [
+      "discovery_log",
+      "discovery_tables",
+      "exec_result",
+      "final_response",
+      "latency_ms",
+      "ranked_tables",
+      "relevant_tables",
+      "sources",
+      "sql_query",
+      "success"
+    ],
+    "trace_stage_presence": {
+      "discovery": true,
+      "ranked": true,
+      "final_sql": true
+    },
+    "stage_tables": {
+      "discovery": [
+        "khkppsrueckmeldungen",
+        "vwkhkppssammellohnschein",
+        "khkppsbdestempelbackup",
+        "khkppsbdeap",
+        "bcspjmprojektevorgaengeleist"
+      ],
+      "ranked": [
+        "khkppsrueckmeldungen",
+        "vwkhkppssammellohnschein",
+        "khkppsbdestempelbackup",
+        "khkppsbdeap",
+        "bcspjmprojektevorgaengeleist"
+      ],
+      "final_sql": [
+        "khkppsbdeap",
+        "dbo.KHKPpsBdeAp"
+      ]
+    },
+    "trace_extraction_notes": [
+      "discovery path found: discovery_log (5 tables)",
+      "discovery path found: discovery_tables (5 tables)",
+      "ranked path found: sources (5 tables)",
+      "ranked path found: relevant_tables (5 tables)",
+      "ranked path found: ranked_tables (5 tables)",
+      "final_sql path found: exec_result.tables_used (1 tables)",
+      "final_sql exec_result tables inferred (1 tables)"
+    ],
+    "sql_execution_success": true,
+    "policy_violation": false,
+    "policy_violation_detail": null,
+    "error_type": null,
+    "required_stage_traces": [
+      "discovery",
+      "ranked"
+    ],
+    "missing_required_stage_traces": [],
+    "trace_requirements_met": true
+  },
+  "CP5": {
+    "query_id": "CP5",
+    "question": "Was hat MA XY heute Morgen gemacht? (Startstempel Zeiterfassung / R\u00fcckmeldungen ERP)",
+    "status": "failed",
+    "http_status": 200,
+    "latency_ms_total": 31210,
+    "error": null,
+    "final_response_text": "I encountered an error while processing your question: Recursion limit of 25 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.\nFor troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/GRAPH_RECURSION_LIMIT",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [],
+    "row_count": null,
+    "result_preview": [],
+    "raw_response_keys": [
+      "discovery_log",
+      "discovery_tables",
+      "exec_result",
+      "final_response",
+      "latency_ms",
+      "ranked_tables",
+      "relevant_tables",
+      "sources",
+      "sql_query",
+      "success"
+    ],
+    "trace_stage_presence": {
+      "discovery": true,
+      "ranked": true,
+      "final_sql": true
+    },
+    "stage_tables": {
+      "discovery": [],
+      "ranked": [],
+      "final_sql": []
+    },
+    "trace_extraction_notes": [
+      "discovery path found: discovery_log (0 tables)",
+      "discovery path found: discovery_tables (0 tables)",
+      "ranked path found: sources (0 tables)",
+      "ranked path found: relevant_tables (0 tables)",
+      "ranked path found: ranked_tables (0 tables)",
+      "final_sql path found: exec_result.tables_used (0 tables)"
+    ],
+    "sql_execution_success": null,
+    "policy_violation": false,
+    "policy_violation_detail": null,
+    "error_type": "no_sql_generated",
+    "required_stage_traces": [
+      "discovery",
+      "ranked"
+    ],
+    "missing_required_stage_traces": [],
+    "trace_requirements_met": true
+  },
+  "CP6": {
+    "query_id": "CP6",
+    "question": "Wurde Material XY schon angeliefert? (Lagerbuchung ERP)",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 5060,
+    "error": null,
+    "final_response_text": "Material XY wurde noch nicht angeliefert, da keine entsprechenden Buchungen mit dem Status \"erledigt\" gefunden wurden.",
+    "sql_query": "SELECT Artikelnummer, Liefertermin, MengeGebucht, IstErledigt FROM dbo.KHKPpsFfMaterial WHERE Artikelnummer = 'XY' AND IstErledigt = 1",
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": 0,
+      "columns": [],
+      "ok": true,
+      "tables_used": [
+        "dbo.KHKPpsFfMaterial"
+      ]
+    },
+    "tables_used": [
+      "dbo.KHKIFAuftraege",
+      "dbo.KHKLieferschwellen",
+      "dbo.KHKPpsFfMatBeigestellt",
+      "dbo.KHKPpsFfMaterial",
+      "dbo.KHKPpsFfRetourenMat",
+      "z.B",
+      "khkppsffmaterial",
+      "khkifauftraege",
+      "khklieferschwellen",
+      "khkppsffmatbeigestellt",
+      "khkppsffretourenmat",
+      "b"
+    ],
+    "row_count": 0,
+    "result_preview": [],
+    "raw_response_keys": [
+      "discovery_log",
+      "discovery_tables",
+      "exec_result",
+      "final_response",
+      "latency_ms",
+      "ranked_tables",
+      "relevant_tables",
+      "sources",
+      "sql_query",
+      "success"
+    ],
+    "trace_stage_presence": {
+      "discovery": true,
+      "ranked": true,
+      "final_sql": true
+    },
+    "stage_tables": {
+      "discovery": [
+        "khkifauftraege",
+        "khklieferschwellen",
+        "khkppsffmatbeigestellt",
+        "khkppsffmaterial",
+        "khkppsffretourenmat",
+        "b"
+      ],
+      "ranked": [
+        "khkifauftraege",
+        "khklieferschwellen",
+        "khkppsffmatbeigestellt",
+        "khkppsffmaterial",
+        "khkppsffretourenmat",
+        "b"
+      ],
+      "final_sql": [
+        "khkppsffmaterial",
+        "dbo.KHKPpsFfMaterial"
+      ]
+    },
+    "trace_extraction_notes": [
+      "discovery path found: discovery_log (6 tables)",
+      "discovery path found: discovery_tables (6 tables)",
+      "ranked path found: sources (6 tables)",
+      "ranked path found: relevant_tables (6 tables)",
+      "ranked path found: ranked_tables (6 tables)",
+      "final_sql path found: exec_result.tables_used (1 tables)",
+      "final_sql exec_result tables inferred (1 tables)"
+    ],
+    "sql_execution_success": true,
+    "policy_violation": false,
+    "policy_violation_detail": null,
+    "error_type": null,
+    "required_stage_traces": [
+      "discovery",
+      "ranked"
+    ],
+    "missing_required_stage_traces": [],
+    "trace_requirements_met": true
+  },
+  "CP7": {
+    "query_id": "CP7",
+    "question": "Korrelieren nicht erf\u00fcllte Wartungspunkte mit Wartungskosten? (ZP / ReWe)",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 7419,
+    "error": null,
+    "final_response_text": "Es scheint, dass es derzeit keine Eintr\u00e4ge in der Tabelle `dbo.KHKPpsWerkzeuge` gibt, die sowohl Wartungskosten als auch Wartungsintervalle (in Stunden oder St\u00fcck) aufweisen. Daher kann ich keine Korrelation zwischen nicht erf\u00fcllten Wartungspunkten und Wartungskosten analysieren. Wenn du weitere Informationen oder eine andere Analyse ben\u00f6tigst, lass es mich wissen!",
+    "sql_query": "SELECT Werkzeugnummer, Wartungskosten, WartungsintervallStd, WartungsintervallStueck FROM dbo.KHKPpsWerkzeuge WHERE WartungsintervallStd IS NOT NULL OR WartungsintervallStueck IS NOT NULL",
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": 0,
+      "columns": [],
+      "ok": true,
+      "tables_used": [
+        "dbo.KHKPpsWerkzeuge"
+      ]
+    },
+    "tables_used": [
+      "dbo.KHKPpsWerkzeuge",
+      "dbo.KHKDruckprozesseDruckbelege2",
+      "dbo.KHKPpsRessourcenAGPositionen",
+      "dbo.KHKDruckbelegeKennzeichen",
+      "dbo.KHKPpsFaBelegeAGPositionen",
+      "u201edbo.KHKPpsWerkzeuge",
+      "khkppswerkzeuge",
+      "khkdruckprozessedruckbelege2",
+      "khkppsressourcenagpositionen",
+      "khkdruckbelegekennzeichen",
+      "khkppsfabelegeagpositionen"
+    ],
+    "row_count": 0,
+    "result_preview": [],
+    "raw_response_keys": [
+      "discovery_log",
+      "discovery_tables",
+      "exec_result",
+      "final_response",
+      "latency_ms",
+      "ranked_tables",
+      "relevant_tables",
+      "sources",
+      "sql_query",
+      "success"
+    ],
+    "trace_stage_presence": {
+      "discovery": true,
+      "ranked": true,
+      "final_sql": true
+    },
+    "stage_tables": {
+      "discovery": [
+        "khkppswerkzeuge",
+        "khkdruckprozessedruckbelege2",
+        "khkppsressourcenagpositionen",
+        "khkdruckbelegekennzeichen",
+        "khkppsfabelegeagpositionen"
+      ],
+      "ranked": [
+        "khkppswerkzeuge",
+        "khkdruckprozessedruckbelege2",
+        "khkppsressourcenagpositionen",
+        "khkdruckbelegekennzeichen",
+        "khkppsfabelegeagpositionen"
+      ],
+      "final_sql": [
+        "khkppswerkzeuge",
+        "dbo.KHKPpsWerkzeuge"
+      ]
+    },
+    "trace_extraction_notes": [
+      "discovery path found: discovery_log (5 tables)",
+      "discovery path found: discovery_tables (5 tables)",
+      "ranked path found: sources (5 tables)",
+      "ranked path found: relevant_tables (5 tables)",
+      "ranked path found: ranked_tables (5 tables)",
+      "final_sql path found: exec_result.tables_used (1 tables)",
+      "final_sql exec_result tables inferred (1 tables)"
+    ],
+    "sql_execution_success": true,
+    "policy_violation": false,
+    "policy_violation_detail": null,
+    "error_type": null,
+    "required_stage_traces": [
+      "discovery",
+      "ranked"
+    ],
+    "missing_required_stage_traces": [],
+    "trace_requirements_met": true
+  },
+  "CP8": {
+    "query_id": "CP8",
+    "question": "Verh\u00e4ltnis Vorgabe zu Ist (keine Felder!) pro Artikel pro Mitarbeiter? (ERP)",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 5870,
+    "error": null,
+    "final_response_text": "Ich konnte keine spezifischen Tabellen finden, die direkt die Vorgabe- und Ist-Zeiten pro Artikel und Mitarbeiter enthalten. Es scheint, dass die relevanten Daten m\u00f6glicherweise in mehreren Tabellen verteilt sind oder unter anderen Bezeichnungen gef\u00fchrt werden.\n\nUm das Verh\u00e4ltnis von Vorgabe zu Ist pro Artikel und Mitarbeiter zu berechnen, ben\u00f6tigen wir typischerweise Tabellen, die folgende Informationen enthalten:\n- Artikelnummer\n- Mitarbeiter-ID\n- Vorgabezeit (Soll)\n- Ist-Zeit\n\nFalls du spezifische Tabellen oder Spalten kennst, die diese Informationen enthalten, lass es mich wissen. Alternativ kannst du mir weitere Details geben, damit ich gezielter suchen kann.",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [
+      "dbo.BCSPjmArtikelObjektVerbrauch",
+      "dbo.BCSPjmArtikelObjektZaehler",
+      "dbo.BCSPjmObjekte",
+      "dbo.BCSPjmObjekteRapport",
+      "dbo.BCSPjmObjekteStapel",
+      "dbo.BCSPjmArtikelObjectConsumption",
+      "dbo.BCSPjmObjekteStacks",
+      "dbo.BCSPjmAdressenKontakt",
+      "dbo.BCSPjmObjekteZubehoer",
+      "dbo.BCSPjmProjekte",
+      "z.B",
+      "bcspjmartikelobjektverbrauch",
+      "bcspjmartikelobjektzaehler",
+      "bcspjmobjekte",
+      "bcspjmobjekterapport",
+      "bcspjmobjektestapel",
+      "bcspjmartikelobjectconsumption",
+      "bcspjmobjektestacks",
+      "bcspjmadressenkontakt",
+      "bcspjmobjektezubehoer",
+      "bcspjmprojekte",
+      "b"
+    ],
+    "row_count": null,
+    "result_preview": [],
+    "raw_response_keys": [
+      "discovery_log",
+      "discovery_tables",
+      "exec_result",
+      "final_response",
+      "latency_ms",
+      "ranked_tables",
+      "relevant_tables",
+      "sources",
+      "sql_query",
+      "success"
+    ],
+    "trace_stage_presence": {
+      "discovery": true,
+      "ranked": true,
+      "final_sql": true
+    },
+    "stage_tables": {
+      "discovery": [
+        "bcspjmartikelobjektverbrauch",
+        "bcspjmartikelobjektzaehler",
+        "bcspjmobjekte",
+        "bcspjmobjekterapport",
+        "bcspjmobjektestapel",
+        "bcspjmartikelobjectconsumption",
+        "bcspjmobjektestacks",
+        "bcspjmadressenkontakt",
+        "bcspjmobjektezubehoer",
+        "bcspjmprojekte",
+        "b"
+      ],
+      "ranked": [
+        "bcspjmartikelobjektverbrauch",
+        "bcspjmartikelobjektzaehler",
+        "bcspjmobjekte",
+        "bcspjmobjekterapport",
+        "bcspjmobjektestapel",
+        "bcspjmartikelobjectconsumption",
+        "bcspjmobjektestacks",
+        "bcspjmadressenkontakt",
+        "bcspjmobjektezubehoer",
+        "bcspjmprojekte",
+        "b"
+      ],
+      "final_sql": []
+    },
+    "trace_extraction_notes": [
+      "discovery path found: discovery_log (11 tables)",
+      "discovery path found: discovery_tables (11 tables)",
+      "ranked path found: sources (11 tables)",
+      "ranked path found: relevant_tables (11 tables)",
+      "ranked path found: ranked_tables (11 tables)",
+      "final_sql path found: exec_result.tables_used (0 tables)"
+    ],
+    "sql_execution_success": null,
+    "policy_violation": false,
+    "policy_violation_detail": null,
+    "error_type": null,
+    "required_stage_traces": [
+      "discovery",
+      "ranked"
+    ],
+    "missing_required_stage_traces": [],
+    "trace_requirements_met": true
+  },
+  "CP9": {
+    "query_id": "CP9",
+    "question": "Abweichungen Start Zeiterfassung zu Start BDE (Zeit/ERP)",
+    "status": "success",
+    "http_status": 200,
+    "latency_ms_total": 5906,
+    "error": null,
+    "final_response_text": "Um die Abweichungen zwischen dem Start der Zeiterfassung und dem Start der BDE zu analysieren, k\u00f6nnen wir die Tabellen `dbo.BSBDEGesRm` und `dbo.BSBDEStempelGesRm` verwenden. Beide Tabellen enthalten relevante Informationen zu Mitarbeitern und Buchungen, jedoch fehlen spezifische Zeitstempel f\u00fcr den Start der Zeiterfassung und der BDE.\n\nDa die ben\u00f6tigten Zeitstempel nicht direkt in den gefundenen Tabellen vorhanden sind, k\u00f6nnte es sinnvoll sein, nach weiteren Tabellen zu suchen, die spezifische Zeitstempel f\u00fcr den Start der Zeiterfassung und der BDE enthalten. Alternativ k\u00f6nnten wir die vorhandenen Tabellen nutzen, um allgemeine Informationen zu den Buchungen und Mitarbeitern zu erhalten.\n\nFalls du spezifische Zeitstempel ben\u00f6tigst, lass es mich wissen, damit ich gezielt danach suchen kann.",
+    "sql_query": null,
+    "exec_result": {
+      "data": [],
+      "rows": [],
+      "row_count": null,
+      "columns": [],
+      "ok": true,
+      "tables_used": []
+    },
+    "tables_used": [
+      "dbo.BSBDEGesRm",
+      "dbo.BSBDEGesRmSerienNr",
+      "dbo.BSBDEStempelGesRm",
+      "dbo.BSBDEStempelGesRmSerienNr",
+      "dbo.BSCrmKalenderPositionen",
+      "z.B",
+      "bsbdegesrm",
+      "bsbdegesrmseriennr",
+      "bsbdestempelgesrm",
+      "bsbdestempelgesrmseriennr",
+      "bscrmkalenderpositionen",
+      "b"
+    ],
+    "row_count": null,
+    "result_preview": [],
+    "raw_response_keys": [
+      "discovery_log",
+      "discovery_tables",
+      "exec_result",
+      "final_response",
+      "latency_ms",
+      "ranked_tables",
+      "relevant_tables",
+      "sources",
+      "sql_query",
+      "success"
+    ],
+    "trace_stage_presence": {
+      "discovery": true,
+      "ranked": true,
+      "final_sql": true
+    },
+    "stage_tables": {
+      "discovery": [
+        "bsbdegesrm",
+        "bsbdegesrmseriennr",
+        "bsbdestempelgesrm",
+        "bsbdestempelgesrmseriennr",
+        "bscrmkalenderpositionen",
+        "b"
+      ],
+      "ranked": [
+        "bsbdegesrm",
+        "bsbdegesrmseriennr",
+        "bsbdestempelgesrm",
+        "bsbdestempelgesrmseriennr",
+        "bscrmkalenderpositionen",
+        "b"
+      ],
+      "final_sql": []
+    },
+    "trace_extraction_notes": [
+      "discovery path found: discovery_log (6 tables)",
+      "discovery path found: discovery_tables (6 tables)",
+      "ranked path found: sources (6 tables)",
+      "ranked path found: relevant_tables (6 tables)",
+      "ranked path found: ranked_tables (6 tables)",
+      "final_sql path found: exec_result.tables_used (0 tables)"
+    ],
+    "sql_execution_success": null,
+    "policy_violation": false,
+    "policy_violation_detail": null,
+    "error_type": null,
+    "required_stage_traces": [
+      "discovery",
+      "ranked"
+    ],
+    "missing_required_stage_traces": [],
+    "trace_requirements_met": true
+  }
+}

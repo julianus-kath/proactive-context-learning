@@ -1,4 +1,8 @@
-# ADR 0025: LangGraph Error Envelope & Clarification Hardening
+# ADR-0025: LangGraph Error Envelope & Clarification Hardening
+**Status**: Accepted
+**Date**: 2025-11-15
+**Author**: Julianus Kath
+
 
 ## Status
 Accepted – November 10, 2025

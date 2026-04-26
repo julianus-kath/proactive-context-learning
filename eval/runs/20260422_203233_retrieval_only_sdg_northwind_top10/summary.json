@@ -1,0 +1,3341 @@
+{
+  "experiment": "retrieval_only_ablation",
+  "dataset": "northwind",
+  "n_queries": 84,
+  "query_ids": [
+    "NW1",
+    "NW2",
+    "NW3",
+    "NW4",
+    "NW5",
+    "NW6",
+    "NW7",
+    "NW8",
+    "NW9",
+    "NW10",
+    "NL1",
+    "NL2",
+    "NL3",
+    "NL4",
+    "NL5",
+    "NL6",
+    "NL7",
+    "NL8",
+    "NL9",
+    "NL10",
+    "CL1",
+    "CL2",
+    "CL3",
+    "CL4",
+    "CL5",
+    "CL6",
+    "CL7",
+    "CL8",
+    "CL9",
+    "CL10",
+    "CL11",
+    "CL12",
+    "HX1",
+    "HX3",
+    "HX4",
+    "HX5",
+    "HX7",
+    "HX8",
+    "HX9",
+    "HX12",
+    "US_CL2_U1",
+    "US_CL2_U2",
+    "US_CL2_U3",
+    "US_CL3_U1",
+    "US_CL3_U2",
+    "US_CL3_U3",
+    "US_CL6_U1",
+    "US_CL6_U2",
+    "US_CL6_U3",
+    "US_CL10_U1",
+    "US_CL10_U2",
+    "US_CL10_U3",
+    "LB_CL2_LX1",
+    "LB_CL2_LX2",
+    "LB_CL2_LX3",
+    "LB_CL3_LX1",
+    "LB_CL3_LX2",
+    "LB_CL3_LX3",
+    "LB_CL6_LX1",
+    "LB_CL6_LX2",
+    "LB_CL6_LX3",
+    "LB_CL10_LX1",
+    "LB_CL10_LX2",
+    "LB_CL10_LX3",
+    "NW_DE_01",
+    "NW_DE_02",
+    "NW_DE_03",
+    "NW_DE_04",
+    "NW_DE_05",
+    "NW_DE_06",
+    "NW_DE_07",
+    "NW_DE_08",
+    "NW_DE_09",
+    "NW_DE_10",
+    "NL_DE_01",
+    "NL_DE_02",
+    "NL_DE_03",
+    "NL_DE_04",
+    "NL_DE_05",
+    "NL_DE_06",
+    "NL_DE_07",
+    "NL_DE_08",
+    "NL_DE_09",
+    "NL_DE_10"
+  ],
+  "top_k": 10,
+  "modes": [
+    "sdg_off",
+    "sdg_on"
+  ],
+  "restart_server": true,
+  "timestamp_utc": "2026-04-22T18:32:33.386522+00:00",
+  "summaries": {
+    "sdg_off": {
+      "mode": "sdg_off",
+      "n_queries": 84,
+      "mean_recall_at_k": 0.43769841269841275,
+      "mean_precision_at_k": 0.3294831821617536,
+      "mean_hit_at_k": 0.5357142857142857,
+      "mean_mrr": 0.43650793650793646,
+      "perfect_recall_count": 26,
+      "zero_recall_count": 39,
+      "mean_latency_ms": 2.8039444517898593,
+      "per_query": [
+        {
+          "query_id": "NW1",
+          "recall": 1.0,
+          "precision": 0.3333333333333333,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.products",
+            "public.employees",
+            "public.order_details"
+          ],
+          "search_query": "products reordering largest shortage first",
+          "latency_ms": 11.19499997003004
+        },
+        {
+          "query_id": "NW2",
+          "recall": 1.0,
+          "precision": 0.75,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "categories",
+            "order_details",
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.categories",
+            "public.order_details",
+            "public.products",
+            "public.orders"
+          ],
+          "search_query": "product category revenue discounts quantity discount",
+          "latency_ms": 2.895624958910048
+        },
+        {
+          "query_id": "NW3",
+          "recall": 1.0,
+          "precision": 0.42857142857142855,
+          "hit": 1.0,
+          "mrr": 0.3333333333333333,
+          "found": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.customers",
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "customers orders quantity without discount adjustment",
+          "latency_ms": 2.5184170226566494
+        },
+        {
+          "query_id": "NW4",
+          "recall": 1.0,
+          "precision": 0.4,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "orders",
+            "shippers"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.orders",
+            "public.shippers",
+            "public.order_details",
+            "public.customers",
+            "public.suppliers"
+          ],
+          "search_query": "orders shippers shipping company",
+          "latency_ms": 2.218250010628253
+        },
+        {
+          "query_id": "NW5",
+          "recall": 1.0,
+          "precision": 0.5,
+          "hit": 1.0,
+          "mrr": 0.5,
+          "found": [
+            "employees",
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.employee_territories",
+            "public.employees",
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.categories"
+          ],
+          "search_query": "employee revenue discounts orders employees descending",
+          "latency_ms": 2.6434590108692646
+        },
+        {
+          "query_id": "NW6",
+          "recall": 1.0,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products"
+          ],
+          "search_query": "top best selling products quantity sold",
+          "latency_ms": 2.5489170220680535
+        },
+        {
+          "query_id": "NW7",
+          "recall": 0.6666666666666666,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "products",
+            "suppliers"
+          ],
+          "missing": [
+            "order_details"
+          ],
+          "retrieved": [
+            "public.products",
+            "public.suppliers"
+          ],
+          "search_query": "supplier pairs frequently appear together use",
+          "latency_ms": 2.314832992851734
+        },
+        {
+          "query_id": "NW8",
+          "recall": 0.6666666666666666,
+          "precision": 0.25,
+          "hit": 1.0,
+          "mrr": 0.3333333333333333,
+          "found": [
+            "customers",
+            "orders"
+          ],
+          "missing": [
+            "order_details"
+          ],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.customers",
+            "public.employees",
+            "public.orders",
+            "public.suppliers",
+            "public.shippers",
+            "public.us_states"
+          ],
+          "search_query": "customer country compute average value two",
+          "latency_ms": 3.3888330217450857
+        },
+        {
+          "query_id": "NW9",
+          "recall": 1.0,
+          "precision": 0.6666666666666666,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products"
+          ],
+          "search_query": "pending orders discounted value null quantity",
+          "latency_ms": 2.6876250049099326
+        },
+        {
+          "query_id": "NW10",
+          "recall": 1.0,
+          "precision": 0.6666666666666666,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.orders"
+          ],
+          "search_query": "monthly revenue trend discounts grouping month",
+          "latency_ms": 2.598083985503763
+        },
+        {
+          "query_id": "NL1",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "products"
+          ],
+          "retrieved": [],
+          "search_query": "offerings look likely run short soon",
+          "latency_ms": 1.9951669964939356
+        },
+        {
+          "query_id": "NL2",
+          "recall": 0.6666666666666666,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [
+            "customers"
+          ],
+          "retrieved": [
+            "public.orders",
+            "public.order_details"
+          ],
+          "search_query": "buyers place frequent orders represent highest",
+          "latency_ms": 2.402000012807548
+        },
+        {
+          "query_id": "NL3",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [
+            "public.products"
+          ],
+          "search_query": "delivery providers miss promised dates overall",
+          "latency_ms": 2.4959170259535313
+        },
+        {
+          "query_id": "NL4",
+          "recall": 1.0,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.products",
+            "public.order_details"
+          ],
+          "search_query": "offerings move highest units overall",
+          "latency_ms": 2.2083749645389616
+        },
+        {
+          "query_id": "NL5",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "average basket values highest buyer location",
+          "latency_ms": 3.8835840532556176
+        },
+        {
+          "query_id": "NL6",
+          "recall": 1.0,
+          "precision": 0.6666666666666666,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.orders"
+          ],
+          "search_query": "discounted income evolve month",
+          "latency_ms": 2.084084029775113
+        },
+        {
+          "query_id": "NL7",
+          "recall": 0.6666666666666666,
+          "precision": 0.6666666666666666,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products"
+          ],
+          "missing": [
+            "suppliers"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.orders"
+          ],
+          "search_query": "upstream partners generate discounted turnover goods",
+          "latency_ms": 2.2547910339199007
+        },
+        {
+          "query_id": "NL8",
+          "recall": 1.0,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "orders",
+            "shippers"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.orders",
+            "public.shippers"
+          ],
+          "search_query": "freight carrier late shipments average often",
+          "latency_ms": 1.9992089946754277
+        },
+        {
+          "query_id": "NL9",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "employees",
+            "orders"
+          ],
+          "retrieved": [
+            "public.us_states"
+          ],
+          "search_query": "staff members serve broadest buyer base",
+          "latency_ms": 2.1715000038966537
+        },
+        {
+          "query_id": "NL10",
+          "recall": 0.5,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "orders"
+          ],
+          "missing": [
+            "customers"
+          ],
+          "retrieved": [
+            "public.orders"
+          ],
+          "search_query": "accounts never transacted",
+          "latency_ms": 2.127166953869164
+        },
+        {
+          "query_id": "CL1",
+          "recall": 1.0,
+          "precision": 0.75,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products",
+            "suppliers"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.orders",
+            "public.suppliers"
+          ],
+          "search_query": "Welche Lieferanten erzielen den höchsten Umsatz nach Rabatten über ihre Artikel?",
+          "latency_ms": 3.032832988537848
+        },
+        {
+          "query_id": "CL2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Kundenländer bringen den größten Gesamtumsatz nach Abzügen?",
+          "latency_ms": 2.260542009025812
+        },
+        {
+          "query_id": "CL3",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [],
+          "search_query": "Bei welchen Versanddienstleistern sind Sendungen im Schnitt am häufigsten verspätet?",
+          "latency_ms": 2.8102920041419566
+        },
+        {
+          "query_id": "CL4",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "employees",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Mitarbeitenden betreuen die meisten unterschiedlichen Kundenkonten?",
+          "latency_ms": 2.485290984623134
+        },
+        {
+          "query_id": "CL5",
+          "recall": 0.5,
+          "precision": 0.25,
+          "hit": 1.0,
+          "mrr": 0.5,
+          "found": [
+            "orders"
+          ],
+          "missing": [
+            "customers"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "Welche Kundenkonten haben bislang keinerlei Bestellung ausgelöst?",
+          "latency_ms": 2.3973750066943467
+        },
+        {
+          "query_id": "CL6",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "Wie entwickeln sich pro Monat erfasste Aufträge und verspätete Auslieferungen?",
+          "latency_ms": 2.755667024757713
+        },
+        {
+          "query_id": "CL7",
+          "recall": 0.8,
+          "precision": 0.4444444444444444,
+          "hit": 1.0,
+          "mrr": 0.3333333333333333,
+          "found": [
+            "order_details",
+            "orders",
+            "region",
+            "territories"
+          ],
+          "missing": [
+            "employee_territories"
+          ],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.region",
+            "public.employees",
+            "public.territories",
+            "public.suppliers",
+            "public.orders",
+            "public.order_details",
+            "public.customers"
+          ],
+          "search_query": "Welche Regionen sind über Gebietszuordnungen mit dem höchsten Umsatz verbunden?",
+          "latency_ms": 2.6774589787237346
+        },
+        {
+          "query_id": "CL8",
+          "recall": 0.6666666666666666,
+          "precision": 0.4,
+          "hit": 1.0,
+          "mrr": 0.3333333333333333,
+          "found": [
+            "customers",
+            "orders"
+          ],
+          "missing": [
+            "order_details"
+          ],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.customers",
+            "public.orders",
+            "public.us_states"
+          ],
+          "search_query": "Welche Kunden bestellen häufig, aber mit eher kleinem Warenkorbwert?",
+          "latency_ms": 2.587667026091367
+        },
+        {
+          "query_id": "CL9",
+          "recall": 1.0,
+          "precision": 0.75,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products",
+            "suppliers"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.orders",
+            "public.suppliers"
+          ],
+          "search_query": "Bei welchen Lieferanten gibt es Produkte ohne jeglichen Verkauf?",
+          "latency_ms": 2.7541250456124544
+        },
+        {
+          "query_id": "CL10",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customer_customer_demo",
+            "customer_demographics",
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Kundensegmente erzeugen den höchsten Erlös nach Rabatt?",
+          "latency_ms": 2.3617090191692114
+        },
+        {
+          "query_id": "CL11",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "employees",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Mitarbeitenden verkaufen häufig in andere Zielländer als ihr Heimatland?",
+          "latency_ms": 2.2098749759607017
+        },
+        {
+          "query_id": "CL12",
+          "recall": 1.0,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.orders",
+            "public.order_details"
+          ],
+          "search_query": "In welchen Monaten ist Fracht im Verhältnis zum Umsatz am teuersten?",
+          "latency_ms": 3.14995797816664
+        },
+        {
+          "query_id": "HX1",
+          "recall": 0.6666666666666666,
+          "precision": 0.4,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "customers",
+            "orders"
+          ],
+          "missing": [
+            "order_details"
+          ],
+          "retrieved": [
+            "public.orders",
+            "public.customers",
+            "public.shippers",
+            "public.suppliers",
+            "public.us_states"
+          ],
+          "search_query": "Welche Kundenkonten haben ihren Monatsumsatz vom ersten zum letzten aktiven Monat am staerksten gesteigert (mindestens 5 Bestellungen insgesamt)?",
+          "latency_ms": 2.676707983482629
+        },
+        {
+          "query_id": "HX3",
+          "recall": 0.5,
+          "precision": 0.25,
+          "hit": 1.0,
+          "mrr": 0.5,
+          "found": [
+            "orders"
+          ],
+          "missing": [
+            "shippers"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "Bei welchen Versanddienstleistern ist der Anteil stark verspaeteter Sendungen (mehr als 3 Tage) am groessten?",
+          "latency_ms": 2.8455000137910247
+        },
+        {
+          "query_id": "HX4",
+          "recall": 1.0,
+          "precision": 0.5714285714285714,
+          "hit": 1.0,
+          "mrr": 0.5,
+          "found": [
+            "categories",
+            "order_details",
+            "products",
+            "suppliers"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.territories",
+            "public.categories",
+            "public.customer_demographics",
+            "public.products",
+            "public.region",
+            "public.order_details",
+            "public.suppliers"
+          ],
+          "search_query": "In welchen Produktkategorien kommt mindestens 60 Prozent des rabattierten Umsatzes von nur einem Lieferanten?",
+          "latency_ms": 2.4249579873867333
+        },
+        {
+          "query_id": "HX5",
+          "recall": 1.0,
+          "precision": 0.42857142857142855,
+          "hit": 1.0,
+          "mrr": 0.3333333333333333,
+          "found": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.customers",
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "Welche Kunden haben ueberdurchschnittliche Rabattquote, aber unterdurchschnittlichen Nettoumsatz pro Bestellung?",
+          "latency_ms": 2.977791999001056
+        },
+        {
+          "query_id": "HX7",
+          "recall": 0.5,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products"
+          ],
+          "missing": [
+            "categories",
+            "orders"
+          ],
+          "retrieved": [
+            "public.products",
+            "public.order_details"
+          ],
+          "search_query": "Welche Produktpaare aus unterschiedlichen Kategorien werden ueberproportional oft gemeinsam gekauft (Lift gegenueber Unabhaengigkeit)?",
+          "latency_ms": 2.1385420113801956
+        },
+        {
+          "query_id": "HX8",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.us_states"
+          ],
+          "search_query": "In welchen Monaten stieg die Frachtkostenquote gegenueber dem Vormonat am staerksten?",
+          "latency_ms": 2.480209048371762
+        },
+        {
+          "query_id": "HX9",
+          "recall": 1.0,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products",
+            "suppliers"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.suppliers"
+          ],
+          "search_query": "Welche Lieferanten haben viele Produkte, aber einen niedrigen Anteil verkaufter Produkte?",
+          "latency_ms": 2.389750035945326
+        },
+        {
+          "query_id": "HX12",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "categories",
+            "order_details",
+            "orders",
+            "products"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Kategorien haben nach Rabatt die hoechste Umsatzvolatilitaet zwischen Monaten?",
+          "latency_ms": 2.994332986418158
+        },
+        {
+          "query_id": "US_CL2_U1",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Woher kommt unser Nettoumsatz?",
+          "latency_ms": 2.4567919899709523
+        },
+        {
+          "query_id": "US_CL2_U2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Märkte tragen am meisten zum Erlös bei?",
+          "latency_ms": 2.419041993562132
+        },
+        {
+          "query_id": "US_CL2_U3",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Wo verdienen wir nach Rabatten am meisten Geld?",
+          "latency_ms": 1.855708018410951
+        },
+        {
+          "query_id": "US_CL3_U1",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [
+            "public.us_states"
+          ],
+          "search_query": "Welcher Zusteller ist im Schnitt am unpünktlichsten?",
+          "latency_ms": 1.749624963849783
+        },
+        {
+          "query_id": "US_CL3_U2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [],
+          "search_query": "Über wen kommt es am häufigsten zu Verzögerungen?",
+          "latency_ms": 2.410790999419987
+        },
+        {
+          "query_id": "US_CL3_U3",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [
+            "public.employee_territories",
+            "public.territories"
+          ],
+          "search_query": "Bei welchem Versandkanal ist die Terminlage am schwächsten?",
+          "latency_ms": 2.5967080146074295
+        },
+        {
+          "query_id": "US_CL6_U1",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Wie läuft es monatlich mit Aufträgen und Pünktlichkeit?",
+          "latency_ms": 4.057457961607724
+        },
+        {
+          "query_id": "US_CL6_U2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Wie entwickeln sich Nachfrage und Verspätungen über die Zeit?",
+          "latency_ms": 2.4655830347910523
+        },
+        {
+          "query_id": "US_CL6_U3",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders"
+          ],
+          "retrieved": [
+            "public.suppliers"
+          ],
+          "search_query": "Zeig den Monatsverlauf von Volumen und Lieferproblemen.",
+          "latency_ms": 1.7217500135302544
+        },
+        {
+          "query_id": "US_CL10_U1",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customer_customer_demo",
+            "customer_demographics",
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Kundengruppen bringen den meisten Nettoerlös?",
+          "latency_ms": 1.8177079618908465
+        },
+        {
+          "query_id": "US_CL10_U2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customer_customer_demo",
+            "customer_demographics",
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Wer sind unsere wertvollsten Segmente nach Rabatten?",
+          "latency_ms": 2.8399580041877925
+        },
+        {
+          "query_id": "US_CL10_U3",
+          "recall": 0.4,
+          "precision": 0.6666666666666666,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [
+            "customer_customer_demo",
+            "customer_demographics",
+            "customers"
+          ],
+          "retrieved": [
+            "public.orders",
+            "public.order_details",
+            "public.suppliers"
+          ],
+          "search_query": "Welche Zielgruppen liefern den größten Beitrag zum Umsatz nach Abzügen?",
+          "latency_ms": 2.379041980020702
+        },
+        {
+          "query_id": "LB_CL2_LX1",
+          "recall": 0.6666666666666666,
+          "precision": 0.6666666666666666,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [
+            "customers"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.orders"
+          ],
+          "search_query": "Zeige den rabattbereinigten Umsatz pro Kundenland.",
+          "latency_ms": 2.4303329992108047
+        },
+        {
+          "query_id": "LB_CL2_LX2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [
+            "public.suppliers"
+          ],
+          "search_query": "Welche Absatzländer liefern den größten Nettoerlös nach Preisnachlässen?",
+          "latency_ms": 1.8490409711375833
+        },
+        {
+          "query_id": "LB_CL2_LX3",
+          "recall": 1.0,
+          "precision": 0.375,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.employees",
+            "public.customers",
+            "public.suppliers",
+            "public.region",
+            "public.us_states"
+          ],
+          "search_query": "Aus welchen Zielregionen stammt nach Abzügen der höchste Wertbeitrag?",
+          "latency_ms": 2.742999990005046
+        },
+        {
+          "query_id": "LB_CL3_LX1",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [],
+          "search_query": "Welcher Versanddienstleister hat im Schnitt die meisten verspäteten Sendungen?",
+          "latency_ms": 2.204083022661507
+        },
+        {
+          "query_id": "LB_CL3_LX2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [
+            "public.suppliers"
+          ],
+          "search_query": "Bei welchem Carrier ist die durchschnittliche Lieferverzögerung am höchsten?",
+          "latency_ms": 2.2477920283563435
+        },
+        {
+          "query_id": "LB_CL3_LX3",
+          "recall": 0.5,
+          "precision": 0.16666666666666666,
+          "hit": 1.0,
+          "mrr": 0.25,
+          "found": [
+            "orders"
+          ],
+          "missing": [
+            "shippers"
+          ],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "Über welchen Zustellkanal entsteht der größte Zeitverzug gegenüber dem Solltermin?",
+          "latency_ms": 2.3014579783193767
+        },
+        {
+          "query_id": "LB_CL6_LX1",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "Zeige pro Monat die Anzahl Aufträge und verspäteten Auslieferungen.",
+          "latency_ms": 2.6355840382166207
+        },
+        {
+          "query_id": "LB_CL6_LX2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders"
+          ],
+          "retrieved": [
+            "public.suppliers"
+          ],
+          "search_query": "Wie entwickeln sich monatlich Auftragseingang und Lieferverzug?",
+          "latency_ms": 2.383124956395477
+        },
+        {
+          "query_id": "LB_CL6_LX3",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders"
+          ],
+          "retrieved": [
+            "public.us_states",
+            "public.employee_territories",
+            "public.territories"
+          ],
+          "search_query": "Wie verändert sich im Zeitverlauf die Kombination aus Nachfragefluss und Terminüberschreitungen?",
+          "latency_ms": 4.765084013342857
+        },
+        {
+          "query_id": "LB_CL10_LX1",
+          "recall": 0.4,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [
+            "customer_customer_demo",
+            "customer_demographics",
+            "customers"
+          ],
+          "retrieved": [
+            "public.orders",
+            "public.order_details"
+          ],
+          "search_query": "Zeige den rabattbereinigten Umsatz je Kundensegment.",
+          "latency_ms": 4.1712080128490925
+        },
+        {
+          "query_id": "LB_CL10_LX2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customer_customer_demo",
+            "customer_demographics",
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Abnehmergruppen erzielen den höchsten Erlös nach Nachlässen?",
+          "latency_ms": 3.3166249631904066
+        },
+        {
+          "query_id": "LB_CL10_LX3",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customer_customer_demo",
+            "customer_demographics",
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [
+            "public.products"
+          ],
+          "search_query": "Welche Profile im Kundenstamm tragen nach Preiszugeständnissen den größten Nettoertrag?",
+          "latency_ms": 4.1600000113248825
+        },
+        {
+          "query_id": "NW_DE_01",
+          "recall": 1.0,
+          "precision": 0.16666666666666666,
+          "hit": 1.0,
+          "mrr": 0.25,
+          "found": [
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.order_details",
+            "public.products",
+            "public.orders",
+            "public.suppliers"
+          ],
+          "search_query": "Gib die fünf Artikel zurück, deren Lagerbestand unter dem Meldebestand liegt, sortiert nach grösster Bestandslücke zuerst. Liefere genau: Artikelnummer, Artikelbezeichnung, Lagerbestand und Meldebestand.",
+          "latency_ms": 2.9206249746493995
+        },
+        {
+          "query_id": "NW_DE_02",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "categories",
+            "products",
+            "order_details"
+          ],
+          "retrieved": [],
+          "search_query": "Berechne je Warengruppe den Nettoumsatz nach Rabatten als SUMME(Stückpreis × Menge × (1 − Rabatt)). Gib für alle Warengruppen den Warengruppennamen und den Nettoumsatz zurück, absteigend nach Nettoumsatz sortiert.",
+          "latency_ms": 2.3657080018892884
+        },
+        {
+          "query_id": "NW_DE_03",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "orders",
+            "order_details"
+          ],
+          "retrieved": [],
+          "search_query": "Liste alle Abnehmer mit mehr als 10 verschiedenen Aufträgen. Gib Abnehmernummer, Firmenbezeichnung, Auftragsanzahl und Auftragswert zurück, wobei Auftragswert = SUMME(Stückpreis × Menge) ohne Rabattberücksichtigung. Sortiere absteigend nach Auftragswert und dann nach Abnehmernummer.",
+          "latency_ms": 2.9527079896070063
+        },
+        {
+          "query_id": "NW_DE_04",
+          "recall": 0.5,
+          "precision": 0.3333333333333333,
+          "hit": 1.0,
+          "mrr": 0.5,
+          "found": [
+            "orders"
+          ],
+          "missing": [
+            "shippers"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products"
+          ],
+          "search_query": "Gib für jeden Versanddienstleister anhand von Aufträgen und Dienstleisterstamm die Dienstleisternummer, die Firmenbezeichnung, die Anzahl verspäteter Sendungen (Versanddatum > Solltermin) und die Gesamtzahl der Sendungen zurück.",
+          "latency_ms": 3.294624970294535
+        },
+        {
+          "query_id": "NW_DE_05",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "employees",
+            "orders",
+            "order_details"
+          ],
+          "retrieved": [
+            "public.shippers"
+          ],
+          "search_query": "Berechne für jede Mitarbeiterin und jeden Mitarbeiter den rabattierten Nettoumsatz aus den zugehörigen Aufträgen. Verknüpfe Personal-, Auftrags- und Auftragspositionsdaten und gib Personalnummer, Vorname, Nachname und Nettoumsatz zurück, absteigend nach Nettoumsatz sortiert.",
+          "latency_ms": 2.97408300684765
+        },
+        {
+          "query_id": "NW_DE_06",
+          "recall": 1.0,
+          "precision": 0.3333333333333333,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.suppliers",
+            "public.employees",
+            "public.customers"
+          ],
+          "search_query": "Gib die fünf Artikel mit der höchsten verkauften Stückzahl zurück. Nutze PostgreSQL LIMIT 5 (nicht TOP). Liefere Artikelnummer, Artikelbezeichnung und verkaufte Stückzahl, absteigend sortiert nach Stückzahl und dann aufsteigend nach Artikelnummer.",
+          "latency_ms": 3.136124985758215
+        },
+        {
+          "query_id": "NW_DE_07",
+          "recall": 1.0,
+          "precision": 0.6,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products",
+            "suppliers"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.us_states",
+            "public.suppliers"
+          ],
+          "search_query": "Finde die Lieferantenpaare, die am häufigsten zusammen in derselben Bestellung vorkommen. Nutze einen Self-Join auf Auftragspositionen als ap1 und ap2 (gleiche Auftragsnummer, unterschiedliche Artikelnummer), verknüpfe Artikel p1/p2 und Lieferanten l1/l2, und erzwinge l1.Lieferantennummer < l2.Lieferantennummer, um Paare zu deduplizieren. Berechne Gemeinsam_Bestellt = ANZAHL(DISTINCT ap1.Auftragsnummer). Gib Lieferant_1, Lieferant_2, Gemeinsam_Bestellt zurück, absteigend sortiert nach Gemeinsam_Bestellt und dann nach Lieferant_1 und Lieferant_2, Top 10.",
+          "latency_ms": 3.9352080202661455
+        },
+        {
+          "query_id": "NW_DE_08",
+          "recall": 0.6666666666666666,
+          "precision": 0.6666666666666666,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [
+            "customers"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products"
+          ],
+          "search_query": "Berechne je Abnehmerland den durchschnittlichen Auftragswert in zwei Aggregationsschritten: zuerst den Auftragswert je Auftrag als SUMME(Stückpreis × Menge × (1 − Rabatt)), anschliessend den Mittelwert der Auftragswerte pro Land. Gib Land und Mittlerer_Auftragswert zurück.",
+          "latency_ms": 3.679000015836209
+        },
+        {
+          "query_id": "NW_DE_09",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "order_details"
+          ],
+          "retrieved": [],
+          "search_query": "Zähle die offenen Aufträge (Versanddatum IST NULL) und ermittle ihren rabattierten Gesamtwert. Gib Offene_Auftraege = ANZAHL(DISTINCT Auftragsnummer) und Gesamtwert = SUMME(Stückpreis × Menge × (1 − Rabatt)) zurück.",
+          "latency_ms": 2.9113749624229968
+        },
+        {
+          "query_id": "NW_DE_10",
+          "recall": 1.0,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.orders",
+            "public.order_details"
+          ],
+          "search_query": "Zeige die monatliche Nettoumsatzentwicklung nach Rabatten, gruppiert auf DATE_TRUNC('month', Auftragsdatum)::date als monat. Gib monat und Umsatz zurück, aufsteigend nach monat sortiert.",
+          "latency_ms": 2.8927079983986914
+        },
+        {
+          "query_id": "NL_DE_01",
+          "recall": 1.0,
+          "precision": 0.3333333333333333,
+          "hit": 1.0,
+          "mrr": 0.5,
+          "found": [
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "Welche Artikel werden voraussichtlich bald knapp, gemessen am aktuellen Lagerbestand im Vergleich zum Meldebestand?",
+          "latency_ms": 3.0057919793762267
+        },
+        {
+          "query_id": "NL_DE_02",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Abnehmer bestellen besonders häufig und erzielen gleichzeitig insgesamt den höchsten Bruttoauftragswert?",
+          "latency_ms": 2.031999989412725
+        },
+        {
+          "query_id": "NL_DE_03",
+          "recall": 0.5,
+          "precision": 0.2,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "orders"
+          ],
+          "missing": [
+            "shippers"
+          ],
+          "retrieved": [
+            "public.orders",
+            "public.order_details",
+            "public.us_states",
+            "public.employee_territories",
+            "public.territories"
+          ],
+          "search_query": "Bei welchen Zustellpartnern werden zugesagte Termine am häufigsten verfehlt, und wie gross ist deren gesamtes Sendungsvolumen?",
+          "latency_ms": 3.521249978803098
+        },
+        {
+          "query_id": "NL_DE_04",
+          "recall": 1.0,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products"
+          ],
+          "search_query": "Welche Artikel bewegen insgesamt die höchste Anzahl an Einheiten?",
+          "latency_ms": 3.9455409860238433
+        },
+        {
+          "query_id": "NL_DE_05",
+          "recall": 1.0,
+          "precision": 0.42857142857142855,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.employees",
+            "public.customers",
+            "public.suppliers",
+            "public.region"
+          ],
+          "search_query": "In welchen Abnehmerregionen ist der durchschnittliche Warenkorbwert am höchsten?",
+          "latency_ms": 2.6912909816019237
+        },
+        {
+          "query_id": "NL_DE_06",
+          "recall": 1.0,
+          "precision": 0.6666666666666666,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products"
+          ],
+          "search_query": "Wie entwickelt sich der rabattbereinigte Ertrag Monat für Monat?",
+          "latency_ms": 2.0133749931119382
+        },
+        {
+          "query_id": "NL_DE_07",
+          "recall": 0.3333333333333333,
+          "precision": 0.5,
+          "hit": 1.0,
+          "mrr": 0.5,
+          "found": [
+            "order_details"
+          ],
+          "missing": [
+            "products",
+            "suppliers"
+          ],
+          "retrieved": [
+            "public.orders",
+            "public.order_details"
+          ],
+          "search_query": "Welche vorgelagerten Partner erzielen über ihre Waren den höchsten rabattbereinigten Umsatz?",
+          "latency_ms": 5.843708000611514
+        },
+        {
+          "query_id": "NL_DE_08",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [
+            "public.us_states"
+          ],
+          "search_query": "Wie stark und wie häufig sind Sendungen je Frachtführer durchschnittlich verspätet?",
+          "latency_ms": 1.8884169985540211
+        },
+        {
+          "query_id": "NL_DE_09",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "employees",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Vertriebsmitarbeitenden betreuen die breiteste Abnehmerbasis?",
+          "latency_ms": 1.7054170020855963
+        },
+        {
+          "query_id": "NL_DE_10",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "orders"
+          ],
+          "retrieved": [
+            "public.us_states"
+          ],
+          "search_query": "Welche Konten haben bis heute keine Transaktion ausgelöst?",
+          "latency_ms": 2.803458017297089
+        }
+      ]
+    },
+    "sdg_on": {
+      "mode": "sdg_on",
+      "n_queries": 84,
+      "mean_recall_at_k": 0.4440476190476191,
+      "mean_precision_at_k": 0.29536564625850337,
+      "mean_hit_at_k": 0.5357142857142857,
+      "mean_mrr": 0.4186507936507936,
+      "perfect_recall_count": 28,
+      "zero_recall_count": 39,
+      "mean_latency_ms": 2.9480524771358994,
+      "per_query": [
+        {
+          "query_id": "NW1",
+          "recall": 1.0,
+          "precision": 0.3333333333333333,
+          "hit": 1.0,
+          "mrr": 0.3333333333333333,
+          "found": [
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.employees",
+            "public.order_details",
+            "public.products"
+          ],
+          "search_query": "products reordering largest shortage first",
+          "latency_ms": 10.322707996238023
+        },
+        {
+          "query_id": "NW2",
+          "recall": 1.0,
+          "precision": 0.75,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "categories",
+            "order_details",
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.categories",
+            "public.order_details",
+            "public.products",
+            "public.orders"
+          ],
+          "search_query": "product category revenue discounts quantity discount",
+          "latency_ms": 4.264666989911348
+        },
+        {
+          "query_id": "NW3",
+          "recall": 1.0,
+          "precision": 0.42857142857142855,
+          "hit": 1.0,
+          "mrr": 0.3333333333333333,
+          "found": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.customers",
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "customers orders quantity without discount adjustment",
+          "latency_ms": 3.9131250232458115
+        },
+        {
+          "query_id": "NW4",
+          "recall": 1.0,
+          "precision": 0.4,
+          "hit": 1.0,
+          "mrr": 0.3333333333333333,
+          "found": [
+            "orders",
+            "shippers"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.customers",
+            "public.order_details",
+            "public.orders",
+            "public.shippers",
+            "public.suppliers"
+          ],
+          "search_query": "orders shippers shipping company",
+          "latency_ms": 2.374082978349179
+        },
+        {
+          "query_id": "NW5",
+          "recall": 1.0,
+          "precision": 0.5,
+          "hit": 1.0,
+          "mrr": 0.5,
+          "found": [
+            "employees",
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.employee_territories",
+            "public.employees",
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.categories"
+          ],
+          "search_query": "employee revenue discounts orders employees descending",
+          "latency_ms": 2.8985420358367264
+        },
+        {
+          "query_id": "NW6",
+          "recall": 1.0,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products"
+          ],
+          "search_query": "top best selling products quantity sold",
+          "latency_ms": 2.3330410476773977
+        },
+        {
+          "query_id": "NW7",
+          "recall": 0.6666666666666666,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "products",
+            "suppliers"
+          ],
+          "missing": [
+            "order_details"
+          ],
+          "retrieved": [
+            "public.products",
+            "public.suppliers"
+          ],
+          "search_query": "supplier pairs frequently appear together use",
+          "latency_ms": 2.1440829732455313
+        },
+        {
+          "query_id": "NW8",
+          "recall": 1.0,
+          "precision": 0.3333333333333333,
+          "hit": 1.0,
+          "mrr": 0.3333333333333333,
+          "found": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.customers",
+            "public.employees",
+            "public.orders",
+            "public.suppliers",
+            "public.shippers",
+            "public.us_states",
+            "public.order_details"
+          ],
+          "search_query": "customer country compute average value two",
+          "latency_ms": 2.7975410339422524
+        },
+        {
+          "query_id": "NW9",
+          "recall": 1.0,
+          "precision": 0.6666666666666666,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products"
+          ],
+          "search_query": "pending orders discounted value null quantity",
+          "latency_ms": 2.140540978871286
+        },
+        {
+          "query_id": "NW10",
+          "recall": 1.0,
+          "precision": 0.6666666666666666,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.orders"
+          ],
+          "search_query": "monthly revenue trend discounts grouping month",
+          "latency_ms": 3.8374580326490104
+        },
+        {
+          "query_id": "NL1",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "products"
+          ],
+          "retrieved": [],
+          "search_query": "offerings look likely run short soon",
+          "latency_ms": 2.4742079549469054
+        },
+        {
+          "query_id": "NL2",
+          "recall": 0.6666666666666666,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [
+            "customers"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.orders"
+          ],
+          "search_query": "buyers place frequent orders represent highest",
+          "latency_ms": 2.746833022683859
+        },
+        {
+          "query_id": "NL3",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [
+            "public.products"
+          ],
+          "search_query": "delivery providers miss promised dates overall",
+          "latency_ms": 2.3507500300183892
+        },
+        {
+          "query_id": "NL4",
+          "recall": 1.0,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.products",
+            "public.order_details"
+          ],
+          "search_query": "offerings move highest units overall",
+          "latency_ms": 1.9540420034900308
+        },
+        {
+          "query_id": "NL5",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "average basket values highest buyer location",
+          "latency_ms": 1.8086250056512654
+        },
+        {
+          "query_id": "NL6",
+          "recall": 1.0,
+          "precision": 0.6666666666666666,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.orders"
+          ],
+          "search_query": "discounted income evolve month",
+          "latency_ms": 2.3683750187046826
+        },
+        {
+          "query_id": "NL7",
+          "recall": 0.6666666666666666,
+          "precision": 0.6666666666666666,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products"
+          ],
+          "missing": [
+            "suppliers"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.orders"
+          ],
+          "search_query": "upstream partners generate discounted turnover goods",
+          "latency_ms": 2.2548330016434193
+        },
+        {
+          "query_id": "NL8",
+          "recall": 1.0,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "orders",
+            "shippers"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.orders",
+            "public.shippers"
+          ],
+          "search_query": "freight carrier late shipments average often",
+          "latency_ms": 2.294125035405159
+        },
+        {
+          "query_id": "NL9",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "employees",
+            "orders"
+          ],
+          "retrieved": [
+            "public.us_states"
+          ],
+          "search_query": "staff members serve broadest buyer base",
+          "latency_ms": 2.0117919775657356
+        },
+        {
+          "query_id": "NL10",
+          "recall": 0.5,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "orders"
+          ],
+          "missing": [
+            "customers"
+          ],
+          "retrieved": [
+            "public.orders"
+          ],
+          "search_query": "accounts never transacted",
+          "latency_ms": 1.879375020507723
+        },
+        {
+          "query_id": "CL1",
+          "recall": 1.0,
+          "precision": 0.42857142857142855,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products",
+            "suppliers"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.orders",
+            "public.suppliers",
+            "public.employee_territories",
+            "public.categories",
+            "public.shippers"
+          ],
+          "search_query": "Welche Lieferanten erzielen den höchsten Umsatz nach Rabatten über ihre Artikel?",
+          "latency_ms": 2.8290420304983854
+        },
+        {
+          "query_id": "CL2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Kundenländer bringen den größten Gesamtumsatz nach Abzügen?",
+          "latency_ms": 2.487582969479263
+        },
+        {
+          "query_id": "CL3",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [],
+          "search_query": "Bei welchen Versanddienstleistern sind Sendungen im Schnitt am häufigsten verspätet?",
+          "latency_ms": 2.2014169953763485
+        },
+        {
+          "query_id": "CL4",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "employees",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Mitarbeitenden betreuen die meisten unterschiedlichen Kundenkonten?",
+          "latency_ms": 2.012292039580643
+        },
+        {
+          "query_id": "CL5",
+          "recall": 0.5,
+          "precision": 0.25,
+          "hit": 1.0,
+          "mrr": 0.5,
+          "found": [
+            "orders"
+          ],
+          "missing": [
+            "customers"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "Welche Kundenkonten haben bislang keinerlei Bestellung ausgelöst?",
+          "latency_ms": 2.3250000085681677
+        },
+        {
+          "query_id": "CL6",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "Wie entwickeln sich pro Monat erfasste Aufträge und verspätete Auslieferungen?",
+          "latency_ms": 3.6888750037178397
+        },
+        {
+          "query_id": "CL7",
+          "recall": 1.0,
+          "precision": 0.5,
+          "hit": 1.0,
+          "mrr": 0.3333333333333333,
+          "found": [
+            "employee_territories",
+            "order_details",
+            "orders",
+            "region",
+            "territories"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.region",
+            "public.employees",
+            "public.territories",
+            "public.suppliers",
+            "public.orders",
+            "public.order_details",
+            "public.customers",
+            "public.employee_territories"
+          ],
+          "search_query": "Welche Regionen sind über Gebietszuordnungen mit dem höchsten Umsatz verbunden?",
+          "latency_ms": 3.7979999906383455
+        },
+        {
+          "query_id": "CL8",
+          "recall": 0.6666666666666666,
+          "precision": 0.4,
+          "hit": 1.0,
+          "mrr": 0.3333333333333333,
+          "found": [
+            "customers",
+            "orders"
+          ],
+          "missing": [
+            "order_details"
+          ],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.customers",
+            "public.orders",
+            "public.us_states"
+          ],
+          "search_query": "Welche Kunden bestellen häufig, aber mit eher kleinem Warenkorbwert?",
+          "latency_ms": 2.4558749864809215
+        },
+        {
+          "query_id": "CL9",
+          "recall": 1.0,
+          "precision": 0.5,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products",
+            "suppliers"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.orders",
+            "public.suppliers",
+            "public.categories",
+            "public.shippers"
+          ],
+          "search_query": "Bei welchen Lieferanten gibt es Produkte ohne jeglichen Verkauf?",
+          "latency_ms": 2.7837500092573464
+        },
+        {
+          "query_id": "CL10",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customer_customer_demo",
+            "customer_demographics",
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Kundensegmente erzeugen den höchsten Erlös nach Rabatt?",
+          "latency_ms": 2.169625018723309
+        },
+        {
+          "query_id": "CL11",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "employees",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Mitarbeitenden verkaufen häufig in andere Zielländer als ihr Heimatland?",
+          "latency_ms": 8.900082961190492
+        },
+        {
+          "query_id": "CL12",
+          "recall": 1.0,
+          "precision": 0.6666666666666666,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.orders",
+            "public.order_details",
+            "public.shippers"
+          ],
+          "search_query": "In welchen Monaten ist Fracht im Verhältnis zum Umsatz am teuersten?",
+          "latency_ms": 2.528791024815291
+        },
+        {
+          "query_id": "HX1",
+          "recall": 0.6666666666666666,
+          "precision": 0.4,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "customers",
+            "orders"
+          ],
+          "missing": [
+            "order_details"
+          ],
+          "retrieved": [
+            "public.orders",
+            "public.shippers",
+            "public.customers",
+            "public.suppliers",
+            "public.us_states"
+          ],
+          "search_query": "Welche Kundenkonten haben ihren Monatsumsatz vom ersten zum letzten aktiven Monat am staerksten gesteigert (mindestens 5 Bestellungen insgesamt)?",
+          "latency_ms": 2.8328329790383577
+        },
+        {
+          "query_id": "HX3",
+          "recall": 0.5,
+          "precision": 0.25,
+          "hit": 1.0,
+          "mrr": 0.5,
+          "found": [
+            "orders"
+          ],
+          "missing": [
+            "shippers"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "Bei welchen Versanddienstleistern ist der Anteil stark verspaeteter Sendungen (mehr als 3 Tage) am groessten?",
+          "latency_ms": 3.498625010251999
+        },
+        {
+          "query_id": "HX4",
+          "recall": 1.0,
+          "precision": 0.5714285714285714,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "categories",
+            "order_details",
+            "products",
+            "suppliers"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.categories",
+            "public.customer_demographics",
+            "public.region",
+            "public.territories",
+            "public.products",
+            "public.order_details",
+            "public.suppliers"
+          ],
+          "search_query": "In welchen Produktkategorien kommt mindestens 60 Prozent des rabattierten Umsatzes von nur einem Lieferanten?",
+          "latency_ms": 2.5567919947206974
+        },
+        {
+          "query_id": "HX5",
+          "recall": 1.0,
+          "precision": 0.42857142857142855,
+          "hit": 1.0,
+          "mrr": 0.3333333333333333,
+          "found": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.customers",
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "Welche Kunden haben ueberdurchschnittliche Rabattquote, aber unterdurchschnittlichen Nettoumsatz pro Bestellung?",
+          "latency_ms": 2.571791992522776
+        },
+        {
+          "query_id": "HX7",
+          "recall": 0.5,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products"
+          ],
+          "missing": [
+            "categories",
+            "orders"
+          ],
+          "retrieved": [
+            "public.products",
+            "public.order_details"
+          ],
+          "search_query": "Welche Produktpaare aus unterschiedlichen Kategorien werden ueberproportional oft gemeinsam gekauft (Lift gegenueber Unabhaengigkeit)?",
+          "latency_ms": 2.632124989759177
+        },
+        {
+          "query_id": "HX8",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.us_states"
+          ],
+          "search_query": "In welchen Monaten stieg die Frachtkostenquote gegenueber dem Vormonat am staerksten?",
+          "latency_ms": 2.712917048484087
+        },
+        {
+          "query_id": "HX9",
+          "recall": 1.0,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products",
+            "suppliers"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.suppliers"
+          ],
+          "search_query": "Welche Lieferanten haben viele Produkte, aber einen niedrigen Anteil verkaufter Produkte?",
+          "latency_ms": 2.5515409652143717
+        },
+        {
+          "query_id": "HX12",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "categories",
+            "order_details",
+            "orders",
+            "products"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Kategorien haben nach Rabatt die hoechste Umsatzvolatilitaet zwischen Monaten?",
+          "latency_ms": 2.3440830409526825
+        },
+        {
+          "query_id": "US_CL2_U1",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Woher kommt unser Nettoumsatz?",
+          "latency_ms": 2.1920829894952476
+        },
+        {
+          "query_id": "US_CL2_U2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Märkte tragen am meisten zum Erlös bei?",
+          "latency_ms": 1.9053330179303885
+        },
+        {
+          "query_id": "US_CL2_U3",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Wo verdienen wir nach Rabatten am meisten Geld?",
+          "latency_ms": 2.137958013918251
+        },
+        {
+          "query_id": "US_CL3_U1",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [
+            "public.us_states"
+          ],
+          "search_query": "Welcher Zusteller ist im Schnitt am unpünktlichsten?",
+          "latency_ms": 2.419541997369379
+        },
+        {
+          "query_id": "US_CL3_U2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [],
+          "search_query": "Über wen kommt es am häufigsten zu Verzögerungen?",
+          "latency_ms": 2.1498340065591037
+        },
+        {
+          "query_id": "US_CL3_U3",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [
+            "public.employee_territories",
+            "public.territories"
+          ],
+          "search_query": "Bei welchem Versandkanal ist die Terminlage am schwächsten?",
+          "latency_ms": 8.556332963053137
+        },
+        {
+          "query_id": "US_CL6_U1",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Wie läuft es monatlich mit Aufträgen und Pünktlichkeit?",
+          "latency_ms": 2.7706659748218954
+        },
+        {
+          "query_id": "US_CL6_U2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders"
+          ],
+          "retrieved": [
+            "public.employee_territories"
+          ],
+          "search_query": "Wie entwickeln sich Nachfrage und Verspätungen über die Zeit?",
+          "latency_ms": 3.0020419508218765
+        },
+        {
+          "query_id": "US_CL6_U3",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders"
+          ],
+          "retrieved": [
+            "public.suppliers"
+          ],
+          "search_query": "Zeig den Monatsverlauf von Volumen und Lieferproblemen.",
+          "latency_ms": 2.6495829806663096
+        },
+        {
+          "query_id": "US_CL10_U1",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customer_customer_demo",
+            "customer_demographics",
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Kundengruppen bringen den meisten Nettoerlös?",
+          "latency_ms": 3.590958018321544
+        },
+        {
+          "query_id": "US_CL10_U2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customer_customer_demo",
+            "customer_demographics",
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Wer sind unsere wertvollsten Segmente nach Rabatten?",
+          "latency_ms": 2.2632500040344894
+        },
+        {
+          "query_id": "US_CL10_U3",
+          "recall": 0.4,
+          "precision": 0.5,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [
+            "customer_customer_demo",
+            "customer_demographics",
+            "customers"
+          ],
+          "retrieved": [
+            "public.orders",
+            "public.order_details",
+            "public.suppliers",
+            "public.shippers"
+          ],
+          "search_query": "Welche Zielgruppen liefern den größten Beitrag zum Umsatz nach Abzügen?",
+          "latency_ms": 3.025166050065309
+        },
+        {
+          "query_id": "LB_CL2_LX1",
+          "recall": 0.6666666666666666,
+          "precision": 0.2,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [
+            "customers"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.orders",
+            "public.employee_territories",
+            "public.employees",
+            "public.territories",
+            "public.categories",
+            "public.region",
+            "public.shippers",
+            "public.suppliers"
+          ],
+          "search_query": "Zeige den rabattbereinigten Umsatz pro Kundenland.",
+          "latency_ms": 2.7714999741874635
+        },
+        {
+          "query_id": "LB_CL2_LX2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [
+            "public.suppliers"
+          ],
+          "search_query": "Welche Absatzländer liefern den größten Nettoerlös nach Preisnachlässen?",
+          "latency_ms": 3.803832980338484
+        },
+        {
+          "query_id": "LB_CL2_LX3",
+          "recall": 1.0,
+          "precision": 0.375,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.employees",
+            "public.customers",
+            "public.suppliers",
+            "public.region",
+            "public.us_states"
+          ],
+          "search_query": "Aus welchen Zielregionen stammt nach Abzügen der höchste Wertbeitrag?",
+          "latency_ms": 2.7174160350114107
+        },
+        {
+          "query_id": "LB_CL3_LX1",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [],
+          "search_query": "Welcher Versanddienstleister hat im Schnitt die meisten verspäteten Sendungen?",
+          "latency_ms": 3.0741249793209136
+        },
+        {
+          "query_id": "LB_CL3_LX2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [
+            "public.suppliers"
+          ],
+          "search_query": "Bei welchem Carrier ist die durchschnittliche Lieferverzögerung am höchsten?",
+          "latency_ms": 2.10266700014472
+        },
+        {
+          "query_id": "LB_CL3_LX3",
+          "recall": 0.5,
+          "precision": 0.16666666666666666,
+          "hit": 1.0,
+          "mrr": 0.25,
+          "found": [
+            "orders"
+          ],
+          "missing": [
+            "shippers"
+          ],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "Über welchen Zustellkanal entsteht der größte Zeitverzug gegenüber dem Solltermin?",
+          "latency_ms": 2.7458330150693655
+        },
+        {
+          "query_id": "LB_CL6_LX1",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "Zeige pro Monat die Anzahl Aufträge und verspäteten Auslieferungen.",
+          "latency_ms": 2.6424580137245357
+        },
+        {
+          "query_id": "LB_CL6_LX2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders"
+          ],
+          "retrieved": [
+            "public.suppliers"
+          ],
+          "search_query": "Wie entwickeln sich monatlich Auftragseingang und Lieferverzug?",
+          "latency_ms": 2.346124965697527
+        },
+        {
+          "query_id": "LB_CL6_LX3",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders"
+          ],
+          "retrieved": [
+            "public.employee_territories",
+            "public.us_states",
+            "public.territories"
+          ],
+          "search_query": "Wie verändert sich im Zeitverlauf die Kombination aus Nachfragefluss und Terminüberschreitungen?",
+          "latency_ms": 3.285209008026868
+        },
+        {
+          "query_id": "LB_CL10_LX1",
+          "recall": 0.4,
+          "precision": 0.3333333333333333,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [
+            "customer_customer_demo",
+            "customer_demographics",
+            "customers"
+          ],
+          "retrieved": [
+            "public.orders",
+            "public.order_details",
+            "public.employee_territories",
+            "public.products",
+            "public.employees",
+            "public.territories"
+          ],
+          "search_query": "Zeige den rabattbereinigten Umsatz je Kundensegment.",
+          "latency_ms": 2.435999980662018
+        },
+        {
+          "query_id": "LB_CL10_LX2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customer_customer_demo",
+            "customer_demographics",
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Abnehmergruppen erzielen den höchsten Erlös nach Nachlässen?",
+          "latency_ms": 2.6666250196285546
+        },
+        {
+          "query_id": "LB_CL10_LX3",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customer_customer_demo",
+            "customer_demographics",
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [
+            "public.products"
+          ],
+          "search_query": "Welche Profile im Kundenstamm tragen nach Preiszugeständnissen den größten Nettoertrag?",
+          "latency_ms": 2.1199999609962106
+        },
+        {
+          "query_id": "NW_DE_01",
+          "recall": 1.0,
+          "precision": 0.16666666666666666,
+          "hit": 1.0,
+          "mrr": 0.25,
+          "found": [
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.customer_customer_demo",
+            "public.customer_demographics",
+            "public.order_details",
+            "public.products",
+            "public.orders",
+            "public.suppliers"
+          ],
+          "search_query": "Gib die fünf Artikel zurück, deren Lagerbestand unter dem Meldebestand liegt, sortiert nach grösster Bestandslücke zuerst. Liefere genau: Artikelnummer, Artikelbezeichnung, Lagerbestand und Meldebestand.",
+          "latency_ms": 3.0730830039829016
+        },
+        {
+          "query_id": "NW_DE_02",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "categories",
+            "products",
+            "order_details"
+          ],
+          "retrieved": [],
+          "search_query": "Berechne je Warengruppe den Nettoumsatz nach Rabatten als SUMME(Stückpreis × Menge × (1 − Rabatt)). Gib für alle Warengruppen den Warengruppennamen und den Nettoumsatz zurück, absteigend nach Nettoumsatz sortiert.",
+          "latency_ms": 2.996916009578854
+        },
+        {
+          "query_id": "NW_DE_03",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "orders",
+            "order_details"
+          ],
+          "retrieved": [],
+          "search_query": "Liste alle Abnehmer mit mehr als 10 verschiedenen Aufträgen. Gib Abnehmernummer, Firmenbezeichnung, Auftragsanzahl und Auftragswert zurück, wobei Auftragswert = SUMME(Stückpreis × Menge) ohne Rabattberücksichtigung. Sortiere absteigend nach Auftragswert und dann nach Abnehmernummer.",
+          "latency_ms": 2.9945410205982625
+        },
+        {
+          "query_id": "NW_DE_04",
+          "recall": 0.5,
+          "precision": 0.3333333333333333,
+          "hit": 1.0,
+          "mrr": 0.5,
+          "found": [
+            "orders"
+          ],
+          "missing": [
+            "shippers"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products"
+          ],
+          "search_query": "Gib für jeden Versanddienstleister anhand von Aufträgen und Dienstleisterstamm die Dienstleisternummer, die Firmenbezeichnung, die Anzahl verspäteter Sendungen (Versanddatum > Solltermin) und die Gesamtzahl der Sendungen zurück.",
+          "latency_ms": 3.1850420054979622
+        },
+        {
+          "query_id": "NW_DE_05",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "employees",
+            "orders",
+            "order_details"
+          ],
+          "retrieved": [
+            "public.shippers"
+          ],
+          "search_query": "Berechne für jede Mitarbeiterin und jeden Mitarbeiter den rabattierten Nettoumsatz aus den zugehörigen Aufträgen. Verknüpfe Personal-, Auftrags- und Auftragspositionsdaten und gib Personalnummer, Vorname, Nachname und Nettoumsatz zurück, absteigend nach Nettoumsatz sortiert.",
+          "latency_ms": 2.977500029373914
+        },
+        {
+          "query_id": "NW_DE_06",
+          "recall": 1.0,
+          "precision": 0.3333333333333333,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.suppliers",
+            "public.employees",
+            "public.customers"
+          ],
+          "search_query": "Gib die fünf Artikel mit der höchsten verkauften Stückzahl zurück. Nutze PostgreSQL LIMIT 5 (nicht TOP). Liefere Artikelnummer, Artikelbezeichnung und verkaufte Stückzahl, absteigend sortiert nach Stückzahl und dann aufsteigend nach Artikelnummer.",
+          "latency_ms": 3.531792026478797
+        },
+        {
+          "query_id": "NW_DE_07",
+          "recall": 1.0,
+          "precision": 0.6,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products",
+            "suppliers"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.us_states",
+            "public.suppliers"
+          ],
+          "search_query": "Finde die Lieferantenpaare, die am häufigsten zusammen in derselben Bestellung vorkommen. Nutze einen Self-Join auf Auftragspositionen als ap1 und ap2 (gleiche Auftragsnummer, unterschiedliche Artikelnummer), verknüpfe Artikel p1/p2 und Lieferanten l1/l2, und erzwinge l1.Lieferantennummer < l2.Lieferantennummer, um Paare zu deduplizieren. Berechne Gemeinsam_Bestellt = ANZAHL(DISTINCT ap1.Auftragsnummer). Gib Lieferant_1, Lieferant_2, Gemeinsam_Bestellt zurück, absteigend sortiert nach Gemeinsam_Bestellt und dann nach Lieferant_1 und Lieferant_2, Top 10.",
+          "latency_ms": 4.278749984223396
+        },
+        {
+          "query_id": "NW_DE_08",
+          "recall": 0.6666666666666666,
+          "precision": 0.6666666666666666,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [
+            "customers"
+          ],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products"
+          ],
+          "search_query": "Berechne je Abnehmerland den durchschnittlichen Auftragswert in zwei Aggregationsschritten: zuerst den Auftragswert je Auftrag als SUMME(Stückpreis × Menge × (1 − Rabatt)), anschliessend den Mittelwert der Auftragswerte pro Land. Gib Land und Mittlerer_Auftragswert zurück.",
+          "latency_ms": 3.2346659572795033
+        },
+        {
+          "query_id": "NW_DE_09",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "order_details"
+          ],
+          "retrieved": [],
+          "search_query": "Zähle die offenen Aufträge (Versanddatum IST NULL) und ermittle ihren rabattierten Gesamtwert. Gib Offene_Auftraege = ANZAHL(DISTINCT Auftragsnummer) und Gesamtwert = SUMME(Stückpreis × Menge × (1 − Rabatt)) zurück.",
+          "latency_ms": 2.83241702709347
+        },
+        {
+          "query_id": "NW_DE_10",
+          "recall": 1.0,
+          "precision": 0.6666666666666666,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.employee_territories"
+          ],
+          "search_query": "Zeige die monatliche Nettoumsatzentwicklung nach Rabatten, gruppiert auf DATE_TRUNC('month', Auftragsdatum)::date als monat. Gib monat und Umsatz zurück, aufsteigend nach monat sortiert.",
+          "latency_ms": 3.0552090029232204
+        },
+        {
+          "query_id": "NL_DE_01",
+          "recall": 1.0,
+          "precision": 0.3333333333333333,
+          "hit": 1.0,
+          "mrr": 0.5,
+          "found": [
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products",
+            "public.us_states"
+          ],
+          "search_query": "Welche Artikel werden voraussichtlich bald knapp, gemessen am aktuellen Lagerbestand im Vergleich zum Meldebestand?",
+          "latency_ms": 2.907374990172684
+        },
+        {
+          "query_id": "NL_DE_02",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Abnehmer bestellen besonders häufig und erzielen gleichzeitig insgesamt den höchsten Bruttoauftragswert?",
+          "latency_ms": 3.250999958254397
+        },
+        {
+          "query_id": "NL_DE_03",
+          "recall": 0.5,
+          "precision": 0.2,
+          "hit": 1.0,
+          "mrr": 0.3333333333333333,
+          "found": [
+            "orders"
+          ],
+          "missing": [
+            "shippers"
+          ],
+          "retrieved": [
+            "public.employee_territories",
+            "public.us_states",
+            "public.orders",
+            "public.order_details",
+            "public.territories"
+          ],
+          "search_query": "Bei welchen Zustellpartnern werden zugesagte Termine am häufigsten verfehlt, und wie gross ist deren gesamtes Sendungsvolumen?",
+          "latency_ms": 3.025582991540432
+        },
+        {
+          "query_id": "NL_DE_04",
+          "recall": 1.0,
+          "precision": 1.0,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "products"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.products"
+          ],
+          "search_query": "Welche Artikel bewegen insgesamt die höchste Anzahl an Einheiten?",
+          "latency_ms": 2.5640829699113965
+        },
+        {
+          "query_id": "NL_DE_05",
+          "recall": 1.0,
+          "precision": 0.42857142857142855,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "customers",
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.customers",
+            "public.employees",
+            "public.suppliers",
+            "public.region"
+          ],
+          "search_query": "In welchen Abnehmerregionen ist der durchschnittliche Warenkorbwert am höchsten?",
+          "latency_ms": 2.8130830032750964
+        },
+        {
+          "query_id": "NL_DE_06",
+          "recall": 1.0,
+          "precision": 0.5,
+          "hit": 1.0,
+          "mrr": 1.0,
+          "found": [
+            "order_details",
+            "orders"
+          ],
+          "missing": [],
+          "retrieved": [
+            "public.order_details",
+            "public.orders",
+            "public.products",
+            "public.employee_territories"
+          ],
+          "search_query": "Wie entwickelt sich der rabattbereinigte Ertrag Monat für Monat?",
+          "latency_ms": 2.670540998224169
+        },
+        {
+          "query_id": "NL_DE_07",
+          "recall": 0.3333333333333333,
+          "precision": 0.2,
+          "hit": 1.0,
+          "mrr": 0.5,
+          "found": [
+            "order_details"
+          ],
+          "missing": [
+            "products",
+            "suppliers"
+          ],
+          "retrieved": [
+            "public.orders",
+            "public.order_details",
+            "public.employee_territories",
+            "public.categories",
+            "public.shippers"
+          ],
+          "search_query": "Welche vorgelagerten Partner erzielen über ihre Waren den höchsten rabattbereinigten Umsatz?",
+          "latency_ms": 2.574542013462633
+        },
+        {
+          "query_id": "NL_DE_08",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "orders",
+            "shippers"
+          ],
+          "retrieved": [
+            "public.us_states"
+          ],
+          "search_query": "Wie stark und wie häufig sind Sendungen je Frachtführer durchschnittlich verspätet?",
+          "latency_ms": 2.8573329909704626
+        },
+        {
+          "query_id": "NL_DE_09",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "employees",
+            "orders"
+          ],
+          "retrieved": [],
+          "search_query": "Welche Vertriebsmitarbeitenden betreuen die breiteste Abnehmerbasis?",
+          "latency_ms": 1.8783749546855688
+        },
+        {
+          "query_id": "NL_DE_10",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "customers",
+            "orders"
+          ],
+          "retrieved": [
+            "public.us_states"
+          ],
+          "search_query": "Welche Konten haben bis heute keine Transaktion ausgelöst?",
+          "latency_ms": 2.5102500221692026
+        }
+      ]
+    }
+  }
+}

@@ -31,6 +31,12 @@ from concurrent.futures import ThreadPoolExecutor
 from mcp_server.catalog.store import CatalogStore
 from mcp_server.catalog.builders.mssql import MSSQLCatalogBuilder
 from mcp_server.catalog.builders.postgres import PostgresCatalogBuilder
+from mcp_server.scout.description_generator import (
+    DescriptionGenerator,
+    NullDescriptionGenerator,
+    build_description_generator_from_env,
+)
+from mcp_server.scout.description_enricher import enrich_tables_with_descriptions
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +152,8 @@ class ScoutRunner:
         catalog_dir: str = "data/catalog",
         ttl_hours: int = 24 * 7,  # 7 days
         refresh_interval_hours: int = 24,  # Check daily
-        max_concurrent_builds: int = 1
+        max_concurrent_builds: int = 1,
+        description_generator: Optional[DescriptionGenerator] = None,
     ):
         """
         Initialize Scout Runner.
@@ -157,6 +164,9 @@ class ScoutRunner:
             ttl_hours: Catalog time-to-live in hours
             refresh_interval_hours: How often to check for refresh
             max_concurrent_builds: Max concurrent catalog builds
+            description_generator: Optional SDG v2 description generator. If
+                None, one is built from environment variables. Pass an explicit
+                generator in tests or to pre-seed with a mock.
         """
         self.db_adapter = db_adapter
         self.store = CatalogStore(catalog_dir=catalog_dir, ttl_hours=ttl_hours)
@@ -175,13 +185,40 @@ class ScoutRunner:
         self.last_build_duration = 0.0
         self.last_build_time: Optional[datetime] = None
 
-        logger.info(f"✅ ScoutRunner initialized: TTL={ttl_hours}h, refresh={refresh_interval_hours}h")
+        # SDG v2: runtime-toggled semantic descriptions. A NullDescriptionGenerator
+        # (default when SCOUT_DESCRIPTIONS_ENABLED is unset or false) stamps every
+        # table with description="" and never calls any LLM — current behaviour
+        # is preserved. An enabled generator enriches the catalog lazily the
+        # first time get_catalog() is called after the catalog is available, and
+        # the enriched catalog is then cached in-process for subsequent calls.
+        self._description_generator: DescriptionGenerator = (
+            description_generator
+            if description_generator is not None
+            else build_description_generator_from_env()
+        )
+        self._enriched_catalog: Optional[Dict[str, Any]] = None
+        self._enrichment_done: bool = False
+
+        logger.info(
+            "✅ ScoutRunner initialized: TTL=%sh, refresh=%sh, descriptions=%s",
+            ttl_hours,
+            refresh_interval_hours,
+            "on" if getattr(self._description_generator, "enabled", False) else "off",
+        )
 
     async def start(self) -> None:
         """
         Start the Scout Runner background tasks.
 
-        This is non-blocking - starts background catalog building if needed.
+        This is non-blocking. Behaviour at startup:
+          1. If the catalog is missing or expired, a build is scheduled as a
+             background task. The server remains responsive while it runs.
+          2. A follow-up prewarm task is scheduled which waits for the build
+             (if any) and then runs SDG enrichment over the catalog, so the
+             first real query does not pay the enrichment cost.
+
+        When SCOUT_DESCRIPTIONS_ENABLED is false, the enrichment step is a
+        no-op pass that stamps description="" on every table and returns.
         """
         if self._running:
             logger.warning("ScoutRunner already running")
@@ -199,6 +236,12 @@ class ScoutRunner:
             self._build_task = asyncio.create_task(self._build_catalog_async())
         else:
             logger.info("✅ Catalog is fresh, no build needed")
+
+        # Prewarm SDG enrichment at startup. Awaits the build task if one was
+        # just scheduled; otherwise fires immediately against the existing
+        # catalog. Runs off the event loop because enrichment is synchronous
+        # and, for large catalogs with a real LLM generator, can take minutes.
+        asyncio.create_task(self._prewarm_catalog_and_enrichment())
 
     async def stop(self) -> None:
         """
@@ -290,6 +333,10 @@ class ScoutRunner:
                 self.last_build_duration = build_duration
                 self.last_build_time = datetime.utcnow()
 
+                # Fresh catalog → drop the in-process enriched copy so the next
+                # get_catalog() call re-runs SDG enrichment.
+                self.invalidate_enrichment_cache()
+
                 metadata = catalog_data.get("metadata", {})
                 tables_count = metadata.get("tables_count", 0)
                 views_count = metadata.get("views_count", 0)
@@ -332,14 +379,116 @@ class ScoutRunner:
 
 
 
+    async def _prewarm_catalog_and_enrichment(self) -> None:
+        """
+        Startup-time prewarm: wait for any in-progress build, then run SDG
+        enrichment over the catalog so the first real query doesn't pay the
+        cost.
+
+        Safe to call even when:
+          - no build is in progress (falls through to immediate enrichment);
+          - no catalog exists yet (logs and returns);
+          - descriptions are disabled (NullDescriptionGenerator is a cheap
+            pass that stamps description="" on every table);
+          - enrichment throws (we log and swallow — prewarm failure must not
+            take down the MCP server).
+        """
+        try:
+            if self._build_task is not None and not self._build_task.done():
+                logger.info("🔥 Prewarm: waiting for catalog build to finish...")
+                try:
+                    await self._build_task
+                except Exception as exc:
+                    # _build_catalog_async already logs its own failure; we
+                    # just note that the prewarm is giving up.
+                    logger.warning("🔥 Prewarm: build task raised %s, skipping enrichment", exc)
+                    return
+
+            if not self.store.is_valid():
+                logger.warning("🔥 Prewarm: no valid catalog available, skipping enrichment")
+                return
+
+            gen_enabled = bool(getattr(self._description_generator, "enabled", False))
+            logger.info(
+                "🔥 Prewarm: triggering SDG enrichment (descriptions=%s)",
+                "on" if gen_enabled else "off",
+            )
+
+            # get_catalog() is synchronous and, with a real LLM generator,
+            # can block for a long time. Run it in the executor so the event
+            # loop stays responsive for health checks and concurrent requests.
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(self._executor, self.get_catalog)
+            logger.info("🔥 Prewarm: enrichment complete, first query will be warm")
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("🔥 Prewarm: unexpected failure: %s", exc)
+
     def get_catalog(self) -> Optional[Dict[str, Any]]:
         """
-        Get current catalog data.
+        Get current catalog data, enriched with SDG v2 descriptions if enabled.
 
-        Returns:
-            Catalog dict if available, None otherwise
+        When SCOUT_DESCRIPTIONS_ENABLED=true (or an explicit generator was
+        injected in __init__), the first call after the catalog becomes
+        available runs the generator over every table. The enriched catalog is
+        then held in-process so subsequent calls are free.
+
+        When disabled, returns the raw catalog from the store with
+        description="" stamped on every table.
         """
-        return self.store.load_catalog()
+        if self._enriched_catalog is not None:
+            return self._enriched_catalog
+
+        catalog = self.store.load_catalog()
+        if catalog is None:
+            return None
+
+        tables = catalog.get("tables", []) or []
+        gen = self._description_generator
+        gen_kind = type(gen).__name__
+        gen_enabled = bool(getattr(gen, "enabled", False))
+        logger.info(
+            "🔤 SDG enrichment START: generator=%s enabled=%s tables=%d",
+            gen_kind, gen_enabled, len(tables),
+        )
+        try:
+            written = enrich_tables_with_descriptions(tables, gen)
+        except Exception as exc:
+            logger.error("🔤 SDG enrichment FAILED: %s", exc)
+            written = 0
+
+        # Audit what actually landed on the catalog after enrichment so we
+        # can see from the logs whether descriptions are present.
+        non_empty = sum(
+            1 for t in tables
+            if isinstance(t, dict) and (t.get("description") or "").strip()
+        )
+        preview_table = next(
+            (t for t in tables if isinstance(t, dict) and (t.get("description") or "").strip()),
+            None,
+        )
+        if preview_table is not None:
+            preview = (preview_table.get("description") or "")[:120].replace("\n", " ")
+            logger.info(
+                "🔤 SDG enrichment DONE: writes=%d non_empty=%d/%d preview[%s]=%r",
+                written, non_empty, len(tables),
+                preview_table.get("full_name"), preview,
+            )
+        else:
+            logger.info(
+                "🔤 SDG enrichment DONE: writes=%d non_empty=%d/%d (no descriptions present)",
+                written, non_empty, len(tables),
+            )
+
+        self._enriched_catalog = catalog
+        self._enrichment_done = True
+        return self._enriched_catalog
+
+    def invalidate_enrichment_cache(self) -> None:
+        """Drop the in-process enriched catalog. Call after a fresh rebuild."""
+        self._enriched_catalog = None
+        self._enrichment_done = False
 
     def force_refresh(self) -> bool:
         """

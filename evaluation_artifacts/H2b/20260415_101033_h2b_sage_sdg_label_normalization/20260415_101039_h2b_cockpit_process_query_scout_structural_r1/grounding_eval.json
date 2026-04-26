@@ -1,0 +1,807 @@
+{
+  "generated_at_utc": "2026-04-15T10:12:14.646699Z",
+  "run_dir": "C:\\Users\\unisg\\Desktop\\pcl_julianus\\proactive-context-learning\\eval\\runs\\20260415_101039_h2b_cockpit_process_query_scout_structural_r1",
+  "run_id": "20260415_101039_h2b_cockpit_process_query_scout_structural_r1",
+  "mode_label": "scout_structural",
+  "scout_mode_start": {
+    "active": true,
+    "backend": "ScoutRunner",
+    "status": "healthy",
+    "catalog_valid": true,
+    "off_control_mode": null,
+    "meaning": "Scout mode ACTIVE: MCP discovery backend is ScoutRunner. Catalog source is scout_runner_catalog."
+  },
+  "scout_mode_end": {
+    "active": true,
+    "backend": "ScoutRunner",
+    "status": "healthy",
+    "catalog_valid": true,
+    "off_control_mode": null,
+    "meaning": "Scout mode ACTIVE: MCP discovery backend is ScoutRunner. Catalog source is scout_runner_catalog."
+  },
+  "labels_path": "C:\\Users\\unisg\\Desktop\\pcl_julianus\\proactive-context-learning\\eval\\runs\\20260415_101033_h2b_sage_sdg_label_normalization\\cockpit_partner_table_labels_v1.normalized.json",
+  "labels_meta": {
+    "dataset": "cockpit_partner_queries_v1",
+    "source_document": "/Users/juli/Downloads/CockpitMitTabellen.docx",
+    "created_at_utc": "2026-03-10T00:00:00Z",
+    "description": "Table-level relevance labels provided by practical partner (Damian).",
+    "verification_status": "partner_mapped_pending_expert_review",
+    "generated_at_utc": "2026-04-15T10:10:33.105926Z",
+    "normalization_source": "C:\\Users\\unisg\\Desktop\\pcl_julianus\\proactive-context-learning\\eval\\runs\\20260415_101033_h2b_sage_sdg_label_normalization\\label_normalization.json",
+    "scoring_policy": "resolved_only_primary_recall",
+    "unresolved_labels_explicit": true
+  },
+  "required_stage_traces": [
+    "discovery",
+    "ranked"
+  ],
+  "strict_stage_traces": true,
+  "summary": {
+    "total_queries": 9,
+    "mean_required_table_recall": 0.0,
+    "queries_with_all_required_tables_surfaced": 0,
+    "required_tables_ok_rate": 0.0,
+    "sql_present_count": 6,
+    "sql_execution_success_count": 6,
+    "median_latency_ms": 7330.0,
+    "policy_violations": 0,
+    "trace_complete_count": 9,
+    "queries_with_unresolved_required_labels": 0
+  },
+  "per_query": [
+    {
+      "query_id": "CP1",
+      "question": "Wann müssen wir neues Ø56 Material bestellen?",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 7485,
+      "error": null,
+      "required_tables_original": [
+        "dbo.KHKArtikel",
+        "dbo.KHKArtikelLieferanten",
+        "dbo.KHKArtikelVarianten"
+      ],
+      "required_tables": [
+        "khkartikel",
+        "khkartikellieferant",
+        "khkartikelvarianten"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 3,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [
+        "khkppsffmaterial",
+        "khkppsffmatbeigestellt",
+        "khkppsffretourenmat",
+        "khkppsgemeinkostensaetze",
+        "khkppsrueckmeldungenfibu",
+        "b"
+      ],
+      "surfaced_stage_by_required_table": {
+        "khkartikel": null,
+        "khkartikellieferant": null,
+        "khkartikelvarianten": null
+      },
+      "missing_required_tables": [
+        "khkartikel",
+        "khkartikellieferant",
+        "khkartikelvarianten"
+      ],
+      "stage_tables": {
+        "discovery": [
+          "khkppsffmatbeigestellt",
+          "khkppsffmaterial",
+          "khkppsffretourenmat",
+          "khkppsgemeinkostensaetze",
+          "khkppsrueckmeldungenfibu",
+          "b"
+        ],
+        "ranked": [
+          "khkppsffmatbeigestellt",
+          "khkppsffmaterial",
+          "khkppsffretourenmat",
+          "khkppsgemeinkostensaetze",
+          "khkppsrueckmeldungenfibu",
+          "b"
+        ],
+        "final_sql": [
+          "khkppsffmaterial"
+        ]
+      },
+      "trace_stage_presence": {
+        "discovery": true,
+        "ranked": true,
+        "final_sql": true
+      },
+      "missing_required_stage_traces": [],
+      "trace_complete": true,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": true,
+      "sql_execution_success": true,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": [
+        "stage_tables present in process artifact",
+        "trace_stage_presence present in process artifact",
+        "final_sql inferred from sql_query",
+        "final_sql inferred from exec_result tables",
+        "discovery path found: discovery_log (6 tables)",
+        "discovery path found: discovery_tables (6 tables)",
+        "ranked path found: sources (6 tables)",
+        "ranked path found: relevant_tables (6 tables)",
+        "ranked path found: ranked_tables (6 tables)",
+        "final_sql path found: exec_result.tables_used (1 tables)",
+        "final_sql exec_result tables inferred (1 tables)"
+      ]
+    },
+    {
+      "query_id": "CP2",
+      "question": "Wann haben wir Bestellung XY geliefert?",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 7330,
+      "error": null,
+      "required_tables_original": [
+        "dbo.KHKVKBelege",
+        "dbo.KHKBelegePositionen"
+      ],
+      "required_tables": [
+        "khkvkbelege",
+        "khkvkbelegepositionen"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 2,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [
+        "khkdispostapelpositionen",
+        "khkekbelege",
+        "khkekbelegepositionen",
+        "khkekbelegepositionenchargen",
+        "khkekbelegezuschlaege",
+        "b"
+      ],
+      "surfaced_stage_by_required_table": {
+        "khkvkbelege": null,
+        "khkvkbelegepositionen": null
+      },
+      "missing_required_tables": [
+        "khkvkbelege",
+        "khkvkbelegepositionen"
+      ],
+      "stage_tables": {
+        "discovery": [
+          "khkdispostapelpositionen",
+          "khkekbelege",
+          "khkekbelegepositionen",
+          "khkekbelegepositionenchargen",
+          "khkekbelegezuschlaege",
+          "b"
+        ],
+        "ranked": [
+          "khkdispostapelpositionen",
+          "khkekbelege",
+          "khkekbelegepositionen",
+          "khkekbelegepositionenchargen",
+          "khkekbelegezuschlaege",
+          "b"
+        ],
+        "final_sql": [
+          "khkdispostapelpositionen"
+        ]
+      },
+      "trace_stage_presence": {
+        "discovery": true,
+        "ranked": true,
+        "final_sql": true
+      },
+      "missing_required_stage_traces": [],
+      "trace_complete": true,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": true,
+      "sql_execution_success": true,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": [
+        "stage_tables present in process artifact",
+        "trace_stage_presence present in process artifact",
+        "final_sql inferred from sql_query",
+        "final_sql inferred from exec_result tables",
+        "discovery path found: discovery_log (6 tables)",
+        "discovery path found: discovery_tables (6 tables)",
+        "ranked path found: sources (6 tables)",
+        "ranked path found: relevant_tables (6 tables)",
+        "ranked path found: ranked_tables (6 tables)",
+        "final_sql path found: exec_result.tables_used (1 tables)",
+        "final_sql exec_result tables inferred (1 tables)"
+      ]
+    },
+    {
+      "query_id": "CP3",
+      "question": "Wie viele Teile wurden in den Morgenstunden 04.00-07.00 Uhr gefertigt? Mehr oder weniger als von 08.00-11.00? (Zeiterfassung / ERP)",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 4953,
+      "error": null,
+      "required_tables_original": [
+        "dbo.KHKPpsBelege",
+        "dbo.KHKPppsBelegeAGPositionen",
+        "dbo.KHKPpsStempel"
+      ],
+      "required_tables": [
+        "khkppsfabelege",
+        "khkppsfabelegeagpositionen",
+        "khkppsbdestempel"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 3,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [
+        "khkprojektezeiterfassung",
+        "bcspjmprojektevorgaengezeitenreise",
+        "khkmitarbeiter",
+        "khkppsressourcenkopf",
+        "khkprojekte",
+        "b"
+      ],
+      "surfaced_stage_by_required_table": {
+        "khkppsfabelege": null,
+        "khkppsfabelegeagpositionen": null,
+        "khkppsbdestempel": null
+      },
+      "missing_required_tables": [
+        "khkppsfabelege",
+        "khkppsfabelegeagpositionen",
+        "khkppsbdestempel"
+      ],
+      "stage_tables": {
+        "discovery": [
+          "bcspjmprojektevorgaengezeitenreise",
+          "khkmitarbeiter",
+          "khkppsressourcenkopf",
+          "khkprojekte",
+          "khkprojektezeiterfassung",
+          "b"
+        ],
+        "ranked": [
+          "bcspjmprojektevorgaengezeitenreise",
+          "khkmitarbeiter",
+          "khkppsressourcenkopf",
+          "khkprojekte",
+          "khkprojektezeiterfassung",
+          "b"
+        ],
+        "final_sql": [
+          "khkprojektezeiterfassung"
+        ]
+      },
+      "trace_stage_presence": {
+        "discovery": true,
+        "ranked": true,
+        "final_sql": true
+      },
+      "missing_required_stage_traces": [],
+      "trace_complete": true,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": true,
+      "sql_execution_success": true,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": [
+        "stage_tables present in process artifact",
+        "trace_stage_presence present in process artifact",
+        "final_sql inferred from sql_query",
+        "final_sql inferred from exec_result tables",
+        "discovery path found: discovery_log (6 tables)",
+        "discovery path found: discovery_tables (6 tables)",
+        "ranked path found: sources (6 tables)",
+        "ranked path found: relevant_tables (6 tables)",
+        "ranked path found: ranked_tables (6 tables)",
+        "final_sql path found: exec_result.tables_used (1 tables)",
+        "final_sql exec_result tables inferred (1 tables)"
+      ]
+    },
+    {
+      "query_id": "CP4",
+      "question": "Halten sich alle an die vorgeschriebenen Anwesenheits- und Pausenzeiten?",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 18207,
+      "error": null,
+      "required_tables_original": [
+        "dbo.OsemzizZEBuchungen"
+      ],
+      "required_tables": [
+        "osemzizzebuchungen"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 1,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [
+        "khkppsbdeap",
+        "khkppsrueckmeldungen",
+        "vwkhkppssammellohnschein",
+        "khkppsbdestempelbackup",
+        "bcspjmprojektevorgaengeleist"
+      ],
+      "surfaced_stage_by_required_table": {
+        "osemzizzebuchungen": null
+      },
+      "missing_required_tables": [
+        "osemzizzebuchungen"
+      ],
+      "stage_tables": {
+        "discovery": [
+          "khkppsrueckmeldungen",
+          "vwkhkppssammellohnschein",
+          "khkppsbdestempelbackup",
+          "khkppsbdeap",
+          "bcspjmprojektevorgaengeleist"
+        ],
+        "ranked": [
+          "khkppsrueckmeldungen",
+          "vwkhkppssammellohnschein",
+          "khkppsbdestempelbackup",
+          "khkppsbdeap",
+          "bcspjmprojektevorgaengeleist"
+        ],
+        "final_sql": [
+          "khkppsbdeap"
+        ]
+      },
+      "trace_stage_presence": {
+        "discovery": true,
+        "ranked": true,
+        "final_sql": true
+      },
+      "missing_required_stage_traces": [],
+      "trace_complete": true,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": true,
+      "sql_execution_success": true,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": [
+        "stage_tables present in process artifact",
+        "trace_stage_presence present in process artifact",
+        "final_sql inferred from sql_query",
+        "final_sql inferred from exec_result tables",
+        "discovery path found: discovery_log (5 tables)",
+        "discovery path found: discovery_tables (5 tables)",
+        "ranked path found: sources (5 tables)",
+        "ranked path found: relevant_tables (5 tables)",
+        "ranked path found: ranked_tables (5 tables)",
+        "final_sql path found: exec_result.tables_used (1 tables)",
+        "final_sql exec_result tables inferred (1 tables)"
+      ]
+    },
+    {
+      "query_id": "CP5",
+      "question": "Was hat MA XY heute Morgen gemacht? (Startstempel Zeiterfassung / Rückmeldungen ERP)",
+      "response_found": true,
+      "status": "failed",
+      "latency_ms": 31210,
+      "error": null,
+      "required_tables_original": [
+        "dbo.OsemzizZEBuchungen",
+        "dbo.KHKPpsStempel"
+      ],
+      "required_tables": [
+        "osemzizzebuchungen",
+        "khkppsbdestempel"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 2,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [],
+      "surfaced_stage_by_required_table": {
+        "osemzizzebuchungen": null,
+        "khkppsbdestempel": null
+      },
+      "missing_required_tables": [
+        "osemzizzebuchungen",
+        "khkppsbdestempel"
+      ],
+      "stage_tables": {
+        "discovery": [],
+        "ranked": [],
+        "final_sql": []
+      },
+      "trace_stage_presence": {
+        "discovery": true,
+        "ranked": true,
+        "final_sql": true
+      },
+      "missing_required_stage_traces": [],
+      "trace_complete": true,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": false,
+      "sql_execution_success": null,
+      "policy_violation": false,
+      "error_type": "no_sql_generated",
+      "notes": [
+        "stage_tables present in process artifact",
+        "trace_stage_presence present in process artifact",
+        "discovery path found: discovery_log (0 tables)",
+        "discovery path found: discovery_tables (0 tables)",
+        "ranked path found: sources (0 tables)",
+        "ranked path found: relevant_tables (0 tables)",
+        "ranked path found: ranked_tables (0 tables)",
+        "final_sql path found: exec_result.tables_used (0 tables)"
+      ]
+    },
+    {
+      "query_id": "CP6",
+      "question": "Wurde Material XY schon angeliefert? (Lagerbuchung ERP)",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 5060,
+      "error": null,
+      "required_tables_original": [
+        "dbo.KHKEKBelege",
+        "dbo.KHKEKBelegePositionen",
+        "dbo.KHKEKBelegePositionenLager"
+      ],
+      "required_tables": [
+        "khkekbelege",
+        "khkekbelegepositionen",
+        "khkekbelegepositionenlager"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 3,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [
+        "khkppsffmaterial",
+        "khkifauftraege",
+        "khklieferschwellen",
+        "khkppsffmatbeigestellt",
+        "khkppsffretourenmat",
+        "b"
+      ],
+      "surfaced_stage_by_required_table": {
+        "khkekbelege": null,
+        "khkekbelegepositionen": null,
+        "khkekbelegepositionenlager": null
+      },
+      "missing_required_tables": [
+        "khkekbelege",
+        "khkekbelegepositionen",
+        "khkekbelegepositionenlager"
+      ],
+      "stage_tables": {
+        "discovery": [
+          "khkifauftraege",
+          "khklieferschwellen",
+          "khkppsffmatbeigestellt",
+          "khkppsffmaterial",
+          "khkppsffretourenmat",
+          "b"
+        ],
+        "ranked": [
+          "khkifauftraege",
+          "khklieferschwellen",
+          "khkppsffmatbeigestellt",
+          "khkppsffmaterial",
+          "khkppsffretourenmat",
+          "b"
+        ],
+        "final_sql": [
+          "khkppsffmaterial"
+        ]
+      },
+      "trace_stage_presence": {
+        "discovery": true,
+        "ranked": true,
+        "final_sql": true
+      },
+      "missing_required_stage_traces": [],
+      "trace_complete": true,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": true,
+      "sql_execution_success": true,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": [
+        "stage_tables present in process artifact",
+        "trace_stage_presence present in process artifact",
+        "final_sql inferred from sql_query",
+        "final_sql inferred from exec_result tables",
+        "discovery path found: discovery_log (6 tables)",
+        "discovery path found: discovery_tables (6 tables)",
+        "ranked path found: sources (6 tables)",
+        "ranked path found: relevant_tables (6 tables)",
+        "ranked path found: ranked_tables (6 tables)",
+        "final_sql path found: exec_result.tables_used (1 tables)",
+        "final_sql exec_result tables inferred (1 tables)"
+      ]
+    },
+    {
+      "query_id": "CP7",
+      "question": "Korrelieren nicht erfüllte Wartungspunkte mit Wartungskosten? (ZP / ReWe)",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 7419,
+      "error": null,
+      "required_tables_original": [
+        "KHKBuchungserfassung"
+      ],
+      "required_tables": [
+        "khkbuchungserfassung"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 1,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [
+        "khkppswerkzeuge",
+        "khkdruckprozessedruckbelege2",
+        "khkppsressourcenagpositionen",
+        "khkdruckbelegekennzeichen",
+        "khkppsfabelegeagpositionen"
+      ],
+      "surfaced_stage_by_required_table": {
+        "khkbuchungserfassung": null
+      },
+      "missing_required_tables": [
+        "khkbuchungserfassung"
+      ],
+      "stage_tables": {
+        "discovery": [
+          "khkppswerkzeuge",
+          "khkdruckprozessedruckbelege2",
+          "khkppsressourcenagpositionen",
+          "khkdruckbelegekennzeichen",
+          "khkppsfabelegeagpositionen"
+        ],
+        "ranked": [
+          "khkppswerkzeuge",
+          "khkdruckprozessedruckbelege2",
+          "khkppsressourcenagpositionen",
+          "khkdruckbelegekennzeichen",
+          "khkppsfabelegeagpositionen"
+        ],
+        "final_sql": [
+          "khkppswerkzeuge"
+        ]
+      },
+      "trace_stage_presence": {
+        "discovery": true,
+        "ranked": true,
+        "final_sql": true
+      },
+      "missing_required_stage_traces": [],
+      "trace_complete": true,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": true,
+      "sql_execution_success": true,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": [
+        "stage_tables present in process artifact",
+        "trace_stage_presence present in process artifact",
+        "final_sql inferred from sql_query",
+        "final_sql inferred from exec_result tables",
+        "discovery path found: discovery_log (5 tables)",
+        "discovery path found: discovery_tables (5 tables)",
+        "ranked path found: sources (5 tables)",
+        "ranked path found: relevant_tables (5 tables)",
+        "ranked path found: ranked_tables (5 tables)",
+        "final_sql path found: exec_result.tables_used (1 tables)",
+        "final_sql exec_result tables inferred (1 tables)"
+      ]
+    },
+    {
+      "query_id": "CP8",
+      "question": "Verhältnis Vorgabe zu Ist (keine Felder!) pro Artikel pro Mitarbeiter? (ERP)",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 5870,
+      "error": null,
+      "required_tables_original": [
+        "dbo.KHKPpsBelege",
+        "dbo.KHKPppsBelegeAGPositionen",
+        "dbo.KHKPpsStempel"
+      ],
+      "required_tables": [
+        "khkppsfabelege",
+        "khkppsfabelegeagpositionen",
+        "khkppsbdestempel"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 3,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [
+        "bcspjmartikelobjektverbrauch",
+        "bcspjmartikelobjektzaehler",
+        "bcspjmobjekte",
+        "bcspjmobjekterapport",
+        "bcspjmobjektestapel",
+        "bcspjmartikelobjectconsumption",
+        "bcspjmobjektestacks",
+        "bcspjmadressenkontakt",
+        "bcspjmobjektezubehoer",
+        "bcspjmprojekte",
+        "b"
+      ],
+      "surfaced_stage_by_required_table": {
+        "khkppsfabelege": null,
+        "khkppsfabelegeagpositionen": null,
+        "khkppsbdestempel": null
+      },
+      "missing_required_tables": [
+        "khkppsfabelege",
+        "khkppsfabelegeagpositionen",
+        "khkppsbdestempel"
+      ],
+      "stage_tables": {
+        "discovery": [
+          "bcspjmartikelobjektverbrauch",
+          "bcspjmartikelobjektzaehler",
+          "bcspjmobjekte",
+          "bcspjmobjekterapport",
+          "bcspjmobjektestapel",
+          "bcspjmartikelobjectconsumption",
+          "bcspjmobjektestacks",
+          "bcspjmadressenkontakt",
+          "bcspjmobjektezubehoer",
+          "bcspjmprojekte",
+          "b"
+        ],
+        "ranked": [
+          "bcspjmartikelobjektverbrauch",
+          "bcspjmartikelobjektzaehler",
+          "bcspjmobjekte",
+          "bcspjmobjekterapport",
+          "bcspjmobjektestapel",
+          "bcspjmartikelobjectconsumption",
+          "bcspjmobjektestacks",
+          "bcspjmadressenkontakt",
+          "bcspjmobjektezubehoer",
+          "bcspjmprojekte",
+          "b"
+        ],
+        "final_sql": []
+      },
+      "trace_stage_presence": {
+        "discovery": true,
+        "ranked": true,
+        "final_sql": true
+      },
+      "missing_required_stage_traces": [],
+      "trace_complete": true,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": false,
+      "sql_execution_success": null,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": [
+        "stage_tables present in process artifact",
+        "trace_stage_presence present in process artifact",
+        "discovery path found: discovery_log (11 tables)",
+        "discovery path found: discovery_tables (11 tables)",
+        "ranked path found: sources (11 tables)",
+        "ranked path found: relevant_tables (11 tables)",
+        "ranked path found: ranked_tables (11 tables)",
+        "final_sql path found: exec_result.tables_used (0 tables)"
+      ]
+    },
+    {
+      "query_id": "CP9",
+      "question": "Abweichungen Start Zeiterfassung zu Start BDE (Zeit/ERP)",
+      "response_found": true,
+      "status": "success",
+      "latency_ms": 5906,
+      "error": null,
+      "required_tables_original": [
+        "dbo.OsemzizZEBuchungen",
+        "dbo.KHKPpsStempel",
+        "dbo.KHKPpsBelege",
+        "dbo.KHKPppsBelegeAGPositionen"
+      ],
+      "required_tables": [
+        "osemzizzebuchungen",
+        "khkppsbdestempel",
+        "khkppsfabelege",
+        "khkppsfabelegeagpositionen"
+      ],
+      "unresolved_required_labels": [],
+      "required_table_count": 4,
+      "matched_required_table_count": 0,
+      "required_tables_ok": false,
+      "required_table_recall": 0.0,
+      "surfaced_tables": [
+        "bsbdegesrm",
+        "bsbdegesrmseriennr",
+        "bsbdestempelgesrm",
+        "bsbdestempelgesrmseriennr",
+        "bscrmkalenderpositionen",
+        "b"
+      ],
+      "surfaced_stage_by_required_table": {
+        "osemzizzebuchungen": null,
+        "khkppsbdestempel": null,
+        "khkppsfabelege": null,
+        "khkppsfabelegeagpositionen": null
+      },
+      "missing_required_tables": [
+        "osemzizzebuchungen",
+        "khkppsbdestempel",
+        "khkppsfabelege",
+        "khkppsfabelegeagpositionen"
+      ],
+      "stage_tables": {
+        "discovery": [
+          "bsbdegesrm",
+          "bsbdegesrmseriennr",
+          "bsbdestempelgesrm",
+          "bsbdestempelgesrmseriennr",
+          "bscrmkalenderpositionen",
+          "b"
+        ],
+        "ranked": [
+          "bsbdegesrm",
+          "bsbdegesrmseriennr",
+          "bsbdestempelgesrm",
+          "bsbdestempelgesrmseriennr",
+          "bscrmkalenderpositionen",
+          "b"
+        ],
+        "final_sql": []
+      },
+      "trace_stage_presence": {
+        "discovery": true,
+        "ranked": true,
+        "final_sql": true
+      },
+      "missing_required_stage_traces": [],
+      "trace_complete": true,
+      "discovery_stage_required_recall": 0.0,
+      "ranked_stage_required_recall": 0.0,
+      "final_sql_required_recall": 0.0,
+      "sql_present": false,
+      "sql_execution_success": null,
+      "policy_violation": false,
+      "error_type": null,
+      "notes": [
+        "stage_tables present in process artifact",
+        "trace_stage_presence present in process artifact",
+        "discovery path found: discovery_log (6 tables)",
+        "discovery path found: discovery_tables (6 tables)",
+        "ranked path found: sources (6 tables)",
+        "ranked path found: relevant_tables (6 tables)",
+        "ranked path found: ranked_tables (6 tables)",
+        "final_sql path found: exec_result.tables_used (0 tables)"
+      ]
+    }
+  ]
+}

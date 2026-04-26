@@ -17,8 +17,7 @@ from dotenv import load_dotenv
 # MCP Server internal imports (using absolute imports for Uvicorn compatibility)
 from mcp_server.database.database_adapter import DatabaseAdapter
 from mcp_server.scout.mode import run_scout_mode
-from mcp_server.tools import MCPTools
-from mcp_server.scout.runner import ScoutRunner
+from mcp_server.tools import MCPTools, _get_scout_runner
 from mcp_server.server.health import set_scout_runner, get_health_status, get_health_summary
 
 # Load environment variables
@@ -151,7 +150,7 @@ async def startup_event():
                         run_scout_mode(db_manager, cache_dir=cache_dir),
                         timeout=30
                     )
-                    logger.info(f"🔍 Legacy Scout Mode Report: {scout_report}")
+                    logger.info(f"🔍 Scout Mode (MSSQL fallback) report: {scout_report}")
                 except asyncio.TimeoutError:
                     logger.warning("⚠️ Legacy Scout Mode startup job timed out (non-blocking)")
                 except Exception as scout_error:
@@ -203,9 +202,9 @@ async def shutdown_event():
 @app.get("/health")
 async def health_check():
     """
-    Phase 1: Comprehensive health check with Scout Mode metrics.
+    Comprehensive health check with Scout Mode metrics.
 
-    Returns comprehensive health status including:
+    Returns health status including:
     - Database connectivity
     - Scout catalog status and metrics
     - Build statistics and performance

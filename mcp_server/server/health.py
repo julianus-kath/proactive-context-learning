@@ -4,6 +4,7 @@ Phase 1: Catalog health monitoring and metrics.
 """
 
 import logging
+import os
 from datetime import datetime
 from typing import Dict, Any, Optional
 
@@ -117,6 +118,7 @@ async def get_health_status(db_manager=None) -> Dict[str, Any]:
                 "backend": "SchemaCatalog",
                 "dialect": dialect or "unknown",
                 "table_count": table_count,
+                "off_control_mode": os.getenv("SCOUT_OFF_CONTROL_MODE", "aligned_table_ranker"),
             }
             # Overall health remains driven by DB + generic status; do not downgrade
 

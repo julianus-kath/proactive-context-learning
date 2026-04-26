@@ -15,9 +15,8 @@ COPY simple_sql_agent/requirements.txt /app/requirements.txt
 RUN pip install -r /app/requirements.txt
 
 COPY simple_sql_agent /app/simple_sql_agent
-COPY data /app/data
 
-RUN mkdir -p /app/logs/conversations
+RUN mkdir -p /app/logs/conversations /app/data
 
 EXPOSE 8080
 

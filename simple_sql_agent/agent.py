@@ -20,6 +20,43 @@ from simple_sql_agent.prompts import get_system_prompt, load_concepts
 from simple_sql_agent.debug_logger import get_debug_logger
 
 logger = logging.getLogger(__name__)
+TABLE_NAME_PATTERN = re.compile(r"\b(?:[A-Za-z_][A-Za-z0-9_]*\.)[A-Za-z_][A-Za-z0-9_]*\b")
+
+
+def _merge_unique(values: List[str], extras: List[str]) -> List[str]:
+    out: List[str] = list(values)
+    for item in extras:
+        text = str(item or "").strip()
+        if not text or text in out:
+            continue
+        out.append(text)
+    return out
+
+
+def _extract_discovery_tables(text: str) -> List[str]:
+    if not text:
+        return []
+
+    tables: List[str] = []
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        # Discover tool formats table headers as:
+        # "### dbo.TableName (relevance: ...)"
+        if line.startswith("### "):
+            heading = line[4:].strip()
+            name = heading.split("(", 1)[0].strip().strip("`")
+            if name and name.lower() != "join paths":
+                tables = _merge_unique(tables, [name])
+
+        # Capture schema-qualified table tokens in join-path lines and free text.
+        matches = [m.group(0).rstrip(".,;:") for m in TABLE_NAME_PATTERN.finditer(line)]
+        if matches:
+            tables = _merge_unique(tables, matches)
+
+    return tables
 
 
 def parse_query_result(content: str) -> Dict[str, Any]:
@@ -129,7 +166,7 @@ class SQLAgentGraph:
         model_name: str = "gpt-4o",
         temperature: float = 0.0,
         concepts_path: Optional[str] = None,
-        max_iterations: int = 15,
+        max_iterations: int = 25,
     ):
         """
         Initialize the SQL agent.
@@ -138,7 +175,7 @@ class SQLAgentGraph:
             model_name: OpenAI model to use
             temperature: LLM temperature (0 = deterministic)
             concepts_path: Path to concepts.json for domain knowledge
-            max_iterations: Max LLM calls per query (default: 15)
+            max_iterations: Max LLM calls per query (default: 25)
         """
         self.model_name = model_name
         self.temperature = temperature
@@ -254,6 +291,9 @@ class SQLAgentGraph:
             exec_result = None
             iterations = 0
             last_tool_input = {}
+            discovery_tables: List[str] = []
+            ranked_tables: List[str] = []
+            discovery_log: List[Dict[str, Any]] = []
 
             # Use astream_events for real-time logging
             async for event in self.graph.astream_events(
@@ -304,6 +344,18 @@ class SQLAgentGraph:
                         exec_result = parse_query_result(tool_output_str)
                         if sql_query:
                             exec_result["sql_query"] = sql_query
+                    elif event_name == "discover_tables":
+                        discovered = _extract_discovery_tables(tool_output_str)
+                        discovery_tables = _merge_unique(discovery_tables, discovered)
+                        ranked_tables = _merge_unique(ranked_tables, discovered)
+                        discover_input = last_tool_input.get("discover_tables", {})
+                        discovery_log.append(
+                            {
+                                "query": discover_input.get("query") if isinstance(discover_input, dict) else None,
+                                "tables": discovered,
+                                "table_count": len(discovered),
+                            }
+                        )
 
             # Calculate latency
             latency_ms = int((time.time() - start_time) * 1000)
@@ -323,6 +375,9 @@ class SQLAgentGraph:
                 "success": True,
                 "message_count": iterations,
                 "latency_ms": latency_ms,
+                "discovery_tables": discovery_tables,
+                "ranked_tables": ranked_tables,
+                "discovery_log": discovery_log,
             }
 
         except Exception as e:
@@ -366,7 +421,7 @@ def create_sql_agent(
     model_name: str = "gpt-4o",
     temperature: float = 0.0,
     concepts_path: Optional[str] = None,
-    max_iterations: int = 15,
+    max_iterations: int = 25,
 ) -> SQLAgentGraph:
     """
     Create a new SQL agent instance.
@@ -375,7 +430,7 @@ def create_sql_agent(
         model_name: OpenAI model to use (default: gpt-4o)
         temperature: LLM temperature (default: 0.0 for deterministic)
         concepts_path: Path to concepts.json (optional, uses default)
-        max_iterations: Max LLM calls per query (default: 15)
+        max_iterations: Max LLM calls per query (default: 25)
 
     Returns:
         SQLAgentGraph instance

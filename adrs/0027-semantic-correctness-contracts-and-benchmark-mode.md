@@ -1,7 +1,9 @@
-# ADR 0027: Semantic Correctness Contracts & Benchmark Mode
+# ADR-0027: Semantic Correctness Contracts & Benchmark Mode
+**Author**: Julianus Kath
 
-**Date:** December 25, 2025  
-**Status:** Accepted
+
+**Date**: 2025-12-25
+**Status**: Accepted — the ablation framing (Scout vs. no-Scout baseline) proposed here is **superseded by [ADR-0036](0036-ablation-axis-pivot-sdg.md)**. The `.contracts.json` file format introduced in this ADR remains in use. See [`README.md`](README.md).
 
 ---
 

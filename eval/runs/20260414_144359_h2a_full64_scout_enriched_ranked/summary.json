@@ -1,0 +1,57 @@
+{
+  "mode": "scout_enriched_ranked",
+  "n_queries": 64,
+  "mean_recall": 0.7201,
+  "sql_generation_rate": 0.7969,
+  "perfect_recall_count": 37,
+  "zero_recall_count": 13,
+  "errors": 0,
+  "per_category": {
+    "crosslingual": {
+      "n": 12,
+      "mean_recall": 0.7556
+    },
+    "complex": {
+      "n": 8,
+      "mean_recall": 0.6562
+    },
+    "lexical_breakpoint": {
+      "n": 12,
+      "mean_recall": 0.5111
+    },
+    "paraphrase": {
+      "n": 10,
+      "mean_recall": 0.8833
+    },
+    "direct": {
+      "n": 10,
+      "mean_recall": 1.0
+    },
+    "underspecified": {
+      "n": 12,
+      "mean_recall": 0.5667
+    }
+  },
+  "per_language": {
+    "de": {
+      "n": 44,
+      "mean_recall": 0.6193
+    },
+    "en": {
+      "n": 20,
+      "mean_recall": 0.9417
+    }
+  },
+  "env_snapshot": {
+    "SCOUT_DISABLE": "false",
+    "SCOUT_DESCRIPTIONS_ENABLED": "true",
+    "SCOUT_DESCRIPTIONS_RANKING": "true",
+    "SCOUT_DESCRIPTIONS_MODEL": "gpt-4o-mini",
+    "SCOUT_DESCRIPTIONS_DATABASE_TYPE": "northwind",
+    "SCOUT_DESCRIPTIONS_CACHE_PATH": "eval/cache/northwind_descriptions.json",
+    "DB_DIALECT": "postgres",
+    "DB_NAME": null,
+    "DB_HOST": null,
+    "DB_PORT": null
+  }
+}

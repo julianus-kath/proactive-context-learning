@@ -1,7 +1,9 @@
-# ADR 0015: Semantic Table Ranking for Autonomous Query Execution
+# ADR-0015: Semantic Table Ranking for Autonomous Query Execution
+**Author**: Julianus Kath
 
-**Date:** 2024  
-**Status:** ACCEPTED  
+
+**Date**: 2025-10-20
+**Status**: ACCEPTED  
 **Context:** Phase 7.1 Enhancement  
 
 ## Problem

@@ -51,6 +51,9 @@ class ERPChatbot {
         this.helpBtn = document.getElementById('helpBtn');
         this.settingsBtn = document.getElementById('settingsBtn');
         this.themeToggleBtn = document.getElementById('themeToggleBtn');
+        this.sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+        this.sidebarBackdrop = document.getElementById('sidebarBackdrop');
+        this.appSidebar = document.getElementById('appSidebar');
         this.dbDialectTag = document.getElementById('dbDialectTag');
         this.dbNameTag = document.getElementById('dbNameTag');
         
@@ -97,6 +100,23 @@ class ERPChatbot {
         if (this.themeToggleBtn) {
             this.themeToggleBtn.addEventListener('click', () => this.toggleTheme());
         }
+        if (this.sidebarToggleBtn) {
+            this.sidebarToggleBtn.addEventListener('click', () => this.toggleSidebar());
+        }
+        if (this.sidebarBackdrop) {
+            this.sidebarBackdrop.addEventListener('click', () => this.closeSidebar());
+        }
+        // Close the mobile sidebar when the user switches to a wider viewport
+        // so state doesn't leak across layouts.
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) this.closeSidebar();
+        });
+        // Escape closes the sidebar on mobile (parity with modal UX).
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.body.classList.contains('sidebar-open')) {
+                this.closeSidebar();
+            }
+        });
 
         // Chat scroll events
         if (this.chatMessages) {
@@ -199,6 +219,28 @@ class ERPChatbot {
         }
     }
 
+    toggleSidebar() {
+        const open = !document.body.classList.contains('sidebar-open');
+        document.body.classList.toggle('sidebar-open', open);
+        if (this.sidebarToggleBtn) {
+            this.sidebarToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+        if (this.sidebarBackdrop) {
+            this.sidebarBackdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
+        }
+    }
+
+    closeSidebar() {
+        if (!document.body.classList.contains('sidebar-open')) return;
+        document.body.classList.remove('sidebar-open');
+        if (this.sidebarToggleBtn) {
+            this.sidebarToggleBtn.setAttribute('aria-expanded', 'false');
+        }
+        if (this.sidebarBackdrop) {
+            this.sidebarBackdrop.setAttribute('aria-hidden', 'true');
+        }
+    }
+
     async initConfig() {
         try {
             const response = await this.fetchWithTimeout('/config', { method: 'GET' }, 5000);
@@ -254,10 +296,17 @@ class ERPChatbot {
         const abortController = controller || new AbortController();
         const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
         try {
-            return await fetch(url, {
+            const response = await fetch(url, {
                 ...options,
                 signal: abortController.signal
             });
+            // Session expired or was never established — bounce to the login page.
+            // We only do this for same-origin requests to avoid redirect loops with
+            // the user-configured service URL (which may be a different host).
+            if (response.status === 401 && !/^https?:\/\//.test(url)) {
+                window.location.href = '/login';
+            }
+            return response;
         } finally {
             clearTimeout(timeoutId);
         }
@@ -266,10 +315,14 @@ class ERPChatbot {
     handleInputChange() {
         if (!this.messageInput) return;
 
-        // Auto-resize textarea
+        // Auto-resize textarea. Cap is viewport-aware: on narrow screens we limit harder
+        // so the input doesn't eat the whole chat area; on desktop we give more room
+        // so multi-sentence questions stay visible without scrolling inside the textarea.
+        const isMobile = window.innerWidth <= 768;
+        const maxHeight = isMobile ? 140 : 220;
         this.messageInput.style.height = 'auto';
-        this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 120) + 'px';
-        
+        this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, maxHeight) + 'px';
+
         // Enable/disable send button
         if (this.sendBtn) {
             const length = this.messageInput.value.length;
@@ -609,33 +662,34 @@ class ERPChatbot {
                 const toolName = event.tool_name || 'unknown';
                 const toolInput = event.tool_input || {};
                 let toolLabel = toolName;
+                // Optional detail block rendered beneath the step label — used for
+                // the full SQL / table list so users can audit what the agent actually ran.
+                let toolDetail = null;
 
                 if (toolName === 'discover_tables' || toolName.includes('discover')) {
                     const query = toolInput.query || '';
-                    toolLabel = query
-                        ? `Searching for "${query.substring(0, 40)}${query.length > 40 ? '...' : ''}"`
-                        : 'Discovering tables...';
+                    toolLabel = query ? `Searching for "${query}"` : 'Discovering tables...';
                 } else if (toolName === 'execute_query' || toolName.includes('execute')) {
-                    const sql = toolInput.sql || '';
-                    const preview = sql.substring(0, 50).replace(/\n/g, ' ');
-                    toolLabel = sql
-                        ? `Executing: ${preview}${sql.length > 50 ? '...' : ''}`
-                        : 'Executing SQL...';
+                    const sql = (toolInput.sql || '').trim();
+                    toolLabel = sql ? 'Executing SQL' : 'Executing SQL...';
+                    toolDetail = sql ? { kind: 'sql', content: sql } : null;
                 } else if (toolName === 'get_schema' || toolName.includes('schema')) {
                     const tables = toolInput.table_names || [];
                     toolLabel = tables.length
-                        ? `Analyzing schema: ${tables.slice(0, 2).join(', ')}${tables.length > 2 ? '...' : ''}`
+                        ? `Analyzing schema (${tables.length} table${tables.length > 1 ? 's' : ''})`
                         : 'Analyzing table schema...';
+                    toolDetail = tables.length ? { kind: 'tables', content: tables.join(', ') } : null;
                 } else if (toolName === 'get_column_index') {
                     const tables = toolInput.table_names || [];
                     toolLabel = tables.length
-                        ? `Checking columns: ${tables.slice(0, 2).join(', ')}${tables.length > 2 ? '...' : ''}`
+                        ? `Checking columns (${tables.length} table${tables.length > 1 ? 's' : ''})`
                         : 'Checking columns...';
+                    toolDetail = tables.length ? { kind: 'tables', content: tables.join(', ') } : null;
                 } else {
                     toolLabel = `Calling ${toolName}...`;
                 }
 
-                this.addThinkingStep(toolLabel, timestamp);
+                this.addThinkingStep(toolLabel, timestamp, toolDetail);
                 break;
 
             case 'tool_result':
@@ -703,7 +757,7 @@ class ERPChatbot {
         }
     }
 
-    addThinkingStep(text, time) {
+    addThinkingStep(text, time, detail = null) {
         if (!this.thinkingContainer) return;
 
         const stepsDiv = this.thinkingContainer.querySelector('.thinking-steps');
@@ -711,9 +765,18 @@ class ERPChatbot {
 
         const step = document.createElement('div');
         step.className = 'thinking-step';
+        // detail: optional { kind: 'sql' | 'tables', content: string }
+        // Rendered as a preformatted block below the step label so the full
+        // SQL / table list is visible without truncation.
+        const detailHtml = detail && detail.content
+            ? `<pre class="step-detail step-detail-${detail.kind}"><code>${this.escapeHtml(detail.content)}</code></pre>`
+            : '';
         step.innerHTML = `
-            <span class="step-text">${this.escapeHtml(text)}</span>
-            <span class="step-time">${time}</span>
+            <div class="step-row">
+                <span class="step-text">${this.escapeHtml(text)}</span>
+                <span class="step-time">${time}</span>
+            </div>
+            ${detailHtml}
         `;
 
         stepsDiv.appendChild(step);
@@ -966,10 +1029,13 @@ class ERPChatbot {
     loadConversation(conversationId) {
         const conversation = this.conversations.find(c => c.id === conversationId);
         if (!conversation) return;
-        
+
         this.currentConversationId = conversationId;
         this.messages = [...conversation.messages];
         this.isUserNearBottom = true;
+        // On mobile the sidebar is an overlay — collapse it once the user makes a selection
+        // so they can immediately see the chat.
+        this.closeSidebar();
         
         // Clear and rebuild chat messages
         if (this.chatMessages) {

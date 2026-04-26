@@ -4,3 +4,6 @@ fastapi
 uvicorn
 pydantic
 aiofiles
+httpx
+itsdangerous
+python-multipart

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ERP Chatbot</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260420-3">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -34,16 +34,32 @@
         <symbol id="icon-theme" viewBox="0 0 24 24">
             <path d="M12 3a1 1 0 01.97.76A6.5 6.5 0 0012 20.5 7.5 7.5 0 1118.24 7.03 1 1 0 0116.9 6.1 5.5 5.5 0 0013 4a1 1 0 01-1-1V3z" fill="currentColor" fill-rule="evenodd" />
         </symbol>
+        <symbol id="icon-menu" viewBox="0 0 24 24">
+            <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" fill="currentColor" fill-rule="evenodd" />
+        </symbol>
+        <symbol id="icon-close" viewBox="0 0 24 24">
+            <path d="M18.3 5.71a1 1 0 00-1.41 0L12 10.59 7.11 5.7A1 1 0 005.7 7.11L10.59 12 5.7 16.89a1 1 0 101.41 1.41L12 13.41l4.89 4.89a1 1 0 001.41-1.41L13.41 12l4.89-4.89a1 1 0 000-1.4z" fill="currentColor" fill-rule="evenodd" />
+        </symbol>
         <symbol id="icon-linkedin" viewBox="0 0 24 24">
             <path d="M6.94 7.5A1.44 1.44 0 1 1 6.94 4.62 1.44 1.44 0 0 1 6.94 7.5ZM8.25 9H5.63V19.5H8.25V9ZM12.38 9H9.88V19.5H12.5V14.03C12.5 11 16.44 10.75 16.44 14.03V19.5H19.06V13.13C19.06 8.18 13.44 8.35 12.5 10.78L12.38 9Z" fill="currentColor" />
         </symbol>
         <symbol id="icon-github" viewBox="0 0 24 24">
             <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.85 10.91.57.11.78-.25.78-.55v-2.12c-3.19.69-3.86-1.35-3.86-1.35-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.69.08-.69 1.15.08 1.75 1.18 1.75 1.18 1.02 1.75 2.68 1.24 3.34.95.1-.74.4-1.24.73-1.52-2.55-.29-5.23-1.27-5.23-5.67 0-1.25.45-2.26 1.18-3.06-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.14 1.17a10.9 10.9 0 0 1 5.72 0c2.17-1.47 3.13-1.17 3.13-1.17.62 1.58.24 2.75.12 3.04.73.8 1.18 1.81 1.18 3.06 0 4.41-2.69 5.37-5.25 5.66.41.35.78 1.04.78 2.1v3.11c0 .3.21.67.79.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z" fill="currentColor" />
         </symbol>
+        <symbol id="icon-user" viewBox="0 0 24 24">
+            <!-- Neutral person silhouette; inherits theme color via currentColor -->
+            <path d="M12 12a4.5 4.5 0 100-9 4.5 4.5 0 000 9zm0 2c-3.87 0-9 1.94-9 5.5V21h18v-1.5c0-3.56-5.13-5.5-9-5.5z" fill="currentColor" fill-rule="evenodd" />
+        </symbol>
     </svg>
     <div class="app-container">
+        <!-- Backdrop shown when the sidebar is open on mobile; tap to close. -->
+        <div
+            class="sidebar-backdrop"
+            id="sidebarBackdrop"
+            aria-hidden="true"
+        ></div>
         <!-- Left Column: Conversation History -->
-        <div class="sidebar">
+        <div class="sidebar" id="appSidebar">
             <div class="sidebar-header">
                 <h2 class="app-title-text">ERP Assistant</h2>
                 <div class="status-indicator" id="statusIndicator" aria-live="polite">
@@ -95,11 +111,50 @@
         <!-- Right Column: Active Chat -->
         <div class="main-chat">
             <div class="chat-header">
+                <button
+                    class="action-btn icon-button sidebar-toggle"
+                    id="sidebarToggleBtn"
+                    type="button"
+                    title="Open conversations"
+                    aria-label="Open conversations"
+                    aria-controls="appSidebar"
+                    aria-expanded="false"
+                >
+                    <svg class="icon" aria-hidden="true">
+                        <use href="#icon-menu"></use>
+                    </svg>
+                </button>
                 <div class="chat-title">
                     <h1>Ask about your ERP data</h1>
                     <p>Query your database using natural language</p>
                 </div>
                 <div class="chat-actions">
+                    <a
+                        class="action-btn icon-button action-link"
+                        id="githubLinkBtn"
+                        href="https://github.com/julianus-kath"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="View code on GitHub"
+                        aria-label="View code on GitHub"
+                    >
+                        <svg class="icon" aria-hidden="true">
+                            <use href="#icon-github"></use>
+                        </svg>
+                    </a>
+                    <a
+                        class="action-btn icon-button action-link"
+                        id="authorLinkBtn"
+                        href="https://www.linkedin.com/in/julianus-kath/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="About the author"
+                        aria-label="About the author (LinkedIn)"
+                    >
+                        <svg class="icon" aria-hidden="true">
+                            <use href="#icon-user"></use>
+                        </svg>
+                    </a>
                     <button
                         class="action-btn icon-button"
                         id="themeToggleBtn"
@@ -228,73 +283,6 @@
         </div>
     </div>
 
-    <footer class="app-footer" aria-label="Application footer">
-        <div class="footer-content">
-            <div class="footer-left">
-                <div class="footer-profile">
-                    <img
-                        class="footer-profile-photo"
-                        src="/static/icons/profile_placeholder_jk.svg"
-                        alt="Julianus Kath profile photo"
-                    >
-                    <div class="footer-profile-details">
-                        <p class="footer-name">Julianus Kath</p>
-                        <p class="footer-title">Co-Founder &amp; CTO at CorpIn</p>
-                        <div class="footer-contact-row">
-                            <a class="footer-email" href="mailto:julianus.kath@corpin.ch">julianus.kath@corpin.ch</a>
-                            <span class="footer-divider">/</span>
-                            <a class="footer-email" href="mailto:julianus.kath@student.unisg.ch">julianus.kath@student.unisg.ch</a>
-                        </div>
-                        <div class="footer-socials">
-                            <a
-                                class="footer-social-link"
-                                href="https://www.linkedin.com/in/julianus-kath/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                aria-label="Open Julianus Kath LinkedIn profile"
-                                title="LinkedIn"
-                            >
-                                <svg class="icon" aria-hidden="true">
-                                    <use href="#icon-linkedin"></use>
-                                </svg>
-                            </a>
-                            <a
-                                class="footer-social-link"
-                                href="https://github.com/julianus-kath"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                aria-label="Open Julianus Kath GitHub profile"
-                                title="GitHub"
-                            >
-                                <svg class="icon" aria-hidden="true">
-                                    <use href="#icon-github"></use>
-                                </svg>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="footer-extra-space" aria-hidden="true">Reserved for additional info</div>
-            </div>
-
-            <div class="footer-powered-by">
-                <span class="powered-by-label">powered by</span>
-                <a
-                    class="footer-corpin-link"
-                    href="https://www.corpin.ch"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Open CorpIn website"
-                >
-                    <img
-                        src="/static/icons/corpin_logo_white.png"
-                        alt="CorpIn"
-                        class="footer-corpin-logo"
-                    >
-                </a>
-            </div>
-        </div>
-    </footer>
-
     <!-- Help Modal -->
     <div class="modal" id="helpModal" aria-hidden="true">
         <div
@@ -399,6 +387,6 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20260420-3"></script>
 </body>
 </html>

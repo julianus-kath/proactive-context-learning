@@ -8,8 +8,10 @@ Phase 6: Added structured logging and observability.
 import logging
 import json
 import os
+import re
+import time
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Tuple
 from decimal import Decimal
 from datetime import datetime, date
 from mcp_server.models import MCPTool, MCPToolResult
@@ -54,8 +56,10 @@ def _get_scout_runner(db_manager):
     if _scout_runner is None:
         try:
             from mcp_server.scout.runner import ScoutRunner
+            from mcp_server.server.health import set_scout_runner
             _scout_runner = ScoutRunner(db_adapter=db_manager)
             setattr(db_manager, "scout_runner", _scout_runner)
+            set_scout_runner(_scout_runner)
             logger.info("✅ Scout Runner initialized for catalog access")
         except Exception as e:
             logger.warning(f"Failed to initialize Scout Runner: {e}")
@@ -87,172 +91,34 @@ def _load_concept_descriptors() -> List[Dict[str, Any]]:
 
 async def _search_tables_from_catalog(catalog: Dict[str, Any], query: str, page: int, page_size: int, intent_data: Dict[str, Any] = None) -> MCPToolResult:
     """
-    Search tables using Scout catalog data with semantic ranking.
+    Search tables using a catalog source with shared TableRanker logic.
 
     Args:
-        catalog: Scout catalog data
-        query: Search query (keywords from intent parser)
+        catalog: Catalog payload with `tables` / `views`
+        query: Search query
         page: Page number
         page_size: Results per page
-        intent_data: Intent parsing results for semantic ranking
+        intent_data: Optional LLM-produced intent payload
 
     Returns:
-        MCPToolResult with semantically ranked search results
+        MCPToolResult with ranked search results
     """
-    import time
-    from mcp_server.tools.table_ranker import TableRanker
-
-    start_time = time.time()
-
-    logger.info(f"🔍 SEMANTIC SEARCH CALLED: query='{query}', intent_data={bool(intent_data)}")
-
     try:
-        # Get tables from catalog
-        tables = catalog.get("tables", {})
-        views = catalog.get("views", {})
-
-        # Combine tables and views for comprehensive search
-        all_entities = []
-        for name, data in tables.items():
-            all_entities.append({
-                "name": name,
-                "schema": data.get("schema", "dbo"),
-                "type": "table",
-                **data
-            })
-
-        for name, data in views.items():
-            all_entities.append({
-                "name": name,
-                "schema": data.get("schema", "dbo"),
-                "type": "view",
-                **data
-            })
-
-        # Extract entities and operations from intent data
-        entities = []
-        operations = []
-
-        if intent_data:
-            # Primary entities from intent parser
-            entities.extend(intent_data.get("primary_entities", []))
-            entities.extend(intent_data.get("secondary_entities", []))
-
-            # Keywords for discovery
-            entities.extend(intent_data.get("keywords_for_discovery", []))
-
-            # Operations/metrics
-            operations.extend(intent_data.get("metrics", []))
-            operations.extend(intent_data.get("filters", []))
-
-            # If no entities found, fall back to query keywords
-            if not entities:
-                entities = query.split()
-
-        # If still no entities, use the raw query
-        if not entities:
-            entities = [query]
-
-        # 🔧 USE SCOUT CATALOG SEMANTIC INFORMATION
-        # The TableRanker will use fuzzy matching against actual German table/column names
-        # No hard-coded translations - rely on semantic matching in TableRanker
-
-        logger.info(f"🔍 Semantic search - Entities: {entities}, Operations: {operations}")
-
-        # Use TableRanker for semantic ranking
-        ranker = TableRanker()
-        ranked_tables = ranker.rank_tables(all_entities, entities, operations)
-
-        # Convert to result format
-        matching_tables = []
-        for ranked in ranked_tables[:page_size]:  # Limit results
-            table_data = tables.get(ranked.full_name, views.get(ranked.full_name, {}))
-
-            result = {
-                "schema": ranked.schema,
-                "name": ranked.name,
-                "full_name": ranked.full_name,
-                "type": "TABLE" if ranked.full_name in tables else "VIEW",
-                "estimated_rows": ranked.estimated_rows,
-                "column_count": ranked.column_count,
-                "fk_count": ranked.fk_count,
-                "relevance_score": ranked.score,
-                "ranking_reasons": ranked.reasons,
-                "matched_columns": [],  # Will be filled below
-                "description": table_data.get("description", "")
-            }
-
-            # Find matched columns based on entity matches
-            columns = table_data.get("columns", [])
-            matched_cols = []
-            for col in columns:
-                col_name = col.get("name", "").lower()
-                for entity in entities:
-                    if entity.lower() in col_name:
-                        matched_cols.append(col["name"])
-                        break
-            result["matched_columns"] = matched_cols[:5]  # Limit to 5
-
-            matching_tables.append(result)
-
-        # Sort by relevance score
-        matching_tables.sort(key=lambda x: x["relevance_score"], reverse=True)
-
-        # Paginate results
-        total_items = len(matching_tables)
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
-        page_results = matching_tables[start_idx:end_idx]
-
-        # Calculate pagination info
-        total_pages = (total_items + page_size - 1) // page_size
-
-        # Format response similar to DiscoveryTools
-        response_dict = {
-            "ok": True,
-            "data": {
-                "results": page_results
-            },
-            "page_info": {
-                "page": page,
-                "page_size": page_size,
-                "total_items": total_items,
-                "total_pages": total_pages,
-                "has_next": page < total_pages,
-                "has_prev": page > 1
-            },
-            "execution_time_ms": (time.time() - start_time) * 1000,
-            "cached": True,
-            "source": "scout_catalog"
-        }
-
-        # Format human-readable text
-        page_info = response_dict["page_info"]
-        data = response_dict["data"]
-
-        result_text = f"🔍 Search Results for '{query}' (Page {page_info['page']} of {page_info['total_pages']})\n\n"
-        result_text += f"Total matches: {page_info['total_items']}\n\n"
-
-        for result in data.get("results", []):
-            result_text += f"• {result['full_name']} ({result['type']}) - Score: {result['relevance_score']:.2f}\n"
-            result_text += f"  Columns: {result['column_count']}, Rows: ~{result['estimated_rows']:,}\n"
-            if result.get('matched_columns'):
-                result_text += f"  Matched columns: {', '.join(result['matched_columns'])}\n"
-            result_text += "\n"
-
-        if page_info.get("has_next"):
-            result_text += f"➡️ More results available (use page={page_info['page'] + 1})\n"
-
-        result_text += f"\n⏱️ Execution time: {response_dict['execution_time_ms']:.2f}ms (cached from Scout catalog)"
-
-        result_text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
+        table_entities = _extract_entities_from_scout_catalog(catalog or {})
+        response_dict = _rank_entities_with_table_ranker(
+            tables=table_entities,
+            query=query,
+            page=page,
+            page_size=page_size,
+            intent_data=intent_data,
+            source="scout_runner_catalog",
+            cached=True,
+        )
+        result_text = _render_search_tables_response_text(query, response_dict)
 
         return MCPToolResult(
-            content=[{
-                "type": "text",
-                "text": result_text
-            }],
-            isError=False
+            content=[{"type": "text", "text": result_text}],
+            isError=False,
         )
 
     except Exception as e:
@@ -264,6 +130,580 @@ async def _search_tables_from_catalog(catalog: Dict[str, Any], query: str, page:
             }],
             isError=True
         )
+
+
+def _env_flag_true(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_scout_disabled() -> bool:
+    return _env_flag_true("SCOUT_DISABLE", default=False)
+
+
+def _is_scout_require_ready() -> bool:
+    return _env_flag_true("SCOUT_REQUIRE_READY", default=False)
+
+
+def _get_off_control_mode() -> str:
+    """
+    Return OFF-mode ranking control strategy.
+
+    Supported values via SCOUT_OFF_CONTROL_MODE:
+    - aligned_table_ranker (default): uses shared TableRanker (current aligned A/B)
+    - legacy_lexical_schema_linking: uses non-semantic lexical schema linking baseline
+    """
+    raw = os.getenv("SCOUT_OFF_CONTROL_MODE", "aligned_table_ranker")
+    value = (raw or "").strip().lower()
+    aliases = {
+        "aligned": "aligned_table_ranker",
+        "aligned_table_ranker": "aligned_table_ranker",
+        "table_ranker": "aligned_table_ranker",
+        "legacy_lexical": "legacy_lexical_schema_linking",
+        "lexical": "legacy_lexical_schema_linking",
+        "legacy_lexical_schema_linking": "legacy_lexical_schema_linking",
+    }
+    return aliases.get(value, "aligned_table_ranker")
+
+
+def _coerce_to_list(value: Any) -> List[Any]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    return [value]
+
+
+def _tokenize_values(values: List[Any], min_len: int = 3) -> List[str]:
+    tokens: List[str] = []
+    for raw in values:
+        if not isinstance(raw, str):
+            continue
+        chunks = re.split(r"\s+", raw.strip())
+        for chunk in chunks:
+            token = chunk.strip(".,!?;:()[]{}\"'").lower()
+            if len(token) < min_len:
+                continue
+            if token not in tokens:
+                tokens.append(token)
+    return tokens
+
+
+def _extract_entities_and_operations(query: str, intent_data: Optional[Dict[str, Any]]) -> Tuple[List[str], List[str]]:
+    raw_entities: List[Any] = []
+    raw_operations: List[Any] = []
+
+    if isinstance(intent_data, dict):
+        for key in (
+            "primary_entities",
+            "secondary_entities",
+            "keywords_for_discovery",
+            "entities",
+            "keywords",
+        ):
+            raw_entities.extend(_coerce_to_list(intent_data.get(key)))
+
+        for key in (
+            "metrics",
+            "filters",
+            "operations",
+            "intent_operations",
+            "aggregations",
+        ):
+            raw_operations.extend(_coerce_to_list(intent_data.get(key)))
+
+    fallback_query_tokens = _tokenize_values([query])
+    entities = _tokenize_values(raw_entities) or fallback_query_tokens
+    operations = _tokenize_values(raw_operations)
+
+    if not operations:
+        normalized_query = query.lower()
+        revenue_tokens = {
+            "umsatz",
+            "revenue",
+            "verkauf",
+            "sales",
+            "invoice",
+            "order",
+            "position",
+            "beleg",
+            "faktura",
+            "discount",
+        }
+        if any(token in revenue_tokens for token in entities):
+            operations.append("sum")
+        if "count" in normalized_query or "how many" in normalized_query:
+            operations.append("count")
+
+    return entities, operations
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        if value is None:
+            return default
+        return int(value)
+    except Exception:
+        return default
+
+
+def _normalize_columns(columns: Any) -> List[Dict[str, Any]]:
+    normalized: List[Dict[str, Any]] = []
+    if not isinstance(columns, list):
+        return normalized
+
+    for col in columns:
+        if isinstance(col, dict):
+            name = col.get("name") or col.get("column_name")
+            if not name:
+                continue
+            col_type = col.get("type") or col.get("data_type") or ""
+            normalized.append({"name": str(name), "type": str(col_type)})
+        elif isinstance(col, str) and col.strip():
+            normalized.append({"name": col.strip(), "type": ""})
+
+    return normalized
+
+
+def _derive_column_type_hints(columns: List[Dict[str, Any]]) -> Tuple[List[str], List[str]]:
+    numeric_columns: List[str] = []
+    date_columns: List[str] = []
+
+    for col in columns:
+        name = str(col.get("name") or "")
+        col_type = str(col.get("type") or "").lower()
+
+        if any(t in col_type for t in ("int", "decimal", "numeric", "float", "double", "real", "money")):
+            numeric_columns.append(name)
+        if any(t in col_type for t in ("date", "time", "timestamp")):
+            date_columns.append(name)
+
+    return numeric_columns, date_columns
+
+
+def _normalize_table_entity(raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not isinstance(raw, dict):
+        return None
+
+    schema = str(raw.get("schema") or "public")
+    name = str(raw.get("name") or "")
+    full_name = str(raw.get("full_name") or (f"{schema}.{name}" if name else ""))
+    if not name or not full_name:
+        return None
+
+    columns = _normalize_columns(raw.get("columns"))
+    column_count = _safe_int(raw.get("column_count"), default=len(columns))
+    fk_count = _safe_int(raw.get("fk_count"), default=len(_coerce_to_list(raw.get("foreign_keys"))))
+    estimated_rows = _safe_int(raw.get("estimated_rows"), default=0)
+    entity_type = str(raw.get("type") or "TABLE").upper()
+
+    numeric_columns = raw.get("numeric_columns")
+    date_columns = raw.get("date_columns")
+    if not isinstance(numeric_columns, list) or not isinstance(date_columns, list):
+        derived_numeric, derived_dates = _derive_column_type_hints(columns)
+        if not isinstance(numeric_columns, list):
+            numeric_columns = derived_numeric
+        if not isinstance(date_columns, list):
+            date_columns = derived_dates
+
+    return {
+        "schema": schema,
+        "name": name,
+        "full_name": full_name,
+        "type": entity_type,
+        "estimated_rows": estimated_rows,
+        "column_count": column_count,
+        "fk_count": fk_count,
+        "columns": columns,
+        "numeric_columns": numeric_columns,
+        "date_columns": date_columns,
+        "description": str(raw.get("description") or ""),
+    }
+
+
+def _normalize_table_entities(raw_entities: List[Any]) -> List[Dict[str, Any]]:
+    entities: List[Dict[str, Any]] = []
+    seen: set = set()
+    for raw in raw_entities or []:
+        if not isinstance(raw, dict):
+            continue
+        normalized = _normalize_table_entity(raw)
+        if not normalized:
+            continue
+        full_name = normalized["full_name"]
+        if full_name in seen:
+            continue
+        seen.add(full_name)
+        entities.append(normalized)
+    return entities
+
+
+def _extract_entities_from_scout_catalog(catalog: Dict[str, Any]) -> List[Dict[str, Any]]:
+    tables_raw = catalog.get("tables") or []
+    views_raw = catalog.get("views") or []
+
+    if isinstance(tables_raw, dict):
+        tables_raw = list(tables_raw.values())
+    if isinstance(views_raw, dict):
+        views_raw = list(views_raw.values())
+
+    combined: List[Any] = []
+    combined.extend(tables_raw if isinstance(tables_raw, list) else [])
+    combined.extend(views_raw if isinstance(views_raw, list) else [])
+
+    return _normalize_table_entities(combined)
+
+
+_LEXICAL_STOPWORDS = {
+    "the", "a", "an", "and", "or", "of", "for", "to", "in", "on", "by", "with", "from", "at", "as",
+    "what", "which", "who", "whom", "when", "where", "why", "how", "many", "much", "show", "list", "find",
+    "after", "before", "between", "across", "over", "under", "per", "each",
+    "der", "die", "das", "und", "oder", "von", "mit", "nach", "vor", "über", "unter", "pro",
+}
+
+
+def _tokenize_for_lexical_linking(query: str) -> List[str]:
+    """
+    Lightweight lexical tokenization for OFF legacy baseline.
+    """
+    tokens: List[str] = []
+    for token in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", query or ""):
+        normalized = token.lower()
+        if len(normalized) <= 1:
+            continue
+        if normalized in _LEXICAL_STOPWORDS:
+            continue
+        if normalized not in tokens:
+            tokens.append(normalized)
+    return tokens
+
+
+def _rank_entities_with_lexical_schema_linking(
+    tables: List[Dict[str, Any]],
+    query: str,
+    page: int,
+    page_size: int,
+    source: str,
+    cached: bool,
+) -> Dict[str, Any]:
+    """
+    Legacy lexical schema-linking baseline (non-semantic).
+
+    This intentionally approximates earlier text-to-SQL schema-linking styles:
+    match only by lexical overlap of query tokens with table/column names.
+    """
+    start_time = time.time()
+    query_text = query or ""
+    query_lower = query_text.lower()
+    tokens = _tokenize_for_lexical_linking(query_text)
+
+    scored_rows: List[Dict[str, Any]] = []
+    for table in tables:
+        if not isinstance(table, dict):
+            continue
+
+        full_name = str(table.get("full_name") or "")
+        schema = str(table.get("schema") or "")
+        name = str(table.get("name") or "")
+        table_type = str(table.get("type") or "TABLE").upper()
+        estimated_rows = _safe_int(table.get("estimated_rows"), default=0)
+        fk_count = _safe_int(table.get("fk_count"), default=0)
+        columns = table.get("columns") or []
+        column_names = []
+        for col in columns:
+            if isinstance(col, dict):
+                col_name = str(col.get("name") or "").strip()
+            else:
+                col_name = str(col).strip()
+            if col_name:
+                column_names.append(col_name)
+
+        full_name_lower = full_name.lower()
+        name_lower = name.lower()
+        schema_lower = schema.lower()
+        column_names_lower = [c.lower() for c in column_names]
+
+        raw_score = 0.0
+        reasons: List[str] = []
+        matched_columns: List[str] = []
+
+        # Exact/substring table name matches
+        if query_lower and (query_lower == name_lower or query_lower in full_name_lower):
+            raw_score += 6.0
+            reasons.append("exact table name match")
+
+        # Token-level lexical matches
+        token_name_hits = 0
+        token_schema_hits = 0
+        token_column_hits = 0
+        for token in tokens:
+            if token in name_lower:
+                token_name_hits += 1
+            if schema_lower and token in schema_lower:
+                token_schema_hits += 1
+
+            for col_idx, col_name in enumerate(column_names_lower):
+                if token in col_name:
+                    token_column_hits += 1
+                    if col_idx < len(column_names):
+                        column_original = column_names[col_idx]
+                        if column_original not in matched_columns:
+                            matched_columns.append(column_original)
+                    break
+
+        if token_name_hits:
+            raw_score += 2.0 * token_name_hits
+            reasons.append(f"table token hits={token_name_hits}")
+        if token_schema_hits:
+            raw_score += 1.0 * token_schema_hits
+            reasons.append(f"schema token hits={token_schema_hits}")
+        if token_column_hits:
+            raw_score += 1.5 * token_column_hits
+            reasons.append(f"column token hits={token_column_hits}")
+
+        lexical_signal = raw_score > 0.0
+        # Very light tie-breakers, only when lexical signal exists.
+        if lexical_signal and estimated_rows > 0:
+            raw_score += 0.1
+        if lexical_signal and fk_count > 0:
+            raw_score += 0.05
+
+        # Keep lexical-positive matches only
+        if raw_score > 0.0:
+            scored_rows.append(
+                {
+                    "schema": schema,
+                    "name": name,
+                    "full_name": full_name,
+                    "type": table_type,
+                    "estimated_rows": estimated_rows,
+                    "column_count": _safe_int(table.get("column_count"), default=len(column_names)),
+                    "fk_count": fk_count,
+                    "raw_score": raw_score,
+                    "reasons": reasons,
+                    "columns": column_names,
+                    "matched_columns": matched_columns,
+                }
+            )
+
+    # Fallback: if lexical matching finds nothing, return all tables in stable order
+    # with zero score so the agent can still proceed.
+    if not scored_rows:
+        for table in tables:
+            if not isinstance(table, dict):
+                continue
+            columns = table.get("columns") or []
+            column_names = []
+            for col in columns:
+                if isinstance(col, dict):
+                    col_name = str(col.get("name") or "").strip()
+                else:
+                    col_name = str(col).strip()
+                if col_name:
+                    column_names.append(col_name)
+            scored_rows.append(
+                {
+                    "schema": str(table.get("schema") or ""),
+                    "name": str(table.get("name") or ""),
+                    "full_name": str(table.get("full_name") or ""),
+                    "type": str(table.get("type") or "TABLE").upper(),
+                    "estimated_rows": _safe_int(table.get("estimated_rows"), default=0),
+                    "column_count": _safe_int(table.get("column_count"), default=len(column_names)),
+                    "fk_count": _safe_int(table.get("fk_count"), default=0),
+                    "raw_score": 0.0,
+                    "reasons": ["fallback: no lexical matches"],
+                    "columns": column_names,
+                    "matched_columns": [],
+                }
+            )
+
+    # Normalize to 0..1 score for compatibility with existing output consumers.
+    max_score = max((row["raw_score"] for row in scored_rows), default=0.0)
+    all_results: List[Dict[str, Any]] = []
+    for row in sorted(scored_rows, key=lambda r: (-r["raw_score"], -r["estimated_rows"], r["full_name"])):
+        if max_score > 0.0:
+            relevance = float(row["raw_score"] / max_score)
+        else:
+            relevance = 0.0
+        all_results.append(
+            {
+                "schema": row["schema"],
+                "name": row["name"],
+                "full_name": row["full_name"],
+                "type": row["type"],
+                "estimated_rows": row["estimated_rows"],
+                "column_count": row["column_count"],
+                "fk_count": row["fk_count"],
+                "relevance_score": relevance,
+                "reasons": row["reasons"],
+                "columns": row["columns"],
+                "matched_columns": row["matched_columns"],
+            }
+        )
+
+    total_items = len(all_results)
+    total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 1
+    page = max(1, min(page, total_pages))
+    start_idx = (page - 1) * page_size
+    page_results = all_results[start_idx:start_idx + page_size]
+
+    return {
+        "ok": True,
+        "data": {
+            "query": query,
+            "results": page_results,
+        },
+        "page_info": {
+            "page": page,
+            "page_size": page_size,
+            "total_items": total_items,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1,
+        },
+        "execution_time_ms": (time.time() - start_time) * 1000,
+        "cached": bool(cached),
+        "source": source,
+        "ranking_backend": "LexicalSchemaLinkingBaseline",
+        "ranking_input": {
+            "tokens": tokens,
+        },
+    }
+
+
+def _rank_entities_with_table_ranker(
+    tables: List[Dict[str, Any]],
+    query: str,
+    page: int,
+    page_size: int,
+    intent_data: Optional[Dict[str, Any]],
+    source: str,
+    cached: bool,
+) -> Dict[str, Any]:
+    from mcp_server.tools.table_ranker import TableRanker
+
+    start_time = time.time()
+    entities, operations = _extract_entities_and_operations(query, intent_data)
+    ranker = TableRanker()
+    ranked_tables = ranker.rank_tables(
+        tables=tables,
+        entities=entities,
+        intent_operations=operations,
+    )
+
+    type_lookup = {
+        str(t.get("full_name")): str(t.get("type") or "TABLE").upper()
+        for t in tables
+        if isinstance(t, dict)
+    }
+
+    all_results: List[Dict[str, Any]] = []
+    for ranked in ranked_tables:
+        all_results.append(
+            {
+                "schema": ranked.schema,
+                "name": ranked.name,
+                "full_name": ranked.full_name,
+                "type": type_lookup.get(ranked.full_name, "TABLE"),
+                "estimated_rows": _safe_int(ranked.estimated_rows, default=0),
+                "column_count": _safe_int(ranked.column_count, default=0),
+                "fk_count": _safe_int(ranked.fk_count, default=0),
+                "relevance_score": float(ranked.score),
+                "reasons": ranked.reasons or [],
+                "columns": ranked.columns or [],
+                "matched_columns": ranked.matched_columns or [],
+                # SDG v2: flows through only when SCOUT_DESCRIPTIONS_ENABLED=true,
+                # otherwise the ranker receives an empty string from the catalog.
+                "description": getattr(ranked, "description", "") or "",
+            }
+        )
+
+    total_items = len(all_results)
+    total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 1
+    page = max(1, min(page, total_pages))
+    start_idx = (page - 1) * page_size
+    page_results = all_results[start_idx:start_idx + page_size]
+
+    # SDG trace: show how many tables in the page carry non-empty descriptions
+    # so we can confirm from the logs that SDG content is reaching the agent.
+    non_empty = sum(1 for r in page_results if (r.get("description") or "").strip())
+    if page_results:
+        sample = page_results[0]
+        sample_desc = (sample.get("description") or "")[:80].replace("\n", " ")
+        logger.info(
+            "🔤 SDG search_tables: query=%r returned=%d with_description=%d/%d sample[%s]=%r",
+            query[:80], total_items, non_empty, len(page_results),
+            sample.get("full_name"), sample_desc,
+        )
+
+    return {
+        "ok": True,
+        "data": {
+            "query": query,
+            "results": page_results,
+        },
+        "page_info": {
+            "page": page,
+            "page_size": page_size,
+            "total_items": total_items,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1,
+        },
+        "execution_time_ms": (time.time() - start_time) * 1000,
+        "cached": bool(cached),
+        "source": source,
+        "ranking_backend": "TableRanker",
+        "ranking_input": {
+            "entities": entities,
+            "operations": operations,
+        },
+    }
+
+
+def _render_search_tables_response_text(query: str, response_dict: Dict[str, Any]) -> str:
+    data = response_dict.get("data") or {}
+    page_info = response_dict.get("page_info") or {}
+
+    text = (
+        f"🔍 Search Results for '{query}' "
+        f"(Page {page_info.get('page', 1)} of {page_info.get('total_pages', 1)})\n\n"
+    )
+    text += f"Total matches: {page_info.get('total_items', 0)}\n\n"
+
+    for result in data.get("results", []):
+        text += (
+            f"• {result.get('full_name')} ({result.get('type')}) "
+            f"- Score: {float(result.get('relevance_score', 0.0)):.3f}\n"
+        )
+        text += f"  Rows: ~{_safe_int(result.get('estimated_rows'), default=0):,}\n"
+
+        columns = result.get("columns") or []
+        if columns:
+            text += f"  Columns: {', '.join(str(c) for c in columns[:15])}\n"
+        else:
+            text += f"  Columns: {_safe_int(result.get('column_count'), default=0)} (names not available)\n"
+
+        matched_columns = result.get("matched_columns") or []
+        if matched_columns:
+            text += f"  Matched columns: {', '.join(str(c) for c in matched_columns[:10])}\n"
+
+        reasons = result.get("reasons") or []
+        if reasons:
+            text += f"  Reasons: {', '.join(str(r) for r in reasons[:4])}\n"
+        text += "\n"
+
+    if page_info.get("has_next"):
+        text += f"➡️ More results available (use page={page_info.get('page', 1) + 1})\n"
+
+    text += f"\n⏱️ Execution time: {float(response_dict.get('execution_time_ms', 0.0)):.2f}ms"
+    if response_dict.get("cached"):
+        text += " (cached)"
+    text += f"\nSource: {response_dict.get('source')} | Ranking: {response_dict.get('ranking_backend')}"
+    text += f"\n\n📊 Full response (JSON):\n{json.dumps(response_dict, indent=2, cls=DecimalEncoder)}"
+    return text
 
 
 class DecimalEncoder(json.JSONEncoder):
@@ -1201,11 +1641,11 @@ class MCPTools:
 
     @staticmethod
     async def _search_tables(arguments: Dict[str, Any], db_manager) -> MCPToolResult:
-        """Search tables by keyword (Phase 4) - Scout Mode aware with semantic ranking."""
+        """Search tables by keyword with aligned Scout ON/OFF ranking."""
         query = (arguments.get("query") or "").strip()
         page = arguments.get("page", 1)
-        page_size = arguments.get("page_size", 25)
-        intent_data = arguments.get("intent_data")  # Extract intent data for semantic ranking
+        page_size = arguments.get("page_size", arguments.get("limit", 25))
+        intent_data = arguments.get("intent_data")
 
         # 🔒 Early guard: empty or missing query should not trigger heavy discovery / catalog scans
         if not query:
@@ -1232,153 +1672,120 @@ class MCPTools:
             )
 
         try:
-            # Phase 1: Try Scout catalog first for instant results with NEW consolidated semantic search
-            scout_runner = _get_scout_runner(db_manager)
-            if scout_runner and scout_runner.is_ready():
-                logger.info(f"🔍 Using ScoutRunner.search() for '{query}' with intent-aware ranking")
-                # Use the NEW semantic search method from consolidated ScoutRunner
-                search_results = scout_runner.search(
-                    query=query,
-                    top_k=page_size,
-                    intent_data=intent_data
-                )
+            page = max(1, _safe_int(page, default=1))
+            page_size = min(max(1, _safe_int(page_size, default=25)), 100)
 
-                if search_results:
-                    # Format results as MCP response
-                    formatted_text = f"🔍 Search Results for '{query}'\n\n"
-                    formatted_text += f"Total matches: {len(search_results)}\n\n"
+            scout_disabled = _is_scout_disabled()
+            scout_require_ready = _is_scout_require_ready()
+            off_control_mode = _get_off_control_mode()
 
-                    for i, result in enumerate(search_results, 1):
-                        formatted_text += f"{i}. {result['full_name']}\n"
-                        formatted_text += (
-                            f"   Type: {result['type']}, "
-                            f"Rows: {result['estimated_rows']}, "
-                            f"Cols: {result['column_count']}\n"
-                        )
-                        formatted_text += (
-                            f"   Score: {result['relevance_score']:.3f}, "
-                            f"Reasons: {', '.join(result['reasons'])}\n"
-                        )
-                        # Include column names for SQL generation
-                        columns = result.get('columns', [])
-                        if columns:
-                            col_names = [c.get('name') if isinstance(c, dict) else str(c) for c in columns[:15]]
-                            formatted_text += f"   Columns: {', '.join(col_names)}\n"
-                        formatted_text += "\n"
+            source_tables: List[Dict[str, Any]] = []
+            source = "schema_catalog"
+            source_cached = False
+            source_details: Dict[str, Any] = {
+                "scout_disabled": scout_disabled,
+                "scout_require_ready": scout_require_ready,
+                "off_control_mode": off_control_mode,
+            }
 
-                    # Return both human-readable and JSON
-                    formatted_text += "\n📊 Full response (JSON):\n"
-                    formatted_text += json.dumps(
-                        {
-                            "ok": True,
-                            "data": {"results": search_results},
-                            "page_info": {
-                                "page": page,
-                                "page_size": page_size,
-                                "total_items": len(search_results),
-                            },
-                            "execution_time_ms": 0,
-                            "cached": True,
-                            "source": "scout_runner",
-                        },
-                        indent=2,
-                        cls=DecimalEncoder,
+            if not scout_disabled:
+                scout_runner = _get_scout_runner(db_manager)
+                scout_ready = bool(scout_runner and scout_runner.is_ready())
+                source_details["scout_ready"] = scout_ready
+
+                if scout_ready and scout_runner:
+                    scout_catalog = scout_runner.get_catalog() or {}
+                    source_tables = _extract_entities_from_scout_catalog(scout_catalog)
+                    if source_tables:
+                        source = "scout_runner_catalog"
+                        source_cached = True
+                        source_details["scout_entities"] = len(source_tables)
+                elif scout_require_ready:
+                    error_response = {
+                        "ok": False,
+                        "data": [],
+                        "row_count": 0,
+                        "execution_time_ms": None,
+                        "truncated": False,
+                        "warnings": [],
+                        "error": "Scout catalog is required but not ready",
+                        "error_code": "SCOUT_NOT_READY",
+                        "source": "scout_runner_catalog",
+                        "ranking_backend": "TableRanker",
+                    }
+                    error_text = (
+                        "❌ search_tables failed\n\n"
+                        f"Error: {error_response['error']}\n"
+                        f"Error code: {error_response['error_code']}\n"
+                        f"\n📊 Full response (JSON):\n"
+                        f"{json.dumps(error_response, indent=2, cls=DecimalEncoder)}"
                     )
-
                     return MCPToolResult(
-                        content=[{"type": "text", "text": formatted_text}],
-                        isError=False,
-                    )
-                else:
-                    logger.warning(f"ScoutRunner.search() returned no results for '{query}'")
-
-            # Fallback to live database search
-            logger.debug("Scout catalog not available, using live search")
-            response = await DiscoveryTools.search_tables(
-                db_adapter=db_manager,
-                query=query,
-                page=page,
-                page_size=page_size,
-            )
-
-            response_dict = response.to_dict()
-            response_dict = MCPTools._make_json_safe(response_dict)
-
-            if response.ok:
-                # Format human-readable text - with defensive checks
-                if not isinstance(response_dict, dict) or "data" not in response_dict:
-                    logger.error("search_tables: response structure invalid")
-                    return MCPToolResult(
-                        content=[{
-                            "type": "text",
-                            "text": "Internal error: Response structure corrupted",
-                        }],
+                        content=[{"type": "text", "text": error_text}],
                         isError=True,
                     )
 
-                data = response_dict["data"]
-                page_info = response_dict.get("page_info", {})
-
-                result_text = (
-                    f"🔍 Search Results for '{query}' "
-                    f"(Page {page_info.get('page', 1)} of {page_info.get('total_pages', 1)})\n\n"
-                )
-                result_text += f"Total matches: {page_info.get('total_items', 0)}\n\n"
-
-                for result in data.get("results", []):
-                    result_text += (
-                        f"• {result['full_name']} ({result['type']}) "
-                        f"- Score: {result['relevance_score']}\n"
+            if not source_tables:
+                if not getattr(db_manager, "catalog", None):
+                    error_response = {
+                        "ok": False,
+                        "data": [],
+                        "row_count": 0,
+                        "execution_time_ms": None,
+                        "truncated": False,
+                        "warnings": [],
+                        "error": "Catalog not initialized",
+                        "error_code": "CATALOG_NOT_INITIALIZED",
+                        "source": "schema_catalog",
+                        "ranking_backend": "TableRanker",
+                    }
+                    error_text = (
+                        "❌ search_tables failed\n\n"
+                        f"Error: {error_response['error']}\n"
+                        f"Error code: {error_response['error_code']}\n"
+                        f"\n📊 Full response (JSON):\n"
+                        f"{json.dumps(error_response, indent=2, cls=DecimalEncoder)}"
                     )
-                    result_text += (
-                        f"  Rows: ~{result['estimated_rows']:,}\n"
-                    )
-                    # Include column names for SQL generation
-                    columns = result.get("columns", [])
-                    if columns:
-                        col_names = [c if isinstance(c, str) else c.get('name', str(c)) for c in columns[:15]]
-                        result_text += f"  Columns: {', '.join(col_names)}\n"
-                    else:
-                        result_text += f"  Columns: {result['column_count']} (names not available)\n"
-                    if result.get("matched_columns"):
-                        result_text += (
-                            "  Matched columns: "
-                            f"{', '.join(result['matched_columns'])}\n"
-                        )
-                    result_text += "\n"
-
-                if page_info.get("has_next"):
-                    result_text += (
-                        f"➡️ More results available "
-                        f"(use page={page_info.get('page', 1) + 1})\n"
+                    return MCPToolResult(
+                        content=[{"type": "text", "text": error_text}],
+                        isError=True,
                     )
 
-                result_text += f"\n⏱️ Execution time: {response.execution_time_ms:.2f}ms"
-                if response.cached:
-                    result_text += " (cached)"
+                source_tables = _normalize_table_entities(db_manager.catalog.get_table_list())
+                source = "schema_catalog"
+                source_cached = False
+                source_details["schema_entities"] = len(source_tables)
 
-                result_text += "\n\n📊 Full response (JSON):\n"
-                result_text += json.dumps(
-                    response_dict, indent=2, cls=DecimalEncoder
+            use_legacy_lexical = scout_disabled and off_control_mode == "legacy_lexical_schema_linking"
+            if use_legacy_lexical:
+                response_dict = _rank_entities_with_lexical_schema_linking(
+                    tables=source_tables,
+                    query=query,
+                    page=page,
+                    page_size=page_size,
+                    source=source,
+                    cached=source_cached,
                 )
-
-                return MCPToolResult(
-                    content=[{"type": "text", "text": result_text}],
-                    isError=False,
-                )
+                source_details["ranking_strategy"] = "legacy_lexical_schema_linking"
             else:
-                error_text = "❌ search_tables failed\n\n"
-                error_text += f"Error: {response.error}\n"
-                error_text += f"Error code: {response.error_code}\n"
-                error_text += "\n📊 Full response (JSON):\n"
-                error_text += json.dumps(
-                    response_dict, indent=2, cls=DecimalEncoder
+                response_dict = _rank_entities_with_table_ranker(
+                    tables=source_tables,
+                    query=query,
+                    page=page,
+                    page_size=page_size,
+                    intent_data=intent_data,
+                    source=source,
+                    cached=source_cached,
                 )
+                source_details["ranking_strategy"] = "aligned_table_ranker"
+            response_dict["source_details"] = source_details
+            response_dict = MCPTools._make_json_safe(response_dict)
+            result_text = _render_search_tables_response_text(query, response_dict)
 
-                return MCPToolResult(
-                    content=[{"type": "text", "text": error_text}],
-                    isError=True,
-                )
+            return MCPToolResult(
+                content=[{"type": "text", "text": result_text}],
+                isError=False,
+            )
 
         except Exception as e:
             logger.error(f"search_tables failed: {e}")

@@ -1,4 +1,8 @@
 # ADR-0008: ERP Chatbot UI - Complete System Architecture
+**Status**: Accepted
+**Date**: 2025-09-01
+**Author**: Julianus Kath
+
 
 ## Status
 **ACCEPTED** - Implemented and Production Ready

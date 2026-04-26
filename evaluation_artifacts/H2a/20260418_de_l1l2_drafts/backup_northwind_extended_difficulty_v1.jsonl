@@ -1,0 +1,64 @@
+{"id": "NW1", "question": "Return the 5 products that need reordering (units_in_stock < reorder_level), sorted by the largest shortage first. Return exactly: product_id, product_name, units_in_stock, reorder_level.", "category": "direct", "language": "en"}
+{"id": "NW2", "question": "For each product category, calculate total revenue after discounts as SUM(unit_price * quantity * (1 - discount)). Return all categories with category_name and total_revenue, sorted by total_revenue descending.", "category": "direct", "language": "en"}
+{"id": "NW3", "question": "List customers with more than 10 distinct orders. Return customer_id, company_name, order_count, and total_order_value where total_order_value = SUM(unit_price * quantity) (without discount adjustment), sorted by total_order_value descending and customer_id.", "category": "direct", "language": "en"}
+{"id": "NW4", "question": "Using orders and shippers, for each shipping company return shipper_id, company_name, late_shipments (where shipped_date > required_date), and total_shipments.", "category": "direct", "language": "en"}
+{"id": "NW5", "question": "For each employee, calculate total revenue after discounts from their orders. Join employees, orders, and order_details, and return employee_id, first_name, last_name, total_revenue sorted by total_revenue descending.", "category": "direct", "language": "en"}
+{"id": "NW6", "question": "Return the top 5 best-selling products by total quantity sold. Use PostgreSQL LIMIT 5 (not TOP). Return product_id, product_name, quantity_sold, sorted by quantity_sold descending and product_id.", "category": "direct", "language": "en"}
+{"id": "NW7", "question": "Find supplier pairs that most frequently appear together in the same order. Use a self-join on order_details as od1 and od2 (same order_id, different product_id), join products p1/p2 and suppliers s1/s2, enforce s1.supplier_id < s2.supplier_id to deduplicate pairs, and compute co_order_count = COUNT(DISTINCT od1.order_id). Return supplier_1, supplier_2, co_order_count, sorted by co_order_count descending, then supplier_1 and supplier_2, top 10.", "category": "direct", "language": "en"}
+{"id": "NW8", "question": "By customer country, compute average order value with a two-step aggregation: first compute each order total as SUM(unit_price * quantity * (1 - discount)), then average order_total per country. Return country and avg_order_value.", "category": "direct", "language": "en"}
+{"id": "NW9", "question": "Count distinct pending orders and their discounted total value where shipped_date IS NULL. Return pending_orders = COUNT(DISTINCT order_id) and total_value = SUM(unit_price * quantity * (1 - discount)).", "category": "direct", "language": "en"}
+{"id": "NW10", "question": "Show monthly revenue trend after discounts by grouping on DATE_TRUNC('month', order_date)::date as month. Return month and revenue, sorted by month.", "category": "direct", "language": "en"}
+{"id": "NL1", "question": "Which offerings look most likely to run short soon based on current stock versus replenishment threshold?", "category": "paraphrase", "language": "en"}
+{"id": "NL2", "question": "Which buyers place very frequent orders and represent the highest gross order value overall?", "category": "paraphrase", "language": "en"}
+{"id": "NL3", "question": "Which delivery providers miss promised dates the most, and what is their overall shipment volume?", "category": "paraphrase", "language": "en"}
+{"id": "NL4", "question": "Which offerings move the highest number of units overall?", "category": "paraphrase", "language": "en"}
+{"id": "NL5", "question": "Where are average basket values highest by buyer location?", "category": "paraphrase", "language": "en"}
+{"id": "NL6", "question": "How does discounted income evolve month by month?", "category": "paraphrase", "language": "en"}
+{"id": "NL7", "question": "Which upstream partners generate the most discounted turnover through their goods?", "category": "paraphrase", "language": "en"}
+{"id": "NL8", "question": "For each freight carrier, how late are shipments on average and how often are they late?", "category": "paraphrase", "language": "en"}
+{"id": "NL9", "question": "Which staff members serve the broadest buyer base?", "category": "paraphrase", "language": "en"}
+{"id": "NL10", "question": "Which accounts have never transacted?", "category": "paraphrase", "language": "en"}
+{"id": "CL1", "question": "Welche Lieferanten erzielen den höchsten Umsatz nach Rabatten über ihre Artikel?", "category": "crosslingual", "language": "de"}
+{"id": "CL2", "question": "Welche Kundenländer bringen den größten Gesamtumsatz nach Abzügen?", "category": "crosslingual", "language": "de"}
+{"id": "CL3", "question": "Bei welchen Versanddienstleistern sind Sendungen im Schnitt am häufigsten verspätet?", "category": "crosslingual", "language": "de"}
+{"id": "CL4", "question": "Welche Mitarbeitenden betreuen die meisten unterschiedlichen Kundenkonten?", "category": "crosslingual", "language": "de"}
+{"id": "CL5", "question": "Welche Kundenkonten haben bislang keinerlei Bestellung ausgelöst?", "category": "crosslingual", "language": "de"}
+{"id": "CL6", "question": "Wie entwickeln sich pro Monat erfasste Aufträge und verspätete Auslieferungen?", "category": "crosslingual", "language": "de"}
+{"id": "CL7", "question": "Welche Regionen sind über Gebietszuordnungen mit dem höchsten Umsatz verbunden?", "category": "crosslingual", "language": "de"}
+{"id": "CL8", "question": "Welche Kunden bestellen häufig, aber mit eher kleinem Warenkorbwert?", "category": "crosslingual", "language": "de"}
+{"id": "CL9", "question": "Bei welchen Lieferanten gibt es Produkte ohne jeglichen Verkauf?", "category": "crosslingual", "language": "de"}
+{"id": "CL10", "question": "Welche Kundensegmente erzeugen den höchsten Erlös nach Rabatt?", "category": "crosslingual", "language": "de"}
+{"id": "CL11", "question": "Welche Mitarbeitenden verkaufen häufig in andere Zielländer als ihr Heimatland?", "category": "crosslingual", "language": "de"}
+{"id": "CL12", "question": "In welchen Monaten ist Fracht im Verhältnis zum Umsatz am teuersten?", "category": "crosslingual", "language": "de"}
+{"id": "HX1", "question": "Welche Kundenkonten haben ihren Monatsumsatz vom ersten zum letzten aktiven Monat am staerksten gesteigert (mindestens 5 Bestellungen insgesamt)?", "category": "complex", "language": "de"}
+{"id": "HX3", "question": "Bei welchen Versanddienstleistern ist der Anteil stark verspaeteter Sendungen (mehr als 3 Tage) am groessten?", "category": "complex", "language": "de"}
+{"id": "HX4", "question": "In welchen Produktkategorien kommt mindestens 60 Prozent des rabattierten Umsatzes von nur einem Lieferanten?", "category": "complex", "language": "de"}
+{"id": "HX5", "question": "Welche Kunden haben ueberdurchschnittliche Rabattquote, aber unterdurchschnittlichen Nettoumsatz pro Bestellung?", "category": "complex", "language": "de"}
+{"id": "HX7", "question": "Welche Produktpaare aus unterschiedlichen Kategorien werden ueberproportional oft gemeinsam gekauft (Lift gegenueber Unabhaengigkeit)?", "category": "complex", "language": "de"}
+{"id": "HX8", "question": "In welchen Monaten stieg die Frachtkostenquote gegenueber dem Vormonat am staerksten?", "category": "complex", "language": "de"}
+{"id": "HX9", "question": "Welche Lieferanten haben viele Produkte, aber einen niedrigen Anteil verkaufter Produkte?", "category": "complex", "language": "de"}
+{"id": "HX12", "question": "Welche Kategorien haben nach Rabatt die hoechste Umsatzvolatilitaet zwischen Monaten?", "category": "complex", "language": "de"}
+{"id": "US_CL2_U1", "question": "Woher kommt unser Nettoumsatz?", "intent": "CL2", "level": "U1", "abstraction": "underspecified", "category": "underspecified", "language": "de"}
+{"id": "US_CL2_U2", "question": "Welche Märkte tragen am meisten zum Erlös bei?", "intent": "CL2", "level": "U2", "abstraction": "underspecified", "category": "underspecified", "language": "de"}
+{"id": "US_CL2_U3", "question": "Wo verdienen wir nach Rabatten am meisten Geld?", "intent": "CL2", "level": "U3", "abstraction": "underspecified", "category": "underspecified", "language": "de"}
+{"id": "US_CL3_U1", "question": "Welcher Zusteller ist im Schnitt am unpünktlichsten?", "intent": "CL3", "level": "U1", "abstraction": "underspecified", "category": "underspecified", "language": "de"}
+{"id": "US_CL3_U2", "question": "Über wen kommt es am häufigsten zu Verzögerungen?", "intent": "CL3", "level": "U2", "abstraction": "underspecified", "category": "underspecified", "language": "de"}
+{"id": "US_CL3_U3", "question": "Bei welchem Versandkanal ist die Terminlage am schwächsten?", "intent": "CL3", "level": "U3", "abstraction": "underspecified", "category": "underspecified", "language": "de"}
+{"id": "US_CL6_U1", "question": "Wie läuft es monatlich mit Aufträgen und Pünktlichkeit?", "intent": "CL6", "level": "U1", "abstraction": "underspecified", "category": "underspecified", "language": "de"}
+{"id": "US_CL6_U2", "question": "Wie entwickeln sich Nachfrage und Verspätungen über die Zeit?", "intent": "CL6", "level": "U2", "abstraction": "underspecified", "category": "underspecified", "language": "de"}
+{"id": "US_CL6_U3", "question": "Zeig den Monatsverlauf von Volumen und Lieferproblemen.", "intent": "CL6", "level": "U3", "abstraction": "underspecified", "category": "underspecified", "language": "de"}
+{"id": "US_CL10_U1", "question": "Welche Kundengruppen bringen den meisten Nettoerlös?", "intent": "CL10", "level": "U1", "abstraction": "underspecified", "category": "underspecified", "language": "de"}
+{"id": "US_CL10_U2", "question": "Wer sind unsere wertvollsten Segmente nach Rabatten?", "intent": "CL10", "level": "U2", "abstraction": "underspecified", "category": "underspecified", "language": "de"}
+{"id": "US_CL10_U3", "question": "Welche Zielgruppen liefern den größten Beitrag zum Umsatz nach Abzügen?", "intent": "CL10", "level": "U3", "abstraction": "underspecified", "category": "underspecified", "language": "de"}
+{"id": "LB_CL2_LX1", "question": "Zeige den rabattbereinigten Umsatz pro Kundenland.", "intent": "CL2", "level": "LX1", "abstraction": "direct", "category": "lexical_breakpoint", "language": "de"}
+{"id": "LB_CL2_LX2", "question": "Welche Absatzländer liefern den größten Nettoerlös nach Preisnachlässen?", "intent": "CL2", "level": "LX2", "abstraction": "paraphrase", "category": "lexical_breakpoint", "language": "de"}
+{"id": "LB_CL2_LX3", "question": "Aus welchen Zielregionen stammt nach Abzügen der höchste Wertbeitrag?", "intent": "CL2", "level": "LX3", "abstraction": "implicit", "category": "lexical_breakpoint", "language": "de"}
+{"id": "LB_CL3_LX1", "question": "Welcher Versanddienstleister hat im Schnitt die meisten verspäteten Sendungen?", "intent": "CL3", "level": "LX1", "abstraction": "direct", "category": "lexical_breakpoint", "language": "de"}
+{"id": "LB_CL3_LX2", "question": "Bei welchem Carrier ist die durchschnittliche Lieferverzögerung am höchsten?", "intent": "CL3", "level": "LX2", "abstraction": "paraphrase", "category": "lexical_breakpoint", "language": "de"}
+{"id": "LB_CL3_LX3", "question": "Über welchen Zustellkanal entsteht der größte Zeitverzug gegenüber dem Solltermin?", "intent": "CL3", "level": "LX3", "abstraction": "implicit", "category": "lexical_breakpoint", "language": "de"}
+{"id": "LB_CL6_LX1", "question": "Zeige pro Monat die Anzahl Aufträge und verspäteten Auslieferungen.", "intent": "CL6", "level": "LX1", "abstraction": "direct", "category": "lexical_breakpoint", "language": "de"}
+{"id": "LB_CL6_LX2", "question": "Wie entwickeln sich monatlich Auftragseingang und Lieferverzug?", "intent": "CL6", "level": "LX2", "abstraction": "paraphrase", "category": "lexical_breakpoint", "language": "de"}
+{"id": "LB_CL6_LX3", "question": "Wie verändert sich im Zeitverlauf die Kombination aus Nachfragefluss und Terminüberschreitungen?", "intent": "CL6", "level": "LX3", "abstraction": "implicit", "category": "lexical_breakpoint", "language": "de"}
+{"id": "LB_CL10_LX1", "question": "Zeige den rabattbereinigten Umsatz je Kundensegment.", "intent": "CL10", "level": "LX1", "abstraction": "direct", "category": "lexical_breakpoint", "language": "de"}
+{"id": "LB_CL10_LX2", "question": "Welche Abnehmergruppen erzielen den höchsten Erlös nach Nachlässen?", "intent": "CL10", "level": "LX2", "abstraction": "paraphrase", "category": "lexical_breakpoint", "language": "de"}
+{"id": "LB_CL10_LX3", "question": "Welche Profile im Kundenstamm tragen nach Preiszugeständnissen den größten Nettoertrag?", "intent": "CL10", "level": "LX3", "abstraction": "implicit", "category": "lexical_breakpoint", "language": "de"}

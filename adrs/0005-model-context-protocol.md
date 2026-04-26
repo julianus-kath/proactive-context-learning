@@ -1,4 +1,8 @@
-# ADR 0005: Adoption of Model-Context Protocol (MCP)
+# ADR-0005: Adoption of Model-Context Protocol (MCP)
+**Status**: Accepted
+**Date**: 2025-04-30
+**Author**: Julianus Kath
+
 
 ## Status
 

@@ -1,7 +1,11 @@
 # ADR-0029: ReAct Supervisor Orchestration Mode
+**Status**: Accepted
+**Date**: 2025-12-27
+**Author**: Julianus Kath
+
 
 ## Status
-Accepted
+Accepted — **Superseded by [ADR-0030](0030-simple-sql-agent-architecture.md)** (the supervisor-over-agents design was collapsed into a single ReAct agent with tools; see [`README.md`](README.md)).
 
 ## Context
 

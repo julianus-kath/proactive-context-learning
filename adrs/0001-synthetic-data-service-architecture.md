@@ -1,8 +1,12 @@
-# ADR 0001: Synthetic Data Service Architecture
+# ADR-0001: Synthetic Data Service Architecture
+**Status**: Accepted
+**Date**: 2025-04-16
+**Author**: Julianus Kath
+
 
 ## Status
 
-Accepted
+Accepted — **Superseded by [ADR-0012](0012-mcp-only-architecture-migration.md) and [ADR-0013](0013-production-database-optimization-vpn-connectivity.md)**. The synthetic data pipeline was retired when the thesis pivoted to querying the real Luisi & Diener / Sage ERP via VPN. See [`README.md`](README.md) for the full narrative.
 
 ## Context
 
