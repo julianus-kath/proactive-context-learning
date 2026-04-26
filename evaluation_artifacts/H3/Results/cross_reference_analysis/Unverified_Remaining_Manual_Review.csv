@@ -1,0 +1,6 @@
+session,turn,user_query,predicted_transcript_time,reason,pre_relabel_state
+1,11,"Die Fertigungszeit ist im Fertigungsauftrag und in der Ressourcenliste des Artikels hinterlegt, kannst du mir diese ausgeben?",,insufficient_evidence_for_incorrect_label,INCORRECT
+1,33,Wie hoch sind die Fertigungskosten für den Artikel 71513773,,insufficient_evidence_for_incorrect_label,INCORRECT
+1,46,Welcher Auftrag des Kunden Flowtec hatte die kürzeste Lieferzeit zwischen Auftragserfassung und Erstellung Lieferschein?,,insufficient_evidence_for_incorrect_label,INCORRECT
+1,48,welcher Auftrag dieses Kundens hatte die kürzeste Zeit zwischen Auftragsbestätigung (Beleg Auftragsbestätigung) und der Erstellung des zugehörigen Lieferscheines?,,insufficient_evidence_for_incorrect_label,INCORRECT
+2,11,Dieser Artikel ist nicht im beleg mit der Referenznummer 1004945311 enthalten,,insufficient_evidence_for_incorrect_label,INCORRECT

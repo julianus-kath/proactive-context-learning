@@ -1,0 +1,5613 @@
+{
+  "metadata": {
+    "source_file": "Transcript_User_Study.json",
+    "cleaned_at": "2026-04-19",
+    "segments_input": 931,
+    "segments_output": 931,
+    "segments_dropped_empty_after_cleaning": 0,
+    "speakers": {
+      "I": "Interviewer / moderator (researcher)",
+      "P1": "Participant 1 (ERP end user, domain expert)",
+      "P2": "Participant 2 (ERP end user, domain expert)"
+    },
+    "diarization_audit": "The raw ASR diarization produced four speaker labels (Julianus, Damian Hotstettler, Urs Meier, 'speaker 4'). A manual audio audit confirmed that 'speaker 4' (202 segments) was the same person as Damian Hotstettler — likely a re-identification artifact from the diarization model. Both labels were consolidated into P1.",
+    "cleaning_operations": [
+      "Speaker labels anonymized (real names → I, P1, P2)",
+      "Diarization split corrected: 'speaker 4' merged into P1",
+      "Real-name mentions inside sentence bodies replaced with speaker IDs",
+      "Standalone non-lexical fillers removed (äh, ähm, mhm, ehm, hm)",
+      "Whitespace and punctuation spacing normalized",
+      "Timestamps normalized to HH:MM:SS",
+      "No content-level rewriting (verbatim preserved)"
+    ],
+    "citation_style": "(Pn, HH:MM:SS)  or  (Pn, HH:MM:SS–HH:MM:SS) for multi-segment quotes"
+  },
+  "segments": [
+    {
+      "speaker": "I",
+      "startTime": "00:00:00",
+      "endTime": "00:00:02",
+      "sentence": "Die Aufnahme starten, die läuft jetzt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:00:04",
+      "endTime": "00:00:09",
+      "sentence": "Genau, das ist jetzt eigentlich so der Anfang erstmal gewesen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:00:09",
+      "endTime": "00:00:20",
+      "sentence": "Jetzt habt ihr einen Überblick bekommen und ich wollte diese Chance eigentlich auch mal nutzen, weil wir haben zwar schon mal auch drüber gesprochen über das Ganze, aber auch so die aktuelle Ausgangslage, bei der ihr euch aktuell befindet."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:00:20",
+      "endTime": "00:00:35",
+      "sentence": "Also ich würde so strukturieren, jetzt kurzes Vorab Interview, dann springen wir tatsächlich ins System rein, dann kommt kurz danach noch ein Fragebogen, der so fünf Minuten dauert und dann einfach können wir noch drüber quatschen, wie ihr es findet, ob es wirklich nützlich für euch wäre und so weiter."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:00:35",
+      "endTime": "00:00:40",
+      "sentence": "Und darum würde ich jetzt einfach damit anfangen, eben aktuelle Ausgangslage."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:00:40",
+      "endTime": "00:00:58",
+      "sentence": "Ihr habt dieses ODBC, dieses Legacy System, sag ich mal, das On Premise bei euch läuft, das ist ja über Sage dann verbunden als Nutzeroberfläche und damit habt ihr aktuell auch Probleme teilweise oder es hält euch zurück oder wie schätzt ihr die aktuelle Ausgangslage bei euch ein?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:00:59",
+      "endTime": "00:01:04",
+      "sentence": "Also vielleicht grundsätzlich hochdeutsch besser, eigentlich kein Problem."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:01:05",
+      "endTime": "00:01:08",
+      "sentence": "Ich verstehe davon eigentlich gar nichts."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:01:09",
+      "endTime": "00:01:13",
+      "sentence": "Ich nutze Sage, deswegen ist für mich Sage auch wunderbar."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:01:14",
+      "endTime": "00:01:16",
+      "sentence": "Ich arbeite mit, was ich habe."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:01:16",
+      "endTime": "00:01:28",
+      "sentence": "Ich hätte zum Teil gern mehr, aber das meiste, ich sage jetzt mal, was man offensichtlich braucht, 90 Prozent meiner Fragen kriege ich beantwortet mit dem System, das wir haben."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:01:29",
+      "endTime": "00:01:40",
+      "sentence": "Was darüber hinausgeht, versteht er und kann dann zum Beispiel Abfragen bauen, die meine Fragen entweder schneller beantworten oder zusätzliche Dinge beantworten."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:01:40",
+      "endTime": "00:01:41",
+      "sentence": "Also ganz einfach."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:01:41",
+      "endTime": "00:02:05",
+      "sentence": "Jetzt sind wir gerade dabei, Rückmeldung eines Mitarbeiters, die melden über die BDE zurück, welche Teile, über welchen Auftrag, in welcher Zeit haben die gemacht, auf welcher Maschine und wenn ich das auswerten möchte, dann gibt es da eine vorgefertigte Sage Auswertung und die kann ich in Excel exportieren und dann kann ich dort drin beispielsweise rechnen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:02:05",
+      "endTime": "00:02:07",
+      "sentence": "OK, spannend."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:02:07",
+      "endTime": "00:02:13",
+      "sentence": "Ich kann aber nicht in Sage rechnen, weil logisch, die können nicht jede Frage, die irgendjemand hat, beantworten."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:02:14",
+      "endTime": "00:02:19",
+      "sentence": "Ich brauche dafür aber dann sicher mal ihn, dass er dann die neue Abfrage bauen kann."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:02:20",
+      "endTime": "00:02:27",
+      "sentence": "Und was dann halt auch ist, ich muss mit meinem Verständnis von was ich gern hätte, ihm klar machen, was ich gern hätte."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:02:27",
+      "endTime": "00:02:31",
+      "sentence": "Er versteht zum Glück, weil er seit 20 Jahren uns betreut."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:02:32",
+      "endTime": "00:02:38",
+      "sentence": "Und das sehe ich aber dann sonst, wenn ich das mit unserem Sage Integrator machen muss."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:02:38",
+      "endTime": "00:02:48",
+      "sentence": "Und da hatten wir schon mehrmals Probleme, bis der versteht, was ich wirklich will, dann macht er es und dann sehe ich aber vier Wochen später, was er wirklich gemacht hat."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:02:48",
+      "endTime": "00:02:56",
+      "sentence": "Und wenn irgendwas in einer fünfseitigen Auftragsbestätigung nicht richtig formuliert war durch mich, dann kann er Ich habe meinen Job erledigt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:02:56",
+      "endTime": "00:02:59",
+      "sentence": "Ist ein Problem, das kostet jetzt so und so viel Geld."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:02:59",
+      "endTime": "00:03:03",
+      "sentence": "Das ist für mich das größte Problem mit Sage, was ich habe."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:03:03",
+      "endTime": "00:03:10",
+      "sentence": "Aber logischerweise, das ist so eine Standardsoftware, nenne ich das, Da kann ich auch nicht mehr erwarten."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:03:10",
+      "endTime": "00:03:20",
+      "sentence": "Schön wäre es aber da sehe ich, wo so etwas personalisierter nutzbar wäre und schön wäre es, wenn das eben durch mich nutzbar ist."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:03:21",
+      "endTime": "00:03:27",
+      "sentence": "Und nicht immer dazu aber vielleicht deine Einschä Was kann Sage und was kann Sage nicht."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:03:28",
+      "endTime": "00:03:39",
+      "sentence": "Sage ist eine ERP Lösung und kann natürlich, ich sage jetzt mal, gängige Daten verarbeiten und bietet auch Analysetools."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:03:39",
+      "endTime": "00:03:45",
+      "sentence": "Also man kann gucken, welchen Artikel haben wir am meisten verkauft und blablabla."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:03:45",
+      "endTime": "00:03:58",
+      "sentence": "Und das Produkt hat natürlich auch ein Reporting über gängige, über gängige Fragen, die an eine betriebswirtschaftliche Unternehmung gerichtet sind, aber eben nicht en detail."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:03:58",
+      "endTime": "00:04:00",
+      "sentence": "Das ist halt schwierig."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:04:01",
+      "endTime": "00:04:15",
+      "sentence": "Und dann ist natürlich, wenn man es genau wissen mag, ist man gefordert, den Datenhintergrund zu erkennen und auch eben die Konstellation der Tabellen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:04:16",
+      "endTime": "00:04:18",
+      "sentence": "Wie macht er das und blablabla."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:04:18",
+      "endTime": "00:04:21",
+      "sentence": "Und das ist sehr kompliziert."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:04:22",
+      "endTime": "00:04:27",
+      "sentence": "Und da hoffen wir natürlich, dass das genau diese Spalte schließen könnte."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:04:27",
+      "endTime": "00:04:35",
+      "sentence": "Sehr spannend, weil genau diese Herausforderung, die du gerade auch erklärst, war auch eine, die ich in dem ganzen Entwicklungsprozess hatte."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:04:35",
+      "endTime": "00:04:39",
+      "sentence": "Weil es war dann oft so, dass es wunderbar auf kleineren Datenbanken funktioniert hat."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:04:39",
+      "endTime": "00:04:48",
+      "sentence": "Aber sobald man das halt und auf der einen Datenbank, auf die ich Zugriff hatten wir über 940 Tabellen, die halt auch alle spezielle Namen haben und so weiter."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:04:49",
+      "endTime": "00:04:56",
+      "sentence": "Wie ein KI System, das auch wirklich herausfinden kann, was dort die relevanten Spalten und Tabellen sind."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:04:56",
+      "endTime": "00:05:01",
+      "sentence": "Dass es eben nicht nur ein Mitarbeiter ist, sondern tatsächlich auch eine KI, finde ich jetzt natürlich auch spannend."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:05:01",
+      "endTime": "00:05:06",
+      "sentence": "Ich hatte da jetzt auch einen sehr spannenden Lösungsansatz, der ich glaube, das auch grundsätzlich viel interessanter macht."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:05:06",
+      "endTime": "00:05:10",
+      "sentence": "Aber können wir dann später auch noch darauf eingehen und eintauchen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:05:11",
+      "endTime": "00:05:25",
+      "sentence": "Was ich jetzt auch noch spannend finde, wäre, du hast es erklärt, du hast ein paar Standardfragen, könntest du noch ein paar Beispiele nennen, so ein bisschen von der Komplexität her auch was es für Daten braucht, die so deine gängigen Fragen sind an das System."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:05:26",
+      "endTime": "00:05:31",
+      "sentence": "Also ganz wirklich Standard und ich glaube wir hatten es mal mit so steigender Komplexität."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:05:32",
+      "endTime": "00:05:40",
+      "sentence": "Ich will zum Beispiel oder Kunde ruft mich an, sagt wir haben schlimmstenfalls ein Qualitätsproblem mit diesem Teil."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:05:41",
+      "endTime": "00:05:44",
+      "sentence": "Wie viele von diesen Teilen habt ihr geliefert?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:05:47",
+      "endTime": "00:05:49",
+      "sentence": "Das Einfachste ist so und so viel Stück."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:05:49",
+      "endTime": "00:05:56",
+      "sentence": "Dann gibt es aber zum Beispiel Chargen, Lot, Größen, die betroffen sein könnten oder nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:05:56",
+      "endTime": "00:06:14",
+      "sentence": "Und wenn ich das will, dann ist der Aufwand, das zu finden, schon größer, weil Stück kriege ich auf Knopfdruck, Chargen kriege ich dann zum Beispiel, indem ich sehe, das sind 100 Lieferungen und ich muss die anklicken und manuell schauen, wo diese Charge dann drin ist."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:06:14",
+      "endTime": "00:06:23",
+      "sentence": "Also er hätte wahrscheinlich wieder einen schnellen Weg, aber dafür braucht es wieder IT Wissen, was ich nicht habe."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:06:23",
+      "endTime": "00:06:25",
+      "sentence": "Das ist so, das kann täglich vorkommen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:06:26",
+      "endTime": "00:06:32",
+      "sentence": "Dann bisschen spannender ist eben zum Beispiel die Rückmeldungen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:06:32",
+      "endTime": "00:06:43",
+      "sentence": "Also wir hatten Fertigungsaufträge, Mitarbeiter stempelt den Auftrag an, arbeitet beendet, sagt wie viele Stück hat er gemacht, vielleicht Ausschuss, kann ich alles relativ einfach rausholen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:06:43",
+      "endTime": "00:07:06",
+      "sentence": "Und dann wüsste ich aber zum Beispiel gern hat jetzt Mitarbeiter A oder Mitarbeiter B pro Zeit mehr Teile gemacht, also irgendwo Controlling oder Nachkalkulationsfragen und das geht auch noch, aber da bräuchte ich dann schon zumindest Export in Excel und Summieren."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:07:06",
+      "endTime": "00:07:08",
+      "sentence": "Das schafft Sage allein nicht mehr."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:07:09",
+      "endTime": "00:07:25",
+      "sentence": "Und dann gibt es die für mich irgendwann wirklich spannenden Fragen, dass ich sagen kann, Mitarbeiter A hat vielleicht fünf Teile gemacht, Mitarbeiter B hat sechs Teile gemacht, Mitarbeiter A verdient x Franken, Mitarbeiter B verdient Y Franken."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:07:25",
+      "endTime": "00:07:32",
+      "sentence": "Die Lohndinge sind aber nicht in Sage oder auch Sage oder nicht mehr Sage, Produktoffizier, aber ähnliches Produkt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:07:33",
+      "endTime": "00:07:37",
+      "sentence": "Und da sprechen die Systeme aber überhaupt nicht miteinander."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:07:37",
+      "endTime": "00:07:49",
+      "sentence": "Das heißt, jetzt muss ich die ganze Abfrage in Sage machen, dann muss ich im Lohnsystem seinen Lohn anschauen, dann muss ich den noch durch was weiß ich rechnen, dass ich pro Stunde habe."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:07:49",
+      "endTime": "00:08:06",
+      "sentence": "Ich könnte das zwar in Sage eintragen, dann müsste ich aber jährlich schauen, dass wenn der mehr verdient, ich das wieder aktualisiere, Dann wird es mühsam und dann habe ich ja erst Stück mit Rückmeldung oder Rückmeldung da die Stück Lohn."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:08:07",
+      "endTime": "00:08:14",
+      "sentence": "Und dann will ich aber vielleicht noch sehen, dass wir im Kanton Basel Land fünf Feiertage hatten diese Woche."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:08:14",
+      "endTime": "00:08:27",
+      "sentence": "Das steht irgendwo im Internet, das muss ich wieder manuell holen und ich denke so auf höchster Komplexitätsebene wäre dann eine Analyse, die all das berücksichtigt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:08:27",
+      "endTime": "00:08:50",
+      "sentence": "Also war Peter effizienter als Stefan im Monat Mai im Jahr 2025 und vielleicht hängt das noch mit der Temperatur draußen ab, indem ich schaue, ob meine Klimaanlage, wenn sie mehr läuft, mehr Entspannung bringt oder nicht endlos Dinge da rein, das geht dann viel zu weit."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:08:51",
+      "endTime": "00:09:06",
+      "sentence": "Aber das wäre schön, wenn mir der perfekte KI Assistent sagen könnte, dreh ein bisschen die Klimaanlage hoch, weil Über die letzten fünf Jahre war der Output immer dann, wenn wir 22 Grad statt 21 Grad hatten."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:09:06",
+      "endTime": "00:09:12",
+      "sentence": "Nicht, dass das so wäre, aber von der Idee her wäre es dann sehr komplex und interessant."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:09:12",
+      "endTime": "00:09:13",
+      "sentence": "Okay, sehr spannend."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:09:13",
+      "endTime": "00:09:22",
+      "sentence": "Also wirklich eben dieses fast schon holistische, auch mit externen Systemen, so ein Modell, das wirklich identifizieren kann, was eigentlich alles am liebsten."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:09:22",
+      "endTime": "00:09:38",
+      "sentence": "Und noch viel schöner wäre dann, wenn ich nicht selber sagen muss, auf was ich schauen muss, sondern wenn ich irgendwelche Korrelationen präsentiert bekomme, weil die abweichen von wie es bis jetzt war zum Beispiel."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:09:38",
+      "endTime": "00:09:43",
+      "sentence": "Also dass mir das System selber sagt, worauf ich eigentlich schauen müsste."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:09:43",
+      "endTime": "00:09:44",
+      "sentence": "Okay, sehr spannend."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:09:44",
+      "endTime": "00:09:47",
+      "sentence": "Also so ein bisschen dieses Projekt proaktive sozusagen, was dann ein."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:09:48",
+      "endTime": "00:09:54",
+      "sentence": "Das wäre ein Traum, wenn ich nicht selber wissen müsste, worauf ich eigentlich schauen muss."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:09:55",
+      "endTime": "00:10:06",
+      "sentence": "Okay, dann braucht es mich vielleicht irgendwann nicht mehr, aber dann schaue ich mir dashboard von Hawaii aus und muss mich nur noch kümmern, was nicht läuft."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:10:06",
+      "endTime": "00:10:12",
+      "sentence": "Klar ist das eine Illusion oder heute noch, aber das schön."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:10:12",
+      "endTime": "00:10:12",
+      "sentence": "OK."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:10:13",
+      "endTime": "00:10:16",
+      "sentence": "Und in welchem Kontext stellst du diese Fragen?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:10:16",
+      "endTime": "00:10:25",
+      "sentence": "Sind diese täglich oder sind die eher quartalsspezifisch, wo du dann anfängst Effizienz und Produktivität zu vergleichen?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:10:25",
+      "endTime": "00:10:26",
+      "sentence": "Es gibt alles."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:10:26",
+      "endTime": "00:10:28",
+      "sentence": "Es gibt Dinge, die schauen wir täglich an."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:10:28",
+      "endTime": "00:10:30",
+      "sentence": "Gibt Dinge, die schauen wir jährlich an."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:10:30",
+      "endTime": "00:10:42",
+      "sentence": "Gibt Dinge, die schauen wir nur bei Ereignissen an, irgendwelche Qualitätsprobleme und es gibt Dinge, von denen ich nicht weiß, dass ich sie anschauen sollte, Die käme ich gern in dem Rhythmus vorgeschlagen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:10:43",
+      "endTime": "00:10:52",
+      "sentence": "Der Sinn macht logischerweise, wobei der Sinn ist die Frage, das müsste ein riesiger Baum sein."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:10:52",
+      "endTime": "00:11:04",
+      "sentence": "Aus Ziel ist irgendwo, was weiß ich, Profit oder Nachhaltigkeit oder was auch immer und der soll alles berücksichtigen und mich auf die relevanten Punkte aufmerksam machen im Rhythmus, der Sinn macht."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:11:05",
+      "endTime": "00:11:07",
+      "sentence": "Ja doch, das macht definitiv Sinn."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:11:07",
+      "endTime": "00:11:11",
+      "sentence": "Also ich glaube halt wirklich dieses Proaktive ist da sehr spannend."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:11:11",
+      "endTime": "00:11:25",
+      "sentence": "Ich glaube, worauf ich mich jetzt wirklich konzentriert habe in der Arbeit ist das System nicht komplett sozusagen auf eure Infrastruktur zu fokussieren, sondern dass du im Prinzip per Knopfdruck einfach die Datenbank austauschen kannst."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:11:25",
+      "endTime": "00:11:38",
+      "sentence": "Können wir sonst auch noch ausprobieren mit einer anderen Datenbank, die dann direkt angeschlossen wird und das System in der Hinsicht schon proaktiv sozusagen herausfindet, welche Daten ich eigentlich hier vor mir habe."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:11:38",
+      "endTime": "00:11:41",
+      "sentence": "Aber natürlich so ein spezifisches Modell wäre sicherlich auch spannend."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:11:41",
+      "endTime": "00:11:46",
+      "sentence": "Ist die Frage, inwieweit bietet das Sage an, solche Extensions oder Integration?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:11:48",
+      "endTime": "00:11:58",
+      "sentence": "Also wir haben divers, also wir nennen das Customizing, wir haben ein Standardprodukt und wir haben natürlich sehr viel Customizing."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:11:58",
+      "endTime": "00:12:10",
+      "sentence": "Also in der PPS haben wir nicht ganz, aber schon Grundlegendes verändert und das kann man bestellen und bezahlen, dann ist das so."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:12:10",
+      "endTime": "00:12:14",
+      "sentence": "Aber dazu gehört dann immer noch die Frage, wie wird das gewartet?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:12:14",
+      "endTime": "00:12:24",
+      "sentence": "Also wie sieht das aus, wenn wir ein neues Stammprodukt haben, Wie sieht das jetzt mit dieser Anpassergeist neu erzeugen oder wird das automatisch?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:12:24",
+      "endTime": "00:12:41",
+      "sentence": "Das ist eine große Diskussion der Auseinandersetzung und eben wie er es angesprochen hat, man muss das sehr genau formulieren, was man will, damit man schlussendlich mit dem Produkt, mit dem Endprodukt dann auch leben kann."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:12:41",
+      "endTime": "00:12:42",
+      "sentence": "Klar, OK, verstehe."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:12:42",
+      "endTime": "00:12:53",
+      "sentence": "Das ist dann aber nur Sage zum Beispiel entweder Warenwirtschaft oder im Lohnsystem oder was weiß ich, mit was man das noch alles verknüpfen möchte."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:12:53",
+      "endTime": "00:12:58",
+      "sentence": "Also von meinem Traum, den ich gerade geschildert habe, ist das weit entfernt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:12:58",
+      "endTime": "00:12:59",
+      "sentence": "OK."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:12:59",
+      "endTime": "00:13:11",
+      "sentence": "Und du hast jetzt viel darüber gesprochen, die Probleme sozusagen, die du nicht siehst, von den Problemen, die du tatsächlich siehst und mit denen du tagtäglich Auseinandersetzungen hast."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:13:12",
+      "endTime": "00:13:17",
+      "sentence": "Welche Probleme sind es, diese abfragen zum Scheitern grundsätzlich?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:13:17",
+      "endTime": "00:13:27",
+      "sentence": "Also erkennst du irgendwelche wiederholenden Themen, wie ob es Datenqualität ist oder Konsistenz der Eintragung, dass es nicht getrackt wurde?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:13:28",
+      "endTime": "00:13:31",
+      "sentence": "Nein, Datenqualität wäre, glaube ich, immer unser Problem."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:13:32",
+      "endTime": "00:13:37",
+      "sentence": "Logisch, wenn ein Mitarbeiter nicht zurückmeldet, was er gemacht hat, dann kann es das System nicht wissen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:13:38",
+      "endTime": "00:13:43",
+      "sentence": "Mein größtes Problem ist, denke ich, die Starrheit."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:13:43",
+      "endTime": "00:13:54",
+      "sentence": "Also es kann sein, dass da eine Analyse vorgefertigt ist, die kriege ich auch, aber wenn ich was anderes gern hätte, dann geht das halt einfach nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:13:54",
+      "endTime": "00:14:18",
+      "sentence": "Plus, wenn ich damit arbeiten möchte, dann muss ich eben abfrage, ich nenne das Abfrage Doppelklick auf Menüpunkt, den es schon gibt, weil irgendjemand anders sich das schon machen hat lassen und dann das in den Standard ging und dann kriege ich da so eine PDF Vorschau und die kann ich in Excel exportieren und dort kann ich dann damit weiterarbeiten."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:14:19",
+      "endTime": "00:14:26",
+      "sentence": "Also es ist für mich diese Umständlichkeit, vielleicht gäbe es einen schlauen Weg, den ich aber als einfacher Bediener nicht kenne."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:14:26",
+      "endTime": "00:14:51",
+      "sentence": "Das ist für mich nicht ein Pain Point, aber das größte Ärgernis, wenn ich daran denke, was ich gerne alles würde, Aber ich meine, ich kann auch nicht mein iPhone sagen, verknüpft jetzt irgendwie die Kamera mit, ich weiß nicht was, da ist halt einfach das gegeben, was da ist und für dich, ich weiß nicht wo deine größten Probleme."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:14:52",
+      "endTime": "00:15:04",
+      "sentence": "Wenn ich von der Geschäftsleitung eine Frage zugespiele, dann ist es natürlich meine Aufgabe, wo gründen jetzt diese Daten, damit man hier eine Antwort generieren kann."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:15:05",
+      "endTime": "00:15:25",
+      "sentence": "Dann fangen wir natürlich mit dem relationalen Datenbankmodell an, das heißt, ich muss die Zusammenhänge der Tabelle erkennen, damit ich überhaupt eine Antwort geben kann, brauche ich eine Übersicht über die Datenstruktur, wie du gesagt hast."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:15:25",
+      "endTime": "00:15:31",
+      "sentence": "Wenn das dann irgendwann mal 100 Tabellen sind, dann wird das aufwendig."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:15:32",
+      "endTime": "00:15:43",
+      "sentence": "Das heißt, man muss dann Konstellationen machen und dann mal ausprobieren, ob die Antworten auch tatsächlich plausibel sind und dann die Fehler suchen, warum sie nicht plausibel sind."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:15:43",
+      "endTime": "00:16:09",
+      "sentence": "Das ist natürlich aufwendig, das ist auch immer schwer abzuschätzen von den Zeiten her, gerade wenn man so einen Vergleich machen will, wie er jetzt benannt hat, dann gibt es ja eigentlich ein statisches Modell, wo man gesagt hat, dieser Prozess dauert so und so lange pro Stück, der ist aber ganz irgendwo anders gespeichert als die Fluktuationsdaten."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:16:09",
+      "endTime": "00:16:13",
+      "sentence": "Das heißt, ich habe jetzt zehn Minuten an diesem Werkstück."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:16:13",
+      "endTime": "00:16:23",
+      "sentence": "Das heißt also, ich muss, wenn ich eine Antwort haben will, ist der jetzt langsamer oder schneller als die Vorgabe, muss ich die wieder neu zusammenfügen, diese Daten."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:16:23",
+      "endTime": "00:16:25",
+      "sentence": "Und das bietet das Standardprodukt so nicht."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:16:26",
+      "endTime": "00:16:27",
+      "sentence": "OK, sehr spannend."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:16:30",
+      "endTime": "00:16:35",
+      "sentence": "Mir kommen ganz viele Ideen schon für das System an sich auch und wo es dort auch Nutzen gibt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:16:35",
+      "endTime": "00:16:38",
+      "sentence": "Also ich freue mich da auch schon das euch gleich zeigen zu können."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:16:39",
+      "endTime": "00:16:47",
+      "sentence": "Vielleicht noch mehr dann zu der Nutzung von einmal KI Systemen grundsätzlich, aber auch jetzt spezifisch solchen personalisierten System."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:16:48",
+      "endTime": "00:16:52",
+      "sentence": "Inwieweit ist das schon in euren aktuellen Alltagen, sage ich mal drin?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:16:52",
+      "endTime": "00:17:01",
+      "sentence": "Sind das schon Erste Nutzungen von ChatGPT, Copilot und auch in so Datenanalyse Zeugs oder wie nutzt ihr aktuell KI?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:17:03",
+      "endTime": "00:17:22",
+      "sentence": "Also ich nutze ChatGPT vor allem, also bei den Standardapplikationen, wie du ansprichst, dieser Co Paris, mit dem arbeite ich eigentlich nicht und in ChatGPT formuliere ich einfach sehr präzise Fragen und bekomme da richtig gute Antworten."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:17:22",
+      "endTime": "00:17:31",
+      "sentence": "Es geht hier Syntax, es geht hier Umgang mit Daten und das mache ich sehr gerne mit diesem System."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:17:31",
+      "endTime": "00:17:39",
+      "sentence": "Ich habe auch festgestellt, wenn ich eine präzise Frage formulieren kann, dann bekomme ich auch eine sehr wertige."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:17:40",
+      "endTime": "00:17:42",
+      "sentence": "Das ist John K."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:17:43",
+      "endTime": "00:17:48",
+      "sentence": "Und ich bin sicher jeden Tag am Chat GP, OK."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:17:49",
+      "endTime": "00:17:56",
+      "sentence": "Ich nicht so häufig, aber ich nutze es, wenn ich irgendwo nicht suchen will."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:17:56",
+      "endTime": "00:18:02",
+      "sentence": "Also wenn ich was weiß ich Kunde will wissen, was ist CO Abdruck unseres Produkts?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:18:02",
+      "endTime": "00:18:23",
+      "sentence": "Dann errechnen wir irgendwas und dann könnte ich mir das jetzt in ewiger Kugelsuche raussuchen und dann liegt es halt nahe zu Wo ist in der mechanischen Bearbeitung ein durchschnittlicher CO Abdruck pro Kilo Rohmaterial bei mir sehr viel qualitativer oder auch was weiß ich."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:18:23",
+      "endTime": "00:18:29",
+      "sentence": "Ich habe auch unsere Strategiepunkte da reingeladen und gesagt mach mir Vorschläge, was jetzt die Lösung ist."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:18:30",
+      "endTime": "00:18:37",
+      "sentence": "Nicht wirklich brauchbar die Antwort, aber interessant, was da wie schnell herumkommt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:18:37",
+      "endTime": "00:18:52",
+      "sentence": "Und privat nutze ich es, wenn mich etwas interessiert schon auch ich habe es dir erzählt, das Ding baut dir ja zwischenzeitlich ein Programm, wenn du willst für irgendwas."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:18:52",
+      "endTime": "00:19:12",
+      "sentence": "Ich verstehe meist zu wenig, aber ich bin angetan davon, dass es das kann, Zumal wir hier über Textinput und ich glaube, da kann das einfach alles viel schneller sprechen mit dem Problem, dass eben die Felder heißen, wie sie heißen und nicht zwingend so, wie wir es gerne hätten."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:19:14",
+      "endTime": "00:19:21",
+      "sentence": "Sehr spannend, wunderbar, sehr interessant eure jeweiligen Meinungen dazu auch zu hören."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:19:21",
+      "endTime": "00:19:35",
+      "sentence": "Wie gesagt, mir kommen ganz viele Ideen auch wie es aufgebaut ist, weil man hat ja zum Beispiel hier links auf der linken Seite die KI Software eigentlich und hier dann die Verbindung der Datenbank und das ist halt spezifisch aufgebaut für KI grundsätzlich."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:19:35",
+      "endTime": "00:19:56",
+      "sentence": "Das heißt, eine andere Überlegung, die ich auch hatte, war das sozusagen als Server, MCP Server, den großen KI Modellen zur Verfügung zu stellen, dass ihr dann sagen könnt, hey, ich lade jetzt einfach genau diese schnittstelle in mein ChatGPT und dann kann im Prinzip ChatGPT die Datenbank zur Informationssuche auch nutzen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:19:57",
+      "endTime": "00:20:03",
+      "sentence": "Aber Simon meinte, wir sollten sicherstellen, dass das Gespräch heute nicht allzu explorativ wird."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:20:03",
+      "endTime": "00:20:05",
+      "sentence": "Kommen mir aber sehr viele Ideen in dem Ganzen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:20:05",
+      "endTime": "00:20:13",
+      "sentence": "Darum würde ich sagen, switchen wir rüber zu der User Study und das ist jetzt im Prinzip die App, die ich entwickelt habe, die das Ganze umschließt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:20:13",
+      "endTime": "00:20:23",
+      "sentence": "Also man sieht hier ist mit dem SQL Syntax verbunden, weil das eure Datenbank ist und es ist mit der OL Luisi Diener Datenbank verknüpft."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:20:24",
+      "endTime": "00:20:29",
+      "sentence": "Und jetzt ist es so, dass wir wie eine Art Think Aloud Study eigentlich durchführen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:20:29",
+      "endTime": "00:20:43",
+      "sentence": "Das heißt, es geht darum, dass ihr eure Gedankenprozesse und Besprechungen vielleicht auch wirklich offenlegt und überlegt, was ihr gerne fragen möchtet, wie ihr auf die Frage gekommen seid, ob es irgendwelche Confusion Points oder sowas gab, während ihr das System genutzt habt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:20:43",
+      "endTime": "00:20:54",
+      "sentence": "Danach kommt dann auch noch eine kurze Besprechung, kurzes Formular, was ich gemacht habe noch, Ich habe, wie gesagt, hier vorab noch einen Fragenkatalog erstellt gehabt von, sag ich mal, komplexer werdenden Fragen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:20:54",
+      "endTime": "00:21:20",
+      "sentence": "Das heißt, wir haben relativ einfache Fragen, die einfach nur abrufen sind, die werden dann komplexer zu Aggregation, zu Gruppierungen, unter anderem, wo mehrere Tabellen nützlich sind, Cross Joins, mehrere Tabellen und so weiter, bis hin dann auch Datenqualität und dann die Cockpit Questions, die du mir mal geschickt hattest, die wirklich sozusagen die höchste Komplexität eigentlich sind und die könnt ihr gerne auch direkt abtippen, wenn sie euch interessieren."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:21:20",
+      "endTime": "00:21:35",
+      "sentence": "Ihr habt sonst hier auch einfach nochmal den Fragenkatalog, sonst kann ich das mit dem Bildschirm verbinden, könnt ihr rüberpasten, aber sie sollen vor allem als Inspiration dienen, dass ihr einfach ein paar Ideen habt, in welche Richtung man fragen könnte, weil es ist ein sehr blankes Interface."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:21:36",
+      "endTime": "00:21:52",
+      "sentence": "Und dann geht es vor allem darum zu analysieren, okay, wie steht ihr zu so einem Tool, inwieweit ist es hilfreich in ihrem aktuellen Stand, was müsste sich verbessern, wie sieht es auch mit dem Vertrauen aus bezüglich den Antworten, Das ist so ein bisschen den Rahmen zu setzen, wie das jetzt verbunden ist."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:21:53",
+      "endTime": "00:21:59",
+      "sentence": "Das Interface spricht mit dem KI System, das KI System spricht mit dem Laptop und somit mit eurer Datenbank."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:21:59",
+      "endTime": "00:22:01",
+      "sentence": "So ist das Ganze im Prinzip aufgesetzt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:22:02",
+      "endTime": "00:22:05",
+      "sentence": "Genau daher würde ich euch jetzt das überreichen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:22:05",
+      "endTime": "00:22:12",
+      "sentence": "Ja ich habe hier auch ein schön Dark Mode, also je nachdem was ihr gerne haben möchtet, Dark oder Light Mode könnt ihr das da oben wählen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:22:13",
+      "endTime": "00:22:17",
+      "sentence": "Hier unten auch noch sind paar Übungsfragen oder weitere Fragen auf Englisch."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:22:17",
+      "endTime": "00:22:23",
+      "sentence": "Er kann beide Sprachen sprechen, aber ich denke, weil eure Datenbank auch auf Deutsch ist, macht das wahrscheinlich am meisten Sinn."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:22:23",
+      "endTime": "00:22:35",
+      "sentence": "Ich würde mich dazusetzen, paar Notizen schreiben, eher unmoderiert bleiben, aber natürlich wenn irgendwelche Fragen aufkommen, bin ich da würde mich sehr interessieren, Hat der jetzt zum Beispiel."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:22:35",
+      "endTime": "00:22:38",
+      "sentence": "Unser Lohnsystem auch drin?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:22:38",
+      "endTime": "00:22:41",
+      "sentence": "Also hat der Office Line und Sage drin?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:22:41",
+      "endTime": "00:22:43",
+      "sentence": "Ne der hat nur."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:22:45",
+      "endTime": "00:22:47",
+      "sentence": "Sage 100 Genau."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:22:47",
+      "endTime": "00:22:54",
+      "sentence": "Der hat nur diese, also ich weiß nicht genau welche das ist, aber das ist eine von vielen Datenbanken, könnte ich hier sonst kurz auch mal schauen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:22:59",
+      "endTime": "00:23:09",
+      "sentence": "Für mich ist das noch Hewis Dialekt, MSSQL und DB Luise Diener, das ist für mich."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:23:12",
+      "endTime": "00:23:18",
+      "sentence": "Da ich das jetzt nicht weiß, würde ich jetzt ihn zuerst fragen, auf welche Daten kann ich denn überhaupt zugreifen?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:23:31",
+      "endTime": "00:23:34",
+      "sentence": "Genau und du siehst auch hier so ein bisschen die Schritte, die er durchführt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:23:35",
+      "endTime": "00:23:38",
+      "sentence": "Dort oben kann man dann auch mal nachschauen, was er sozusagen gesucht hat."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:23:39",
+      "endTime": "00:23:39",
+      "sentence": "Wo sehe ich das?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:23:40",
+      "endTime": "00:23:40",
+      "sentence": "Entschuldigung."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:23:40",
+      "endTime": "00:23:46",
+      "sentence": "Hier bei dem Agent Completer kannst du draufklicken, dann siehst du so ein bisschen was er so denkt gerade."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:23:49",
+      "endTime": "00:24:02",
+      "sentence": "Da hast du angesprochen eben Vertrauen in sowas, das ist bei mir zumindest bei ChatGPT zum Teil nicht hoch, deswegen würde ich jetzt ein paar Fragen stellen, zu schauen, ob das sein kann, was der mir sagt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:24:03",
+      "endTime": "00:24:10",
+      "sentence": "Also zum Beispiel, welches Produkt haben wir 2025 sind alle Jahre drin?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:24:10",
+      "endTime": "00:24:14",
+      "sentence": "Ist es bis vor kurzem live, ist jetzt online drin?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:24:15",
+      "endTime": "00:24:18",
+      "sentence": "Ja also ich glaube die er kann sogar Abfragen bis letzte Woche machen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:24:21",
+      "endTime": "00:24:23",
+      "sentence": "Höftesten gibt Das Wort."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:24:27",
+      "endTime": "00:24:29",
+      "sentence": "Selber 25."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:24:43",
+      "endTime": "00:24:52",
+      "sentence": "Sieht man auf der Seite auch was ich spannend finde immer kann man zuschauen, wie er Fehler macht in der Datenbank und die dann auch versucht zu korrigieren und so weiter."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:24:52",
+      "endTime": "00:24:58",
+      "sentence": "Das ist ganz spannend sieht man, wie das KI System sozusagen mit eurem Server interagiert auf diesen Logs."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:25:00",
+      "endTime": "00:25:01",
+      "sentence": "Und was ist Fehler für ihn?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:25:02",
+      "endTime": "00:25:09",
+      "sentence": "Das ist zum Beispiel In dem Fall war der Fehler, dass er wahrscheinlich nicht Er konnte den Spaltennamen nicht finden."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:25:09",
+      "endTime": "00:25:21",
+      "sentence": "Das heißt, er bekommt diese Rückmeldung sozusagen von der Datenbank zurück und dann findet er hier oder nutzt er den Fehler, die Query weiter zu verschärfen und kann dann die neue Query abfeuern."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:25:21",
+      "endTime": "00:25:26",
+      "sentence": "Okay, das am häufigsten verschärfte Produkt hat keine spezifische Artikelnummer in den Daten."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:25:26",
+      "endTime": "00:25:29",
+      "sentence": "Das verstehe ich zum Beispiel jetzt nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:25:30",
+      "endTime": "00:25:41",
+      "sentence": "Dann frage ich ihn welche Artikelnummer ist es denn, die 1000 dreimal verkauft wurde?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:25:45",
+      "endTime": "00:25:49",
+      "sentence": "1003 macht grundsätzlich keinen Sinn."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:25:54",
+      "endTime": "00:25:56",
+      "sentence": "Das verstehe ich nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:25:56",
+      "endTime": "00:26:05",
+      "sentence": "Also wieso jetzt 1003 mal, wenn es Einheiten, dann habe ich mich eventuell nicht korrekt."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:26:06",
+      "endTime": "00:26:07",
+      "sentence": "Vielleicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:26:10",
+      "endTime": "00:26:19",
+      "sentence": "Welche Artikelnummer weist die meisten verkauften."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:26:27",
+      "endTime": "00:26:30",
+      "sentence": "Hättest du jetzt verstanden, was die 1003 meint?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:26:30",
+      "endTime": "00:26:39",
+      "sentence": "Ne, nicht jetzt auch direkt, aber man kann ihm dann dazu auch Rückfragen stellen, dass er nochmal Revue passieren lassen kann, welche Tabellen er genutzt hat."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:26:53",
+      "endTime": "00:26:54",
+      "sentence": "Lass mich bitte wissen, ok."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:27:04",
+      "endTime": "00:27:05",
+      "sentence": "Das ist."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:27:05",
+      "endTime": "00:27:11",
+      "sentence": "Jetzt zum Beispiel ich weiß, dass unser Artikel Matchcode, dass der Matchcode den Namen enthält."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:27:11",
+      "endTime": "00:27:12",
+      "sentence": "Deswegen würde ich jetzt fragen, kannst du."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:27:12",
+      "endTime": "00:27:17",
+      "sentence": "Mir den matchcode des Artikels 17 Art."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:27:17",
+      "endTime": "00:27:21",
+      "sentence": "7 9 4 ausgeben?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:27:29",
+      "endTime": "00:27:34",
+      "sentence": "Das kann sogar sein, weil davon haben wir recht viel gemacht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:27:37",
+      "endTime": "00:27:50",
+      "sentence": "Welchen Artikel haben wir nach diesem Vierkant Stahl am häufigsten verkauft?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:27:52",
+      "endTime": "00:27:55",
+      "sentence": "Jetzt denke ich, sind wir überall bei relativ einfachen Fragen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:27:55",
+      "endTime": "00:27:58",
+      "sentence": "Die hätte ich in Sage zügig."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:28:18",
+      "endTime": "00:28:18",
+      "sentence": "Was meint er jetzt?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:28:18",
+      "endTime": "00:28:28",
+      "sentence": "Also hat Produkte gezeigt, der Artikel, das ist ein Artikel, den haben wir verkauft, aber das für uns so ein Sammelartikel, da kann sehr viel drin sein."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:28:28",
+      "endTime": "00:28:32",
+      "sentence": "Deswegen kann ich nicht mal sagen, ob das nicht stimmt, ob ich wüsste, worauf."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:28:32",
+      "endTime": "00:28:33",
+      "sentence": "Ich eigentlich aus bin."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:28:35",
+      "endTime": "00:28:36",
+      "sentence": "Ja, der ist es."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:28:41",
+      "endTime": "00:28:43",
+      "sentence": "Soll ich nebendran schauen, ob das stimmt?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:28:44",
+      "endTime": "00:28:46",
+      "sentence": "Wenn du möchtest, das wäre super."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:28:46",
+      "endTime": "00:28:50",
+      "sentence": "Also wäre natürlich gut zu Das wäre."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:28:50",
+      "endTime": "00:28:54",
+      "sentence": "Mein erster Zuverlässigkeitscheck, sowas stimmt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:28:54",
+      "endTime": "00:28:57",
+      "sentence": "Ist tatsächlich auch Teil der Query."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:28:57",
+      "endTime": "00:29:00",
+      "sentence": "Ich mache nur kurz das Screen Recording an, weil ich ver hatte das zu aktivieren."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:29:02",
+      "endTime": "00:29:03",
+      "sentence": "Das wird auch alles schon aufgezeichnet."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:29:05",
+      "endTime": "00:29:29",
+      "sentence": "Genau, weil das ist auch eigentlich der Punkt, wo ich auch viel dran gearbeitet habe, Weil diese Hypothesen, die ich euch gezeigt hatte, diese Hypothese 2 vor allem, wo es darum geht oder B, wo es darum geht, die tatsächliche Performance von dem System zu evaluieren, ist genau dieser Vergleich zwischen einerseits dem systemgenerierten oder der systemgeneriert generierten Antwort und der Expert Review Antwort sozusagen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:29:29",
+      "endTime": "00:29:33",
+      "sentence": "Also ist natürlich super, wenn das schnell gemacht ist, hier drin auch aufzubauen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:29:34",
+      "endTime": "00:29:35",
+      "sentence": "Schau, wie schnell das geht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:29:35",
+      "endTime": "00:29:39",
+      "sentence": "Aber in der Zwischenzeit mach doch du mal mit, was dich interessieren würde weiter."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:29:41",
+      "endTime": "00:29:43",
+      "sentence": "Möchtest du einen neuen Chat machen, dann."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:29:43",
+      "endTime": "00:29:45",
+      "sentence": "Kannst du Nö, alles gut."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:29:46",
+      "endTime": "00:29:46",
+      "sentence": "Wunderbar."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:29:49",
+      "endTime": "00:29:53",
+      "sentence": "Hier ist auch der Fragenkatalog, falls du Inspiration benötigst."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:29:59",
+      "endTime": "00:30:01",
+      "sentence": "Ich mache kurz das Fenster auf."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:30:47",
+      "endTime": "00:30:47",
+      "sentence": "Ja klar."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:30:49",
+      "endTime": "00:30:50",
+      "sentence": "Genau."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:30:57",
+      "endTime": "00:30:58",
+      "sentence": "Das könnte so machen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:31:00",
+      "endTime": "00:31:12",
+      "sentence": "Das ist jetzt nicht so schlecht, weil geplant heißt, er versteht, dass ein offener Fertigungsauftrag irgendetwas mit geplantem Fertigen zu tun hat."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:31:16",
+      "endTime": "00:31:19",
+      "sentence": "Sehe ich irgendwo aus welchen Feldern er das nimmt?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:31:20",
+      "endTime": "00:31:22",
+      "sentence": "Konkret kannst du ihn gerade mal fragen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:31:26",
+      "endTime": "00:31:40",
+      "sentence": "Genau, weil das war auch ein wichtiger Punkt für mich, eben diese Transparenz, dieses Vertrauen, auch diese Hilfsbereitschaft, sag ich mal, tatsächlich noch eine Weile gedauert, ihm diese Art Persönlichkeit, sag ich mal, zu geben, weil ich glaube, das ist auch noch sehr wichtig."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:31:44",
+      "endTime": "00:31:49",
+      "sentence": "Den meistverkauften Artikel."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:31:51",
+      "endTime": "00:31:55",
+      "sentence": "Er hat den zweitmeistverkauften Artikel als meistverkauften Artikel."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:31:56",
+      "endTime": "00:31:57",
+      "sentence": "Nein, stimmt nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:31:59",
+      "endTime": "00:31:59",
+      "sentence": "Er hat."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:32:02",
+      "endTime": "00:32:09",
+      "sentence": "OK, er hat zwar recht, aber unter anderem zum Beispiel sonstige Artikel umfasst."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:32:09",
+      "endTime": "00:32:23",
+      "sentence": "Jetzt die beiden ersten, die er genannt hat und dann habe ich Nenn mir den dritthäufigsten und dann holt er den dritthäufigsten wahrscheinlich, weil alles andere unter solche Artikel summiert wird."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:32:24",
+      "endTime": "00:32:25",
+      "sentence": "Nicht falsch, aber auch nicht."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:32:27",
+      "endTime": "00:32:28",
+      "sentence": "Konnte er das beantworten?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:32:28",
+      "endTime": "00:32:30",
+      "sentence": "Die wir Ist noch dran."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:32:30",
+      "endTime": "00:32:31",
+      "sentence": "Ist noch dran."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:32:33",
+      "endTime": "00:32:36",
+      "sentence": "Er konnte das natürlich aber systemisch beantworten."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:32:37",
+      "endTime": "00:32:46",
+      "sentence": "Ich habe jetzt natürlich gesagt, wie heißen denn die Tabellen und Felder und jetzt ist er am Konzipieren."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:32:46",
+      "endTime": "00:32:47",
+      "sentence": "Rückmeldungen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:32:54",
+      "endTime": "00:32:58",
+      "sentence": "Stempelpack, Stamp Nicht unbedingt, aber schön."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:33:11",
+      "endTime": "00:33:16",
+      "sentence": "Ist es jetzt eher verblüffend oder erwartet oder was ist so eure erhofft?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:33:16",
+      "endTime": "00:33:22",
+      "sentence": "Auf jeden Fall, ich möchte natürlich das dazu sagen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:33:22",
+      "endTime": "00:33:30",
+      "sentence": "Die OfficeLine Datenbank hinter dieser ERP Lösung arbeitet mit sinnbehafteten Ausdrücken."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:33:30",
+      "endTime": "00:33:39",
+      "sentence": "Das heißt, die Tabellen heißen so, wie es Sinn machen könnte und die Spalten heißen so, wie es Sinn machen könnte."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:33:39",
+      "endTime": "00:33:45",
+      "sentence": "Von daher, er hat jetzt etwas beigezogen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:33:46",
+      "endTime": "00:33:52",
+      "sentence": "Der Stampelbackup, der braucht es an dieser Stelle aus meiner Sicht Datentechnik nicht, aber ist ja wurscht."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:33:54",
+      "endTime": "00:34:00",
+      "sentence": "Ist kein Fehlergrund, ist ein bisschen zu umfangreich."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:34:01",
+      "endTime": "00:34:06",
+      "sentence": "Gibt es da eine Tabelle, die dir eher gefehlt hätte, die er nicht genannt hat?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:34:06",
+      "endTime": "00:34:13",
+      "sentence": "Sonst war richtig, das sind die Rückmeldungen und die AB."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:34:13",
+      "endTime": "00:34:19",
+      "sentence": "Das ist schon okay."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:34:20",
+      "endTime": "00:34:25",
+      "sentence": "Und jetzt denke ich, einfache Fragen war das mal."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:34:25",
+      "endTime": "00:34:37",
+      "sentence": "Und jetzt wenn ich weiß wo, was der alles machen müsste, die Fertigungsdauer dieses Artikels herauszufinden, weil die sind verschachtelt, da gibt es Unterschritte Und ich."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:34:37",
+      "endTime": "00:34:40",
+      "sentence": "Würde jetzt gern sehen, ob er das weiß."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:34:42",
+      "endTime": "00:34:46",
+      "sentence": "Das ist ein spezifisches Feld plus dieses."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:34:46",
+      "endTime": "00:34:52",
+      "sentence": "Bei allen Unterartikeln und es würde mich eigentlich verblüffen, wenn er das weiß."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:34:56",
+      "endTime": "00:34:56",
+      "sentence": "Oder."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:34:56",
+      "endTime": "00:34:58",
+      "sentence": "Wenn du das jetzt summiert."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:35:06",
+      "endTime": "00:35:08",
+      "sentence": "Oder er geht über die Rückmeldungen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:35:13",
+      "endTime": "00:35:17",
+      "sentence": "Mit der Rückmeldung, bin mir nicht sicher, ob er da zum Ziel kommt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:35:17",
+      "endTime": "00:35:20",
+      "sentence": "Ja, kommt zum Ist und nicht zum Soll."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:35:31",
+      "endTime": "00:35:40",
+      "sentence": "Die Daten oder die Fertigungszeit ist im Fertigungsauftrag."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:35:50",
+      "endTime": "00:35:54",
+      "sentence": "Weißt du ursgrob, was alles in der Datenbank enthalten ist."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:35:55",
+      "endTime": "00:35:59",
+      "sentence": "In der OL Luisidina war das die einzige, auf die wir Zugriff haben."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:35:59",
+      "endTime": "00:36:00",
+      "sentence": "Ja, grob schon."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:36:02",
+      "endTime": "00:36:04",
+      "sentence": "Und das sind vor allem so Produktionsdaten."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:36:04",
+      "endTime": "00:36:39",
+      "sentence": "Und die Frage ist noch, ne, das ist also die Office Line repräsentiert jetzt eigentlich ein Rechnungswesen mit allem Drumsbums natürlich eine Chargen also eine Lagerverwaltung, aber Lagerverwaltung ist ja ein simpels Wort, aber es kann natürlich innerhalb der Lagerverwaltung First in, last out, blablabla, Plätze verwalten, Chargen verwalten und Serienum verwalten, das ist da drin."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:36:39",
+      "endTime": "00:36:45",
+      "sentence": "Dann haben wir die ganze Produktion, also in der Produktion sind natürlich die Vorgabezeite."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:36:46",
+      "endTime": "00:36:54",
+      "sentence": "Was wir jetzt ein bisschen anders gestaltet haben, vielleicht viele, ist, dass wir Kaskaden in der Ressourcenliste haben."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:36:54",
+      "endTime": "00:37:03",
+      "sentence": "Das heißt, wir machen eigentlich aus A ein Produkt B und aus dem B machen wir ein C, machen wir ein D."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:37:03",
+      "endTime": "00:37:34",
+      "sentence": "Und das ist nicht einfach ein String, weil wir schaffen damit losgrößen, Das heißt Sägen möchten wir 50 auf einmal, aber nicht fräsen, 50 blablabla, das ist auch in dieser Applikation drin und die zugehörigen Kosten und das Produkt weiß, wenn ich den Fertigartikel XY möchte und ich sage, ich will einer von denen, dann kann es alle davon abhängigen Unteraufträge auch auslösen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:37:34",
+      "endTime": "00:37:41",
+      "sentence": "Das heißt, es fängt dann beim Rohmaterial an und geht hoch über die verschiedenen Bearbeitungsstufen bis zum Endprodukt."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:37:41",
+      "endTime": "00:37:42",
+      "sentence": "Das kann es natürlich."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:37:43",
+      "endTime": "00:38:06",
+      "sentence": "Und dann haben wir in dieser Tabelle natürlich auch sämtliche, also wir reden jetzt von Betriebsdatenerfassung, wir haben aber auch die Personendatenerfassung, meint, dann ist er gekommen, dann ist er gegangen, die ganzen HR Daten haben wir auch Was verdient er für dass er diese Stunden gekommen wäre."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:38:07",
+      "endTime": "00:38:13",
+      "sentence": "Das alles lässt sich natürlich dann letztendlich mit einer Abfrage auch in einer Antwort generieren."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:38:13",
+      "endTime": "00:38:16",
+      "sentence": "Aus diesem Korsett möchten wir uns eigentlich lösen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:38:17",
+      "endTime": "00:38:19",
+      "sentence": "Also eigentlich möchten sie auf mich verzichten."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:38:19",
+      "endTime": "00:38:21",
+      "sentence": "Das ist das Ziel."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:38:23",
+      "endTime": "00:38:32",
+      "sentence": "Ich bin schlussendlich der versucht die Daten zusammenzuraffen, die Antwort geben könnte, die Geschäftsleitung interessiert."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:38:32",
+      "endTime": "00:38:42",
+      "sentence": "Da wäre eine solche Lösung natürlich schneller als ich hoffe ich doch und auch sehr wertschöpfend."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:38:42",
+      "endTime": "00:38:43",
+      "sentence": "Ja, OK, spannend."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:38:43",
+      "endTime": "00:38:45",
+      "sentence": "Was hattest du jetzt eben versucht nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:38:47",
+      "endTime": "00:39:07",
+      "sentence": "Oben sagt er zweimal gar nichts, dann habe ich Hinweise auf Sollzeit und dann sagte er sowas 15 13 63 jetzt überprüfe ich mich sowohl Stückzeit als auch Rüstzeit in der Ressourcenliste als 0 0 angegeben und das stimmt nicht, das schaue ich jetzt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:39:07",
+      "endTime": "00:39:25",
+      "sentence": "Hier ist er müsste halt verstehen, das ist der Artikel und er hat eine Ressourcenliste, die braucht Material und Arbeit und bei der Arbeit ist die Stückzeit 22 Minuten."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:39:25",
+      "endTime": "00:39:30",
+      "sentence": "Verstehe okay und das Material hier ist eine Materie."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:39:30",
+      "endTime": "00:39:35",
+      "sentence": "Materialposition ist natürlich seinerseits auch ein Fertigungsartikel."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:39:35",
+      "endTime": "00:39:38",
+      "sentence": "Das heißt da kommt noch bei den."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:39:38",
+      "endTime": "00:39:40",
+      "sentence": "Kaskaden genau."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:39:43",
+      "endTime": "00:39:44",
+      "sentence": "Das scheint da nicht zu."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:40:02",
+      "endTime": "00:40:06",
+      "sentence": "Wobei wenn ich so lang brauch, dann nicht wirklich brauchbar ist logischerweise."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:40:06",
+      "endTime": "00:40:07",
+      "sentence": "Klar."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:40:17",
+      "endTime": "00:40:28",
+      "sentence": "Die Rüstzeit hat er jetzt selber da rausgefunden, während er hier oben sagte, dass das nicht so ist, weil er das Fräsen nicht aber dann können wir."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:40:29",
+      "endTime": "00:40:39",
+      "sentence": "Dieser Artikel besteht aus einem Drehteil, das wir eben."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:40:48",
+      "endTime": "00:40:52",
+      "sentence": "Die Zeit für das drehen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:40:57",
+      "endTime": "00:41:06",
+      "sentence": "Jetzt müsste er ja verstehen, dass da ein Artikel drin ist, also beim zugrunde liegenden Halbfertigprodukt nach der Drehzeit suchen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:41:10",
+      "endTime": "00:41:14",
+      "sentence": "Das stimmt nicht oder das findet er nicht."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:41:17",
+      "endTime": "00:41:18",
+      "sentence": "Achtung Verschriebfehler."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:41:19",
+      "endTime": "00:41:26",
+      "sentence": "Der Artikel heißt F.D."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:41:40",
+      "endTime": "00:41:44",
+      "sentence": "Und das sind alles Daten, die in dieser Datenbank drin sein sollten sind."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:41:46",
+      "endTime": "00:41:48",
+      "sentence": "Er hat es ja nachher dann auch."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:41:49",
+      "endTime": "00:41:58",
+      "sentence": "Gefunden, das keine Drehzahl des Artikels in der Tabelle der Ressourcentopologie nicht erfasst worden."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:42:00",
+      "endTime": "00:42:01",
+      "sentence": "Er macht Sprung nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:42:02",
+      "endTime": "00:42:04",
+      "sentence": "Was ist das für Intervalle?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:42:05",
+      "endTime": "00:42:11",
+      "sentence": "Das ist der KK Ressource, das ist das, was du vorher zeigt hast, aber."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:42:11",
+      "endTime": "00:42:17",
+      "sentence": "Dahinter da gibt es Drehen für diesen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:42:17",
+      "endTime": "00:42:25",
+      "sentence": "Artikel, das ist PPS f d und da gibt es die Stückzeit vier Minuten."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:42:26",
+      "endTime": "00:42:32",
+      "sentence": "Das scheint er nicht zu finden, aber ich."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:42:53",
+      "endTime": "00:42:55",
+      "sentence": "Schaffe er anscheinend nicht."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:42:59",
+      "endTime": "00:43:02",
+      "sentence": "Das sind dann ja wie Untertabellen von Untertabellen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:43:03",
+      "endTime": "00:43:08",
+      "sentence": "Ja, ja schon."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:43:08",
+      "endTime": "00:43:09",
+      "sentence": "Ja, letztendlich schon."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:43:12",
+      "endTime": "00:43:15",
+      "sentence": "Ein bisschen viel, was es nicht gäbe, weil wenn ich jetzt."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:43:16",
+      "endTime": "00:43:29",
+      "sentence": "Eine Ressourcenliste ist in dieser ERP Lösung eigentlich ein Unikat, weil normalerweise in der Produktion hat man eine Stückliste und eine Prozessliste, die sind getrennt."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:43:30",
+      "endTime": "00:43:35",
+      "sentence": "Dieses Produkt schiebt zusammen Material und Arbeit ist in einer Entität."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:43:35",
+      "endTime": "00:43:37",
+      "sentence": "Das wird nicht getrennt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:43:38",
+      "endTime": "00:43:38",
+      "sentence": "Und."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:43:41",
+      "endTime": "00:43:50",
+      "sentence": "Das müsste er versuchen zu wirken oder etwas zu sagen, vielleicht was Dummes, aber etwas zu produzieren, brauche ich Material."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:43:50",
+      "endTime": "00:43:53",
+      "sentence": "Ich brauche eine Maschine und ich brauche Arbeit."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:43:56",
+      "endTime": "00:44:04",
+      "sentence": "Und bei diesem Produkt beschreibt man alles in der sogenannten Ressourcenliste."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:44:04",
+      "endTime": "00:44:06",
+      "sentence": "Auch darum vielleicht diese Namensfindung."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:44:06",
+      "endTime": "00:44:18",
+      "sentence": "Das ist spannend eigentlich, weil wie erwähnt hatte, war die ganze Zielsetzung eigentlich ihm eben kein, sag ich mal, Domain oder unternehmensspezifisches Wissen zu."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:44:18",
+      "endTime": "00:44:22",
+      "sentence": "Das heißt, alles was er antwortet, ist rein basierend auf den Daten."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:44:22",
+      "endTime": "00:44:30",
+      "sentence": "Aber natürlich, wenn man diese Logik einbaut, hey, wenn ich Material habe, brauche ich auch eine Maschine, wäre natürlich auch eine."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:44:30",
+      "endTime": "00:44:38",
+      "sentence": "Kann sein, dass man das noch parametrisiert, aber schön wäre natürlich, wenn er diese Logik erkennen könnte."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:44:39",
+      "endTime": "00:44:42",
+      "sentence": "Das ist natürlich ein heftiger Anspruch."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:44:42",
+      "endTime": "00:44:48",
+      "sentence": "Ist es eher nur für euch oder würdest du sagen, das sind so Regeln allgemein für produzierende Unternehmen?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:44:49",
+      "endTime": "00:44:57",
+      "sentence": "Also es ist tatsächlich so, dass natürlich da gibt es sogenannte Leitstände."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:44:59",
+      "endTime": "00:45:06",
+      "sentence": "Leitstände sind in der Lage, digital Engpässe zu erkennen und Lösungsvorschläge vorzuführen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:45:06",
+      "endTime": "00:45:17",
+      "sentence": "Das heißt, man könnte ja zum Beispiel diesen Artikel aus dieser Maschine produzieren, weil da braucht es im Hintergrund die Informationen, was kann die Maschine, Spitzenweite, Durchmesser."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:45:19",
+      "endTime": "00:45:37",
+      "sentence": "Und da gibt es aus meiner Sicht, wir waren da auch schon am gucken, ob es da einen Leitstand gäbe, der solche Analysen per Drag and Drop, sage ich jetzt mal dumm, liefern könnte."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:45:39",
+      "endTime": "00:45:44",
+      "sentence": "Das wäre natürlich hochinteressant, definitiv, weil so fängt es ja dann an."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:45:44",
+      "endTime": "00:45:59",
+      "sentence": "Genau das Beispiel, was er gemacht hat, das ist ja jetzt mal Personen, okay, Diese Person bei 12 Grad Außentemperatur, Luftfeuchtigkeit, blablabla, hat auf dieser Maschine dieses Werkstück so schnell gemacht, verstehe."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:45:59",
+      "endTime": "00:46:12",
+      "sentence": "Und auf einer anderen Maschine, wir machen zum Teil die Werkstücke auf zwei verschiedene Maschinen, da kann es jetzt ein Delta geben, wenn auf einer anderen Maschine ist, wieso, sei mal dahingestellt, vielleicht gefällt es ihm dort nicht oder weiß der geil was."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:46:12",
+      "endTime": "00:46:16",
+      "sentence": "Aber diese Korrelationen würden wir gerne sehen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:46:16",
+      "endTime": "00:46:22",
+      "sentence": "Und das ist natürlich im Moment können wir nur das sehen, wo wir eine eigene these haben."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:46:22",
+      "endTime": "00:46:23",
+      "sentence": "Verstehe."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:46:23",
+      "endTime": "00:46:31",
+      "sentence": "Ja klar, natürlich, wenn wir sagen, dann können wir runter und die Daten hervorholen, diese these zu beweisen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:46:32",
+      "endTime": "00:46:40",
+      "sentence": "Aber das jetzt jemand, dieses Beispiel aufzugreifen, ja, wir gucken jetzt mal, was war die Außentemperatur."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:46:41",
+      "endTime": "00:46:50",
+      "sentence": "Solche Inputs wären natürlich fast noch attraktiver, weil sie bergen die Chance, dass sie auf etwas hinweisen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:46:50",
+      "endTime": "00:46:53",
+      "sentence": "An das haben wir gar noch nicht gedacht."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:46:53",
+      "endTime": "00:46:56",
+      "sentence": "Genau, also so über die Thesen hinweg eigentlich."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:47:00",
+      "endTime": "00:47:07",
+      "sentence": "Also der, ich weiß nicht, woher der die Antworten nimmt, aber die letzten drei waren falsch."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:47:09",
+      "endTime": "00:47:13",
+      "sentence": "Und wenn ich ihn frage, woher er das nimmt, dann sagt er mir das zu allgemein."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:47:13",
+      "endTime": "00:47:16",
+      "sentence": "Also ich habe hier zum Beispiel gefragt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:47:16",
+      "endTime": "00:47:18",
+      "sentence": "Wann wurde der das letzte Mal gefertigt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:47:18",
+      "endTime": "00:47:21",
+      "sentence": "Sagt er, gibt es nicht, Habe ich hier dann."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:47:21",
+      "endTime": "00:47:25",
+      "sentence": "Also da gibt es genug Fertigungsaufträge, die."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:47:25",
+      "endTime": "00:47:30",
+      "sentence": "Alle diesen PPSF D, ist das mit."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:47:30",
+      "endTime": "00:47:31",
+      "sentence": "Minus D und so?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:47:31",
+      "endTime": "00:47:33",
+      "sentence": "Ja, alles korrekt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:47:33",
+      "endTime": "00:47:39",
+      "sentence": "Mindestens einmal im Monat sagt er, gibt es nicht, habe ich ihm gesagt, das Letzte Mal am 18."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:47:39",
+      "endTime": "00:47:52",
+      "sentence": "Dezember sagt er, danke, sage ich wie viele Stück, weil ich hätte jetzt erwartet, dass er dann selber in diesen Fertigungsauftrag kam und da."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:47:52",
+      "endTime": "00:47:54",
+      "sentence": "Hatten wir am 18."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:47:54",
+      "endTime": "00:47:59",
+      "sentence": "42 Stück und er sagt 5."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:48:01",
+      "endTime": "00:48:03",
+      "sentence": "Am 18.12."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:48:03",
+      "endTime": "00:48:06",
+      "sentence": "Ja, da hat er einfach falsch, Das stimmt nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:48:06",
+      "endTime": "00:48:10",
+      "sentence": "Dann habe ich zur Kontrolle gefragt, wie viel waren es am 17."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:48:10",
+      "endTime": "00:48:13",
+      "sentence": "Und da waren es 20, da sagt er keine."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:48:15",
+      "endTime": "00:48:33",
+      "sentence": "Und wenn ich frage, woher er diesen Info nimmt, sagt er aus der Datenbank und aus welchem konkreten Tabellenfeld, Artikelnummer, Datum und Menge PPS Rückmeldungen, das wäre schon der richtige Ort, aber keine Ahnung, wo."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:48:33",
+      "endTime": "00:48:42",
+      "sentence": "Der das, was er da aussagt, hernimmt, stimmt überhaupt nicht Mit den Dingen hierüber ein."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:48:42",
+      "endTime": "00:48:43",
+      "sentence": "Sehr spannend."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:48:43",
+      "endTime": "00:48:48",
+      "sentence": "Was würdest du sagen, wie soll ich da weitersuchen, dass ich nicht schon die dos verliere?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:48:51",
+      "endTime": "00:48:52",
+      "sentence": "Keine Kritik an dem."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:48:52",
+      "endTime": "00:48:57",
+      "sentence": "Das ist auch, wieso ich ChatGPT für anspruchsvoll dann eben nicht nutze, weil klar."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:48:58",
+      "endTime": "00:49:00",
+      "sentence": "Irgendwann dreht man sich im Kreis dann."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:49:00",
+      "endTime": "00:49:01",
+      "sentence": "Doch noch den Kopf."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:49:03",
+      "endTime": "00:49:09",
+      "sentence": "Du könntest mal versuchen, ihm zu sagen, er soll genau in der Tabelle nach diesen Fragen suchen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:49:11",
+      "endTime": "00:49:11",
+      "sentence": "Das ist schon."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:49:14",
+      "endTime": "00:49:16",
+      "sentence": "In der Rückmeldung alles drin."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:49:18",
+      "endTime": "00:49:29",
+      "sentence": "Zum Beispiel Materialrückmeldungen, das sind arbeitszeitrückmeldige Dinge und das unterscheidet sich über Rückmeldungstyp."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:49:30",
+      "endTime": "00:49:50",
+      "sentence": "Also Wenn über Typ 1 geht, Typen offen wird konfus, weil dann stehen natürlich Materialmengen, wonach eventuell mit der Zeitmeldung verwechseln könnte, weil beides ist natürlich intern in der DB ist beides Currency vom Faltformat."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:49:50",
+      "endTime": "00:49:54",
+      "sentence": "Ja klar, das kann man nicht einfach so unterscheiden."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:49:54",
+      "endTime": "00:50:04",
+      "sentence": "Ja klar, ich glaube das sind halt genau diese Punkte, wo der dann halt durchaus kommt, weil er halt rein nur auf den Datenbankschemas arbeitet."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:50:08",
+      "endTime": "00:50:08",
+      "sentence": "Das stimmt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:50:10",
+      "endTime": "00:50:13",
+      "sentence": "Der Tag stimmt nicht, stimmt leider auch nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:50:14",
+      "endTime": "00:50:15",
+      "sentence": "Der 18."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:50:15",
+      "endTime": "00:50:17",
+      "sentence": "12 Uhr 12."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:50:19",
+      "endTime": "00:50:26",
+      "sentence": "Was haben wir denn insane am interview 26."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:50:28",
+      "endTime": "00:50:32",
+      "sentence": "Das war vor heute vor einer Stunde."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:50:35",
+      "endTime": "00:50:50",
+      "sentence": "Da finde ich es ja auch überraschend möglicherweise richtig, aber 1901 und 1341 das sind zwei Schlüssel."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:50:54",
+      "endTime": "00:51:00",
+      "sentence": "Ja doch, jetzt hat er recht bei mir jetzt erst gerade reingekommen, aber jetzt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:51:00",
+      "endTime": "00:51:14",
+      "sentence": "Habe ich ihm sowohl die Tabelle bestätigt als auch gesagt die letzte Fertigmeldung, weil das heißt wahrscheinlich irgendwie so ähnlich und dann scheint das."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:51:19",
+      "endTime": "00:51:26",
+      "sentence": "Wie würdet ihr die Komplexität dieser Frage und wie wir sie jetzt aufgebaut haben einschätzen?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:51:28",
+      "endTime": "00:51:37",
+      "sentence": "Ich habe mal jetzt 1 bis 6 haben wir mit und die Cockpit Questions sind ein komplexes 2 eigentlich Level 2."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:51:37",
+      "endTime": "00:51:45",
+      "sentence": "Okay, das ist einfach ablesen, was da steht natürlich mit viel des Tabellen und Feldnamens."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:51:53",
+      "endTime": "00:52:02",
+      "sentence": "Ja wir sind überall noch da, wo ich noch nichts exportieren und so weiter muss, was er jetzt zum Beispiel gut gemacht hat, ich habe gefragt, wie viele Stück wurden am 19.01."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:52:02",
+      "endTime": "00:52:15",
+      "sentence": "Also heute gefertigt und er geht nicht nur auf diese Rückmeldung, sondern er summiert alles, was heute rückgemeldet wurde, die letzten zwei zusammen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:52:16",
+      "endTime": "00:52:19",
+      "sentence": "Ich glaube das ist dann ja vor allem in diesem Level 1 drin, oder?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:52:19",
+      "endTime": "00:52:32",
+      "sentence": "Also der eine Punkt war halt die Level 1 Fragen, auf die Xavi nicht ganz so gut trainiert, sag ich mal be nicht so viel testen, weil ich natürlich die ganzen Zahlen nicht genau weiß und auch das Domain Knowledge nicht hab."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:52:32",
+      "endTime": "00:52:34",
+      "sentence": "Das heißt also wir können genau."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:52:36",
+      "endTime": "00:52:45",
+      "sentence": "Wenn ich jetzt sagen müsste, wie überzeugt ich bin 50 prozent von 100 soll uns aber nicht hindern da weiterzugehen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:52:48",
+      "endTime": "00:52:52",
+      "sentence": "Wann haben wir den Artikel."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:52:59",
+      "endTime": "00:53:07",
+      "sentence": "Letzte Mal verkauft, mit welcher Stückzahl und zu welchem Preis?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:53:11",
+      "endTime": "00:53:16",
+      "sentence": "Da wäre es jetzt spannend, ob er das alles in einem schafft oder ob er dich vielleicht Stück für Stück ranführen möchte."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:53:19",
+      "endTime": "00:53:21",
+      "sentence": "Das Problem am 14.01."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:53:28",
+      "endTime": "00:53:31",
+      "sentence": "Wann hat sich der Preis?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:53:38",
+      "endTime": "00:53:44",
+      "sentence": "Das ist was, wo ich jetzt mehrere Klicks machen müsste, bis ich diese Antworten habe, nicht so wie da."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:53:44",
+      "endTime": "00:53:46",
+      "sentence": "Da ist einfach ein."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:53:51",
+      "endTime": "00:53:52",
+      "sentence": "Ich weiß nicht, ob er das macht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:53:52",
+      "endTime": "00:53:55",
+      "sentence": "Das ist eine gute Antwort, aber sie stimmt nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:53:57",
+      "endTime": "00:54:00",
+      "sentence": "Wenn ich ein Lagerbuch mach, fragt er."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:54:00",
+      "endTime": "00:54:03",
+      "sentence": "Stimmt Mitteleinkaufspreis 0 und ich krieg's einfach weg."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:54:04",
+      "endTime": "00:54:07",
+      "sentence": "Insofern, das ist nicht schlecht."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "00:54:14",
+      "endTime": "00:54:16",
+      "sentence": "Meint er sich auf Preis."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:54:16",
+      "endTime": "00:54:17",
+      "sentence": "Kann halt alles sein."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:54:18",
+      "endTime": "00:54:25",
+      "sentence": "Wann hat sich der Verkaufspreis dieses Artikels geändert?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:54:27",
+      "endTime": "00:54:34",
+      "sentence": "Ja, zum Beispiel, es gibt für jeden in dieser Software, für jeden Artikel einen Einkauf und einen Verkaufspreis."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:54:34",
+      "endTime": "00:54:40",
+      "sentence": "Und wenn man nur nach Preis fragt, klar geht er auf das, was jetzt als letztes geändert hat."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:54:40",
+      "endTime": "00:54:42",
+      "sentence": "Das stimmt, aber."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:54:47",
+      "endTime": "00:54:50",
+      "sentence": "Haut halt logischerweise nicht meine Logik."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:54:52",
+      "endTime": "00:54:58",
+      "sentence": "Glaubst du, es wäre durch so ein Sprachinterface besser, wo du dich besser ausdrücken könntest?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:54:58",
+      "endTime": "00:55:03",
+      "sentence": "Oder bräuchtest du eher paar Rückfragen zuerst, Sachen wie Preis zu klassieren?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:55:04",
+      "endTime": "00:55:05",
+      "sentence": "Das wäre vielleicht nicht schlecht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:55:05",
+      "endTime": "00:55:12",
+      "sentence": "Ich bin bei solchen Dingen eher der Meinung, beim Schreiben gebe ich mehr Mühe und es wird exakter, wie wenn ich da einfach reinspreche."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:55:12",
+      "endTime": "00:55:14",
+      "sentence": "Also würde ich das eigentlich lieber schreiben."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:55:19",
+      "endTime": "00:55:24",
+      "sentence": "Das stimmt nicht, wurde zuletzt geändert, das stimmt eigentlich nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:55:25",
+      "endTime": "00:55:31",
+      "sentence": "Und wenn du weiter zurückschaust, zum Beispiel."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:55:38",
+      "endTime": "00:55:45",
+      "sentence": "Mal schauen, ob das Ja, das geht halt nicht über die Preisänderung, aber er."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:55:45",
+      "endTime": "00:55:49",
+      "sentence": "Müsste jetzt in den verkauften Artikel zurückschauen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:55:49",
+      "endTime": "00:55:52",
+      "sentence": "Wann haben wir diesen Artikel anders verkauft."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:55:52",
+      "endTime": "00:55:56",
+      "sentence": "Als für 262 Franken 71 ist er."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:55:56",
+      "endTime": "00:55:57",
+      "sentence": "Da jetzt in den richtigen Tabellen?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:56:00",
+      "endTime": "00:56:01",
+      "sentence": "Sagt jemand das gleich."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:56:23",
+      "endTime": "00:56:24",
+      "sentence": "Verkauft?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:56:51",
+      "endTime": "00:56:52",
+      "sentence": "Nicht schlecht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:56:53",
+      "endTime": "00:57:02",
+      "sentence": "Wobei er müsste bei den verkauften Artikeln Es reicht nicht, wenn er das Preisfeld anschaut, denke ich."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:57:07",
+      "endTime": "00:57:09",
+      "sentence": "Von Belegposition nicht schlecht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:57:11",
+      "endTime": "00:57:13",
+      "sentence": "Weißt du Gott, wirklich in die vergangene Beleg."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:57:13",
+      "endTime": "00:57:15",
+      "sentence": "So müsste es sich zusammensurfen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:57:18",
+      "endTime": "00:57:20",
+      "sentence": "Also wenn ich die Abfrage hier machen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:57:20",
+      "endTime": "00:57:28",
+      "sentence": "Würde, die dauert ähnlich lang, je nachdem wie lange das noch geht, sicher irgendwo dann bei zwei."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:57:40",
+      "endTime": "00:57:41",
+      "sentence": "Das ist."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:57:50",
+      "endTime": "00:57:51",
+      "sentence": "19."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:57:51",
+      "endTime": "00:57:54",
+      "sentence": "Dezember, macht keinen Sinn."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:57:54",
+      "endTime": "00:57:56",
+      "sentence": "Und der gleiche Preis am 12.12."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:57:56",
+      "endTime": "00:58:03",
+      "sentence": "Das wird wohl stimmen, weil das hätte Anfang 25 enden müssen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:58:05",
+      "endTime": "00:58:07",
+      "sentence": "Wie kann es sein, dass er 0,0 zieht?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:58:07",
+      "endTime": "00:58:11",
+      "sentence": "Ist das wirklich ein Fehler von ihm oder gibt es da irgendwas, was in der Datenbank was."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:58:14",
+      "endTime": "00:58:16",
+      "sentence": "Gibt's keinen Grund."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:58:51",
+      "endTime": "00:58:56",
+      "sentence": "Ja gut, ich denke, da widerspreche ich ihm, schaue jetzt kurz auf das."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:59:00",
+      "endTime": "00:59:03",
+      "sentence": "Abo, lager ihn ruhig mit weiterer Frage in der Zwischenzeit."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:59:30",
+      "endTime": "00:59:38",
+      "sentence": "Wie soll er diese Fehler handhaben, wenn er etwas nicht finden kann aus so."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "00:59:38",
+      "endTime": "00:59:57",
+      "sentence": "Einer User Experience bestenfalls auch vorschlagen, was er denn könnte oder woran es scheitert zum Beispiel wenn er jetzt sagt Preis ist für mich nicht eindeutig ja mein Fehler ich muss Verkaufspreis sagen aber wenn er einfach irgendwas ausspuckt, der würde lieber."
+    },
+    {
+      "speaker": "I",
+      "startTime": "00:59:57",
+      "endTime": "01:00:15",
+      "sentence": "Nachfragen Ja es ist halt auch es ist schlussendlich kein deterministisches System oder das ist glaube ja braucht auch ein anderes Nutzerverhalten dann auf dieselben Ausgaben zu kommen aber klar das muss natürlich so deterministisch wie möglich sein bei gewissen Anfragen und die sind entweder richtig oder."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:00:15",
+      "endTime": "01:00:19",
+      "sentence": "Falsch oder der hätte jetzt hier klar merken müssen am 12."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:00:19",
+      "endTime": "01:00:31",
+      "sentence": "März ist gleiche Menge Artikel heißt genau gleich hätte er da die Preisänderung merken müssen keine Ahnung."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:00:38",
+      "endTime": "01:00:48",
+      "sentence": "Fertigungskosten das wäre jetzt relativ weit hinten wenn er alles machen würde wie hoch sind die Fertigungskosten für diesen Artikel?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:00:49",
+      "endTime": "01:00:54",
+      "sentence": "Da sagt er 0 wie kommst du auf."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:00:57",
+      "endTime": "01:01:10",
+      "sentence": "Ja gut genug Rüstung hat alles irgendwie erkannt aber ich meine mindestens ich bin nicht sicher bei der aber in."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:01:10",
+      "endTime": "01:01:14",
+      "sentence": "Der Regel haben wir nicht zwingend aber."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:01:14",
+      "endTime": "01:01:40",
+      "sentence": "Zum Beispiel was auch schön wäre wäre natürlich wenn ich jetzt irgendwo dann muss er aber schon richtig hirnen wenn ich zum Beispiel keinen Stundensatz der Maschine hinterlegt habe dann könnte er ja trotzdem Sehen das dauert 20 Minuten und bei ChatGPT kriege ich einen durchschnittlichen Stundensatz und das meine ich mit diesem verschiedenen Quellen nutzen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:01:40",
+      "endTime": "01:01:42",
+      "sentence": "Klar wäre halt wirklich schön."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:01:45",
+      "endTime": "01:01:50",
+      "sentence": "Mit ICO und gefragt hast du noch Fertigungskosten?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:01:50",
+      "endTime": "01:01:51",
+      "sentence": "Fertigungskosten."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:01:53",
+      "endTime": "01:01:55",
+      "sentence": "Ja da versteht der."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:01:58",
+      "endTime": "01:02:20",
+      "sentence": "Überrascht, weil er muss ja den Material und Maschine stund und Menschen stund und blablabla aber es wäre schön wenn an dieser Stelle sagen würde ich kann das nicht rechnen, weil ihr habt keine Zahl hinterlegt Das wäre natürlich eine erfreuliche Antwort Also ich."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:02:20",
+      "endTime": "01:02:36",
+      "sentence": "Glaube später wenn wir dann zu den Datenqualitätsfragen kommen können wir gleich mal austesten da kann dann auch solche Sachen klären aber normalerweise ist wie gesagt nicht deterministisch aber wenn er die Daten findet normalerweise sagt er auch Bescheid aber offensichtlich nicht immer."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:02:39",
+      "endTime": "01:02:44",
+      "sentence": "Da müsste er jetzt wieder in der Kaskade nach unten gehen ich denke nicht, dass er das kann."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:02:49",
+      "endTime": "01:02:55",
+      "sentence": "Fremdfertigung jetzt ist auf der FF gelandet das ist eine Tabelle, weil es dort."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:02:55",
+      "endTime": "01:02:57",
+      "sentence": "Material hat und sonst heißt es Menge."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:03:14",
+      "endTime": "01:03:18",
+      "sentence": "50 s und enter."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:04:07",
+      "endTime": "01:04:08",
+      "sentence": "Das stimmt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:04:10",
+      "endTime": "01:04:17",
+      "sentence": "Da bin ich aber jetzt wieder hier oben, dass ich sehr viel so eingeben muss, bis er es versteht."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:04:17",
+      "endTime": "01:04:23",
+      "sentence": "Ja, also kannst du noch mal kurz erklären, auch fürs Transkript, was jetzt die Frage war, wie er dich dann zu."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:04:23",
+      "endTime": "01:04:29",
+      "sentence": "Einer Antwort Die Frage war, wie viel Rohmaterial brauche ich für den fertigen Artikel?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:04:31",
+      "endTime": "01:04:34",
+      "sentence": "Dann sagt, es gibt keine Einträge."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:04:35",
+      "endTime": "01:04:41",
+      "sentence": "Dann habe ich ihm gesagt, dass dieses Fertige besteht aus einem Fertig, heißt fertig gefräst."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:04:41",
+      "endTime": "01:04:44",
+      "sentence": "Ein vorheriger Fertigungsschritt ist das Sägen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:04:44",
+      "endTime": "01:05:02",
+      "sentence": "Also wir nehmen ein Stück Rohr, das wird gesägt, das System weiß, wie lange man es sägen muss und dann heißt der Artikel XY gesägt und dieser Artikel ist ein Unterartikel des fertig gefrästen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:05:03",
+      "endTime": "01:05:21",
+      "sentence": "Und ich habe ihm dann gesagt, das Halbfertigprodukt heißt PPSF S, also das gesägte Rohr und enthält eine gewisse Menge Rohmaterial RM, weil bei uns heißen die Rohmaterial RM und so weiter und eine Anzahl an Metern kannst du mir das ausgeben?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:05:22",
+      "endTime": "01:05:25",
+      "sentence": "Und dann hat er in der falschen Tabelle gesucht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:05:25",
+      "endTime": "01:05:37",
+      "sentence": "Dann habe ich gesagt, das hat mit Kalkulation nichts zu tun, habe ich nicht gesagt, aber gesagt habe ich, das ist in der Ressourcenliste eingetragen und dann habe ich ihn dorthin geführt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:05:38",
+      "endTime": "01:05:44",
+      "sentence": "OK, Spannend."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:05:45",
+      "endTime": "01:06:00",
+      "sentence": "Ein langer Weg zu einer einfachen Antwort vielleicht Die Anzahl Klicks entspricht etwa der Anzahl an Tipps, die ich geben musste, was es dann unnütz macht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:06:00",
+      "endTime": "01:06:04",
+      "sentence": "Also wenn ich diese Tipps nur geben."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:06:04",
+      "endTime": "01:06:09",
+      "sentence": "Wenn du einen hohen situativen Sachverstand hast."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:06:09",
+      "endTime": "01:06:13",
+      "sentence": "Sonst könntest du ihn ein leichter hätte das nicht rausgefunden."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:06:13",
+      "endTime": "01:06:15",
+      "sentence": "Also wenn ich jetzt, weißt du wie ich meine?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:06:15",
+      "endTime": "01:06:23",
+      "sentence": "Wenn ich jetzt einfach ohne Wissen der Datenbank die Frage gestellt hätte, kannst du ihm ja nicht wirklich weiterhelfen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:06:25",
+      "endTime": "01:06:34",
+      "sentence": "Eine Überlegung war auch, ob es vielleicht interessanter oder nutzbar sein könnte für Leute, die sich vielleicht mit sage nicht so gut auskennen, die vielleicht neu dabei sind."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:06:36",
+      "endTime": "01:06:38",
+      "sentence": "Das wäre ein Riesenvorteil."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:06:39",
+      "endTime": "01:06:42",
+      "sentence": "Darum geht es ja mir auch darum, unabhängiger von ihm zu sein."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:06:42",
+      "endTime": "01:06:55",
+      "sentence": "Und genauso möchte ich, wenn ich irgendeinen Sachbearbeiter einstelle, ich will dem nicht das System beibringen müssen, das sollte die KI machen oder die sollte ihn befähigen, das von 0 auf 100 zu nutzen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:06:56",
+      "endTime": "01:07:05",
+      "sentence": "Die Antwort hätte ein Laie nicht gefunden, die Hinweise genau keine Ahnung, wo ich den suchen muss."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:07:07",
+      "endTime": "01:07:18",
+      "sentence": "Jetzt gehen wir da aber mal so ein bisschen noch nach oben und schauen, ob er das besser kann und wir drücken uns wahrscheinlich dann am besten sehr präzise aus, dass wir sehen, ob er es eigentlich könnte."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:07:20",
+      "endTime": "01:07:28",
+      "sentence": "Interessant wäre jetzt zum Beispiel nur eine Spielerei, welche Bestellnummer ihre Referenz."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:07:30",
+      "endTime": "01:07:34",
+      "sentence": "Hatte den höchsten Auftragswert."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:07:36",
+      "endTime": "01:07:41",
+      "sentence": "Kunden geben ihre Bestellnummer an und wir vermerken die unter ihre Referenz."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:07:44",
+      "endTime": "01:07:45",
+      "sentence": "Ist er richtig unterwegs?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:07:51",
+      "endTime": "01:07:56",
+      "sentence": "Bestellnummer Auftragswert."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:07:58",
+      "endTime": "01:08:00",
+      "sentence": "Wie heißt denn sowas?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:08:02",
+      "endTime": "01:08:06",
+      "sentence": "Wobei der sollte jetzt auch im Rechnungswesen wildern?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:08:06",
+      "endTime": "01:08:08",
+      "sentence": "Das weiß ich nicht."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:08:08",
+      "endTime": "01:08:09",
+      "sentence": "Eigentlich schon."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:08:09",
+      "endTime": "01:08:10",
+      "sentence": "Also total."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:08:30",
+      "endTime": "01:08:32",
+      "sentence": "Zuerst geht auch in wahre Wirtschaft buchen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:08:38",
+      "endTime": "01:08:41",
+      "sentence": "Überlauffehler, dann kam zu viel zurück."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:08:42",
+      "endTime": "01:08:42",
+      "sentence": "Sag ihm."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:08:44",
+      "endTime": "01:08:53",
+      "sentence": "Welche Buchung im Rechnungswesen hatte einen Wert über?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:08:59",
+      "endTime": "01:09:00",
+      "sentence": "Das könnten auch mehrere sein."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:09:07",
+      "endTime": "01:09:09",
+      "sentence": "Was 12 Millionen mit der ID."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:09:11",
+      "endTime": "01:09:13",
+      "sentence": "Was haben wir da gekauft?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:09:17",
+      "endTime": "01:09:18",
+      "sentence": "Maschinen und Anlagen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:09:18",
+      "endTime": "01:09:21",
+      "sentence": "Ja, der summiert jetzt einfach das Konto."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:09:22",
+      "endTime": "01:09:35",
+      "sentence": "Man sieht vielleicht ein bisschen, er hangelt sich so gewissen Templates entlang oder Also ich habe ihm gewisse Guidelines gegeben, was Aggregation angeht oder Top Gruppierungen und so weiter."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:09:35",
+      "endTime": "01:09:37",
+      "sentence": "Das versucht er dann auch zu nutzen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:09:37",
+      "endTime": "01:09:42",
+      "sentence": "Welche Buchung mit Gegenkonto SC 20."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:09:51",
+      "endTime": "01:09:54",
+      "sentence": "Jetzt frage ich explizit Buchung gegenüber Bankkonto."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:10:17",
+      "endTime": "01:10:19",
+      "sentence": "Ja, was sage ich, wenn der lügt?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:10:21",
+      "endTime": "01:10:28",
+      "sentence": "Er sagt, es gibt keine Buchung mit Gegenkonto Scan."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:10:28",
+      "endTime": "01:10:32",
+      "sentence": "Hey, schau nochmal, es müsste verfügbar sein."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:10:32",
+      "endTime": "01:10:33",
+      "sentence": "Sowas in die Richtung."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:11:06",
+      "endTime": "01:11:10",
+      "sentence": "Der hat jetzt irgendwas gefunden, aber das kann auch nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:11:16",
+      "endTime": "01:11:17",
+      "sentence": "Schwierig."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:11:23",
+      "endTime": "01:11:29",
+      "sentence": "Was hat die neue Trumpf Lasermaschine gekostet?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:11:31",
+      "endTime": "01:11:33",
+      "sentence": "Das steht im Buchungssatz."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:11:39",
+      "endTime": "01:11:45",
+      "sentence": "Ich habe diese als Bar Einkauf."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:11:49",
+      "endTime": "01:11:57",
+      "sentence": "20 21 25 gebucht im Rechnungswesen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:11:58",
+      "endTime": "01:12:07",
+      "sentence": "Drum sollte im Buchungstext stehen, mehr helfen kann ich ihm nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:12:13",
+      "endTime": "01:12:16",
+      "sentence": "Der geht schon an den eigentlich richtigen Ort."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:12:16",
+      "endTime": "01:12:17",
+      "sentence": "Kommt er nicht hin."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:12:18",
+      "endTime": "01:12:23",
+      "sentence": "Ist da irgendwelche Sperrungen oder so drauf, dass ich vielleicht mit meinem Zugriff keinen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:12:23",
+      "endTime": "01:12:25",
+      "sentence": "Ne, lässt du alles."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:12:26",
+      "endTime": "01:12:27",
+      "sentence": "Spannend."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:12:28",
+      "endTime": "01:12:31",
+      "sentence": "Gut, ich sammle auch alle Logs und alles im Hintergrund."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:12:31",
+      "endTime": "01:12:34",
+      "sentence": "Da kann ich sicherlich nochmal schauen Dann."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:12:37",
+      "endTime": "01:12:39",
+      "sentence": "OK, sowas wäre auch interessant und da."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:12:39",
+      "endTime": "01:12:41",
+      "sentence": "Braucht es jetzt ziemlich viel."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:12:42",
+      "endTime": "01:12:58",
+      "sentence": "Welcher Auftrag des Kunden flowtag hatte die kürzeste Lieferzeit zwischen Auftragserfassung."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:13:05",
+      "endTime": "01:13:09",
+      "sentence": "Das ist jetzt eigentlich alles definiert, was definiert sein muss."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:13:15",
+      "endTime": "01:13:16",
+      "sentence": "Das ist schlecht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:13:21",
+      "endTime": "01:13:24",
+      "sentence": "Der Kund heißt explizit Flaute."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:13:24",
+      "endTime": "01:13:25",
+      "sentence": "Ich weiß."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:13:29",
+      "endTime": "01:13:31",
+      "sentence": "Hat er vielleicht eine ID, mit der man es probieren könnte?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:13:31",
+      "endTime": "01:13:33",
+      "sentence": "Manchmal hat er Schwierigkeiten."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:13:41",
+      "endTime": "01:13:43",
+      "sentence": "Die sollte er uns ja sagen können."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:13:43",
+      "endTime": "01:13:44",
+      "sentence": "Eigentlich schon."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:13:49",
+      "endTime": "01:13:57",
+      "sentence": "Welche idee hat der kunde flowtec."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:14:07",
+      "endTime": "01:14:09",
+      "sentence": "Das ist unser erster Kunde."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:14:13",
+      "endTime": "01:14:22",
+      "sentence": "Welcher Auftakt, diesen Kunden, dieses Kunden."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:14:24",
+      "endTime": "01:14:29",
+      "sentence": "Dieses Kunden hat sein Essanschluss des Kunden."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:14:29",
+      "endTime": "01:14:42",
+      "sentence": "Des Kundens oder des Kunden dieses Kunden hat die kürzeste Zeit zwischen Auftragsbestätigung, wie."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:14:42",
+      "endTime": "01:14:53",
+      "sentence": "Heißt das Datum abgespeichert am Ehrstellungsdatum, Beleg."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:14:54",
+      "endTime": "01:15:05",
+      "sentence": "Auftragsbestätigung und der Erstellung des zugehörigen Lieferscheines."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:15:06",
+      "endTime": "01:15:11",
+      "sentence": "Sur hochfiest drei oder vier Daten."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:15:11",
+      "endTime": "01:15:14",
+      "sentence": "Ja, aber also."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:15:19",
+      "endTime": "01:15:29",
+      "sentence": "Wenn ich ihm sage erstellen Auftragsbestätigung und erstellen Lieferschein heißt wahrscheinlich nicht so in."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:15:29",
+      "endTime": "01:15:31",
+      "sentence": "Der Software, müssen nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:15:32",
+      "endTime": "01:15:34",
+      "sentence": "Ja, wenn er nachher nach."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:15:36",
+      "endTime": "01:15:36",
+      "sentence": "Das ist."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:15:36",
+      "endTime": "01:15:38",
+      "sentence": "Was ich auch das gibt es nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:15:45",
+      "endTime": "01:16:05",
+      "sentence": "Welcher Auftrag hat die kürzeste Dauer zwischen Datum der Auftragsbestätigung und Liefertermin, weil den haben wir, der heißt Liefertermin im Beleg."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:16:08",
+      "endTime": "01:16:10",
+      "sentence": "Sind das jetzt auch Informationen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:16:12",
+      "endTime": "01:16:14",
+      "sentence": "Negativ spannend."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:16:16",
+      "endTime": "01:16:27",
+      "sentence": "Sind das jetzt auch Informationen, die dann, sag ich mal, wie in den Feldern enthalten sind, über die ihr dann sozusagen, also zum Beispiel das Flotech Beispiel, wo flowtech im Buchungssatz ist."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:16:27",
+      "endTime": "01:16:29",
+      "sentence": "Also ich stelle es mir jetzt so vor, korrigiert mich da gerne."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:16:30",
+      "endTime": "01:16:38",
+      "sentence": "Du hast Tabelleneintrag, Buchungssatz und dort drin steht dann ein Text und in dem Text steht flowtech."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:16:38",
+      "endTime": "01:16:38",
+      "sentence": "Okay."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:16:38",
+      "endTime": "01:16:40",
+      "sentence": "Zum Beispiel, ja, okay."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:16:40",
+      "endTime": "01:16:47",
+      "sentence": "Also auch dieses Reasoning über die tatsächlichen Inhalte, diese und jetzt habe ich da."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:16:47",
+      "endTime": "01:16:52",
+      "sentence": "Wo habe ich ihn gesehen, die Eilaufträge."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:16:53",
+      "endTime": "01:17:02",
+      "sentence": "Ich habe Eilauftrag übersetzt in Auftragsbestätigung bis Liefertermin und dann gibt er mir da was aus und."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:17:04",
+      "endTime": "01:17:16",
+      "sentence": "Beschreibe mir bitte den Auftrag mit ID, weil das kann ich mir vorstellen, was das sein sollte mit minus zwei."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:17:56",
+      "endTime": "01:18:04",
+      "sentence": "Jetzt springt er aber in irgendwelches Meta Wissen, das ist was du vorher meintest."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:18:04",
+      "endTime": "01:18:08",
+      "sentence": "Jetzt gibt er mehr Feldernamen aus, aber ich möchte gern Feldern, Inhalte."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:18:14",
+      "endTime": "01:18:19",
+      "sentence": "Was haben wir in diese Spalten geschrieben?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:18:24",
+      "endTime": "01:18:26",
+      "sentence": "Ich finde es wirklich sehr spannend zuzuschauen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:18:27",
+      "endTime": "01:18:42",
+      "sentence": "Ich sehe wirklich, wie so die Entscheidungen, die Designentscheidungen jetzt seine Antwort beeinflussen, zum Beispiel diese ganzen Unterfelder, Da sehe ich dann Problematik sozusagen in dem Suchalgorithmus, den ich eingebaut habe in der Datenbank und wie das funktioniert."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:18:42",
+      "endTime": "01:18:44",
+      "sentence": "Also kommen mir ganz viele Ideen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:18:45",
+      "endTime": "01:18:54",
+      "sentence": "Kannst du gleich nochmal Gibt es Differenzen zwischen das könnten wir auch noch Fragen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:18:55",
+      "endTime": "01:18:59",
+      "sentence": "Haben wir bei Muss ich ihm sagen, dass ich eine neue Suche anführ?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:19:01",
+      "endTime": "01:19:13",
+      "sentence": "Du kannst mal probieren, vielleicht ist es besser, wenn man also er hat halt ein in Chat Memory, das sieht man, dass du zum Beispiel nicht die Tabelle jedes Mal sagen musst und er weiß, worum es geht, das heißt, es kann sein, dass nach jetzt fast einer Stunde."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:19:13",
+      "endTime": "01:19:17",
+      "sentence": "Das auch ein bisschen overloadet ist, haben."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:19:17",
+      "endTime": "01:19:48",
+      "sentence": "Wir eine Bestellung überliefert, also mehr, Ich."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:19:48",
+      "endTime": "01:19:53",
+      "sentence": "Meine, da holt er ja jetzt auch einen Inhalt des Feldes Liefermenge."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:19:59",
+      "endTime": "01:20:12",
+      "sentence": "Vielleicht sind Zahlen auch einfacher, kann ich mir vorstellen bei den Texten, also ich habe jetzt keine Komponente drin, die nochmal über die Texte, die erhält, sozusagen rübergeht und Zahlen sind ja als Zahl definiert, das heißt, er weiß, wie er."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:20:12",
+      "endTime": "01:20:14",
+      "sentence": "Es handhaben soll, das mag sein, aber."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:20:14",
+      "endTime": "01:20:17",
+      "sentence": "Immerhin, jetzt hat er die Referenznummer, die."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:20:17",
+      "endTime": "01:20:23",
+      "sentence": "Hat er vorhin nicht, das ist die Bestellnummer des Kunden und jetzt schaue ich, ob das stimmt, was er da sagt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:20:46",
+      "endTime": "01:21:01",
+      "sentence": "Mit Referent, ja, Auftragsbestätigung war über Einstück, okay, dann stimmt sein Auto nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:21:23",
+      "endTime": "01:21:30",
+      "sentence": "126 sehr selbstbewusste Antwort, aber einfach falsch."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:21:31",
+      "endTime": "01:21:49",
+      "sentence": "Weil es gibt weder diese Zahl irgendwo in diesem so krass halt spannend, weder es war eine bestellt, eine geliefert und er kommt mit einer Bestellmenge von 42 Einheiten, aber 126 Einheiten geliefert."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:21:50",
+      "endTime": "01:21:56",
+      "sentence": "In welchen Feldern stehen diese Einheiten?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:22:02",
+      "endTime": "01:22:05",
+      "sentence": "Bestellmenge und Liefermenge."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:22:09",
+      "endTime": "01:22:15",
+      "sentence": "Wenn ich das falsch sehe, aber da steht eins in der Menge, das heißt bei mir Menge und."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:22:15",
+      "endTime": "01:22:19",
+      "sentence": "Nicht Bestellmenge und Liefermenge."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:22:22",
+      "endTime": "01:22:24",
+      "sentence": "Da hätte richtig Referenznummer."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:22:30",
+      "endTime": "01:22:33",
+      "sentence": "Welchen Preis hatte eine?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:22:39",
+      "endTime": "01:22:42",
+      "sentence": "Jetzt springe ich da zu einer Frage."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:22:47",
+      "endTime": "01:22:51",
+      "sentence": "Das ist Hauptspalt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:22:57",
+      "endTime": "01:23:04",
+      "sentence": "Das stimmt auch nicht mit der Vorposition, sei die, was ist Vorposition?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:23:04",
+      "endTime": "01:23:16",
+      "sentence": "Sei die kommen auf Position, Das wäre Position 1 vielleicht, aber stimmt nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:23:18",
+      "endTime": "01:23:28",
+      "sentence": "29 In diesem Beleg haben wir TRT."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:23:43",
+      "endTime": "01:24:07",
+      "sentence": "Sieben, Saxon über sechs, Okay, this is very flush."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:24:10",
+      "endTime": "01:24:39",
+      "sentence": "Weil hier oben war ich zuversichtlich, wir hatten diesen Artikel, ich erinnere mich an den haben wir mal überliefert, nicht aus demselben Grund, aber wir haben an einem Tag mehrere gleiche Lieferungen gemacht und bestellt waren tatsächlich 42 also hat er irgendwas richtig gemacht, aber längst."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:24:39",
+      "endTime": "01:24:41",
+      "sentence": "Vielleicht genug die Daten zusammen falsch."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:24:45",
+      "endTime": "01:24:45",
+      "sentence": "Also."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:24:46",
+      "endTime": "01:24:47",
+      "sentence": "Das waren jetzt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:24:49",
+      "endTime": "01:24:59",
+      "sentence": "Logisch, wenn er hier schon Mühe hat, dann hat er es hier halt noch mehr, weil wenn ich Dinge vergleiche und er hat beiden in der Ausgangszahl Fehler, dann wird es schwierig."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:25:01",
+      "endTime": "01:25:05",
+      "sentence": "Mal so welche Kunden haben die."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:25:05",
+      "endTime": "01:25:10",
+      "sentence": "Meisten Ansprechpartner, Das ist eigentlich jetzt auch."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:25:10",
+      "endTime": "01:25:14",
+      "sentence": "Relativ einfach, aber irgendwo mit so Unvollständigkeit."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:25:20",
+      "endTime": "01:25:24",
+      "sentence": "Kundadresse 1 hat 8 Marke, Kunde Adresse 2."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:25:25",
+      "endTime": "01:25:28",
+      "sentence": "Sind das tatsächlich die Feldernamen bei euch?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:25:28",
+      "endTime": "01:25:34",
+      "sentence": "Ansprechpartner heißt das und Kunde 1 nennt er jetzt wahrscheinlich ID."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:25:37",
+      "endTime": "01:25:55",
+      "sentence": "Und jetzt schauen wir mal, Das Kann schon sein 1 von 28 Wie heißt Kunde 1?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:26:01",
+      "endTime": "01:26:02",
+      "sentence": "Das ist korrekt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:26:06",
+      "endTime": "01:26:12",
+      "sentence": "Und jetzt gehen wir da mal zu diesen Cockpit Query oder hast du zu solchen Dingen?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:26:15",
+      "endTime": "01:26:16",
+      "sentence": "Das ist interessant."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:26:16",
+      "endTime": "01:26:30",
+      "sentence": "Wo gibt es systematische Abwehrungen zwischen ich nehme nicht an, dass etwas kann, weil was jetzt kommt, versteht er nicht zwischen Plantermin und Isttermin."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:26:33",
+      "endTime": "01:26:36",
+      "sentence": "Und da müsst ihr jetzt eigentlich Rückfragen stellen, das weiter."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:26:36",
+      "endTime": "01:26:38",
+      "sentence": "Zu Ja, und wenn es am liebsten."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:26:39",
+      "endTime": "01:26:44",
+      "sentence": "Es gibt derzeit keine Es ist der Material zwischen Plantermin und Ist Termin, die größer als fünf Tage sind."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:26:48",
+      "endTime": "01:26:51",
+      "sentence": "Ja, es stimmt fast, Aber bei welche."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:26:53",
+      "endTime": "01:26:54",
+      "sentence": "Auftrag hat."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:27:00",
+      "endTime": "01:27:06",
+      "sentence": "Da müsst ihr jetzt fragen, was meint Plantermin und was meint Ist Termin oder fragen meinst du damit das."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:27:09",
+      "endTime": "01:27:11",
+      "sentence": "Zwischen dem Plan und Ist Termin?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:27:15",
+      "endTime": "01:27:17",
+      "sentence": "Das kann sicher nicht sein."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:27:20",
+      "endTime": "01:27:29",
+      "sentence": "Wenn wir 79 Tage zu spät liefern würden, dann könnte Kunde persönlich."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:27:39",
+      "endTime": "01:27:45",
+      "sentence": "Das ist wieder dasselbe, kommt wieder mit."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:27:45",
+      "endTime": "01:27:48",
+      "sentence": "Dem genau gleichen mit der gleichen Referenznummer."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:27:49",
+      "endTime": "01:27:52",
+      "sentence": "Wie vorhin, als würde er nur die kennen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:27:53",
+      "endTime": "01:27:58",
+      "sentence": "Und das hat aber überhaupt nichts mit diesem Artikel zu tun."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:28:01",
+      "endTime": "01:28:04",
+      "sentence": "Dieser Artikel ist nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:28:09",
+      "endTime": "01:28:13",
+      "sentence": "Beleg mit der Referenznummer."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:28:33",
+      "endTime": "01:28:35",
+      "sentence": "The Defense."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:29:03",
+      "endTime": "01:29:07",
+      "sentence": "Keine Eindrücke, das kann euch nicht sein."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:29:16",
+      "endTime": "01:29:18",
+      "sentence": "Sowas wäre zum Beispiel jetzt da kommt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:29:18",
+      "endTime": "01:29:21",
+      "sentence": "Es jetzt nicht auf den Inhalt an."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:29:22",
+      "endTime": "01:29:33",
+      "sentence": "Für welchen Lieferschein haben wir noch keine Rechnung erstellt?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:29:35",
+      "endTime": "01:29:38",
+      "sentence": "Das ist jetzt eigentlich nur Systemlogik."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:29:38",
+      "endTime": "01:29:40",
+      "sentence": "Nonik übernommen Recht nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:29:44",
+      "endTime": "01:29:48",
+      "sentence": "Jetzt kommen mit 100 das wäre aber."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:29:48",
+      "endTime": "01:29:49",
+      "sentence": "Ganz schlecht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:30:05",
+      "endTime": "01:30:09",
+      "sentence": "Da dürfte er jetzt mit 0 kommen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:30:12",
+      "endTime": "01:30:12",
+      "sentence": "5."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:30:12",
+      "endTime": "01:30:13",
+      "sentence": "März."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:30:35",
+      "endTime": "01:30:35",
+      "sentence": "Hingegen nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:30:37",
+      "endTime": "01:30:40",
+      "sentence": "Er hat hier oben grundsätzlich recht und."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:30:40",
+      "endTime": "01:30:46",
+      "sentence": "Er lügt hier, weil das gibt es ganz klar."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:30:46",
+      "endTime": "01:30:47",
+      "sentence": "Spannend."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:30:49",
+      "endTime": "01:30:52",
+      "sentence": "Also Und dann denke ich, gehen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:30:52",
+      "endTime": "01:30:53",
+      "sentence": "Wir mal nach hier zu den."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:31:05",
+      "endTime": "01:31:10",
+      "sentence": "Weichen, die Teilmengen, die."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:31:21",
+      "endTime": "01:31:22",
+      "sentence": "Das kann er sicher nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:31:33",
+      "endTime": "01:31:35",
+      "sentence": "Da müsst ihr jetzt schon ziemlich viel."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:31:35",
+      "endTime": "01:31:38",
+      "sentence": "5 oder so ähnlich in die Richtung."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:31:38",
+      "endTime": "01:31:39",
+      "sentence": "Genau so oder so."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:31:39",
+      "endTime": "01:31:45",
+      "sentence": "Ja, ja, Morgens ins Ganze."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:31:47",
+      "endTime": "01:31:51",
+      "sentence": "Okay, wenn das stimmt, wäre es brillant."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:31:55",
+      "endTime": "01:32:07",
+      "sentence": "Kannst du mir einen Tag als Beispiel nennen, inklusive der gefertigten Produkte?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:32:18",
+      "endTime": "01:32:57",
+      "sentence": "Das gibt es nicht, Da bin ich einverstanden, Kenne ich nicht, erwartet gibt es nicht und so gerade Stückzahlen gibt es auch nicht bei uns."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:32:58",
+      "endTime": "01:33:00",
+      "sentence": "Ich meine diese Antwort, wenn die stimmen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:33:00",
+      "endTime": "01:33:02",
+      "sentence": "Würde, das wäre brillant."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:33:04",
+      "endTime": "01:33:06",
+      "sentence": "Aber glauben tue."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:33:06",
+      "endTime": "01:33:06",
+      "sentence": "Ich es ihm nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:33:14",
+      "endTime": "01:33:17",
+      "sentence": "Ich muss mal für kleine Jungs rechts."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:33:17",
+      "endTime": "01:33:18",
+      "sentence": "Und dann wieder rechts."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:33:20",
+      "endTime": "01:33:21",
+      "sentence": "Hinter der Küche."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:33:21",
+      "endTime": "01:33:22",
+      "sentence": "Ja, okay."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:33:23",
+      "endTime": "01:33:34",
+      "sentence": "Welcher Artikel wurde in der letzten Morgenschicht am häufigsten gefertigt?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:33:52",
+      "endTime": "01:33:56",
+      "sentence": "Die Gesamtmenge holt, dann ist das halt besser über verschiedene Artikel."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:33:57",
+      "endTime": "01:34:02",
+      "sentence": "Letzter Morgen kann es sein, dass er damit Sonntagabend meint oder Sonntagmorgen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:34:03",
+      "endTime": "01:34:05",
+      "sentence": "Aber er sagte dann, Die Gesamtmenge beträgt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:34:05",
+      "endTime": "01:34:14",
+      "sentence": "327 Berücksichtige Notage von Montag bis Freitag."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:34:18",
+      "endTime": "01:34:20",
+      "sentence": "Sowas müsste er mir dann halt auch sagen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:34:20",
+      "endTime": "01:34:24",
+      "sentence": "Ich habe jetzt übrigens am Sonntag geschaut, aber der weiß halt auch nicht, was."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:34:24",
+      "endTime": "01:34:31",
+      "sentence": "Für mich also noch mehr so Kontextinformationen drumherum, damit es nachvollziehbarer ist wie ja OK."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:34:35",
+      "endTime": "01:34:37",
+      "sentence": "Das ist Käse, was der da."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:34:37",
+      "endTime": "01:34:43",
+      "sentence": "Sagt am letzten Morgen in der Schicht von Montag bis Freitag kein spezifischer die Gesamtmenge beträgt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:34:49",
+      "endTime": "01:34:54",
+      "sentence": "Erklär mir, woher du diese Zahl hast."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:34:54",
+      "endTime": "01:34:56",
+      "sentence": "Jetzt kommt er vielleicht wieder mit Feldern."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:35:14",
+      "endTime": "01:35:16",
+      "sentence": "Okay, das kann man nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:35:45",
+      "endTime": "01:35:55",
+      "sentence": "Jetzt sehen wir auch, ob da zum Beispiel die Zeiterfassung, Das glaube ich auch."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:35:55",
+      "endTime": "01:35:57",
+      "sentence": "Nicht, es wäre sehr schön, aber das machen die niemals."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:35:59",
+      "endTime": "01:36:03",
+      "sentence": "Hast du gerade, siehst du, ist das Zitafas?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:36:06",
+      "endTime": "01:36:11",
+      "sentence": "Das sind Funktionen, das sind SQL Funktion, Select Mitarbeiter da weiterhin."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:36:15",
+      "endTime": "01:36:18",
+      "sentence": "Wer hat die längste Pause?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:36:26",
+      "endTime": "01:36:28",
+      "sentence": "Ich muss kurz finden, wo das gefragt hat."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:36:29",
+      "endTime": "01:36:33",
+      "sentence": "1531 war der Timestamp, also Top 100."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:36:33",
+      "endTime": "01:36:45",
+      "sentence": "Mitarbeiternummer, Minute, Datum, Zeit, Start, Datenzeitende als Pausendauer genommen von PPS BDE Stempel."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:36:45",
+      "endTime": "01:36:46",
+      "sentence": "Ja, nein, das ist."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:36:52",
+      "endTime": "01:36:58",
+      "sentence": "Der erfindet Dinge, der Mitarbeiter ID, den gibt es nicht."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:36:58",
+      "endTime": "01:37:00",
+      "sentence": "Sein Gehirn kocht langsam."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:37:01",
+      "endTime": "01:37:02",
+      "sentence": "Gut, aber das ist spannend."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:37:03",
+      "endTime": "01:37:11",
+      "sentence": "Also sowohl hier als auch oben bei diesen Artikeln A, B gibt es einfach nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:37:12",
+      "endTime": "01:37:18",
+      "sentence": "Letzte Frage, Ross, was fragen wir noch irgendwas noch?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:37:19",
+      "endTime": "01:37:27",
+      "sentence": "Ja, hat man noch eine Belegung, wenn ich es richtig mitverfolge, dann haben wir Zitter."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:37:28",
+      "endTime": "01:37:33",
+      "sentence": "Also das sind ja eigentlich Personenzeit."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:37:35",
+      "endTime": "01:37:35",
+      "sentence": "Und."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:37:35",
+      "endTime": "01:37:44",
+      "sentence": "Wir haben Werkstückzeiten gefragt, Priesache, Belegsache, bestellig haben wir."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:37:48",
+      "endTime": "01:37:49",
+      "sentence": "Was meinst du jetzt?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:37:49",
+      "endTime": "01:37:50",
+      "sentence": "Externe Bestelligen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:37:56",
+      "endTime": "01:38:21",
+      "sentence": "Welcher Lieferant hat die beste Übereinstimmung von angeforderten Lieferantermin und tatsächlich."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:38:30",
+      "endTime": "01:38:34",
+      "sentence": "Ja vom SQL für die Frage macht das alles Sinn?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:38:38",
+      "endTime": "01:38:39",
+      "sentence": "Das ist stark."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:38:39",
+      "endTime": "01:38:42",
+      "sentence": "Der hat 71 Tage Vorbestellung geliefert."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:38:45",
+      "endTime": "01:38:46",
+      "sentence": "Lieferantengruppe."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:38:49",
+      "endTime": "01:38:49",
+      "sentence": "Was meint ihr?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:38:49",
+      "endTime": "01:38:51",
+      "sentence": "Könnten diese 71 sein?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:38:51",
+      "endTime": "01:38:57",
+      "sentence": "Irgendwie vielleicht so, wo der Kontakt eröffnet wurde oder ihm irgendwie ein Auftrag zugewiesen wurde."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:38:57",
+      "endTime": "01:38:58",
+      "sentence": "Einfach erfunden."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:38:59",
+      "endTime": "01:39:01",
+      "sentence": "Kann wirklich sein, weil wir hatten ein."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:39:01",
+      "endTime": "01:39:09",
+      "sentence": "Klares Bestellung Beleg erfassen oder abschließen und dann ist bestellt."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:39:10",
+      "endTime": "01:39:21",
+      "sentence": "Was sein kann, ist, dass er einen Artikel, den wir mehrfach bestellen halt jetzt vermischt zwischen Wareneingang XY stimmt überein mit einer Bestellung."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:39:25",
+      "endTime": "01:39:31",
+      "sentence": "Lieferbare Aufträge temporär Chefliste."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:39:32",
+      "endTime": "01:39:35",
+      "sentence": "Das ist beim Ja, ich weiß."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:39:39",
+      "endTime": "01:39:49",
+      "sentence": "Käufe unsererseits also Einkaufsbelege mit Liefertermin und Liefernahme in."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:40:06",
+      "endTime": "01:40:08",
+      "sentence": "Es heißt natürlich nur Übernahme in Wareneingang."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:40:08",
+      "endTime": "01:40:11",
+      "sentence": "Ob da so netter Wall so heißt, weiß ich nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:40:13",
+      "endTime": "01:40:15",
+      "sentence": "Nein, das ist heute Ihn fragen, ob."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:40:15",
+      "endTime": "01:40:19",
+      "sentence": "Er ähnliche finden kann oder die am ehesten passen würden."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:40:19",
+      "endTime": "01:40:26",
+      "sentence": "Welche dabei, welche Tabellen passen am besten zu meiner."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:40:34",
+      "endTime": "01:40:35",
+      "sentence": "Belegeposition?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:40:35",
+      "endTime": "01:40:52",
+      "sentence": "Ek belegeposition, Die für Termin relevant ist, Da ist natürlich nicht ganz korrekt und welcher?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:40:53",
+      "endTime": "01:41:03",
+      "sentence": "Ja, die KK Papers FFM, das ist Fremdfertigungsmaterial und das ist out of Bestellwesen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:41:03",
+      "endTime": "01:41:10",
+      "sentence": "Du musst dir vorstellen, wir machen Produkte, da muss man etwas hinschweissen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:41:10",
+      "endTime": "01:41:28",
+      "sentence": "Also wir produzieren die zwei Produkte, liefern die an einen Lieferanten, der macht eine Fremdfertigung, er schweißt sie nämlich zusammen und natürlich werden diese Zeiten bei uns erfasst."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:41:28",
+      "endTime": "01:41:29",
+      "sentence": "Blablabla."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:41:30",
+      "endTime": "01:41:44",
+      "sentence": "Das ist aber ein Fremdfertigungsauftrag und nicht in diesem Der hat einen Wareneingang, logisch, aber es ist kein Bestellprozess im Sinne von Warenwirtschaft und die ersten zwei Tabellen sind korrekt."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:41:45",
+      "endTime": "01:41:47",
+      "sentence": "KKE Belege Positionen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:41:47",
+      "endTime": "01:41:52",
+      "sentence": "EK steht für Einkauf und EK Belege hat eines Menschen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:41:52",
+      "endTime": "01:42:00",
+      "sentence": "Also da gibt es einen Beleg und der hat Belege Positionen und das hat er richtig, aber das passt da nicht in diesen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:42:00",
+      "endTime": "01:42:03",
+      "sentence": "Das passt da nicht mit verstehe."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:42:04",
+      "endTime": "01:42:12",
+      "sentence": "Also weil eben die Fremdfertigung, die kennt auch Ausdrücke wie Wareneingang und Liefertermin."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:42:12",
+      "endTime": "01:42:13",
+      "sentence": "Was gibt es da?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:42:13",
+      "endTime": "01:42:18",
+      "sentence": "Aber er müsste das nicht mischen in dieser Stelle."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:42:19",
+      "endTime": "01:42:20",
+      "sentence": "Was ist jetzt die Frage?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:42:34",
+      "endTime": "01:42:42",
+      "sentence": "Ich kenne und Waren Niedergang, da gibt es auch, aber."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:42:46",
+      "endTime": "01:42:50",
+      "sentence": "Ich finde es schade, dass der Abstecher fremdfährt."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:42:50",
+      "endTime": "01:42:55",
+      "sentence": "Das ist schwierig zu sagen, aber ich finde es nötig."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:42:55",
+      "endTime": "01:43:02",
+      "sentence": "War es nicht diese letzte Tabelle da Tabellenbruch der hinteren vorne im Prinzip, wie."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:43:02",
+      "endTime": "01:43:15",
+      "sentence": "Es im Hintergrund funktioniert, ist so, dass er sich halt alle Tabellen anschaut, basierend auf der Frage und das einerseits grundsätzlich versucht zu matchen mit dem Katalog, den er sich zusammenbaut."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:43:15",
+      "endTime": "01:43:20",
+      "sentence": "Das heißt, er hat sozusagen eben so ein aufschlagbares Buch, wo er die Tabellennamen nachschauen kann."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:43:20",
+      "endTime": "01:43:40",
+      "sentence": "Das heißt in dem Fall, wenn es dann Belege zum Beispiel geht oder was ähnliches, dann kann es sein, dann rankt er alle Tabellen und hey, das ist die, wo es am wahrscheinlichsten drin ist, zweitwahrscheinlichsten, drittwahrscheinlichsten und darum listet er die als Top 3, obwohl er wahrscheinlich nur ich meine, wir können es nachschauen, dass er nur in den ersten beiden geschaut hat."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:43:42",
+      "endTime": "01:43:49",
+      "sentence": "Okay, sieht man jetzt gerade hier leider nicht, aber genau das heißt, so funktioniert das im Hintergrund, dass er die Tabellen versucht zu priorisieren."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:43:49",
+      "endTime": "01:43:51",
+      "sentence": "OK, spannend."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:43:51",
+      "endTime": "01:43:53",
+      "sentence": "Habt ihr noch Fragen an das System?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:43:53",
+      "endTime": "01:43:58",
+      "sentence": "Sonst können wir sind auch schon seit einer Weile dran."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:43:58",
+      "endTime": "01:44:01",
+      "sentence": "Ich glaube, das passt so vielleicht einfach."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:44:01",
+      "endTime": "01:44:12",
+      "sentence": "Mal so, sag ich mal, Gesamteindruck, dort mal anzufangen, jetzt aus euren beiden jeweiligen Perspektiven, auch einmal technischere Sicht, strategischere Sicht."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:44:13",
+      "endTime": "01:44:15",
+      "sentence": "Wie schätzt ihr so ein System ein?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:44:15",
+      "endTime": "01:44:18",
+      "sentence": "Wo seht ihr da Potenziale, Herausforderungen?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:44:20",
+      "endTime": "01:44:22",
+      "sentence": "Potenzial sehe ich auf jeden Fall."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:44:22",
+      "endTime": "01:44:32",
+      "sentence": "Potenzial sehe ich Fall eben so, wie es bis jetzt auf mich wirkt."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:44:33",
+      "endTime": "01:44:53",
+      "sentence": "Wäre es trotz alledem vielleicht besser, man könnte das Datenmodell der KI zeigen, dann wäre sie sehr wahrscheinlich ungemein treffsicher, auch wenn es auf Deutsch ist, auch wenn sie eigentlich auch sinnentsprechend sind."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:44:53",
+      "endTime": "01:45:08",
+      "sentence": "Die Bezeichnungen gibt es natürlich Überschneidungen, Ich denke jetzt eben an Fremdfertigung, die hat einen Wareneingang, ein Bestellprozess hat auch einen Wareneingang, solche Fehler zu vermeiden."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:45:09",
+      "endTime": "01:45:13",
+      "sentence": "Das würde er sicher nicht machen, wenn er das Datenmodell besser kennen würde."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:45:14",
+      "endTime": "01:45:26",
+      "sentence": "Also eigentlich wie ein Organigramm, Aber ja, es ist."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:45:27",
+      "endTime": "01:45:34",
+      "sentence": "Ich kann nur sagen, für mich geht es in die richtige Richtung, aber Vertrauen könnte aber keines aufbauen auf meiner Seite."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:45:34",
+      "endTime": "01:45:37",
+      "sentence": "Also ich müsste ihn latent überprüfen, verstehe."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:45:38",
+      "endTime": "01:45:41",
+      "sentence": "Bei mir genauso Potenzial riesig."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:45:45",
+      "endTime": "01:45:46",
+      "sentence": "Überrascht, dass es nicht funktioniert."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:45:46",
+      "endTime": "01:45:48",
+      "sentence": "Eigentlich auch nicht, also nicht funktioniert."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:45:48",
+      "endTime": "01:45:58",
+      "sentence": "Es funktioniert wahrscheinlich vieles, aber wenn das Resultat nicht stimmt, dann vertrauen keines und entsprechend kann er wenig."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:45:59",
+      "endTime": "01:45:59",
+      "sentence": "Und."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:46:02",
+      "endTime": "01:46:16",
+      "sentence": "Was ich befürchtet habe und auch so eintrifft, ist, wenn der Feldname bekannt sein muss, selbst wenn man ihm das alles beibringen muss, dann bin ich nahe bei, kann sie auch hermachen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:46:17",
+      "endTime": "01:46:33",
+      "sentence": "Du musst auch den Namen suchen oder weißt es und Wenn es so viel Input braucht, dann bauen wir uns damit ein zweites System, das wahrscheinlich gleich viel Aufwand braucht, wie wenn er es einfach von sich aus macht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:46:34",
+      "endTime": "01:46:57",
+      "sentence": "Langfristig natürlich, wenn der irgendwann das alles kann, okay, aber für mich so bisschen ernüchternd, ohne dass hier Softfolio, unser ERP Integrator, dem all sein Wissen rein spült, können wir es einfach so als Klette, die wir da drauf pappen, nicht selber nutzen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:46:57",
+      "endTime": "01:46:58",
+      "sentence": "Verstehe."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:46:58",
+      "endTime": "01:47:00",
+      "sentence": "Also entfaltet nicht den Wert."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:47:00",
+      "endTime": "01:47:13",
+      "sentence": "Wahrscheinlich müsste man mit so einer Idee zum ERP Lieferant gehen, der da sehr viel schneller seine Logik reinpflanzen könnte."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:47:13",
+      "endTime": "01:47:17",
+      "sentence": "Ja, weil genau dieses Domain Knowledge ist halt das, was ihm fehlt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:47:17",
+      "endTime": "01:47:20",
+      "sentence": "Also ich hab versucht, es ihm so viel wie möglich zur Verfügung zu stellen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:47:20",
+      "endTime": "01:47:27",
+      "sentence": "Oder was ich meinte mit diesem Katalog, den er hat, das ist eigentlich genau so ein Organigramm ist auch so eine Grafik, Graphenstruktur."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:47:27",
+      "endTime": "01:47:47",
+      "sentence": "Natürlich kann man da, wie er den Graphen absucht, das kann man alles optimieren und so weiter und das bringt auch sicherlich was, aber schlussendlich hat er nur die Tabellennamen und aus denen zieht er halt alle Schlüsse zusammen oder er hat nicht dieses wirkliche produktionsspezifische Wissen, wie ihr das habt und das ist sicherlich etwas, was fehlt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:47:47",
+      "endTime": "01:47:51",
+      "sentence": "Was, wenn man das integrieren könnte, sicherlich seine Performance verbessern würde."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:47:53",
+      "endTime": "01:47:54",
+      "sentence": "Würde ihm das Handbuch helfen?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:47:54",
+      "endTime": "01:47:56",
+      "sentence": "Kennt er das Handbuch?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:47:56",
+      "endTime": "01:47:57",
+      "sentence": "Er kennt es tatsächlich nicht."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:47:58",
+      "endTime": "01:47:59",
+      "sentence": "Also es wäre sicherlich super spannend."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:48:00",
+      "endTime": "01:48:13",
+      "sentence": "Wir hatten es davon die Tabellen oder die Feldbezeichnungen auch nicht enthalten, aber viele Zusammenhänge, zum Beispiel, wo gibt es überall Liefertermine?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:48:13",
+      "endTime": "01:48:19",
+      "sentence": "Das steht dann in Textform da drin, das ist das in der Fremdfertigung beim Wareneingang, wo auch immer gibt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:48:20",
+      "endTime": "01:48:22",
+      "sentence": "Das wäre wirklich sehr schön."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:48:22",
+      "endTime": "01:48:23",
+      "sentence": "Würde das helfen?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:48:23",
+      "endTime": "01:48:24",
+      "sentence": "Das habe ich dir glaube ich weiß."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:48:24",
+      "endTime": "01:48:28",
+      "sentence": "Nicht, ob geschickt, aber ja, das wäre super spannend."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:48:28",
+      "endTime": "01:48:36",
+      "sentence": "Was halt spannend ist bei mir jetzt vor allem war der Transfer von einer einfachen Datenbank hin zu einem richtigen ERP, oder?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:48:36",
+      "endTime": "01:48:48",
+      "sentence": "Und die einfache, das war halt auch, also es war ein Webshop sozusagen, das heißt, man hatte auch Lieferungen, Bestellungen, man hatte Kunden, Mitarbeiter und so weiter, aber der ganze Scope war viel kleiner."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:48:48",
+      "endTime": "01:48:55",
+      "sentence": "Ich glaube es waren so 16, 19 Tabellen und bei euch sind es über 900, das heißt, wie schaffst du es dort ein effizientes Abbild zu bauen?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:48:56",
+      "endTime": "01:49:00",
+      "sentence": "Damit der Agent tatsächlich versteht, wie er sich durch die Umgebung navigieren soll."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:49:02",
+      "endTime": "01:49:09",
+      "sentence": "Mir ist aufgefallen, wenn ich das einbringen darf, er ist da manchmal auf temporäre Tabellen gestoßen bei der Analyse."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:49:09",
+      "endTime": "01:49:28",
+      "sentence": "Das ist natürlich superquart, weil es gibt von vielen Tabellen gibt es ein Pendant mit einem TKHK als eine temporäre Tabelle und diese Tabelle schreibt er Antworten, aber dann werden die wieder gelöscht."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:49:29",
+      "endTime": "01:49:36",
+      "sentence": "Also das sind auch Tabellen in der ganzen Konstruktion, die man nur zwischendurch mal braucht."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:49:37",
+      "endTime": "01:49:52",
+      "sentence": "Und darum denke ich eben ein bisschen, einblick in das Datenmodell würde sehr wahrscheinlich viel bringen, dass er weiß, nein, die temporären gucke ich gar nicht in die Systemtabellen braucht er auch nicht, oder?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:49:52",
+      "endTime": "01:49:55",
+      "sentence": "Weil wenn du sagst 100 dann sind das mit allem drum und dran."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:49:55",
+      "endTime": "01:50:02",
+      "sentence": "Genau, Wir sind jetzt gerade eh fertig."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:50:02",
+      "endTime": "01:50:04",
+      "sentence": "Ich glaube, ich kann das sogar stoppen hier."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:50:04",
+      "endTime": "01:50:06",
+      "sentence": "Mal schauen, ob mein Speicher das aushält."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:50:07",
+      "endTime": "01:50:07",
+      "sentence": "Genau."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:50:08",
+      "endTime": "01:50:13",
+      "sentence": "Vielleicht jetzt noch mal eben zu dieser Frage bezüglich Trust und Decision Impact."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:50:13",
+      "endTime": "01:50:31",
+      "sentence": "Ich habe es mir so ein bisschen auf Englisch notiert, weil ich sie auf Englisch schreibe, Aber wo waren Punkte, wo entweder Vertrauen gebrochen wurde, wo vielleicht ein Aha Moment war, wo irgendwelche bestimmte Momente, wo ihr dachtet, hey, das war ich cool oder eben überhaupt nicht cool oder wie auch immer."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:50:32",
+      "endTime": "01:50:39",
+      "sentence": "Also was gut ist, wenn die Antwort stimmt, logischerweise, das weiß ich aber nicht Zwang zwingend."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:50:39",
+      "endTime": "01:50:50",
+      "sentence": "Dort hilft aber, wenn ich sehe, wo er es her hat, also die ganze Erklärung nicht, dass ich sie immer brauche, aber wenn ich mir irgendwo ein bisschen unsicher wäre zu schauen können, schaut der am richtigen Ort."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:50:50",
+      "endTime": "01:50:55",
+      "sentence": "Das hilft und absoluter Abbruch von Vertrauen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:50:56",
+      "endTime": "01:51:01",
+      "sentence": "Wenn Erfindungen auftauchen, falsche Schlüsselwerte."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:51:06",
+      "endTime": "01:51:07",
+      "sentence": "Den es."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:51:07",
+      "endTime": "01:51:14",
+      "sentence": "Nicht gibt, dann denke ich, da könnte ein Affe sitzen und schick irgendwas raus."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:51:16",
+      "endTime": "01:51:23",
+      "sentence": "Also am vertrauenswürdigsten fand ich, wenn ich hier sehe, der schaut am richtigen Ort."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:51:24",
+      "endTime": "01:51:27",
+      "sentence": "OK, Also wirklich diese internal working steps."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:51:27",
+      "endTime": "01:51:30",
+      "sentence": "Sozusagen, ja, wobei ich die eigentlich gar nicht sehen will."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:51:31",
+      "endTime": "01:51:40",
+      "sentence": "Bei ChatGPT will ich nicht wissen, wo der das her hat, weil für ein gutes System, das ich nutze, müsste das Vertrauen halt schon da sein."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:51:40",
+      "endTime": "01:51:42",
+      "sentence": "Klar, verstehe ich natürlich."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:51:43",
+      "endTime": "01:51:53",
+      "sentence": "Und so grundsätzlich diese Vorgehensweise, dass man über so ein Sprachmodell mit seinen Daten interagiert, unter den Annahmen, dass es genaue Antworten sind."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:51:54",
+      "endTime": "01:51:57",
+      "sentence": "Wo seht ihr das Potenzial konkret bei Luise und Dina?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:51:58",
+      "endTime": "01:52:00",
+      "sentence": "Wer würde das nutzen?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:52:00",
+      "endTime": "01:52:05",
+      "sentence": "Wäre das eher auf strategischer Ebene, technischer Ebene, Mitarbeiterebene?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:52:05",
+      "endTime": "01:52:08",
+      "sentence": "Wo seht ihr das Potenzial von so einer Lösung?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:52:09",
+      "endTime": "01:52:10",
+      "sentence": "Ich glaube überall."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:52:11",
+      "endTime": "01:52:32",
+      "sentence": "Ich würde es nutzen, zwar für andere Dinge als ein Mein Co Geschäftsführer zum Beispiel, der ist überhaupt nicht in solchen Dingen drin, aber der fände es vielleicht umso cooler, wenn der Rolli da jetzt Er bedient das ERP nur das, was er kann, weil er halt nicht mehr kann."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:52:32",
+      "endTime": "01:52:38",
+      "sentence": "Und das würde ihm wahrscheinlich ermöglichen, größer zu nutzen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:52:38",
+      "endTime": "01:52:42",
+      "sentence": "Genau, ich ebenso und ich denke auch unsere Mitarbeiter."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:52:43",
+      "endTime": "01:52:49",
+      "sentence": "Also heute musste er wissen, wo er klicken muss, damit er zum Beispiel ein Dokument findet."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:52:49",
+      "endTime": "01:52:53",
+      "sentence": "Und wenn er einfach sagen könnte, welches Dokument gibt es zum Matrikel XY."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:52:55",
+      "endTime": "01:52:56",
+      "sentence": "Also."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:52:56",
+      "endTime": "01:53:08",
+      "sentence": "Die Eltern der Thierry, wir haben Leute, die bedienen keinen Computer, die werden das nie benutzen, aber wir haben auch junge, schlaue Leute, die das wahrscheinlich recht cool fänden für weniger strategisches."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:53:09",
+      "endTime": "01:53:11",
+      "sentence": "Die wären eher hier oben."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:53:12",
+      "endTime": "01:53:17",
+      "sentence": "Leute, die das ERP heute wenig nutzen, wären eher irgendwie hier."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:53:17",
+      "endTime": "01:53:22",
+      "sentence": "Also die würden schon einen Schritt hoch machen und ich denke, ich würde hier hinten sehr viel Zeit verbringen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:53:25",
+      "endTime": "01:53:25",
+      "sentence": "Weiß ich nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:53:25",
+      "endTime": "01:53:28",
+      "sentence": "Aus Informatiksicht ist das nochmal was anderes."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:53:28",
+      "endTime": "01:53:40",
+      "sentence": "Ja, für mich wäre es natürlich sehr attraktiv, wenn er mir sagen könnten könnte welche Tabellen beinhalten die Werte zur folgenden Sachfrage?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:53:41",
+      "endTime": "01:53:56",
+      "sentence": "Sonst ich muss das immer selber Ich denke und die letzte Übung da mit diesen Zeiten, da muss man ja auch eben systemisch betrachten."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:53:56",
+      "endTime": "01:54:11",
+      "sentence": "Wie macht das eigentlich die Applikation zu unterscheiden zwischen einer Materialrückmeldungen, einer Zeitrückmeldung, blablabla, Da muss ich auch einen Moment in die Tabelle gucken und das wäre schon toll."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:54:11",
+      "endTime": "01:54:16",
+      "sentence": "Also so bisschen eigentlich fast solche Fragen dann, wo du Hey, in welchen?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:54:17",
+      "endTime": "01:54:30",
+      "sentence": "Okay, also so als Assistenz on the way, aber nicht komplett abgegeben, so human out of the loop, sagen wir, also dass du das Denken komplett deck hast, überlässt, aber einfach im Prinzip nur so als Assistent hast Hey, was war noch mal die Zahl?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:54:30",
+      "endTime": "01:54:31",
+      "sentence": "Und dann kriegst du sie so zurück."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:54:31",
+      "endTime": "01:54:38",
+      "sentence": "Ja, das denke ich auch für diesen Level 4, wenn man Fragen könnte du wo bekomme ich die durchschnittlichen Seiten her?"
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:54:38",
+      "endTime": "01:54:44",
+      "sentence": "Und der kann mir dann einen Speisezettel machen."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:54:48",
+      "endTime": "01:54:51",
+      "sentence": "Das wäre sicher auch attraktiv sich sehr cool."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:54:52",
+      "endTime": "01:54:56",
+      "sentence": "Das deckt eigentlich auch tatsächlich schon die meisten Punkte ab."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:54:56",
+      "endTime": "01:55:04",
+      "sentence": "Ich habe jetzt noch dieses eine Formular da vorbereitet gehabt, aber wir sind jetzt auch schon seit einer Weile dran Ich weiß nicht, ob ihr noch Zeit habt oder Lust habt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:55:05",
+      "endTime": "01:55:11",
+      "sentence": "Es geht im Prinzip darum, diese Nutzerakzeptanz eigentlich zu testen oder zu prüfen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:55:11",
+      "endTime": "01:55:14",
+      "sentence": "Ich habe es jetzt hier, ich kann dir sonst auch den Link schicken."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:55:14",
+      "endTime": "01:55:22",
+      "sentence": "Ich wäre super dankbar, wenn du es ausführen könntest, könntest einfach das im Prinzip noch mal qualitativ zu oder quantitativ zu belegen, das Ganze."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:55:22",
+      "endTime": "01:55:25",
+      "sentence": "Ich weiß auch nicht, wie es mit meinem Rechner aussieht, ob der das noch hält."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:55:25",
+      "endTime": "01:55:26",
+      "sentence": "Acht."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:55:26",
+      "endTime": "01:55:26",
+      "sentence": "Auch acht."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:55:26",
+      "endTime": "01:55:29",
+      "sentence": "Also ich kann es dir auch schicken, wie lang?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:55:29",
+      "endTime": "01:55:31",
+      "sentence": "Fünf bis zehn Minuten, würde ich sagen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:55:31",
+      "endTime": "01:55:32",
+      "sentence": "Vielleicht auch schneller."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:55:37",
+      "endTime": "01:55:39",
+      "sentence": "Gehe ich jetzt davon aus, wie er heute ist."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:55:40",
+      "endTime": "01:55:42",
+      "sentence": "Genau, wie er sein sollte, wie er heute ist."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:55:51",
+      "endTime": "01:55:54",
+      "sentence": "Grundsätzlich ja, aber halt nicht in der heutigen Form."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:55:58",
+      "endTime": "01:55:59",
+      "sentence": "Darf ich so beantworten?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:55:59",
+      "endTime": "01:56:00",
+      "sentence": "Ja klar, gerne."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:56:07",
+      "endTime": "01:56:09",
+      "sentence": "Weil ich halt tippen muss."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:56:23",
+      "endTime": "01:56:23",
+      "sentence": "Hier ist."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:56:23",
+      "endTime": "01:56:25",
+      "sentence": "Das NASA tlx abgeändert."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:56:26",
+      "endTime": "01:56:27",
+      "sentence": "Genau, ja."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:56:54",
+      "endTime": "01:56:55",
+      "sentence": "Kann ich nicht beurteilen."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:56:56",
+      "endTime": "01:56:58",
+      "sentence": "Haben wir die Infrastruktur sowas."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "01:57:02",
+      "endTime": "01:57:03",
+      "sentence": "Grundsätzlich schon."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:57:04",
+      "endTime": "01:57:12",
+      "sentence": "Also es ist jetzt auf Status Quo sozusagen aufgebaut, also alles, es zum Funktionieren zu bringen, habe ich sozusagen gebaut."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:57:40",
+      "endTime": "01:57:41",
+      "sentence": "Moment nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:57:43",
+      "endTime": "01:57:48",
+      "sentence": "Ist halt ein bisschen jetzt klar Zwischenput, was ich hier eingebe, aber."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:58:11",
+      "endTime": "01:58:14",
+      "sentence": "Das ist halt auch so wie es heute ist Eigentlich nicht, aber grundsätzlich ja."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:58:15",
+      "endTime": "01:58:17",
+      "sentence": "Deswegen, ich weiß nicht, ob die Auswertung dir danach hilft."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:58:20",
+      "endTime": "01:58:27",
+      "sentence": "Ich glaube, es ist gut, dann zu belegen, hey, in die Richtung sollte man die weiter forschen jetzt in meinem Fall oder weiterentwickeln."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "01:58:42",
+      "endTime": "01:58:44",
+      "sentence": "Das verzehrt halt das Ganze."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:59:02",
+      "endTime": "01:59:03",
+      "sentence": "Perfekt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:59:03",
+      "endTime": "01:59:04",
+      "sentence": "Vielen, vielen lieben Dank."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:59:05",
+      "endTime": "01:59:08",
+      "sentence": "Genau, somit sind wir, glaube ich, auch schon am Ende."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:59:08",
+      "endTime": "01:59:09",
+      "sentence": "Also hat jetzt ein bisschen länger gedauert."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:59:09",
+      "endTime": "01:59:10",
+      "sentence": "Ich hoffe, das ist in Ordnung."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:59:10",
+      "endTime": "01:59:18",
+      "sentence": "Aber wirklich nochmal vielen Dank für die Zeit heute und auch, dass sie mir das zur Verfügung gestellt habt, dass ich darin rumbauen darf."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:59:19",
+      "endTime": "01:59:47",
+      "sentence": "War super spannend, aber ultra viel gelernt, weil es ist halt nicht so eine einfache Translation von einer einfachen Datenbank zu der Produktion, wo so viele Granularitäten auch wichtig sind, genaue Anfragen zu Und eben es war halt jetzt bei mir auch immer eine Balance zwischen einmal dem spezifischen, auf euch konkret angepasst und gleichzeitig einem generischen System, was du einfach plug and play eine Datenbank anschließen kannst."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:59:47",
+      "endTime": "01:59:50",
+      "sentence": "Und jetzt bei diesem generischen Konzept bin ich jetzt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "01:59:50",
+      "endTime": "02:00:06",
+      "sentence": "Das heißt, du musst wirklich nur sagen, hey, das ist der Zugang zu der Datenbank und es funktioniert direkt und baut eben diesen Katalog von alleine auf, kann dann im Prinzip direkt auf dem Niveau eigentlich querien bei kleineren Datenbanken noch besser Und das war so ein bisschen das Ziel von dem Ganzen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:00:06",
+      "endTime": "02:00:18",
+      "sentence": "Aber war jetzt auch super spannend, euer Feedback zu hören und paar Ideen auch zu hören, ohne dass wir zu explorativ wurden, wie das Simon befürchtet hatte, aber war super hilfreich."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:00:18",
+      "endTime": "02:00:24",
+      "sentence": "Ich weiß nicht, ob die Änderungen, die wir jetzt besprochen haben, dann noch in meine Arbeit fließen, aber es ist sicher."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "02:00:24",
+      "endTime": "02:00:26",
+      "sentence": "Meine Frage, machst du weiter damit?"
+    },
+    {
+      "speaker": "P1",
+      "startTime": "02:00:26",
+      "endTime": "02:00:31",
+      "sentence": "Ihr habt ja irgendwie auch eine Firma, die sowas irgendwann wahrscheinlich nutzen würden."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:00:31",
+      "endTime": "02:00:34",
+      "sentence": "Genau, also vielleicht hat man es an den Farben erkannt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:00:35",
+      "endTime": "02:00:40",
+      "sentence": "Das ist eben das Corporate Design von dem Startup, das wir gegründet haben, Corpin heißt das."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:00:40",
+      "endTime": "02:00:45",
+      "sentence": "Und da fokussieren wir uns eben auf AI Readiness, die Integration von KI in Unternehmen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:00:45",
+      "endTime": "02:00:54",
+      "sentence": "Und da schlagen wir uns halt in letzter Zeit ziemlich viel mit solchen Legacy Geschichten rum und On Premise Datenbanken, von denen aus die Brücke zu modernen Systemen zu bauen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:00:55",
+      "endTime": "02:01:04",
+      "sentence": "Also thesistechnisch denke ich mal einfach weil ich jetzt schon so lange dran bin, werde ich das abschließen mit dem Feedback und vielleicht noch ein paar Sachen einbauen, bespreche ich dann mit Simon."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:01:04",
+      "endTime": "02:01:12",
+      "sentence": "Aber aus unternehmerischer Sicht werde ich sicherlich weiterverfolgen, weil es ist super spannend und wir sehen da sicherlich Potenzial."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:01:12",
+      "endTime": "02:01:15",
+      "sentence": "Aber eben diese Granularität ist halt extrem wichtig."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "02:01:16",
+      "endTime": "02:01:30",
+      "sentence": "Ja, wenn ihr das weitermachen wollt, wir sind da jederzeit denke ich offen, dass sowohl als Versuchskaninchen als auch als Mitentwicklung, wenn wir irgendwas mit unseren Daten helfen können, sowas zu entwickeln."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "02:01:32",
+      "endTime": "02:01:36",
+      "sentence": "Ich nehme nicht an, dass du das noch selber machst."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "02:01:37",
+      "endTime": "02:01:55",
+      "sentence": "Aber ich denke eben von der Architektur her würde ich mir Gedanken machen, wenn es ein Tool geht, das auf der Datenbank Informationen abrufen kann, dass man dem irgendwie besser das Datenmodell beibringen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:01:55",
+      "endTime": "02:01:58",
+      "sentence": "Ja, genau, das ist sicherlich was wir noch anschauen können."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:01:58",
+      "endTime": "02:02:02",
+      "sentence": "Ich habe hier das einfach mal aufgemacht, dass wir mal kurz durchgehen können."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:02:02",
+      "endTime": "02:02:05",
+      "sentence": "Ich möchte euch nicht komplett durcheinander bringen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:02:05",
+      "endTime": "02:02:06",
+      "sentence": "Warte mal, irgendwo habe ich hier."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:02:06",
+      "endTime": "02:02:10",
+      "sentence": "Genau, also einfach zu zeigen, wie es so allgemein aufgebaut sind."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:02:10",
+      "endTime": "02:02:12",
+      "sentence": "Sehr, sehr viele Grafiken gerade."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:02:13",
+      "endTime": "02:02:18",
+      "sentence": "Genau, also man hat hier eben im Prinzip dieses Frontend, das war das, worüber ihr gechattet habt."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:02:18",
+      "endTime": "02:02:33",
+      "sentence": "Das geht dann rüber eben zu dem KI System, das ist so eine spezielle Version von dem KI System, das dann halt wirklich denken kann sozusagen und dann hat es halt Werkzeuge, auf die es Zugriff hat, das System und eins dieser Werkzeuge ist eben dieser MCP Server."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:02:33",
+      "endTime": "02:02:42",
+      "sentence": "MCP steht für Model Context Protocol, das ist im Prinzip wie ein HTTP Request im Internet, aber für KI Systeme."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:02:42",
+      "endTime": "02:02:51",
+      "sentence": "Und so eine Schicht habe ich im Prinzip auf den VPN Zugang oben drauf gebaut, Serverseite, halt die Schnittstelle zu gewährleisten."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:02:51",
+      "endTime": "02:02:58",
+      "sentence": "Und so kommt er dann über ODBC auf die MSSQL und hier sieht man auch bisschen, wie das KI System aufgebaut ist."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:02:58",
+      "endTime": "02:03:12",
+      "sentence": "Also er denkt halt wirklich drüber nach, macht dann Tool Call, das war das, was wir gesehen haben, wie er dann zum Beispiel in der Tabelle nach Sachen sucht und dann nach den Keywords sucht, schaut was er bekommen hat und geht zurück und denkt noch mal drüber nach, okay, bin ich jetzt wirklich fertig?"
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:03:12",
+      "endTime": "02:03:15",
+      "sentence": "Und wenn er dann irgendwann fertig ist, beendet er das Ganze."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:03:16",
+      "endTime": "02:03:28",
+      "sentence": "Wie gesagt, sehr viel Diagramme, aber irgendwo hatte ich auch Sachen drin bezüglich dem MCP und das ist eben dann die Verbindung zu der tatsächlichen Datenbank."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:03:28",
+      "endTime": "02:03:37",
+      "sentence": "Also er hat hier die Möglichkeit Tables, also Tabellen zu finden, das ist eben genau dieser Scout Katalog, den er abbaut, abbildet."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:03:37",
+      "endTime": "02:03:41",
+      "sentence": "Die kann er dann auch Listen, Priorisierungen und so weiter zu machen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:03:41",
+      "endTime": "02:03:55",
+      "sentence": "Er hat eben dieses Table Ranking und kann halt ganz viele Sachen durchführen, also Schemas holen, konkrete Spaltennamen holen von Tabellen, Queries ausführen, Queries validieren, schauen, hey, was ist da falsch gelaufen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:03:55",
+      "endTime": "02:04:01",
+      "sentence": "Also das sind alles so Sachen, die er aktuell kann, Das ist was anderes."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:04:02",
+      "endTime": "02:04:07",
+      "sentence": "Ich weiß gar nicht, wie schnell ich zu den MCP Sachen komme, aber ich kann sonst auch gerne Infos noch hinterher schicken."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:04:11",
+      "endTime": "02:04:20",
+      "sentence": "Genau das ist dann hier, aber ich weiß nicht, wie hilfreich das jetzt in dem Fall ist, weil es ist eigentlich nur so, wie das genetworkt ist mit und wie die Queries rüberfließen."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:04:21",
+      "endTime": "02:04:26",
+      "sentence": "Vielleicht habe ich da kein schönes Dokument wie die Response Post hier."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:04:26",
+      "endTime": "02:04:42",
+      "sentence": "Eigentlich ist der Prozess vielleicht nicht super hilfreich, aber wenn er zum Beispiel nach Lager sucht, wie das eigentlich abläuft, macht er den Post Request auf den MCP Server und dort läuft dann auf der Seite sozusagen alles, was mit dem Katalog zu tun hat und so weiter."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:04:42",
+      "endTime": "02:05:05",
+      "sentence": "Also alles bezüglich Datenbankrecherche, die der Agent macht er über eine Schnittstelle auf das System und kann dann dort die Datenbank abfragen über die Werkzeuge die er zur Verfügung gestellt bekommen hat genau also so ist das so grob aufgebaut hat jetzt eine Weile gedauert da hinzukommen aber war auch ein sehr spannendes Learning über den ganzen und das ist dann der gesamte Prozess Ja ich."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "02:05:05",
+      "endTime": "02:05:32",
+      "sentence": "Meine ich finde die Antworten war ja nicht völlig aus dem Ruf gegriffen von daher ist das schon nicht alle ist das schon ein Schritt in die richtige Richtung definitiv die stö in der Regel patchbomben und das hat schon länger und Beats bringen wenn man es in der."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "02:05:32",
+      "endTime": "02:05:35",
+      "sentence": "Sage findet das stimmt ist."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "02:05:35",
+      "endTime": "02:05:44",
+      "sentence": "Noch schwierig mich so zurückzuversetzen wie wenn ich noch nie damit gearbeitet hätte aber dann wäre man hier schneller Employee also."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "02:05:44",
+      "endTime": "02:05:58",
+      "sentence": "Stufe angestellt würde eigentlich dieser Block erreichen in irgendeiner Reise und da kamen die Antworten rapide und präzise aber eben."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "02:06:00",
+      "endTime": "02:06:00",
+      "sentence": "Ich."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "02:06:00",
+      "endTime": "02:06:02",
+      "sentence": "Habe ja morgen Gott sei Dank noch."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "02:06:02",
+      "endTime": "02:06:10",
+      "sentence": "Zu tun das tut er mal so cool ich bin gespannt ob das und."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:06:10",
+      "endTime": "02:06:35",
+      "sentence": "Wie das weitergeht ja und also eben was du auch meintest mit dem Testkaninchen sind wir sicherlich auch offen also ich finde es eine super spannende Idee ich habe mich jetzt seit einem Jahr mit dem ganzen Thema befasst und mega viel gelernt wie man wirklich diese on premise Sachen mit Cloud System verbindet also wir sind da sicherlich offen dass wir das uns auch mal genauer anschauen können weiter ausrollen können wäre super spannend wir."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "02:06:35",
+      "endTime": "02:06:49",
+      "sentence": "Sind klein genug dass wir machen können was immer wir wollen perfekt wir haben denke ich viel Daten und keiner der uns hindert sofern es unser itler zulässt."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "02:06:49",
+      "endTime": "02:07:23",
+      "sentence": "Ja klar wir haben Möglichkeiten also wir können gerne auch diese Datensammlung freistellen zum Beispiel damit man ich weiß es ist ja immerhin haben wir glaube ich langsam zehn Jahre Daten irgend sowas und die Datenbank Da könnte ich zum Beispiel eben alles was Geldwerte sind könnte ich geteilt durch 1000 oder sowas blödes verstümmeln oder so falls es da ein."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "02:07:24",
+      "endTime": "02:07:37",
+      "sentence": "Bedarf gibt solange ihr das für euch behaltet und mit unseren Kunden zuschickt ist mir das eigentlich alles auch wurscht so viel zu verheimlichen gibt's dann auch wieder."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:07:37",
+      "endTime": "02:07:37",
+      "sentence": "Nicht."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "02:07:40",
+      "endTime": "02:07:46",
+      "sentence": "Aber spannend das ist eine Masterarbeit meinte bald auf."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:07:49",
+      "endTime": "02:08:03",
+      "sentence": "Eigentlich war das Ziel jetzt die erste Deadline war im August aber da waren wir gerade sind meine Freundin und ich gerade umgezogen war star nichts nächste Deadline war im November aber dann hatten wir beim Unternehmen halt einfach unglaublich viel zu tun mit ganz viel Kundenprojekten und so weiter."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:08:04",
+      "endTime": "02:08:07",
+      "sentence": "Und jetzt ist es dann halt Februar."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:08:07",
+      "endTime": "02:08:13",
+      "sentence": "Also jetzt mit der User Study bin ich eigentlich am Ende sozusagen und muss eigentlich nur noch schreiben."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:08:15",
+      "endTime": "02:08:22",
+      "sentence": "Also ich werde wahrscheinlich noch Anpassungen machen, aber es macht auch keinen Sinn, dann finale System zu publizieren, das nicht getestet wurde."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:08:22",
+      "endTime": "02:08:26",
+      "sentence": "Also eigentlich müsste es ja das System sein, was ich dann auch für die Arbeit nutze."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:08:27",
+      "endTime": "02:08:30",
+      "sentence": "Man macht doch mal eine Studie, aber müssen ja auch alle erstmal die Zeit finden."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "02:08:31",
+      "endTime": "02:08:32",
+      "sentence": "Genau."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:08:33",
+      "endTime": "02:08:34",
+      "sentence": "Wunderbar."
+    },
+    {
+      "speaker": "P1",
+      "startTime": "02:08:34",
+      "endTime": "02:08:37",
+      "sentence": "P1, vielen lieben Dank für die Melde dich."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:08:41",
+      "endTime": "02:08:41",
+      "sentence": "Es hat mich gefreut."
+    },
+    {
+      "speaker": "P2",
+      "startTime": "02:08:41",
+      "endTime": "02:08:42",
+      "sentence": "Mich auch."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:08:44",
+      "endTime": "02:08:45",
+      "sentence": "Dankeschön."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:08:45",
+      "endTime": "02:08:55",
+      "sentence": "Ihr fahrt jetzt zurück, Extra für mich hierher gekommen, sonst hätten wir uns auch in Zürich oder so treffen können."
+    },
+    {
+      "speaker": "I",
+      "startTime": "02:09:00",
+      "endTime": "02:09:01",
+      "sentence": "Vielen dank, schönen tag noch."
+    }
+  ]
+}

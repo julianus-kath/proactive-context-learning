@@ -1,0 +1,51 @@
+start_time,start_time_mmss,speaker,sentence,already_referenced_in_ground_truth
+18:52,18:52,P1,"Ich verstehe meist zu wenig, aber ich bin angetan davon, dass es das kann, Zumal wir hier über Textinput und ich glaube, da kann das einfach alles viel schneller sprechen mit dem Problem, dass eben die Felder heißen, wie sie heißen und nicht zwingend so, wie wir es gerne hätten.",no
+25:56,25:56,P1,"Also wieso jetzt 1003 mal, wenn es Einheiten, dann habe ich mich eventuell nicht korrekt.",no
+28:28,28:28,P1,"Deswegen kann ich nicht mal sagen, ob das nicht stimmt, ob ich wüsste, worauf.",no
+28:41,28:41,P1,"Soll ich nebendran schauen, ob das stimmt?",no
+28:50,28:50,P1,"Mein erster Zuverlässigkeitscheck, sowas stimmt.",yes
+31:56,31:56,P1,"Nein, stimmt nicht.",no
+32:24,32:24,P1,"Nicht falsch, aber auch nicht.",yes
+32:37,32:37,P2,"Ich habe jetzt natürlich gesagt, wie heißen denn die Tabellen und Felder und jetzt ist er am Konzipieren.",no
+38:47,38:47,P1,"Oben sagt er zweimal gar nichts, dann habe ich Hinweise auf Sollzeit und dann sagte er sowas 15 13 63 jetzt überprüfe ich mich sowohl Stückzeit als auch Rüstzeit in der Ressourcenliste als 0 0 angegeben und das stimmt nicht, das schaue ich jetzt.",yes
+41:10,41:10,P1,Das stimmt nicht oder das findet er nicht.,no
+47:00,47:00,P1,"Also der, ich weiß nicht, woher der die Antworten nimmt, aber die letzten drei waren falsch.",no
+47:09,47:09,P1,"Und wenn ich ihn frage, woher er das nimmt, dann sagt er mir das zu allgemein.",no
+47:31,47:31,P2,"Ja, alles korrekt.",yes
+48:15,48:15,P1,"Und wenn ich frage, woher er diesen Info nimmt, sagt er aus der Datenbank und aus welchem konkreten Tabellenfeld, Artikelnummer, Datum und Menge PPS Rückmeldungen, das wäre schon der richtige Ort, aber keine Ahnung, wo.",yes
+48:33,48:33,P1,"Der das, was er da aussagt, hernimmt, stimmt überhaupt nicht Mit den Dingen hierüber ein.",no
+50:08,50:08,P1,Das stimmt.,no
+50:10,50:10,P1,"Der Tag stimmt nicht, stimmt leider auch nicht.",no
+53:52,53:52,P1,"Das ist eine gute Antwort, aber sie stimmt nicht.",yes
+54:00,54:00,P1,Stimmt Mitteleinkaufspreis 0 und ich krieg's einfach weg.,no
+54:40,54:40,P1,"Das stimmt, aber.",yes
+55:19,55:19,P1,"Das stimmt nicht, wurde zuletzt geändert, das stimmt eigentlich nicht.",yes
+01:00:15,01:00:15,P1,Falsch oder der hätte jetzt hier klar merken müssen am 12.,yes
+01:00:49,01:00:49,P1,Da sagt er 0 wie kommst du auf.,no
+01:04:07,01:04:07,P1,Das stimmt.,no
+01:05:22,01:05:22,P1,Und dann hat er in der falschen Tabelle gesucht.,yes
+01:20:14,01:20:14,P1,"Immerhin, jetzt hat er die Referenznummer, die.",no
+01:20:17,01:20:17,P1,"Hat er vorhin nicht, das ist die Bestellnummer des Kunden und jetzt schaue ich, ob das stimmt, was er da sagt.",no
+01:20:46,01:20:46,P1,"Mit Referent, ja, Auftragsbestätigung war über Einstück, okay, dann stimmt sein Auto nicht.",no
+01:21:23,01:21:23,P1,"126 sehr selbstbewusste Antwort, aber einfach falsch.",no
+01:22:09,01:22:09,P1,"Wenn ich das falsch sehe, aber da steht eins in der Menge, das heißt bei mir Menge und.",no
+01:22:22,01:22:22,P2,Da hätte richtig Referenznummer.,no
+01:22:57,01:22:57,P1,"Das stimmt auch nicht mit der Vorposition, sei die, was ist Vorposition?",no
+01:23:04,01:23:04,P1,"Sei die kommen auf Position, Das wäre Position 1 vielleicht, aber stimmt nicht.",no
+01:26:01,01:26:01,P1,Das ist korrekt.,no
+01:26:48,01:26:48,P1,"Ja, es stimmt fast, Aber bei welche.",no
+01:27:45,01:27:45,P1,Dem genau gleichen mit der gleichen Referenznummer.,no
+01:28:09,01:28:09,P1,Beleg mit der Referenznummer.,no
+01:31:47,01:31:47,P1,"Okay, wenn das stimmt, wäre es brillant.",no
+01:34:49,01:34:49,P1,"Erklär mir, woher du diese Zahl hast.",no
+01:39:10,01:39:10,P1,"Was sein kann, ist, dass er einen Artikel, den wir mehrfach bestellen halt jetzt vermischt zwischen Wareneingang XY stimmt überein mit einer Bestellung.",no
+01:40:19,01:40:19,P1,"Welche dabei, welche Tabellen passen am besten zu meiner.",no
+01:40:35,01:40:35,P2,"Ek belegeposition, Die für Termin relevant ist, Da ist natürlich nicht ganz korrekt und welcher?",no
+01:41:30,01:41:30,P2,"Das ist aber ein Fremdfertigungsauftrag und nicht in diesem Der hat einen Wareneingang, logisch, aber es ist kein Bestellprozess im Sinne von Warenwirtschaft und die ersten zwei Tabellen sind korrekt.",no
+01:41:52,01:41:52,P2,"Also da gibt es einen Beleg und der hat Belege Positionen und das hat er richtig, aber das passt da nicht in diesen.",no
+01:42:00,01:42:00,P2,Das passt da nicht mit verstehe.,no
+01:43:58,01:43:58,P1,"Ich glaube, das passt so vielleicht einfach.",no
+01:45:48,01:45:48,P1,"Es funktioniert wahrscheinlich vieles, aber wenn das Resultat nicht stimmt, dann vertrauen keines und entsprechend kann er wenig.",no
+01:50:32,01:50:32,P1,"Also was gut ist, wenn die Antwort stimmt, logischerweise, das weiß ich aber nicht Zwang zwingend.",no
+01:53:28,01:53:28,P2,"Ja, für mich wäre es natürlich sehr attraktiv, wenn er mir sagen könnten könnte welche Tabellen beinhalten die Werte zur folgenden Sachfrage?",no
+02:05:32,02:05:32,P1,Sage findet das stimmt ist.,no

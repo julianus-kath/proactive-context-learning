@@ -21,6 +21,14 @@ output/
 results/
 reports/
 docs/build/*
+
+# Re-include the curated H3 evaluation outputs that the generic results/ rule
+# above would otherwise sweep up (case-insensitive match against Results/ on
+# macOS). The raw think-aloud transcript carries real participant names and
+# stays excluded per the H3 user-study consent terms.
+!evaluation_artifacts/H3/Results/
+!evaluation_artifacts/H3/Results/**
+evaluation_artifacts/H3/Results/Thematic Analysis/Transcript_User_Study.json
 # Python bytecode
 *.pyc
 *.pyo
