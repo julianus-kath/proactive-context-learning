@@ -513,8 +513,8 @@ fi
 
 echo ""
 
-# Start the SQL Agent
-echo -e "${YELLOW}🔧 Starting SQL Agent (Port 5001) - ReAct Text-to-SQL Engine...${NC}"
+# Start Simple SQL Agent — single ReAct agent over MCP tools.
+echo -e "${YELLOW}🔧 Starting Simple SQL Agent (Port 5001) - ReAct Text-to-SQL Engine...${NC}"
 cd "$PROJECT_ROOT"
 
 # Verify simple_sql_agent exists

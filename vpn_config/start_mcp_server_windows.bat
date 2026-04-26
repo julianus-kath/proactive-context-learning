@@ -4,11 +4,11 @@ setlocal EnableExtensions EnableDelayedExpansion
 echo.
 echo ================================================
 echo   MCP Server Startup (Windows/VPN)
-echo   Scout Catalog + MSSQL Tooling
+echo   Scout Catalog + MSSQL ERP Backend
 echo ================================================
 echo.
 echo System Architecture:
-echo   [SQL Agent (macOS/Linux) ^| LangGraph ReAct]
+echo   [macOS Simple SQL Agent (LangGraph ReAct)]
 echo   ════════════════════════════════════════
 echo   [MCP Server (Windows/VPN) ^| Scout Catalog]
 echo   ════════════════════════════════════════
@@ -175,7 +175,7 @@ echo     ✅ Table Ranking (business vs archive tables)
 echo     ✅ Customer/Product Master Table Priority
 echo     ✅ Fuzzy Matching (German compound words)
 echo     ✅ Safe Query Execution (timeouts, limits)
-echo     ✅ SQL Agent ready (macOS LangGraph ReAct integration)
+echo     ✅ ReAct agent ready (macOS LangGraph integration)
 echo.
 echo   (Ctrl+C to stop)
 echo ================================================
