@@ -1,7 +1,7 @@
 # ADR-0035: Semantic Description Generator (SDG) for Scout Catalog
 
 **Status**: Accepted
-**Date**: 2026-04-19
+**Date**: 2026-04-25
 **Author**: Julianus Kath
 **Related**: ADR-0014, ADR-0015, ADR-0020, ADR-0036
 

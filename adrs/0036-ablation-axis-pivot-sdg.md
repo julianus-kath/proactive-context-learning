@@ -1,7 +1,7 @@
 # ADR-0036: Ablation Axis Pivot — from Scout ON/OFF to SDG Description Enrichment
 
 **Status**: Accepted
-**Date**: 2026-04-19
+**Date**: 2026-04-25
 **Author**: Julianus Kath
 **Related**: ADR-0014, ADR-0015, ADR-0027, ADR-0035
 

@@ -1,0 +1,29 @@
+{
+  "description": "Paired Wilcoxon signed-rank test on H2a per-query table recall, SDG-on vs SDG-off (N=64 shared query_ids). The full N=84 analysis (with the April-18 German L1/L2 extension) is in 20260418_extension_report.md section 4.4.",
+  "source_runs": {
+    "sdg_off": "code/eval/runs/20260414_095357_h2a_full64_scout_structural",
+    "sdg_on":  "code/eval/runs/20260414_144359_h2a_full64_scout_enriched_ranked",
+    "naming_note": "Framework directories use the legacy labels scout_structural and scout_enriched_ranked. These are the same conditions the thesis reports as SDG-off and SDG-on respectively."
+  },
+  "means": {
+    "sdg_off": 0.5729,
+    "sdg_on":  0.7201,
+    "delta_pp": 14.71
+  },
+  "tie_structure": {"positive": 13, "negative": 1, "zero": 50, "n_total": 64},
+  "wilcoxon_one_sided_greater_wilcox_zeros": {"W": 99.5, "p_value": 0.00128468},
+  "wilcoxon_one_sided_greater_pratt_zeros":  {"W": 749.5, "p_value": 0.000642481},
+  "wilcoxon_two_sided_wilcox_zeros":         {"W": 5.5, "p_value": 0.00256936},
+  "rank_biserial_r": 0.8952,
+  "sign_test_one_sided": {"positive_over_nonzero": "13/14", "p_value": 0.000915527},
+  "sensitivity_both_conditions_produced_sql": {
+    "n": 42,
+    "mean_off": 0.8540,
+    "mean_on":  0.8877,
+    "delta_pp": 3.37,
+    "wilcoxon_one_sided_greater": {"W": 10.0, "p_value": 0.0327998}
+  },
+  "sql_generation_rates": {"sdg_off": "43/64 (67.19%)", "sdg_on": "51/64 (79.69%)"},
+  "test_library": "scipy.stats.wilcoxon (version installed 2026-04-18)",
+  "computed_on": "2026-04-18"
+}

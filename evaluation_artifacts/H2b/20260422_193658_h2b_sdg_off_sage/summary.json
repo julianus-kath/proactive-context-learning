@@ -1,0 +1,276 @@
+{
+  "experiment": "retrieval_only_ablation",
+  "dataset": "cockpit",
+  "n_queries": 9,
+  "query_ids": [
+    "CP1",
+    "CP2",
+    "CP3",
+    "CP4",
+    "CP5",
+    "CP6",
+    "CP7",
+    "CP8",
+    "CP9"
+  ],
+  "top_k": 10,
+  "modes": [
+    "sdg_off"
+  ],
+  "restart_server": false,
+  "timestamp_utc": "2026-04-22T17:36:58.095953+00:00",
+  "summaries": {
+    "sdg_off": {
+      "mode": "sdg_off",
+      "n_queries": 9,
+      "mean_recall_at_k": 0.14814814814814814,
+      "mean_precision_at_k": 0.022222222222222223,
+      "mean_hit_at_k": 0.2222222222222222,
+      "mean_mrr": 0.05092592592592592,
+      "perfect_recall_count": 1,
+      "zero_recall_count": 7,
+      "mean_latency_ms": 179.46512509499573,
+      "per_query": [
+        {
+          "query_id": "CP1",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "dbo.KHKArtikel",
+            "dbo.KHKArtikelLieferant",
+            "dbo.KHKArtikelVarianten"
+          ],
+          "retrieved": [
+            "dbo.KHKLagerplatzbuchungen",
+            "dbo.KHKPpsFfMatBeigestellt",
+            "dbo.KHKPpsFfMaterial",
+            "dbo.KHKPpsFfRetourenMat",
+            "dbo.KHKPpsStlImportPos",
+            "dbo.KHKProjekteMaterialplanung",
+            "dbo.tKHKPpsFfBeistellmaterial",
+            "dbo.KHKDispoArtikel",
+            "dbo.KHKLagerbewegungsarten",
+            "dbo.KHKLagerRegelnArten"
+          ],
+          "search_query": "Wann müssen wir neues Ø56 Material bestellen?",
+          "latency_ms": 162.7922499901615
+        },
+        {
+          "query_id": "CP2",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "dbo.KHKVKBelege",
+            "dbo.KHKVKBelegePositionen"
+          ],
+          "retrieved": [
+            "dbo.KHKBankverbindungenD",
+            "dbo.KHKBankverbindungenL",
+            "dbo.KHKBuchungserfassung",
+            "dbo.KHKBuchungserfassungA",
+            "dbo.KHKBuchungsjournal",
+            "dbo.KHKBuchungsmatrix",
+            "dbo.KHKBuchungstransferPositionen",
+            "dbo.KHKDispostapelPositionen",
+            "dbo.KHKEKBelegePositionenChargen",
+            "dbo.KHKEKBelegeZuschlaege"
+          ],
+          "search_query": "Wann haben wir Bestellung XY geliefert?",
+          "latency_ms": 169.6168749476783
+        },
+        {
+          "query_id": "CP3",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "dbo.KHKPpsFaBelege",
+            "dbo.KHKPpsFaBelegeAGPositionen",
+            "dbo.KHKPpsBdeStempel"
+          ],
+          "retrieved": [
+            "dbo.BCSPjmProjekteVorgaengeZeiten",
+            "dbo.BSCrmKalenderPositionen",
+            "dbo.BSCrmKalenderPositionenVerweise",
+            "dbo.BSCrmKalenderPositionenVerweiseBlackList",
+            "dbo.BSCrmPositionenZeitstempel",
+            "dbo.BSCrmZeitzone",
+            "dbo.BSMyKampagne",
+            "dbo.KHKAfAMethoden",
+            "dbo.KHKAfAMethodenSub",
+            "dbo.KHKAnlagenTermine"
+          ],
+          "search_query": "Wie viele Teile wurden in den Morgenstunden 04.00-07.00 Uhr gefertigt? Mehr oder weniger als von 08.00-11.00? (Zeiterfassung / ERP)",
+          "latency_ms": 222.61791699565947
+        },
+        {
+          "query_id": "CP4",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "dbo.OsemzizZEBuchungen"
+          ],
+          "retrieved": [
+            "dbo.BCSPjmProjekteVorgaengeLeist",
+            "dbo.BCSPjmProjekteVorgaengeZeiten",
+            "dbo.BSMyVertriebsphaseKontaktVorlage",
+            "dbo.KHKArtikelKunden",
+            "dbo.KHKBankverbindungenCH",
+            "dbo.KHKHausbankenD",
+            "dbo.KHKIntrastatGrundlagen",
+            "dbo.KHKKonsolidierung",
+            "dbo.KHKKonsolidierungMandanten",
+            "dbo.KHKKonsolidierungMandantenUms"
+          ],
+          "search_query": "Halten sich alle an die vorgeschriebenen Anwesenheits- und Pausenzeiten?",
+          "latency_ms": 178.93162497784942
+        },
+        {
+          "query_id": "CP5",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "dbo.OsemzizZEBuchungen",
+            "dbo.KHKPpsBdeStempel"
+          ],
+          "retrieved": [
+            "dbo.BSCrmKalenderPositionen",
+            "dbo.BSCrmKalenderPositionenVerweise",
+            "dbo.BSCrmKalenderPositionenVerweiseBlackList",
+            "dbo.KHKArtikelVariantenLagerplatz",
+            "dbo.KHKArtikelVariantenVerpackungen",
+            "dbo.KHKBankverbindungenA",
+            "dbo.KHKBuchungstransferPositionen",
+            "dbo.KHKLagerplaetze",
+            "dbo.KHKLagerplaetzePermanenteIV",
+            "dbo.KHKLagerplatzbestaende"
+          ],
+          "search_query": "Was hat MA XY heute Morgen gemacht? (Startstempel Zeiterfassung / Rückmeldungen ERP)",
+          "latency_ms": 188.15683299908414
+        },
+        {
+          "query_id": "CP6",
+          "recall": 0.3333333333333333,
+          "precision": 0.1,
+          "hit": 1.0,
+          "mrr": 0.125,
+          "found": [
+            "khkekbelegepositionenlager"
+          ],
+          "missing": [
+            "dbo.KHKEKBelege",
+            "dbo.KHKEKBelegePositionen"
+          ],
+          "retrieved": [
+            "dbo.BSCrmKalenderPositionen",
+            "dbo.BSCrmKalenderPositionenVerweise",
+            "dbo.BSCrmKalenderPositionenVerweiseBlackList",
+            "dbo.KHKArtikelVariantenLagerplatz",
+            "dbo.KHKArtikelVariantenVerpackungen",
+            "dbo.KHKBankverbindungenA",
+            "dbo.KHKBuchungstransferPositionen",
+            "dbo.KHKEKBelegePositionenLager",
+            "dbo.KHKEKBelegeZuschlaege",
+            "dbo.KHKLagerorte"
+          ],
+          "search_query": "Wurde Material XY schon angeliefert? (Lagerbuchung ERP)",
+          "latency_ms": 182.45179200312123
+        },
+        {
+          "query_id": "CP7",
+          "recall": 1.0,
+          "precision": 0.1,
+          "hit": 1.0,
+          "mrr": 0.3333333333333333,
+          "found": [
+            "khkbuchungserfassung"
+          ],
+          "missing": [],
+          "retrieved": [
+            "dbo.BSMyKampagneMitarbeiter",
+            "dbo.BsMyTeamMitglieder",
+            "dbo.KHKBuchungserfassung",
+            "dbo.KHKBuchungserfassungA",
+            "dbo.KHKBuchungserfassungBG",
+            "dbo.KHKBuchungserfassungOp",
+            "dbo.KHKBuchungserfassungOpA",
+            "dbo.KHKBuchungserfassungSDiv",
+            "dbo.KHKBuchungserfassungSDivA",
+            "dbo.KHKBuchungserfassungSDivBG"
+          ],
+          "search_query": "Korrelieren nicht erfüllte Wartungspunkte mit Wartungskosten? (ZP / ReWe)",
+          "latency_ms": 171.91058298340067
+        },
+        {
+          "query_id": "CP8",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "dbo.KHKPpsFaBelege",
+            "dbo.KHKPpsFaBelegeAGPositionen",
+            "dbo.KHKPpsBdeStempel"
+          ],
+          "retrieved": [
+            "dbo.BCSPjmArtikelObjektVerbrauch",
+            "dbo.BCSPjmArtikelObjektZaehler",
+            "dbo.BCSPjmProjekte",
+            "dbo.BCSPjmProjektePositionen",
+            "dbo.BCSPjmProjektePositionenFlow",
+            "dbo.BCSPjmProjekteTemplates",
+            "dbo.BCSPjmProjekteVorgaengeLeist",
+            "dbo.BCSPjmProjekteVorgaengeZeiten",
+            "dbo.BCSPjmProjekteVorgaengeZeitenArchiv",
+            "dbo.BCSPjmProjekteVorgaengeZeitenReise"
+          ],
+          "search_query": "Verhältnis Vorgabe zu Ist (keine Felder!) pro Artikel pro Mitarbeiter? (ERP)",
+          "latency_ms": 186.60466698929667
+        },
+        {
+          "query_id": "CP9",
+          "recall": 0.0,
+          "precision": 0.0,
+          "hit": 0.0,
+          "mrr": 0.0,
+          "found": [],
+          "missing": [
+            "dbo.OsemzizZEBuchungen",
+            "dbo.KHKPpsBdeStempel",
+            "dbo.KHKPpsFaBelege",
+            "dbo.KHKPpsFaBelegeAGPositionen"
+          ],
+          "retrieved": [
+            "dbo.BSBDEGesRm",
+            "dbo.BSBDEGesRmSerienNr",
+            "dbo.BSBDEStempelGesRm",
+            "dbo.BSBDEStempelGesRmSerienNr",
+            "dbo.BsWinBDEMa",
+            "dbo.BsWinBDEMaStatus",
+            "dbo.KHKPpsBdeAp",
+            "dbo.KHKPpsBdeImportServer",
+            "dbo.KHKPpsBdeKommtGeht",
+            "dbo.KHKPpsBdeMaFm"
+          ],
+          "search_query": "Abweichungen Start Zeiterfassung zu Start BDE (Zeit/ERP)",
+          "latency_ms": 152.10358396871015
+        }
+      ]
+    }
+  }
+}

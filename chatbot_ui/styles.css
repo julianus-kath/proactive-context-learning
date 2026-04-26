@@ -84,8 +84,6 @@ body {
     --radius-xl: 24px;
     --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.45);
     --shadow-strong: 0 24px 60px rgba(15, 23, 42, 0.85);
-    --footer-height: 114px;
-    --footer-gap: 16px;
 }
 
 /* Dark Theme Overrides */
@@ -114,177 +112,7 @@ body.theme-dark {
     width: 100%;
     max-width: 1360px;
     margin: 0 auto;
-    height: calc(100vh - 64px - var(--footer-height) - var(--footer-gap)); /* fixed layout height; reserves space for footer */
-}
-
-/* Footer */
-.app-footer {
-    width: 100%;
-    max-width: 1360px;
-    height: var(--footer-height);
-    margin-top: var(--footer-gap);
-    border-radius: 24px;
-    border: 1px solid rgba(248, 248, 248, 0.28);
-    background: rgba(4, 34, 63, 0.22);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
-    overflow: hidden;
-}
-
-.footer-content {
-    height: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1.25rem;
-    padding: 0.75rem 1.35rem;
-}
-
-.footer-left {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.footer-profile {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-    min-width: 0;
-}
-
-.footer-profile-photo {
-    width: 58px;
-    height: 58px;
-    border-radius: 50%;
-    border: 1px solid rgba(248, 248, 248, 0.3);
-    object-fit: cover;
-    flex-shrink: 0;
-}
-
-.footer-profile-details {
-    min-width: 0;
-}
-
-.footer-name {
-    color: var(--ci-white);
-    font-size: 0.95rem;
-    font-weight: 600;
-}
-
-.footer-title {
-    color: rgba(248, 248, 248, 0.86);
-    font-size: 0.76rem;
-    margin-top: 0.1rem;
-    white-space: nowrap;
-}
-
-.footer-contact-row {
-    margin-top: 0.3rem;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.73rem;
-}
-
-.footer-email {
-    color: rgba(248, 248, 248, 0.95);
-    text-decoration: none;
-}
-
-.footer-email:hover,
-.footer-email:focus-visible {
-    text-decoration: underline;
-}
-
-.footer-divider {
-    color: rgba(248, 248, 248, 0.68);
-}
-
-.footer-socials {
-    margin-top: 0.35rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.footer-social-link {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    border: 1px solid rgba(248, 248, 248, 0.35);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--ci-white);
-    background-color: rgba(248, 248, 248, 0.08);
-    transition: background-color 0.15s ease-out, transform 0.15s ease-out;
-}
-
-.footer-social-link:hover,
-.footer-social-link:focus-visible {
-    background-color: rgba(248, 248, 248, 0.2);
-    transform: translateY(-1px);
-}
-
-.footer-social-link .icon {
-    width: 16px;
-    height: 16px;
-    display: block;
-}
-
-.footer-extra-space {
-    flex: 1;
-    min-width: 180px;
-    max-width: 330px;
-    padding: 0.7rem 0.85rem;
-    border-radius: 12px;
-    border: 1px dashed rgba(248, 248, 248, 0.38);
-    background: rgba(248, 248, 248, 0.06);
-    color: rgba(248, 248, 248, 0.72);
-    font-size: 0.74rem;
-    letter-spacing: 0.02em;
-}
-
-.footer-powered-by {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 0.4rem;
-    margin-left: auto;
-    flex-shrink: 0;
-}
-
-.powered-by-label {
-    font-family: "Acumin Pro", "Acumin Variable Concept", "Avenir Next", "Inter", sans-serif;
-    font-size: 0.66rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(248, 248, 248, 0.82);
-}
-
-.footer-corpin-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-end;
-    text-decoration: none;
-}
-
-.footer-corpin-logo {
-    width: 148px;
-    max-width: 100%;
-    height: auto;
-    display: block;
-}
-
-body.theme-dark .app-footer {
-    background: rgba(20, 26, 33, 0.45);
-    border-color: rgba(248, 248, 248, 0.2);
+    height: calc(100vh - 64px); /* fixed layout height */
 }
 
 /* Sidebar - Left Column */
@@ -1636,32 +1464,6 @@ body.sidebar-open .sidebar-backdrop {
     .btn-primary, .btn-secondary {
         width: 100%;
     }
-
-    .app-footer {
-        height: auto;
-    }
-
-    .footer-content {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 1rem;
-    }
-
-    .footer-left {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .footer-extra-space {
-        width: 100%;
-        max-width: none;
-        min-width: 0;
-    }
-
-    .footer-powered-by {
-        align-items: flex-end;
-        width: 100%;
-    }
 }
 
 @media (max-width: 480px) {
@@ -1696,23 +1498,6 @@ body.sidebar-open .sidebar-backdrop {
 
     .sidebar-footer {
         padding: 0.5rem;
-    }
-
-    .footer-profile-photo {
-        width: 50px;
-        height: 50px;
-    }
-
-    .footer-title {
-        white-space: normal;
-    }
-
-    .footer-contact-row {
-        gap: 0.25rem;
-    }
-
-    .footer-corpin-logo {
-        width: 126px;
     }
 }
 

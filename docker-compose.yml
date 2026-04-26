@@ -51,7 +51,18 @@ services:
       POSTGRES_SCHEMA: public
       MCP_API_KEY: ${MCP_API_KEY:-local-dev-mcp-key}
       SCOUT_DISABLE: "false"
+      # --- SDG (Semantic Description Generator) — primary H2a ablation axis ---
+      # See ADR-0035 (SDG) and ADR-0036 (ablation pivot). All six SDG vars +
+      # the Anthropic key are forwarded so a reviewer can run any of the three
+      # ablation conditions without touching this file.
       SCOUT_DESCRIPTIONS_ENABLED: ${SCOUT_DESCRIPTIONS_ENABLED:-false}
+      SCOUT_DESCRIPTIONS_RANKING: ${SCOUT_DESCRIPTIONS_RANKING:-false}
+      SCOUT_DESCRIPTIONS_PROVIDER: ${SCOUT_DESCRIPTIONS_PROVIDER:-anthropic}
+      SCOUT_DESCRIPTIONS_MODEL: ${SCOUT_DESCRIPTIONS_MODEL:-claude-sonnet-4-20250514}
+      SCOUT_DESCRIPTIONS_DATABASE_TYPE: ${SCOUT_DESCRIPTIONS_DATABASE_TYPE:-northwind}
+      SCOUT_DESCRIPTIONS_CACHE_PATH: ${SCOUT_DESCRIPTIONS_CACHE_PATH:-data/catalog/sdg_cache.json}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       PORT: "8080"
       LOG_LEVEL: INFO
     ports:

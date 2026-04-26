@@ -1,0 +1,131 @@
+[
+  {
+    "query_id": "US_CL2_U1",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL2"
+  },
+  {
+    "query_id": "US_CL2_U2",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL2"
+  },
+  {
+    "query_id": "US_CL2_U3",
+    "required_tables": [
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL2"
+  },
+  {
+    "query_id": "US_CL3_U1",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL3"
+  },
+  {
+    "query_id": "US_CL3_U2",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL3"
+  },
+  {
+    "query_id": "US_CL3_U3",
+    "required_tables": [
+      "orders",
+      "shippers"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL3"
+  },
+  {
+    "query_id": "US_CL6_U1",
+    "required_tables": [
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL6"
+  },
+  {
+    "query_id": "US_CL6_U2",
+    "required_tables": [
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL6"
+  },
+  {
+    "query_id": "US_CL6_U3",
+    "required_tables": [
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL6"
+  },
+  {
+    "query_id": "US_CL10_U1",
+    "required_tables": [
+      "customer_customer_demo",
+      "customer_demographics",
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL10"
+  },
+  {
+    "query_id": "US_CL10_U2",
+    "required_tables": [
+      "customer_customer_demo",
+      "customer_demographics",
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL10"
+  },
+  {
+    "query_id": "US_CL10_U3",
+    "required_tables": [
+      "customer_customer_demo",
+      "customer_demographics",
+      "customers",
+      "order_details",
+      "orders"
+    ],
+    "category": "underspecified",
+    "language": "de",
+    "parent_query": "CL10"
+  }
+]

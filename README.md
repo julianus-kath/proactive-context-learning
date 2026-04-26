@@ -1,7 +1,7 @@
 <h1 align="center">ERP Natural Language Query Assistant</h1>
 
 <p align="center">
-  <strong>Proactive Context Learning for LLM-Based ERP Database Querying in SMEs</strong>
+<strong>Proactive Context Learning for LLM-Based ERP Database Querying in SMEs</strong>
 </p>
 
 <p align="center">
@@ -26,14 +26,14 @@
 
 ## About This Release
 
-This repository accompanies the master's thesis *"Proactive Context Learning for LLM-Based ERP Database Querying in SMEs"*.
+This repository accompanies the master's thesis *"Proactive Context Learning"*.
 
 | | |
 |---|---|
 | **Author** | Julianus Elias Flavio Kath |
 | **Email** | [julianus.kath@student.unisg.ch](mailto:julianus.kath@student.unisg.ch) |
 | **Matriculation** | 23-607-203 |
-| **Programme** | MSc Business Innovation, University of St. Gallen |
+| **Programme** | MSc Computer Science, University of St. Gallen |
 | **Supervisor** | Prof. Dr. Simon Mayer |
 | **Year** | 2026 |
 
@@ -72,6 +72,11 @@ Stop the stack with `docker compose down`. See [.env.example](.env.example) for 
   <img src="docs/interface-screenshot.png" alt="ERP Assistant Interface" width="800"/>
 </p>
 
+<!-- High-level Architecture Diagram (midterm presentation) -->
+<p align="center">
+  <img src="docs/higher-level-diagram.png" alt="ERP Assistant — high-level architecture (Agent Graph · MCP layer · ODBC database)" width="800"/>
+</p>
+
 ---
 
 ## Features
@@ -89,75 +94,72 @@ Stop the stack with `docker compose down`. See [.env.example](.env.example) for 
 
 ### System Overview
 
-Four services. Every link between them is an HTTP boundary that can be a network hop on a different host — proven by the production deployment, where the MCP server lives behind a VPN on a different machine than the SQL Agent.
+Three logical panels: an **agent graph** that runs the ReAct loop, an **MCP layer** that is the only thing crossing the network boundary, and an **MCP server + database** side that hosts the proactive Scout catalog and the five tools the agent calls. Everything between the agent and the MCP server is JSON-RPC over HTTP — production swaps `localhost` for a VPN tunnel to a Windows host, but the wire is the same.
 
 ```mermaid
-flowchart TB
-    subgraph Client["🖥️ Client (any host)"]
-        UI[Web UI<br/>Port 3000]
+flowchart LR
+    %% ===== LEFT: Agent Graph =====
+    subgraph CLIENT["💻 Agent Graph"]
+        direction TB
+        UI["<b>Web UI</b><br/>chatbot_ui · :3000<br/><i>chat · SSE streaming · clarifications</i>"]
+        AGENT["<b>LangGraph ReAct Agent</b><br/>simple_sql_agent · :5001<br/><br/>plan → discover_tables → get_schema →<br/>generate SQL → execute → format<br/><i>(re-loops on clarify or empty result)</i>"]
+        UI <--> AGENT
     end
 
-    subgraph AgentHost["🤖 Agent host"]
-        SA[SQL Agent<br/>Port 5001<br/><i>LangGraph ReAct</i>]
+    %% ===== MIDDLE: MCP Layer =====
+    subgraph BOUNDARY["🔐 MCP Layer"]
+        direction TB
+        PROTO["<b>JSON-RPC<br/>over HTTP</b><br/><br/>MCP_API_KEY<br/>auth header<br/><br/>optional VPN<br/>tunnel for L&D<br/><br/><i>same wire on<br/>Mac · Railway ·<br/>Windows VPN host</i>"]
     end
 
-    subgraph MCPHost["🔌 MCP host (network boundary)"]
-        MS[MCP Server<br/>Port 8000<br/><i>JSON-RPC + auth</i>]
-        SC[Scout Catalog<br/>Table metadata + SDG]
+    %% ===== RIGHT: MCP Server + DB =====
+    subgraph SERVER_SIDE["🗄️ MCP Server + Database"]
+        direction TB
+        SERVER["<b>MCP Server</b> · mcp_server · :8000"]
+
+        subgraph SCOUT_BOX["Scout · proactive context"]
+            direction TB
+            CATALOG["<b>Catalog cache</b><br/>tables · columns<br/>FK graph · row counts"]
+            RANKER["<b>Semantic ranker</b><br/>token + fuzzy match<br/>CamelCase / DE compound parser"]
+            SDG["<b>SDG layer</b><br/>LLM-generated table and<br/>column descriptions<br/><i>H2a ablation axis</i>"]
+        end
+
+        subgraph TOOLS_BOX["5 MCP tools"]
+            direction TB
+            T1["<b>discover_tables</b> · proactive ranking"]
+            T234["list_tables · get_schema · get_column_index<br/><i>direct catalog reads</i>"]
+            T5["<b>execute_query</b> · validated bounded SELECT"]
+        end
+
+        DB[("<b>PostgreSQL</b> Northwind · 14 tables<br/>or <b>MSSQL</b> Sage / L&D · 943 tables")]
+
+        SERVER --> SCOUT_BOX
+        SERVER --> TOOLS_BOX
+        T1 --> RANKER
+        SDG --> RANKER
+        RANKER --> CATALOG
+        T234 --> CATALOG
+        T5 --> DB
+        CATALOG -. startup + TTL refresh .-> DB
     end
 
-    subgraph DataHost["💾 Database host"]
-        DB[(PostgreSQL or MSSQL<br/>ERP database)]
-    end
+    AGENT <==>|"5 tool calls"| PROTO
+    PROTO <==> SERVER
 
-    UI -->|HTTP / SSE<br/>LANGGRAPH_URL| SA
-    SA -->|JSON-RPC<br/>MCP_SERVER_URL + MCP_API_KEY| MS
-    MS --> SC
-    MS -->|SQL<br/>POSTGRES_* / MSSQL_*| DB
+    classDef client fill:#e3f2fd,stroke:#0277bd,stroke-width:2px,color:#000
+    classDef boundary fill:#0288d1,color:#fff,stroke:#01579b,stroke-width:2px
+    classDef server fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#000
 
-    style Client fill:#e1f5fe
-    style AgentHost fill:#fff3e0
-    style MCPHost fill:#f3e5f5
-    style DataHost fill:#e8f5e9
+    class CLIENT client
+    class BOUNDARY boundary
+    class SERVER_SIDE server
 ```
 
 Three URLs configure the topology end-to-end: `LANGGRAPH_URL` (UI → Agent), `MCP_SERVER_URL` (Agent → MCP), and the `POSTGRES_*` / `MSSQL_*` block (MCP → DB). No service knows about any other except via these env vars; collapse them all to localhost for a single-host deployment, or split them across hosts for a VPN-tunnelled production.
 
 ### Deployment topologies
 
-The same image set supports three configurations. All three are tested.
-
-```mermaid
-flowchart LR
-    subgraph A["A — One-host (default Docker stack)"]
-        direction TB
-        A1[UI] --> A2[Agent] --> A3[MCP] --> A4[(Postgres)]
-    end
-
-    subgraph B["B — Split-host (cross-network)"]
-        direction TB
-        B1[UI] --> B2[Agent]
-        B2 -.HTTP across hosts.-> B3[MCP]
-        B3 --> B4[(Database)]
-    end
-
-    subgraph C["C — Production (Railway + VPN)"]
-        direction TB
-        C1[UI<br/><i>public</i>] --> C2[Agent<br/><i>private</i>]
-        C2 -.Railway internal.-> C3[MCP<br/><i>private</i>]
-        C3 -.VPN.-> C4[(Sage MSSQL<br/>at L&D)]
-    end
-
-    style A fill:#e8f5e9
-    style B fill:#fff3e0
-    style C fill:#f3e5f5
-```
-
-- **A** — `./run.sh` boots the whole stack on one machine. Bundled Postgres + Northwind, ~2 min cold start. The default for examiners.
-- **B** — Set `MCP_SERVER_URL=http://<other-host>:8000` on the Agent. The MCP server's `MCP_API_KEY` authenticates inbound traffic; nothing else needs to change. Use this when the database is on a separate machine, behind a firewall, or behind a VPN.
-- **C** — The four services run as separate Railway services with private internal DNS; only the Web UI is publicly exposed at `thesis.julianuskath.com`. The MCP service connects through a VPN to the Sage MSSQL ERP at Luisi & Diener. See [`deploy/railway/README.md`](deploy/railway/README.md) for the runbook.
-
-For local variations of B (custom Postgres, port overrides, remote MCP), see [`docker-compose.override.yml.example`](docker-compose.override.yml.example).
+The same image set runs in three tested configurations: **A** one-host (Docker stack, the examiner default), **B** split-host across a network, and **C** Railway + VPN to the Sage ERP at L&D. Diagram and per-topology runbook in **[`docs/deployment-topologies.md`](docs/deployment-topologies.md)**.
 
 ### Query Processing Flow
 
@@ -194,48 +196,9 @@ sequenceDiagram
 
 ### Scout Mode
 
-The agent calls five MCP tools. Three are direct catalog reads (`list_tables`, `get_schema`, `get_column_index`), one runs the generated SQL (`execute_query`), and one is the proactive entry point (`discover_tables`) that drives Scout's semantic ranking before the agent commits to a table set. Scout's catalog is populated at MCP startup and refreshed on a TTL; the agent never waits on a fresh build during a query.
+`discover_tables` tokenises the query, extracts CamelCase / German compound components from each table name, scores every table in the cached catalog (exact / token-ratio / fuzzy / column-hit / row-count signals), and returns the top-k. The catalog is built at MCP startup and TTL-refreshed; the agent never waits on a build at query time. SDG descriptions are computed offline and merged into the catalog — toggling them is the H2a ablation axis (§5.2).
 
-```mermaid
-flowchart LR
-    subgraph Tools["🔧 MCP tools (called by the agent)"]
-        T1[discover_tables<br/><i>proactive ranking</i>]
-        T2[list_tables]
-        T3[get_schema]
-        T4[get_column_index]
-        T5[execute_query]
-    end
-
-    subgraph Scout["🔍 Scout ranker"]
-        S1[Semantic search]
-        S2[CamelCase / German<br/>compound parser]
-        S3[Fuzzy match]
-        S4[SDG description<br/>token coverage]
-    end
-
-    subgraph Cache["📦 Catalog cache"]
-        C1[Table metadata]
-        C2[Column types]
-        C3[Row counts]
-        C4[FK graph]
-    end
-
-    T1 --> S1
-    S1 --> S2
-    S1 --> S3
-    S1 --> S4
-    S1 --> C1
-    T2 --> C1
-    T3 --> C2
-    T3 --> C3
-    T3 --> C4
-    T4 --> C2
-    T5 -.>|bounded SELECT| C1
-
-    style Tools fill:#fff3e0
-    style Scout fill:#e8f5e9
-    style Cache fill:#f3e5f5
-```
+Pipeline diagram, per-step scoring thresholds, and ADR pointers in **[`docs/scout-mode.md`](docs/scout-mode.md)**.
 
 ---
 
@@ -388,7 +351,7 @@ GET  /backend_health            # Proxied health check of SQL Agent
 │   ├── scout/                 # Proactive schema catalog + semantic search
 │   └── catalog/               # Dialect-specific catalog builders
 ├── eval/                      # Evaluation framework (scripts, datasets, runs)
-├── evaluation/                # Curated thesis-cited results (H1, H2a, H2b, H3)
+├── evaluation_artifacts/                # Curated thesis-cited results (H1, H2a, H2b, H3)
 ├── tests/                     # Unit + integration tests
 ├── adrs/                      # 34 Architecture Decision Records
 ├── data/
@@ -409,14 +372,14 @@ GET  /backend_health            # Proxied health check of SQL Agent
 - **Northwind (PostgreSQL, 14 tables)** — controlled benchmark with transparent schema naming
 - **Sage/Luisi & Diener (MSSQL, ~943 tables)** — production evaluation with opaque German table names
 
-**Curated evaluation results** organised by hypothesis are in [`evaluation/`](evaluation/). The full reproducibility framework — datasets, scripts, all run timestamps — is in [`eval/`](eval/).
+**Curated evaluation results** organised by hypothesis are in [`evaluation_artifacts/`](evaluation_artifacts/). The full reproducibility framework — datasets, scripts, all run timestamps — is in [`eval/`](eval/).
 
 | Hypothesis | Subdirectory | Thesis section |
 |---|---|---|
-| H1 — Catalog completeness | [`evaluation/H1/`](evaluation/H1/) | §5.1 |
-| H2a — Controlled SDG ablation | [`evaluation/H2a/`](evaluation/H2a/) | §5.2 |
-| H2b — Production transfer | [`evaluation/H2b/`](evaluation/H2b/) | §5.3 |
-| H3 — User study | [`evaluation/H3/`](evaluation/H3/) | §5.4 |
+| H1 — Catalog completeness | [`evaluation_artifacts/H1/`](evaluation_artifacts/H1/) | §5.1 |
+| H2a — Controlled SDG ablation | [`evaluation_artifacts/H2a/`](evaluation_artifacts/H2a/) | §5.2 |
+| H2b — Production transfer | [`evaluation_artifacts/H2b/`](evaluation_artifacts/H2b/) | §5.3 |
+| H3 — User study | [`evaluation_artifacts/H3/`](evaluation_artifacts/H3/) | §5.4 |
 
 ### Key Architecture Decisions
 
